@@ -4254,30 +4254,23 @@ function buildSnapFrameAsync(buildFn) {
 }
 
 function buildForecastSnap(foreHr) {
-  // decay FRC ของ pump/plant ล่วงหน้า foreHr ชั่วโมง
-  // MH: ใช้ k เฉพาะ (0.038/hr), CP: ใช้ EPANET sidebar
-  const forecastSnap = {};
+  // decay FRC ของแต่ละ pump ล่วงหน้า foreHr ชั่วโมง
+  // inject ค่า forecast ชั่วคราวเข้า SENSORS แล้วใช้ window.frcZone (รองรับ Custom Zone)
+  const origFrc = {};
   for (const s of SENSORS) {
-    if (!['pump','plant'].includes(s.type)) continue;
-    const frcNow = getParamVal(s) || 0;
-    // decay pump source เอง foreHr ชั่วโมง (travel time=0)
-    const decayAtSource = epanetDecay(0, s); // = 1.0 เสมอ (d=0)
-    // ใช้ k ของ pump source decay foreHr ชั่วโมง
-    const k_hr = getStationKhr(s.id) || 0.062;
-    const frcFore = frcNow * Math.exp(-k_hr * foreHr);
-    forecastSnap[s.id] = Math.max(0, frcFore);
+    origFrc[String(s.id)] = s.frc;
+    if (['pump','plant'].includes(s.type)) {
+      const frcNow = getParamVal(s) || 0;
+      const k_hr   = getStationKhr(String(s.id)) || 0.062;
+      s.frc = Math.max(0, frcNow * Math.exp(-k_hr * foreHr));
+    }
   }
-  // build frame: FRC ที่จุด lat/lon = forecastSnap[zone] × decay ระยะทาง
-  return buildOneFrame((lat, lon) => {
-    const zone = frcZone(lat, lon);
-    if (!zone) return 0;
-    const frcSrc = forecastSnap[zone.id];
-    if (frcSrc == null) return 0;
-    const a = getAnchorLatLon(zone);
-    const dLat = lat - a.lat, dLon = lon - a.lon;
-    const dKm = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
-    return Math.max(0, frcSrc * epanetDecay(dKm, zone));
-  });
+  // build frame โดยใช้ window.frcZone ที่รองรับ Custom Zone
+  const _frcFn = window.frcZone || frcZone;
+  const arr = buildOneFrame((lat, lon) => _frcFn(lat, lon));
+  // restore ค่าเดิม
+  for (const s of SENSORS) s.frc = origFrc[String(s.id)];
+  return arr;
 }
 
 function buildUnifiedTicks() {
@@ -4718,7 +4711,8 @@ function setFcMode(mode) {
     }
     seekForecastUnified(parseInt(slider.value));
   } else {
-    startLoadFc();
+    // unified ยังไม่โหลด → โหลดก่อน แล้ว set mode หลังโหลดเสร็จ
+    loadUnifiedTimeline().then(() => setFcMode(mode));
   }
 }
 
@@ -4831,18 +4825,9 @@ function openForecastBar() {
     document.getElementById('fc-mode-hist').classList.add('active');
     document.getElementById('fc-mode-fore').classList.remove('active');
     _fcFrames = null;
-    // ใช้ unified engine เท่านั้น
     if (_unifiedLoaded) {
-      // ตั้ง slider history mode
-      const slider = document.getElementById('forecast-slider');
-      const nowIdx = _unifiedFrames.findIndex(f => f.isNow);
-      const nowI   = nowIdx >= 0 ? nowIdx : FC_HIST_STEPS;
-      slider.min   = 0;
-      slider.max   = nowI;
-      slider.value = nowI;
-      seekForecastUnified(nowI);
+      setFcMode('history');
     } else {
-      // โหลด unified timeline ครั้งแรก
       loadUnifiedTimeline();
     }
   }
@@ -5934,4 +5919,3 @@ const _zepInitTimer = setInterval(() => {
 </script>
 <div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.2.0 — รองรับ Zone Influence Editor: วาดขอบเขตพื้นที่สูบจ่ายน้ำเองได้ · EPANET Decay Model · 18 Mar 2026</span></div>
 </body></html>
-
