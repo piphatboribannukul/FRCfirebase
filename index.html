@@ -4299,8 +4299,11 @@ function seekForecastUnified(idx) {
   // อัปเดต contour
   if (frame.arr) {
     _idwCache = frame.arr;
+    // set resolution ให้ตรงกับ frame (FC_RES หรือ CACHE_RES)
+    _idwCacheRes = frame.isNow ? CACHE_RES : FC_RES;
     redrawContour(0);
   } else {
+    _idwCacheRes = CACHE_RES;
     buildIdwCache(); redrawContour(0);
   }
 
@@ -4640,10 +4643,19 @@ function stopForecastPlay() {
 
 function startForecastPlay() {
   if (!_unifiedLoaded || !_unifiedFrames.length) return;
+  const slider = document.getElementById('forecast-slider');
+  const min = parseInt(slider.min);
+  const max = parseInt(slider.max);
+
+  // ถ้า slider อยู่ที่ max แล้ว → reset กลับไปที่ min ก่อน play
+  if (parseInt(slider.value) >= max) {
+    slider.value = min;
+    seekForecastUnified(min);
+  }
+
   _fcPlaying = true; _fcLastTime = performance.now();
   const btn = document.getElementById('fc-play-btn');
   if (btn) { btn.textContent='⏸'; btn.classList.add('active'); }
-  const slider = document.getElementById('forecast-slider');
   const fps = _fcMode === 'history' ? 3 : 1;
 
   function tick(now) {
@@ -4651,9 +4663,8 @@ function startForecastPlay() {
     if ((now - _fcLastTime) / 1000 >= 1/fps) {
       _fcLastTime = now;
       const cur = parseInt(slider.value);
-      const max = parseInt(slider.max);
       const next = cur + 1;
-      if (next > max) { stopForecastPlay(); return; }
+      if (next > parseInt(slider.max)) { stopForecastPlay(); return; }
       seekForecastUnified(next);
       slider.value = next;
     }
@@ -5903,4 +5914,3 @@ const _zepInitTimer = setInterval(() => {
 </script>
 <div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.2.0 — รองรับ Zone Influence Editor: วาดขอบเขตพื้นที่สูบจ่ายน้ำเองได้ · EPANET Decay Model · 18 Mar 2026</span></div>
 </body></html>
-
