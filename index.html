@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>Chlorine Contour V.3.1 — MWA Realtime</title>
+<title>M sandbox Chlorine Contour V.6.0 — MWA Realtime</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -59,6 +59,15 @@ body{font-family:'Sarabun',sans-serif;background:#f8f0f5;color:#1a0a10;height:10
 #tab-content{overflow-y:auto;padding:10px 12px;min-height:100px;max-height:220px;}
 .sblock{padding:13px 15px;border-bottom:1px solid #f8eef4;}
 .sblock h3{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;color:#d080a0;margin-bottom:10px;}
+/* Accordion menu */
+.sb-menu{cursor:pointer;user-select:none;}
+.sb-menu > h3{margin-bottom:0;}
+.sb-menu.open > h3{margin-bottom:10px;}
+.sb-menu .sb-arrow{font-size:11px;transition:transform .2s;color:#d080a0;}
+.sb-menu.open .sb-arrow{transform:rotate(90deg);}
+.sb-menu .sb-body{overflow:hidden;transition:max-height .25s ease;}
+.sb-menu .sb-body > *{pointer-events:auto;}
+body.dark .sb-menu .sb-arrow{color:var(--neon-pink,#e94560);}
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .stat-card{background:#fff5f8;border:1px solid #f5d0e0;border-radius:7px;padding:9px 11px;}
 .stat-label{font-size:9px;color:#c080a0;margin-bottom:3px;}
@@ -207,11 +216,11 @@ body{font-family:'Sarabun',sans-serif;background:#f8f0f5;color:#1a0a10;height:10
   color:#4060a0;text-align:right;width:72px;
 }
 .src-tbl td.via{color:#6080a0;font-size:10.5px;}
-#tip{position:absolute;background:#fff;border:1px solid #f0c0d8;border-radius:8px;padding:10px 14px;pointer-events:none;font-size:12px;z-index:2000;display:none;min-width:175px;box-shadow:0 4px 20px rgba(180,0,80,.12);}
-#tip .tl{font-size:9.5px;color:#555;margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;}
-#tip .tv{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
-#tip .ts{font-size:11px;margin-top:3px;font-weight:600;color:#111;}
-#tip .tll{font-size:9px;color:#888;margin-top:4px;font-family:'JetBrains Mono',monospace;}
+#tip{position:absolute;background:#fff;border:1px solid #e0e4f0;border-radius:10px;padding:10px 14px;pointer-events:none;font-size:12px;z-index:2000;display:none;min-width:175px;box-shadow:0 4px 24px rgba(50,50,100,.12);}
+#tip .tl{font-size:9.5px;color:#6c5ce7;margin-bottom:2px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+#tip .tv{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#2d3436;}
+#tip .ts{font-size:11px;margin-top:3px;font-weight:700;color:#00b894;}
+#tip .tll{font-size:9px;color:#b0b4c0;margin-top:4px;font-family:'JetBrains Mono',monospace;}
 .lpop h4{font-size:14px;font-weight:700;color:#111;margin-bottom:7px;border-bottom:1px solid #f5d8ec;padding-bottom:6px;font-family:'Sarabun',sans-serif;} .lpop{min-width:420px;}
 .lpop .pr{display:flex;justify-content:space-between;margin-bottom:4px;color:#666;gap:8px;font-family:'Sarabun',sans-serif;font-size:12px;}
 .lpop .pv{color:#111;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;}
@@ -473,6 +482,500 @@ body{font-family:'Sarabun',sans-serif;background:#f8f0f5;color:#1a0a10;height:10
 #zone-editor-btn:hover{background:#fff0f5;}
 #zone-editor-btn.active{background:#cc0055;color:#fff;border-color:#cc0055;}
 
+/* ═══════════════════════════════════════
+   AI INSIGHT PANEL
+   ═══════════════════════════════════════ */
+#ai-insight-btn {
+  position:absolute;top:106px;left:10px;z-index:1100;
+  background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #0f3460;border-radius:8px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 2px 12px rgba(15,52,96,.4);
+  font-size:16px;transition:all .2s;color:#e94560;
+}
+#ai-insight-btn:hover{background:linear-gradient(135deg,#16213e,#0f3460);box-shadow:0 2px 16px rgba(233,69,96,.3);}
+#ai-insight-btn.active{background:#e94560;color:#fff;border-color:#e94560;box-shadow:0 0 20px rgba(233,69,96,.5);}
+#ai-insight-btn .ai-pulse{
+  position:absolute;inset:-3px;border-radius:11px;border:2px solid #e94560;
+  animation:ai-ring 2s ease-out infinite;opacity:0;pointer-events:none;
+}
+@keyframes ai-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0;}}
+
+/* ── Flow Direction Button ── */
+#flow-btn {
+  position:absolute;top:154px;left:10px;z-index:1100;
+  background:#fff;border:1.5px solid #1a4a90;border-radius:8px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 2px 8px rgba(20,60,160,.2);
+  font-size:16px;transition:all .2s;color:#1a4a90;
+}
+#flow-btn:hover{background:#eef2ff;box-shadow:0 2px 12px rgba(20,60,160,.3);}
+#flow-btn.active{background:#1a4a90;color:#fff;border-color:#1a4a90;box-shadow:0 0 16px rgba(20,60,160,.4);}
+body.dark #flow-btn{
+  background:var(--glass-bg,rgba(16,16,32,.65));border-color:rgba(20,60,160,.4);
+  color:#6090cc;box-shadow:0 2px 12px rgba(0,0,0,.4);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+body.dark #flow-btn:hover{background:rgba(20,60,160,.15);color:#80b0ff;}
+body.dark #flow-btn.active{background:#1a4a90;color:#fff;box-shadow:0 0 20px rgba(20,60,160,.5);}
+
+#ai-panel {
+  position:absolute;top:0;left:0;height:100%;width:340px;
+  background:linear-gradient(180deg,#0a0a1a 0%,#0f0f2a 40%,#1a1a3e 100%);
+  border-right:1px solid #1a3060;
+  display:flex;flex-direction:column;z-index:950;
+  box-shadow:4px 0 30px rgba(0,0,0,.5);
+  transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;font-family:'Sarabun',sans-serif;
+}
+#ai-panel.open{transform:translateX(0);}
+#ai-panel-head{
+  background:linear-gradient(135deg,#0f3460,#1a1a4e);
+  padding:14px 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+  border-bottom:1px solid #233580;
+}
+#ai-panel-head h3{font-size:14px;font-weight:700;color:#e8e8ff;flex:1;margin:0;letter-spacing:.3px;}
+#ai-panel-head .ai-icon{font-size:20px;filter:drop-shadow(0 0 8px rgba(233,69,96,.6));}
+#ai-close{background:none;border:none;color:#8888bb;font-size:18px;cursor:pointer;padding:0;line-height:1;transition:color .15s;}
+#ai-close:hover{color:#e94560;}
+#ai-panel-body{flex:1;overflow-y:auto;padding:0;min-height:0;}
+.ai-section{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);}
+.ai-section h4{
+  font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+  color:#e94560;margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.ai-section h4::before{content:'';width:12px;height:2px;background:#e94560;border-radius:1px;}
+.ai-card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;padding:12px 14px;margin-bottom:8px;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.ai-card:hover{background:rgba(255,255,255,.07);border-color:rgba(233,69,96,.3);}
+.ai-card::before{
+  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(180deg,#e94560,#533483);border-radius:0 2px 2px 0;
+}
+.ai-card-title{font-size:11.5px;color:#c8c8e8;font-weight:600;margin-bottom:4px;}
+.ai-card-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#fff;margin-bottom:2px;}
+.ai-card-sub{font-size:10px;color:#8888bb;line-height:1.5;}
+.ai-card-sub b{color:#e94560;}
+.ai-trend-up{color:#4ecca3 !important;}
+.ai-trend-down{color:#e94560 !important;}
+.ai-trend-stable{color:#87ceeb !important;}
+.ai-rec{
+  background:linear-gradient(135deg,rgba(233,69,96,.1),rgba(83,52,131,.1));
+  border:1px solid rgba(233,69,96,.2);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px;
+}
+.ai-rec-icon{font-size:14px;margin-right:6px;}
+.ai-rec-text{font-size:11px;color:#d0d0ea;line-height:1.7;}
+.ai-rec-text strong{color:#e94560;}
+.ai-rank-item{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border-radius:7px;margin-bottom:4px;transition:background .15s;
+}
+.ai-rank-item:hover{background:rgba(255,255,255,.05);}
+.ai-rank-num{
+  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:#fff;flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;
+}
+.ai-rank-num.r1{background:linear-gradient(135deg,#e94560,#c0392b);}
+.ai-rank-num.r2{background:linear-gradient(135deg,#e67e22,#d35400);}
+.ai-rank-num.r3{background:linear-gradient(135deg,#f1c40f,#e6a800);color:#333;}
+.ai-rank-num.rn{background:rgba(255,255,255,.1);color:#8888bb;}
+.ai-rank-name{flex:1;font-size:10.5px;color:#c0c0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ai-rank-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;}
+.ai-footer{
+  padding:10px 16px;border-top:1px solid rgba(255,255,255,.06);
+  font-size:9px;color:#555580;text-align:center;flex-shrink:0;
+}
+.ai-loading{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:30px 0;color:#8888bb;font-size:11px;
+}
+.ai-loading .spinner{
+  width:16px;height:16px;border:2px solid #333;border-top-color:#e94560;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-width:640px) {
+  #ai-panel{width:100% !important;}
+  #ai-insight-btn{top:100px;left:8px;width:40px;height:40px;}
+  #flow-btn{top:148px;left:8px;width:40px;height:40px;}
+}
+
+/* ═══════════════════════════════════════
+   🌙 DARK MODE
+   ═══════════════════════════════════════ */
+#dark-toggle{
+  background:none;border:1px solid #f0c0d8;border-radius:6px;
+  padding:3px 8px;font-size:14px;cursor:pointer;transition:all .2s;
+  flex-shrink:0;line-height:1;
+}
+#dark-toggle:hover{background:#fff0f5;}
+body.dark #dark-toggle{border-color:#444;background:rgba(255,255,255,.08);}
+body.dark #dark-toggle:hover{background:rgba(255,255,255,.15);}
+
+body.dark{
+  background:#080810 !important;color:#d0d0e0 !important;
+}
+/* ── Glassmorphism base variables ── */
+body.dark{
+  --glass-bg: rgba(16,16,32,.65);
+  --glass-bg-deep: rgba(12,12,24,.80);
+  --glass-border: rgba(255,255,255,.08);
+  --glass-border-hover: rgba(233,69,96,.25);
+  --glass-blur: blur(16px);
+  --glass-blur-heavy: blur(24px);
+  --glass-glow: 0 0 30px rgba(233,69,96,.06);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,.35);
+  --neon-pink: #e94560;
+  --neon-pink-dim: rgba(233,69,96,.5);
+  --neon-blue: #4ea8de;
+  --text-primary: #e8e8ff;
+  --text-secondary: #9090b8;
+  --text-muted: #606088;
+}
+/* Header — frosted glass */
+body.dark #header{
+  background:var(--glass-bg) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;-webkit-backdrop-filter:var(--glass-blur-heavy) !important;
+  border-color:var(--glass-border) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.04), 0 4px 30px rgba(0,0,0,.4) !important;
+}
+body.dark #header h1{color:var(--text-primary) !important;}
+body.dark .badge{
+  background:rgba(233,69,96,.1) !important;border-color:rgba(233,69,96,.25) !important;color:#ff6699 !important;
+  backdrop-filter:blur(8px) !important;
+}
+body.dark #clock{color:var(--text-muted) !important;}
+body.dark #v2-badge{background:linear-gradient(135deg,#e94560,#7a0030) !important;box-shadow:0 0 12px rgba(233,69,96,.3) !important;}
+body.dark .param-btn{
+  background:rgba(255,255,255,.04) !important;color:var(--text-secondary) !important;
+  border-color:var(--glass-border) !important;backdrop-filter:blur(8px) !important;
+}
+body.dark .param-btn.active{background:#cc0055 !important;color:#fff !important;box-shadow:0 0 16px rgba(204,0,85,.3) !important;}
+body.dark .param-btn:not(.active):hover{background:rgba(233,69,96,.1) !important;color:#ff6699 !important;}
+body.dark #forecast-toggle-float{background:#cc0055 !important;box-shadow:0 0 12px rgba(204,0,85,.25) !important;}
+/* Disclaimer — subtle glass */
+body.dark #disclaimer-bar{
+  background:rgba(8,8,20,.85) !important;border-color:var(--glass-border) !important;color:#cc6688 !important;
+  backdrop-filter:var(--glass-blur) !important;
+}
+/* Sidebar — deep frosted glass */
+body.dark #sidebar{
+  background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;-webkit-backdrop-filter:var(--glass-blur-heavy) !important;
+  box-shadow:3px 0 40px rgba(0,0,0,.6) !important;
+}
+body.dark #sidebar-overlay.open{background:rgba(0,0,0,.45) !important;backdrop-filter:blur(4px) !important;}
+body.dark .sblock{border-color:rgba(255,255,255,.04) !important;}
+body.dark .sblock h3{color:var(--neon-pink) !important;}
+body.dark .stat-card{
+  background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:blur(8px) !important;border-radius:10px !important;
+  transition:all .2s !important;
+}
+body.dark .stat-card:hover{background:rgba(233,69,96,.06) !important;border-color:var(--glass-border-hover) !important;}
+body.dark .stat-label{color:var(--text-muted) !important;}
+body.dark .stat-val{color:#ff6699 !important;text-shadow:0 0 20px rgba(255,102,153,.15) !important;}
+body.dark .toggle-row{color:#c0c0d8 !important;}
+body.dark .tog.off{background:rgba(255,255,255,.08) !important;}
+body.dark .tog.on{box-shadow:0 0 10px rgba(204,0,85,.3) !important;}
+body.dark .tab-btn.active{background:rgba(233,69,96,.08) !important;color:var(--neon-pink) !important;border-bottom-color:var(--neon-pink) !important;}
+body.dark .tab-btn.inactive{background:rgba(255,255,255,.02) !important;color:var(--text-muted) !important;}
+body.dark #tab-content{color:#c0c0d8 !important;}
+body.dark .alert-item{
+  background:rgba(255,255,255,.03) !important;border-left-color:var(--neon-pink) !important;
+  border-radius:0 8px 8px 0 !important;backdrop-filter:blur(6px) !important;
+}
+body.dark .alert-item.warn{background:rgba(224,128,32,.06) !important;border-color:#e08020 !important;}
+body.dark .alert-item:hover{background:rgba(233,69,96,.08) !important;}
+body.dark .alert-name{color:var(--text-primary) !important;}
+body.dark .stbl th{color:var(--neon-pink) !important;border-color:rgba(255,255,255,.06) !important;background:rgba(233,69,96,.06) !important;}
+body.dark .stbl td{color:#c0c0d8 !important;border-color:rgba(255,255,255,.03) !important;}
+body.dark .stbl tr:hover{background:rgba(233,69,96,.05) !important;}
+body.dark .sbadge.ok{background:rgba(233,69,96,.15) !important;color:#ff6699 !important;}
+body.dark .sbadge.mid{background:rgba(200,100,160,.12) !important;color:#cc6688 !important;}
+body.dark .sbadge.lo{background:rgba(220,170,0,.12) !important;color:#ddaa00 !important;}
+/* EPANET */
+body.dark .ep-input{
+  background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;
+  color:var(--text-primary) !important;backdrop-filter:blur(6px) !important;
+}
+body.dark .ep-input:focus{border-color:var(--neon-pink) !important;background:rgba(233,69,96,.06) !important;box-shadow:0 0 12px rgba(233,69,96,.15) !important;}
+body.dark .ep-formula{
+  background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;
+  color:#a080c0 !important;backdrop-filter:blur(6px) !important;
+}
+body.dark .ep-label{color:#b0b0cc !important;}
+body.dark .ep-unit{color:var(--text-muted) !important;}
+body.dark .ep-apply{backdrop-filter:blur(6px) !important;}
+/* Map buttons — glass pills */
+body.dark #ham-btn{
+  background:var(--glass-bg) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:var(--glass-blur) !important;-webkit-backdrop-filter:var(--glass-blur) !important;
+  box-shadow:var(--glass-shadow) !important;
+}
+body.dark #ham-btn:hover{background:rgba(233,69,96,.1) !important;border-color:var(--glass-border-hover) !important;}
+body.dark #ham-btn span{background:var(--neon-pink) !important;}
+body.dark #zone-editor-btn{
+  background:var(--glass-bg) !important;border-color:var(--glass-border) !important;
+  color:var(--neon-pink) !important;backdrop-filter:var(--glass-blur) !important;
+  box-shadow:var(--glass-shadow) !important;
+}
+body.dark #zone-editor-btn:hover{background:rgba(233,69,96,.1) !important;border-color:var(--glass-border-hover) !important;}
+body.dark #zone-editor-btn.active{background:var(--neon-pink) !important;color:#fff !important;box-shadow:0 0 20px var(--neon-pink-dim) !important;}
+body.dark #ai-insight-btn{box-shadow:0 2px 16px rgba(0,0,0,.4), var(--glass-glow) !important;backdrop-filter:var(--glass-blur) !important;}
+/* Legend panel — glass */
+body.dark #legend-panel{
+  background:rgba(12,12,28,.96) !important;border-color:rgba(255,255,255,.08) !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  box-shadow:-4px 0 30px rgba(0,0,0,.5) !important;
+}
+body.dark #legend-panel h4{color:#ffffff !important;font-weight:800 !important;}
+body.dark #legend-panel .lg-sub{color:#e0e0f0 !important;font-weight:600 !important;}
+body.dark #legend-panel .lg-ticks{color:#ffffff !important;font-weight:700 !important;}
+body.dark #legend-panel .lg-ticks span{color:#ffffff !important;}
+body.dark #legend-panel .lg-item span{color:#e0e0f0 !important;font-weight:500 !important;}
+body.dark #legend-panel .lg-dline span{color:#e0e0f0 !important;font-weight:600 !important;}
+body.dark #legend-panel .lg-dline span[style*="color:#a08000"]{color:#f0d040 !important;}
+body.dark #legend-panel .lg-dline span[style*="color:#cc0055"]{color:#ff6699 !important;}
+body.dark #legend-panel .lg-swatch{border-color:rgba(255,255,255,.2) !important;}
+body.dark #note-btn{color:#ff6699 !important;border-color:rgba(233,69,96,.3) !important;background:rgba(233,69,96,.08) !important;}
+body.dark #legend-panel .lg-div{border-color:rgba(255,255,255,.04) !important;}
+body.dark #note-btn{
+  background:rgba(233,69,96,.06) !important;border-color:rgba(233,69,96,.2) !important;color:var(--neon-pink) !important;
+  backdrop-filter:blur(6px) !important;
+}
+body.dark #note-btn:hover{background:rgba(233,69,96,.12) !important;}
+body.dark .note-tbl th{background:var(--neon-pink) !important;}
+body.dark .note-tbl td{border-color:rgba(255,255,255,.04) !important;color:#c0c0d8 !important;}
+body.dark .note-tbl td:first-child{color:#ff6699 !important;}
+body.dark .note-tbl tr:nth-child(even) td{background:rgba(255,255,255,.02) !important;}
+body.dark .note-tbl.ec th{background:#1a5090 !important;}
+body.dark .note-tbl.ec td:first-child{color:var(--neon-blue) !important;}
+body.dark .note-tbl.ec tr:nth-child(even) td{background:rgba(78,168,222,.03) !important;}
+/* Tooltip — glass */
+body.dark #tip{
+  background:rgba(10,10,25,.92) !important;border:1px solid rgba(233,69,96,.3) !important;
+  color:#fff !important;
+  backdrop-filter:blur(20px) !important;-webkit-backdrop-filter:blur(20px) !important;
+  box-shadow:0 8px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05) !important;
+}
+body.dark #tip .tl{color:#ff6699;letter-spacing:1px;}
+body.dark #tip .tv{color:#ffffff;text-shadow:0 0 16px rgba(255,102,153,.3);}
+body.dark #tip .ts{color:#4ecca3;font-weight:700;}
+body.dark #tip .tll{color:#606088;}
+/* Src modal — glass */
+body.dark #src-btn{
+  background:var(--glass-bg) !important;border-color:rgba(78,168,222,.25) !important;
+  color:var(--neon-blue) !important;backdrop-filter:var(--glass-blur) !important;
+  box-shadow:var(--glass-shadow) !important;
+}
+body.dark #src-btn:hover{background:rgba(78,168,222,.1) !important;}
+body.dark #src-modal{
+  background:var(--glass-bg-deep) !important;border-color:rgba(78,168,222,.2) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;box-shadow:0 20px 60px rgba(0,0,0,.6) !important;
+}
+body.dark #src-modal-head{background:rgba(15,24,48,.9) !important;border-color:rgba(78,168,222,.15) !important;}
+body.dark #src-modal-head h3{color:var(--neon-blue) !important;}
+body.dark #src-modal-body{color:#c0c0d8 !important;}
+body.dark .src-group-title{background:linear-gradient(135deg,#1a3a70,#0f2850) !important;box-shadow:0 2px 8px rgba(0,0,0,.3) !important;}
+body.dark .src-tbl th{background:rgba(78,168,222,.08) !important;color:var(--neon-blue) !important;border-color:rgba(78,168,222,.15) !important;}
+body.dark .src-tbl td{color:#c0c0d8 !important;border-color:rgba(255,255,255,.03) !important;}
+body.dark .src-tbl tr:hover td{background:rgba(78,168,222,.05) !important;}
+/* Zone editor — glass */
+body.dark #zone-editor-panel{
+  background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;
+  box-shadow:-4px 0 40px rgba(0,0,0,.6) !important;
+}
+body.dark #zep-header{background:rgba(8,8,20,.9) !important;border-color:var(--glass-border) !important;}
+body.dark .zep-section h4{color:var(--neon-pink) !important;}
+body.dark .zep-station-item:hover{background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;}
+body.dark .zep-station-item.selected{background:rgba(233,69,96,.08) !important;border-color:var(--neon-pink) !important;}
+body.dark .zep-station-name{color:#c0c0d8 !important;}
+body.dark .zep-tool-btn{
+  background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;
+  color:var(--text-secondary) !important;backdrop-filter:blur(6px) !important;
+}
+body.dark .zep-tool-btn:hover{background:rgba(233,69,96,.08) !important;color:var(--neon-pink) !important;border-color:var(--glass-border-hover) !important;}
+body.dark .zep-tool-btn.active{background:var(--neon-pink) !important;color:#fff !important;box-shadow:0 0 14px var(--neon-pink-dim) !important;}
+body.dark .zep-info{background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;color:#a0a0c0 !important;}
+body.dark .zep-zone-card{
+  background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:blur(6px) !important;
+}
+body.dark .zep-zone-card:hover{background:rgba(233,69,96,.06) !important;border-color:var(--glass-border-hover) !important;}
+body.dark .zep-zone-card-name{color:var(--text-primary) !important;}
+body.dark .zep-zone-card-meta{color:var(--text-muted) !important;}
+body.dark .zep-zone-act-btn{background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;color:var(--neon-pink) !important;}
+body.dark .zep-divider{border-color:rgba(255,255,255,.04) !important;}
+body.dark .zep-apply-btn{box-shadow:0 0 16px rgba(204,0,85,.25) !important;}
+/* Forecast bar — glass */
+body.dark #forecast-bar{
+  background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;-webkit-backdrop-filter:var(--glass-blur-heavy) !important;
+  box-shadow:0 -4px 30px rgba(0,0,0,.5) !important;
+}
+body.dark .fc-btn{
+  background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;
+  color:var(--neon-pink) !important;backdrop-filter:blur(6px) !important;
+}
+body.dark .fc-btn:hover{background:rgba(233,69,96,.08) !important;}
+body.dark .fc-btn.active{background:var(--neon-pink) !important;color:#fff !important;box-shadow:0 0 14px var(--neon-pink-dim) !important;}
+body.dark .fc-mode-btn{background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;color:var(--text-secondary) !important;}
+body.dark .fc-mode-btn.active{background:rgba(78,168,222,.2) !important;color:#fff !important;border-color:rgba(78,168,222,.4) !important;}
+/* Popup — glass */
+body.dark .pk-pop .leaflet-popup-content-wrapper{
+  background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
+  color:var(--text-primary) !important;
+  backdrop-filter:var(--glass-blur-heavy) !important;-webkit-backdrop-filter:var(--glass-blur-heavy) !important;
+  box-shadow:0 12px 48px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+body.dark .pk-pop .leaflet-popup-tip{background:var(--glass-bg-deep) !important;}
+body.dark .pk-pop .leaflet-popup-close-button{color:var(--text-secondary) !important;}
+body.dark .lpop h4{color:var(--text-primary) !important;border-color:rgba(255,255,255,.06) !important;}
+body.dark .lpop .pr{color:var(--text-secondary) !important;}
+body.dark .lpop .pv{color:var(--text-primary) !important;}
+body.dark .lpop .bigval{color:#ff6699 !important;text-shadow:0 0 24px rgba(255,102,153,.2) !important;}
+
+/* ══════════════════════════════════════════
+   DARK MODE — Popup & Chart comprehensive
+   ══════════════════════════════════════════ */
+/* Popup text overrides (inline style colors) */
+body.dark .lpop h4{color:#e8e8ff !important;border-color:rgba(255,255,255,.08) !important;}
+body.dark .lpop h4[style*="color"]{color:#e8e8ff !important;}
+body.dark .lpop .bigval span{color:#9090b8 !important;}
+body.dark .lpop .pr{color:#9090b8 !important;}
+body.dark .lpop .pr span{color:#9090b8 !important;}
+body.dark .lpop .pv{color:#d0d0ea !important;}
+body.dark .lpop .pr span.pv{color:#d0d0ea !important;}
+body.dark .lpop .pr span[style*="color:#111"],
+body.dark .lpop .pv[style*="color:#111"],
+body.dark .lpop .pv[style*="color: #111"]{color:#d0d0ea !important;}
+body.dark .lpop div[style*="color:#555"],
+body.dark .lpop span[style*="color:#555"]{color:#9090b8 !important;}
+body.dark .lpop div[style*="border-top:1px solid #f5d8ec"],
+body.dark .lpop div[style*="border-top:1px solid #f5"]{border-color:rgba(255,255,255,.08) !important;}
+/* Chart header text */
+body.dark .lpop div[style*="color:#aa0044"]{color:#ff6699 !important;}
+body.dark .lpop span[style*="color:#cc0055"]{color:#ff6699 !important;}
+body.dark .lpop span[style*="background:#fff0f5"]{background:rgba(233,69,96,.15) !important;color:#ff99bb !important;}
+body.dark .lpop div[style*="color:#c080a0"]{color:#8888bb !important;}
+body.dark .lpop span[style*="color:#006020"]{color:#4ecca3 !important;}
+body.dark .lpop span[style*="color:#a06000"]{color:#f0c060 !important;}
+body.dark .lpop span[style*="color:#4060a0"]{color:#6090cc !important;}
+body.dark .lpop div[style*="color:#804"],
+body.dark .lpop span[style*="color:#804"]{color:#a080c0 !important;}
+
+/* ── SVG Chart: backgrounds ── */
+body.dark .lpop svg rect[fill="#fff8fa"]{fill:rgba(20,20,40,.85) !important;}
+body.dark .lpop svg rect[fill="#f5f8ff"]{fill:rgba(20,25,50,.85) !important;}
+body.dark .lpop svg rect[fill="#fff"]{fill:rgba(20,20,40,.85) !important;}
+body.dark .lpop svg rect[fill="white"]{fill:rgba(20,20,40,.85) !important;}
+/* Forecast zone (purple tint) */
+body.dark .lpop svg rect[fill="#f5eeff"]{fill:rgba(100,60,180,.15) !important;opacity:0.6 !important;}
+/* Beyond zone (grey → dark) */
+body.dark .lpop svg rect[fill="#e8e8e8"]{fill:rgba(60,60,80,.5) !important;opacity:0.7 !important;}
+/* Confidence band fill */
+body.dark .lpop svg path[fill="#9060c0"]{fill:#7040b0 !important;opacity:0.15 !important;}
+
+/* ── SVG Chart: all text → light ── */
+body.dark .lpop svg text[fill="#222"]{fill:#c0c0e0 !important;}
+body.dark .lpop svg text[fill="#111"]{fill:#d0d0ea !important;}
+body.dark .lpop svg text[fill="#333"]{fill:#b0b0d0 !important;}
+body.dark .lpop svg text[fill="#555"]{fill:#9090b8 !important;}
+body.dark .lpop svg text[fill="#666"]{fill:#8888aa !important;}
+body.dark .lpop svg text[fill="#888"]{fill:#7070a0 !important;}
+body.dark .lpop svg text[fill="#aaa"]{fill:#606088 !important;}
+body.dark .lpop svg text[fill="#bbb"]{fill:#505070 !important;}
+body.dark .lpop svg text[fill="#ccc"]{fill:#404060 !important;}
+body.dark .lpop svg text[fill="#c080a0"]{fill:#9070a0 !important;}
+body.dark .lpop svg text[fill="#1565c0"]{fill:#4ea8de !important;}
+body.dark .lpop svg text[fill="#cc0055"]{fill:#ff6699 !important;}
+body.dark .lpop svg text[fill="#b08000"]{fill:#e0b040 !important;}
+
+/* ── SVG Chart: axis lines & gridlines ── */
+body.dark .lpop svg line[stroke="#e8c8d8"]{stroke:rgba(255,255,255,.15) !important;}
+body.dark .lpop svg line[stroke="#c0d8f0"]{stroke:rgba(255,255,255,.15) !important;}
+body.dark .lpop svg line[stroke="#e0c0d0"]{stroke:rgba(255,255,255,.12) !important;}
+body.dark .lpop svg line[stroke="#e0b0c8"]{stroke:rgba(255,255,255,.1) !important;}
+body.dark .lpop svg line[stroke="#ccc"]{stroke:rgba(255,255,255,.08) !important;}
+body.dark .lpop svg line[stroke="#9060c0"]{stroke:rgba(140,80,200,.5) !important;}
+/* "ตอนนี้" line stays visible */
+body.dark .lpop svg line[stroke="#cc0055"]{stroke:#ff4477 !important;}
+body.dark .lpop svg line[stroke="#1565c0"]{stroke:#4ea8de !important;}
+/* Standard threshold lines stay colored */
+body.dark .lpop svg line[stroke="#c0a000"]{stroke:#e0c040 !important;}
+
+/* ── SVG Chart: circles (data points) ── */
+body.dark .lpop svg circle[stroke="#fff"]{stroke:rgba(255,255,255,.3) !important;}
+body.dark .lpop svg circle[fill="#cc0055"]{fill:#ff4477 !important;}
+body.dark .lpop svg circle[fill="#9060c0"]{fill:#a070d0 !important;}
+
+/* ── SVG Chart: confidence band ── */
+body.dark .lpop svg path[fill="#a5d6a7"]{fill:#4ecca3 !important;opacity:0.25 !important;}
+body.dark .lpop svg path[fill="#9060c0"]{fill:#7040b0 !important;opacity:0.15 !important;}
+body.dark .lpop svg path[stroke="#66bb6a"]{stroke:#4ecca3 !important;opacity:0.7 !important;}
+body.dark .lpop svg path[stroke="#9060c0"]{stroke:#a080d0 !important;}
+body.dark .lpop svg path[stroke="#cc0055"]{stroke:#ff4477 !important;}
+body.dark .lpop svg path[fill="#cc0055"]{fill:#ff4477 !important;}
+/* Forecast diamond markers */
+body.dark .lpop svg rect[fill="#43a047"]{fill:#4ecca3 !important;}
+body.dark .lpop svg rect[stroke="#fff"]{stroke:rgba(255,255,255,.4) !important;}
+body.dark .lpop svg line[stroke="#66bb6a"]{stroke:#4ecca3 !important;opacity:0.8 !important;}
+
+/* ── Legend/footer text in popup ── */
+body.dark .lpop div[style*="font-size:9px"][style*="text-align:center"]{color:#8888bb !important;}
+body.dark .lpop span[style*="color:#c08000"]{color:#e0a030 !important;}
+body.dark .lpop span[style*="color:#008040"]{color:#4ecca3 !important;}
+/* Chart legend row */
+body.dark .lpop span[style*="color:#9060c0"]{color:#b090e0 !important;}
+body.dark .lpop span[style*="color:#66bb6a"]{color:#4ecca3 !important;}
+body.dark .lpop span[style*="color:#43a047"]{color:#4ecca3 !important;}
+/* EC chart colors in dark */
+body.dark .lpop svg text[fill="#6090c0"]{fill:#6090cc !important;}
+body.dark .lpop svg line[stroke="#1a7ab0"]{stroke:#4ea8de !important;}
+body.dark .lpop svg line[stroke="#b32800"]{stroke:#e06040 !important;}
+body.dark .lpop svg text[fill="#1a7ab0"]{fill:#4ea8de !important;}
+body.dark .lpop svg text[fill="#b32800"]{fill:#e06040 !important;}
+
+/* Tooltip (#tip) — handled above */
+/* Draw indicator */
+body.dark #draw-mode-indicator{
+  background:var(--glass-bg-deep) !important;
+  backdrop-filter:var(--glass-blur) !important;
+  box-shadow:0 4px 20px rgba(0,0,0,.5) !important;
+}
+/* Scrollbar */
+body.dark ::-webkit-scrollbar-track{background:rgba(12,12,24,.5) !important;}
+body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1) !important;border-radius:4px !important;}
+body.dark ::-webkit-scrollbar-thumb:hover{background:rgba(233,69,96,.3) !important;}
+/* Map tile: dark basemap via CSS filter */
+body.dark .leaflet-tile-pane{filter:brightness(0.65) invert(1) contrast(1.15) hue-rotate(200deg) saturate(0.35);}
+body.dark .leaflet-overlay-pane{filter:none !important;}
+body.dark .leaflet-marker-pane{filter:none !important;}
+body.dark .leaflet-popup-pane{filter:none !important;}
+body.dark .leaflet-tooltip-pane{filter:none !important;}
+/* K Tuner / History blocks */
+body.dark #ktuner-block, body.dark #hist-block{color:var(--text-secondary) !important;}
+body.dark #ktuner-block input[type="range"]{accent-color:var(--neon-pink) !important;}
+body.dark #hist-result{background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;color:#a080c0 !important;}
+/* Leaflet controls */
+body.dark .leaflet-control-zoom a{
+  background:var(--glass-bg) !important;color:var(--text-primary) !important;
+  border-color:var(--glass-border) !important;backdrop-filter:var(--glass-blur) !important;
+}
+body.dark .leaflet-control-zoom a:hover{background:rgba(233,69,96,.12) !important;}
+body.dark .leaflet-control-attribution{
+  background:rgba(8,8,20,.7) !important;color:var(--text-muted) !important;
+  backdrop-filter:blur(8px) !important;
+}
+body.dark .leaflet-control-attribution a{color:var(--neon-blue) !important;}
+
 /* Zone Editor Panel */
 #zone-editor-panel {
   position:absolute;top:0;right:0;height:100%;width:290px;
@@ -718,14 +1221,15 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <body>
 <div id="header">
   <div class="live-dot"></div>
-  <h1 id="header-title">🌸 Chlorine Contour V.3.1</h1>
+  <h1 id="header-title">🌸 M sandbox Chlorine Contour V.6.0</h1>
   <div id="param-switcher">
     <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">🌸 FRC</button>
-    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ EC</button>
+    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V.3.1</span>
+  <span id="v2-badge">⬡ V.6.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
+  <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
   <span id="clock"></span>
 </div>
 <div id="app">
@@ -734,6 +1238,34 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 </button>
 <!-- Zone Influence Editor Button -->
 <button id="zone-editor-btn" onclick="toggleZoneEditor()" title="Zone Influence Editor — กำหนดขอบเขตพื้นที่อิทธิพลสถานีสูบจ่าย">🗺</button>
+
+<!-- AI Insight Button -->
+<button id="ai-insight-btn" onclick="toggleAiPanel()" title="AI Insight — วิเคราะห์แนวโน้ม">
+  🧠
+  <div class="ai-pulse"></div>
+</button>
+
+<!-- Flow Direction Button -->
+<button id="flow-btn" onclick="toggleFlow()" title="ทิศทางน้ำ — แสดงการไหลของน้ำจากสถานีสูบจ่าย">💧</button>
+
+<!-- AI Insight Panel -->
+<div id="ai-panel">
+  <div id="ai-panel-head">
+    <span class="ai-icon">🧠</span>
+    <h3>AI Water Quality Insight</h3>
+    <button id="ai-close" onclick="toggleAiPanel()">✕</button>
+  </div>
+  <div id="ai-panel-body">
+    <div class="ai-loading" id="ai-loading">
+      <div class="spinner"></div>
+      <span>กำลังวิเคราะห์ข้อมูล...</span>
+    </div>
+    <div id="ai-content" style="display:none;"></div>
+  </div>
+  <div class="ai-footer">
+    🧠 AI Insight Engine · วิเคราะห์จาก <span id="ai-pts-count">0</span> จุดข้อมูล · อัปเดตทุก 5 นาที
+  </div>
+</div>
 
 <!-- Zone Influence Editor Panel -->
 <div id="zone-editor-panel">
@@ -808,26 +1340,22 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 <div id="sidebar">
 <div id="sidebar-scroll">
-  <div class="sblock">
-    <h3>ภาพรวมระบบ</h3>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">สถานีทั้งหมด</div><div class="stat-val" id="s-total" style="color:#cc0055">—</div></div>
-      <div class="stat-card"><div class="stat-label" id="s-avg-label">เฉลี่ย mg/L</div><div class="stat-val" id="s-avg" style="color:#cc0055">—</div></div>
-      <div class="stat-card"><div class="stat-label" id="s-hi-label">🌸 FRC ≥ 1.0</div><div class="stat-val" id="s-hi" style="color:#cc0055">—</div></div>
-      <div class="stat-card"><div class="stat-label" id="s-lo-label">⚠ FRC &lt; 0.2</div><div class="stat-val" id="s-lo" style="color:#c08000">—</div></div>
-    </div>
-  </div>
-  <div class="sblock">
-    <h3>ชั้นข้อมูล</h3>
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">ชั้นข้อมูล <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
     <div class="toggle-row"><span>Contour Fill</span><div class="tog on" id="t-fill" onclick="toggleLayer('fill')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>Contour Lines</span><div class="tog on" id="t-lines" onclick="toggleLayer('lines')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>จุด Sensor</span><div class="tog on" id="t-sensors" onclick="toggleLayer('sensors')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>ขอบเขตเขต MWA</span><div class="tog on" id="t-mwa" onclick="toggleLayer('mwa')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>ขอบเขตพื้นที่สาขา</span><div class="tog on" id="t-sta" onclick="toggleLayer('sta')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>เส้น 0.2 / 1.0 mg/L</span><div class="tog on" id="t-thresh" onclick="toggleLayer('thresh')"><div class="tok"></div></div></div>
+    </div><!-- /sb-body ชั้นข้อมูล -->
   </div>
-  <!-- tab panel: แจ้งเตือน / รายการสถานี -->
-  <div id="tab-panel">
+  <!-- แจ้งเตือน / รายการสถานี -->
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">แจ้งเตือน / สถานี <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
+  <div id="tab-panel" style="border-top:none;">
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-alert" onclick="setTab('alert')">
         แจ้งเตือน <span id="alert-badge" style="background:#c08000;color:#fff;border-radius:10px;padding:0 5px;font-size:9px;margin-left:3px;"></span>
@@ -836,8 +1364,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </div>
     <div id="tab-content"></div>
   </div>
+    </div><!-- /sb-body -->
+  </div>
   <!-- EPANET Decay Parameters -->
-  <div class="sblock" id="epanet-block">
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)" id="epanet-block">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">EPANET Parameters <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
     <div style="margin-bottom:8px;text-align:right">
       <button onclick="clearAllHistory()" style="font-size:10px;padding:2px 8px;background:#cc0055;color:white;border:none;border-radius:4px;cursor:pointer">🗑 ล้าง History</button>
     </div>
@@ -870,10 +1402,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </button>
     <div id="ep-ktotal" style="margin-top:7px;font-size:9.5px;color:#c080a0;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
     <div id="ep-autofit-info" style="display:none;margin-top:4px;font-size:9px;color:#2a5a90;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
+    </div><!-- /sb-body EPANET -->
   </div>
   <!-- Historical API block -->
-  <div class="sblock" id="hist-block">
-    <h3>Auto-fit k (localStorage)</h3>
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)" id="hist-block">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">Auto-fit k <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
     <div style="font-size:10px;color:#a060c0;margin-bottom:8px;line-height:1.5;">
       เก็บประวัติ FRC ทุก 5 นาที สะสม 24 ชม.<br>
       fit k จริงรายสถานี → forecast แม่นขึ้น
@@ -901,11 +1435,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <div id="twq-import-msg" style="display:none;margin-top:5px;font-size:9px;font-family:'JetBrains Mono',monospace;border-radius:5px;padding:5px 7px;border:1px solid #ccc;"></div>
     </div>
     <pre id="hist-result" style="display:none;margin-top:6px;font-size:8px;color:#604080;background:#f8f0ff;border:1px solid #d0b0f0;border-radius:5px;padding:6px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;"></pre>
+    </div><!-- /sb-body -->
   </div>
 
-  <!-- K Tuner: ปรับ k รายสถานี -->
-  <div class="sblock" id="ktuner-block">
-    <h3>🎛 ปรับ k รายสถานี</h3>
+  <!-- K Tuner -->
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)" id="ktuner-block">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🎛 ปรับ k รายสถานี <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
     <div style="font-size:10px;color:#a060c0;margin-bottom:8px;line-height:1.5;">
       ปรับค่า decay k (1/hr) ของแต่ละสถานี<br>
       เห็นผลกราฟคาดการณ์ทันที
@@ -917,6 +1453,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <button class="ep-apply" onclick="resetAllK()" style="flex:1;font-size:10px;background:#3a1a60;color:#e0c8ff;border-color:#6040a0;">↺ Reset ทั้งหมด</button>
       <button class="ep-apply" onclick="renderKTuner()" style="flex:1;font-size:10px;">🔄 Refresh</button>
     </div>
+    </div><!-- /sb-body -->
   </div>
 </div><!-- /sidebar-scroll -->
 </div><!-- /sidebar -->
@@ -1065,12 +1602,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
     </div>
     <div class="lg-div"></div>
-    <div class="lg-item">
-      <svg width="13" height="13"><rect x="0" y="0" width="13" height="13" rx="3" fill="#cc0055"/></svg>
+    <div class="lg-item" id="lg-sym-pump">
+      <svg width="13" height="13"><rect id="lg-pump-rect" x="0" y="0" width="13" height="13" rx="3" fill="#cc0055"/></svg>
       <span>โรงงาน/สูบ</span>
     </div>
-    <div class="lg-item">
-      <svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="#e05080" stroke="#fff" stroke-width="1.5"/></svg>
+    <div class="lg-item" id="lg-sym-monitor">
+      <svg width="13" height="13"><circle id="lg-monitor-circle" cx="6.5" cy="6.5" r="5.5" fill="#e05080" stroke="#fff" stroke-width="1.5"/></svg>
       <span>จุดตรวจวัด</span>
     </div>
     <div class="lg-div"></div>
@@ -1085,13 +1622,22 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl">
         <tr><th colspan="2">Contour Model</th></tr>
-        <tr><td>วิธีคำนวณ</td><td>Zone nearest-neighbor · สจ./โรงผลิต</td></tr>
+        <tr><td>วิธีคำนวณ</td><td>Zone Influence custom (หลัก) + EPANET decay</td></tr>
+        <tr><td>Zone หลัก</td><td>DEFAULT_ZONES polygon 15+ โซน วาดไว้ล่วงหน้า</td></tr>
+        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน)</td></tr>
+        <tr><td>Zone Editor</td><td>วาด/แก้ไข polygon · circle บนแผนที่ · export/import JSON</td></tr>
         <tr><td>Decay</td><td>EPANET: C = C₀·e<sup>−Kt</sup> | K = k<sub>b</sub>+k<sub>w</sub>×(4/D)</td></tr>
         <tr><td>ตัดออก</td><td>TR1/TR2/TR3/MTR (อุโมงค์ ไม่จ่ายโดยตรง)</td></tr>
+      </table>
+
+      <table class="note-tbl">
+        <tr><th colspan="2">EPANET Decay Parameters</th></tr>
+        <tr><td>พารามิเตอร์</td><td>k<sub>b</sub>=0.70 · k<sub>w</sub>=0.10 · D=0.20m · v=0.45m/s</td></tr>
         <tr><td>k รายสถานี</td><td>fit 3 เดือน (ม.ค.–มี.ค. 2569) · 51 สถานี</td></tr>
         <tr><td>MH (แม่กลอง)</td><td>k=0.038/hr · half-life ~19h</td></tr>
         <tr><td>CP (เจ้าพระยา)</td><td>k=0.062/hr · half-life ~11h</td></tr>
-        <tr><td>พารามิเตอร์</td><td>k<sub>b</sub>=0.70 · k<sub>w</sub>=0.10 · D=0.20m · v=0.45m/s</td></tr>
+        <tr><td>Auto-fit k</td><td>ใช้ค่า k เฉลี่ยจาก STATION_K ที่ fit จากข้อมูลจริง</td></tr>
+        <tr><td>ปรับค่า</td><td>ปรับ k<sub>b</sub> k<sub>w</sub> D v ได้จาก sidebar</td></tr>
       </table>
 
       <table class="note-tbl">
@@ -1119,7 +1665,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">V.3.1 · Mar 2026 · Perf optimized</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">V.6.0 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -1127,10 +1673,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl ec">
         <tr><th colspan="2">Contour Model</th></tr>
-        <tr><td>วิธีคำนวณ</td><td>Zone nearest-neighbor · สจ./โรงผลิต</td></tr>
+        <tr><td>วิธีคำนวณ</td><td>Zone Influence custom (หลัก) · ไม่มี decay</td></tr>
+        <tr><td>Zone หลัก</td><td>CUSTOM_ZONES polygon วาดไว้ล่วงหน้า</td></tr>
+        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน)</td></tr>
+        <tr><td>Zone Editor</td><td>วาด/แก้ไข polygon · circle บนแผนที่ · export/import JSON</td></tr>
         <tr><td>Decay</td><td>ไม่มี (EC = conservative parameter)</td></tr>
         <tr><td>ตัดออก</td><td>TR1/TR2/TR3/MTR (อุโมงค์ส่งน้ำ)</td></tr>
-        <tr><td>Zone override</td><td>รองรับ CUSTOM_ZONES จาก Zone Editor</td></tr>
       </table>
 
       <table class="note-tbl ec">
@@ -1144,6 +1692,23 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </table>
 
       <table class="note-tbl ec">
+        <tr><th colspan="2">ค่า EC อ้างอิง (μS/cm)</th></tr>
+        <tr><td>บางเขน (เจ้าพระยา)</td><td>240–265</td></tr>
+        <tr><td>มหาสวัสดิ์ (แม่กลอง)</td><td>175–210</td></tr>
+        <tr><td>ธนบุรี</td><td>~230</td></tr>
+        <tr><td>สามเสน 1–4</td><td>~235</td></tr>
+      </table>
+
+      <table class="note-tbl ec">
+        <tr><th colspan="2">เกณฑ์ EC</th></tr>
+        <tr><td>&lt; 150</td><td>ดีมาก</td></tr>
+        <tr><td>150–210</td><td>ดี</td></tr>
+        <tr><td>211–500</td><td>ผ่านมาตรฐาน</td></tr>
+        <tr><td>501–1200</td><td>เฝ้าระวัง</td></tr>
+        <tr><td>&gt; 1200</td><td>สูงกว่ามาตรฐาน (WHO)</td></tr>
+      </table>
+
+      <table class="note-tbl ec">
         <tr><th colspan="2">Forecast กราฟ popup</th></tr>
         <tr><td>เส้นทึบ</td><td>ค่าจริง 24 ชม. (live API ทุก 4 นาที)</td></tr>
         <tr><td>เส้นปะ</td><td>flat line = EC ต้นทาง delayed ttHours</td></tr>
@@ -1152,7 +1717,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">V.3.1 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">V.6.0 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -1602,8 +2167,8 @@ function idw(lat, lon) {
 
 
 // ── MAP ───────────────────────────────────────────────────────
-const map=L.map('map',{center:[13.76,100.58],zoom:10,zoomControl:false,attributionControl:false,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120,markerZoomAnimation:true});
-map.fitBounds([[13.43, 100.25],[14.15, 101.00]]);
+const map=L.map('map',{center:[13.81,100.58],zoom:10,zoomControl:false,attributionControl:false,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120,markerZoomAnimation:true});
+map.fitBounds([[13.45, 100.25],[14.10, 100.97]], {paddingTopLeft: [0, 0], paddingBottomRight: [0, 0]});
 L.control.zoom({position:'topright'}).addTo(map);
 // Tile layers: ลอง CartoDB ก่อน fallback เป็น OSM ถ้าโหลดไม่ได้
 const tileCartoDB = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {maxZoom:19});
@@ -1633,7 +2198,7 @@ setTimeout(() => {
 }, 6000);
 L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
 
-const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true};
+const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:false};
 
 // ══════════════════════════════════════════════════════════════════
 // CONTOUR: Single offscreen canvas rendered in lat/lon space
@@ -2345,12 +2910,9 @@ function buildMarkers() {
     const endStatus = ecEnd >= EC_CONFIG.hi ? '⚠ เกินมาตรฐาน' : ecEnd >= EC_CONFIG.lo ? '✓ ปกติ' : '↓ ต่ำ';
     const hasHistory = destHist.length >= 1;
 
-    // แรเงาเทาช่วง ttHours → FORE_WIN
+    // แรเงาเทาช่วง ttHours → FORE_WIN — removed for cleaner look
     const beyondW = xForeEnd - xTTend;
-    const beyondZoneEc = ttHours < FORE_WIN && beyondW > 0
-      ? '<rect x="'+xTTend.toFixed(1)+'" y="'+PT+'" width="'+beyondW.toFixed(1)+'" height="'+ch+'" fill="#e8e8e8" opacity="0.55"/>'
-       +'<text x="'+((xTTend+xForeEnd)/2).toFixed(1)+'" y="'+(PT+ch/2).toFixed(1)+'" font-size="9" font-weight="bold" fill="#aaa" text-anchor="middle" font-family="Sarabun,sans-serif" transform="rotate(-90,'+((xTTend+xForeEnd)/2).toFixed(1)+','+(PT+ch/2).toFixed(1)+')">ไม่มีข้อมูลคาดการณ์</text>'
-      : '';
+    const beyondZoneEc = '';
 
     return '<div style="margin-top:8px;border-top:1px solid #d0e8f8;padding-top:7px;">'
       +'<div style="font-size:9.5px;font-weight:700;color:#1040a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:#4060c0;text-transform:none;letter-spacing:0;background:#e8eeff;border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
@@ -2367,40 +2929,23 @@ function buildMarkers() {
       +'<path d="'+smoothPath(pts1,px,py)+'" fill="none" stroke="#1565c0" stroke-width="2" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>'
       +pts1.map(p=>'<circle cx="'+px(p.t).toFixed(1)+'" cy="'+py(p.f).toFixed(1)+'" r="2.5" fill="#1565c0" stroke="#fff" stroke-width="1" clip-path="url(#ecclip_'+sensorId+')"/>').join('')
       +(()=>{
-        // แสดงจุดคาดการณ์เก่าบนกราฟเพื่อเปรียบเทียบกับค่าจริง
-        const fores = loadEcForecasts(sensorId);
-        let svg = '';
-        for (const fp of fores) {
-          const t = (fp.foreTs - nowMs) / 3600000;
-          if (t < -HIST_WIN || t > 0) continue; // แสดงเฉพาะจุดที่ผ่านมาแล้ว
-          const cx = px(t), cy = py(fp.fore);
-          const cyHi = py(fp.hi), cyLo = py(fp.lo);
-          // วาด error bar
-          svg += '<line x1="'+cx.toFixed(1)+'" y1="'+Math.max(PT,cyHi).toFixed(1)+'" x2="'+cx.toFixed(1)+'" y2="'+Math.min(PT+ch,cyLo).toFixed(1)+'" stroke="#66bb6a" stroke-width="1.5" opacity="0.7" clip-path="url(#ecclip_'+sensorId+')"/>';
-          // จุดคาดการณ์ (สีเขียว diamond shape)
-          svg += '<rect x="'+(cx-4).toFixed(1)+'" y="'+(cy-4).toFixed(1)+'" width="8" height="8" fill="#43a047" stroke="#fff" stroke-width="1" transform="rotate(45,'+cx.toFixed(1)+','+cy.toFixed(1)+')" opacity="0.85" clip-path="url(#ecclip_'+sensorId+')"/>';
-        }
-        return svg;
-      })()
-      +(()=>{
-        // Safe Zone Band ±20% — วาดโดยเรียง hi ซ้าย→ขวา แล้ว lo ขวา→ซ้าย
+        // Safe Zone Band ±20% — dark-mode aware
+        const _dkEC = document.body.classList.contains('dark');
         const pts2hi = pts2.map(p => ({ t:p.t, f:p.f*(1+BAND) }));
         const pts2lo = pts2.map(p => ({ t:p.t, f:Math.max(0, p.f*(1-BAND)) }));
-        // สร้าง band โดยต่อ hi path + lo path กลับทาง
         let bandD = 'M'+px(pts2hi[0].t).toFixed(1)+','+pyClamp(pts2hi[0].f).toFixed(1);
         for (let i=1;i<pts2hi.length;i++) bandD += ' L'+px(pts2hi[i].t).toFixed(1)+','+pyClamp(pts2hi[i].f).toFixed(1);
         for (let i=pts2lo.length-1;i>=0;i--) bandD += ' L'+px(pts2lo[i].t).toFixed(1)+','+pyClamp(pts2lo[i].f).toFixed(1);
         bandD += ' Z';
         const hiPath = 'M'+pts2hi.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
         const loPath = 'M'+pts2lo.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
-        return '<path d="'+bandD+'" fill="#a5d6a7" opacity="0.35" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+hiPath+'" fill="none" stroke="#66bb6a" stroke-width="1" opacity="0.7" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+loPath+'" fill="none" stroke="#66bb6a" stroke-width="1" opacity="0.7" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="#4060c0" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
+        return '<path d="'+bandD+'" fill="'+(_dkEC?'#4ecca3':'#a5d6a7')+'" opacity="'+(_dkEC?'0.35':'0.35')+'" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+hiPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1.5':'1')+'" opacity="'+(_dkEC?'0.9':'0.7')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1.5':'1')+'" opacity="'+(_dkEC?'0.9':'0.7')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="'+(_dkEC?'#6090cc':'#4060c0')+'" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
       })()
       +'<line x1="'+xNow.toFixed(1)+'" y1="'+PT+'" x2="'+xNow.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#1565c0" stroke-width="1.5" opacity="0.5"/>'
       +'<text x="'+xNow.toFixed(1)+'" y="'+(PT-3).toFixed(1)+'" font-size="9" font-weight="bold" fill="#1565c0" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>'
-      +'<circle cx="'+ex2.toFixed(1)+'" cy="'+ey2.toFixed(1)+'" r="4" fill="'+endColor+'" stroke="#fff" stroke-width="1.5"/>'
       +'<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#c0d8f0" stroke-width="1"/>'
       +'<line x1="'+PL+'" y1="'+(PT+ch).toFixed(1)+'" x2="'+(PL+cw).toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#c0d8f0" stroke-width="1"/>'
       +yLabels+hourlyMarksEc
@@ -2418,7 +2963,7 @@ function buildMarkers() {
       +'/>'
       +'</svg>'
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
-      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ Confidence Band ±15%</span></span>'
+      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ Confidence Band (±20%)</span></span>'
       +'<span style="color:'+endColor+';font-weight:700">'+endStatus+' ที่ '+toHHMM(nowHr+ttHours)+'</span>'
       +'</div></div>';
   }
@@ -2494,17 +3039,21 @@ function buildMarkers() {
           ? getHistFrcAt(srcKey, srcTargetTs, frcSource, srcSlope)
           : (frcSource + srcSlope * t);
         const fNew = fSrcAtT * Math.exp(-k_hr * ttHours);
-        pts2.push({ t, f: fOld * (1-frac) + fNew * frac });
+        let fVal = fOld * (1-frac) + fNew * frac;
+        // Guard NaN/Infinity
+        if (!isFinite(fVal) || fVal == null) fVal = frc0 * Math.exp(-k_hr * t);
+        if (!isFinite(fVal)) fVal = frc0;
+        pts2.push({ t, f: Math.max(0, fVal) });
       }
 
       const allF = [
         ...pts1.map(p=>p.f),
         ...pts2.map(p=>p.f),
-        ...(destPts||[]).map(p=>p.f),  // รวมค่าจริงปลายทาง
-        frc0,                           // ค่าปัจจุบัน
-      ].filter(v => v != null && isFinite(v) && v > 0);
-      const allFmax = allF.length > 0 ? Math.max(...allF) : frc0;
-      const yMax = Math.max(allFmax * 1.15, 2.0);
+        ...(destPts||[]).map(p=>p.f),
+        frc0,
+      ].filter(v => v != null && isFinite(v) && v >= 0);
+      const allFmax = allF.length > 0 ? Math.max(...allF) : (isFinite(frc0) ? frc0 : 1);
+      const yMax = Math.max(isFinite(allFmax) ? allFmax * 1.15 : 2.0, 2.0);
       const yMin = 0;
 
       // px: t ∈ [-HIST_WIN, FORE_WIN]
@@ -2517,7 +3066,7 @@ function buildMarkers() {
 
       const pathSolid = smoothPath(pts1, px, py);
       const pathDash  = smoothPath(pts2, px, py);
-      const fillDash  = pathDash + ` L${px(ttHours).toFixed(1)},${(PT+ch).toFixed(1)} L${px(0).toFixed(1)},${(PT+ch).toFixed(1)} Z`;
+      const fillDash  = pathDash ? (pathDash + ` L${px(ttHours).toFixed(1)},${(PT+ch).toFixed(1)} L${px(0).toFixed(1)},${(PT+ch).toFixed(1)} Z`) : '';
 
       const xNow = px(0);
       const xTTend = px(ttHours);   // จุดสิ้นสุดคาดการณ์จริง
@@ -2550,8 +3099,8 @@ function buildMarkers() {
         ${yTickVals.map(v => {
           const y = py(v);
           if (y < PT-2 || y > PT+ch+2) return '';
-          return `<line x1="${(PL-3).toFixed(1)}" y1="${y.toFixed(1)}" x2="${PL}" y2="${y.toFixed(1)}" stroke="#e0c0d0" stroke-width="0.8"/>
-                  <text x="${(PL-5).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="9" font-weight="bold" fill="#222" text-anchor="end" font-family="JetBrains Mono,monospace">${v.toFixed(1)}</text>`;
+          return `<line x1="${(PL-3).toFixed(1)}" y1="${y.toFixed(1)}" x2="${PL}" y2="${y.toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="0.8"/>
+                  <text x="${(PL-5).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#c0c0e0':'#636e8a'}" text-anchor="end" font-family="JetBrains Mono,monospace">${v.toFixed(1)}</text>`;
         }).join('')}`;
 
       function toHHMM(hr) {
@@ -2599,16 +3148,17 @@ function buildMarkers() {
         const cy = fVal != null ? pyClamp(fVal) : PT + ch/2;
         const isNowTick = Math.abs(t) < 0.05;
 
+        const _dk2 = document.body.classList.contains('dark');
         return `
           <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
-            stroke="${isNowTick?'#cc0055':isFuture&&!beyondFore?'#9060c0':beyondFore?'#ccc':'#e0b0c8'}"
+            stroke="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture&&!beyondFore?(_dk2?'#a080d0':'#6c5ce7'):beyondFore?(_dk2?'rgba(255,255,255,.1)':'#dde0e8'):(_dk2?'rgba(255,255,255,.12)':'#e0e4f0')}"
             stroke-width="${isNowTick?1.5:0.7}" stroke-dasharray="${isNowTick?'':'2,3'}"
             opacity="${isNowTick?0.8:beyondFore?0.3:0.45}"/>
           ${showDot ? `<circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isNowTick?3.5:isFuture?2.5:3}"
-            fill="${isNowTick?'#cc0055':isFuture?'#9060c0':'#cc0055'}" stroke="#fff" stroke-width="1.2" opacity="${isFuture?0.8:1}"/>` : ''}
+            fill="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture?(_dk2?'#a080d0':'#6c5ce7'):(_dk2?'#ff4477':'#e84393')}" stroke="${_dk2?'rgba(255,255,255,.3)':'#fff'}" stroke-width="1.2" opacity="${isFuture?0.8:1}"/>` : ''}
           <text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+32).toFixed(1)})"
             x="${x.toFixed(1)}" y="${(PT+ch+32).toFixed(1)}"
-            font-size="9" font-weight="bold" fill="#222" text-anchor="start" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
+            font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#c0c0e0':'#636e8a'}" text-anchor="start" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
           ''`;
       }).join('');
 
@@ -2618,9 +3168,9 @@ function buildMarkers() {
       const beyondW = xForeEnd - xTTend;
       const beyondZone = ttHours < FORE_WIN && beyondW > 0
         ? `<rect x="${xTTend.toFixed(1)}" y="${PT}" width="${beyondW.toFixed(1)}" height="${ch}"
-             fill="#e8e8e8" opacity="0.55"/>
+             fill="${document.body.classList.contains('dark')?'rgba(60,60,80,.5)':'#e0e2ea'}" opacity="${document.body.classList.contains('dark')?'0.7':'0.85'}"/>
            <text x="${((xTTend+xForeEnd)/2).toFixed(1)}" y="${(PT+ch/2).toFixed(1)}"
-             font-size="9" font-weight="bold" fill="#aaa" text-anchor="middle" font-family="Sarabun,sans-serif"
+             font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#606088':'#b0b4c0'}" text-anchor="middle" font-family="Sarabun,sans-serif"
              transform="rotate(-90,${((xTTend+xForeEnd)/2).toFixed(1)},${(PT+ch/2).toFixed(1)})">ไม่มีข้อมูลคาดการณ์</text>`
         : '';
 
@@ -2640,55 +3190,66 @@ function buildMarkers() {
         <rect x="${PL}" y="${PT}" width="${cw}" height="${ch}"/>
       </clipPath>
     </defs>
-    <rect x="${PL}" y="${PT}" width="${cw}" height="${ch}" fill="#fff8fa" rx="3"/>
+    <rect x="${PL}" y="${PT}" width="${cw}" height="${ch}" fill="${document.body.classList.contains('dark')?'rgba(20,20,40,.85)':'#fafbff'}" rx="3"/>
     <!-- พื้นหลังช่วงคาดการณ์ (0 → ttHours) -->
-    <rect x="${xNow.toFixed(1)}" y="${PT}" width="${(xTTend-xNow).toFixed(1)}" height="${ch}" fill="#f5eeff" opacity="0.4"/>
+    <rect x="${xNow.toFixed(1)}" y="${PT}" width="${(xTTend-xNow).toFixed(1)}" height="${ch}" fill="${document.body.classList.contains('dark')?'rgba(100,60,180,.12)':'rgba(100,70,200,.06)'}" opacity="0.5"/>
     <!-- แรเงาเทาช่วงไม่มีคาดการณ์ -->
     ${beyondZone}
     ${stdLines}${stdLabels}
-    <path d="${fillDash}" fill="#9060c0" opacity="0.08" stroke="none" clip-path="url(#chartclip_${sensorId})"/>
-    <path d="${pathSolid}" fill="none" stroke="#cc0055" stroke-width="2" stroke-linejoin="round" clip-path="url(#chartclip_${sensorId})"/>
+    <path d="${fillDash}" fill="${document.body.classList.contains('dark')?'#7040b0':'#6c5ce7'}" opacity="0.06" stroke="none" clip-path="url(#chartclip_${sensorId})"/>
+    <path d="${pathSolid}" fill="none" stroke="${document.body.classList.contains('dark')?'#ff4477':'#e84393'}" stroke-width="2" stroke-linejoin="round" clip-path="url(#chartclip_${sensorId})"/>
     ${(() => {
       if (pts1.length < 2) return '';
+      const _dk3 = document.body.classList.contains('dark');
       let d = `M${px(pts1[0].t).toFixed(1)},${py(pts1[0].f).toFixed(1)}`;
       for (let i=1;i<pts1.length;i++) d += ` L${px(pts1[i].t).toFixed(1)},${py(pts1[i].f).toFixed(1)}`;
-      return `<path d="${d}" fill="none" stroke="#cc0055" stroke-width="1.5" stroke-dasharray="none" opacity="0.7" clip-path="url(#chartclip_${sensorId})"/>`;
+      return `<path d="${d}" fill="none" stroke="${_dk3?'#ff4477':'#e84393'}" stroke-width="1.5" stroke-dasharray="none" opacity="0.7" clip-path="url(#chartclip_${sensorId})"/>`;
     })()}
-    ${pts1.map(p => `<circle cx="${px(p.t).toFixed(1)}" cy="${py(p.f).toFixed(1)}" r="2.5" fill="#cc0055" stroke="#fff" stroke-width="1" clip-path="url(#chartclip_${sensorId})"/>`).join('')}
+    ${pts1.map(p => {
+      const _dk4 = document.body.classList.contains('dark');
+      return `<circle cx="${px(p.t).toFixed(1)}" cy="${py(p.f).toFixed(1)}" r="2.5" fill="${_dk4?'#ff4477':'#e84393'}" stroke="${_dk4?'rgba(255,255,255,.3)':'#fff'}" stroke-width="1" clip-path="url(#chartclip_${sensorId})"/>`;
+    }).join('')}
     ${(()=>{
-      const fores = loadFrcForecasts(sensorId);
-      return fores.filter(fp => {
-        const t = (fp.foreTs - Date.now()) / 3600000;
-        return t < 0 && t >= -HIST_WIN;
-      }).map(fp => {
-        const t = (fp.foreTs - Date.now()) / 3600000;
-        const cx = px(t), cy = py(fp.fore);
-        const cyHi = pyClamp(fp.hi), cyLo = pyClamp(fp.lo);
-        return '<line x1="'+cx.toFixed(1)+'" y1="'+cyHi.toFixed(1)+'" x2="'+cx.toFixed(1)+'" y2="'+cyLo.toFixed(1)+'" stroke="#66bb6a" stroke-width="1.5" opacity="0.8" clip-path="url(#chartclip_'+sensorId+')"/>'
-          +'<rect x="'+(cx-4).toFixed(1)+'" y="'+(cy-4).toFixed(1)+'" width="8" height="8" fill="#43a047" stroke="#fff" stroke-width="1" transform="rotate(45,'+cx.toFixed(1)+','+cy.toFixed(1)+')" opacity="0.9" clip-path="url(#chartclip_'+sensorId+')"/>';
-      }).join('');
-    })()}
-    ${(()=>{
-      // Confidence Band ±15% (funnel: แคบที่ t=0 ขยายที่ t=ttHours)
-      const FRC_BAND = 0.15;
-      const bandHi = pts2.map(p => ({ t:p.t, f:Math.min(4, p.f*(1+FRC_BAND*(p.t/ttHours))) }));
-      const bandLo = pts2.map(p => ({ t:p.t, f:Math.max(0, p.f*(1-FRC_BAND*(p.t/ttHours))) }));
-      let bd = 'M'+px(bandHi[0].t).toFixed(1)+','+pyClamp(bandHi[0].f).toFixed(1);
-      for(let i=1;i<bandHi.length;i++) bd += ' L'+px(bandHi[i].t).toFixed(1)+','+pyClamp(bandHi[i].f).toFixed(1);
-      for(let i=bandLo.length-1;i>=0;i--) bd += ' L'+px(bandLo[i].t).toFixed(1)+','+pyClamp(bandLo[i].f).toFixed(1);
+      // Confidence Band ±10% with minimum visible absolute spread
+      const FRC_BAND = 0.10;
+      const _dk = document.body.classList.contains('dark');
+      const bandFill = _dk ? '#4ecca3' : '#00b894';
+      const bandFillOp = _dk ? '0.30' : '0.18';
+      const bandStroke = _dk ? '#4ecca3' : '#00b894';
+      const bandStrokeOp = _dk ? '0.85' : '0.5';
+      const bandStrokeW = _dk ? '1.5' : '1';
+      if (pts2.length < 2) return '';
+      // Minimum absolute spread of 0.06 mg/L so band is always visible even when FRC is low
+      const MIN_ABS = 0.06;
+      const bandHi = pts2.map(p => {
+        const pctSpread = p.f * FRC_BAND * (p.t / ttHours);
+        const spread = Math.max(MIN_ABS, pctSpread);
+        const f = Math.min(4, p.f + spread);
+        return { t:p.t, f: isFinite(f) ? f : p.f };
+      });
+      const bandLo = pts2.map(p => {
+        const pctSpread = p.f * FRC_BAND * (p.t / ttHours);
+        const spread = Math.max(MIN_ABS, pctSpread);
+        const f = Math.max(0, p.f - spread);
+        return { t:p.t, f: isFinite(f) ? f : p.f };
+      });
+      // Guard: skip if any coordinate is NaN
+      const safeClamp = (f) => { const v = pyClamp(f); return isFinite(v) ? v : PT + ch/2; };
+      let bd = 'M'+px(bandHi[0].t).toFixed(1)+','+safeClamp(bandHi[0].f).toFixed(1);
+      for(let i=1;i<bandHi.length;i++) bd += ' L'+px(bandHi[i].t).toFixed(1)+','+safeClamp(bandHi[i].f).toFixed(1);
+      for(let i=bandLo.length-1;i>=0;i--) bd += ' L'+px(bandLo[i].t).toFixed(1)+','+safeClamp(bandLo[i].f).toFixed(1);
       bd += ' Z';
-      const hiP = 'M'+bandHi.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
-      const loP = 'M'+bandLo.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
-      return '<path d="'+bd+'" fill="#a5d6a7" opacity="0.30" stroke="none" clip-path="url(#chartclip_'+sensorId+')"/>'
-        +'<path d="'+hiP+'" fill="none" stroke="#66bb6a" stroke-width="1" opacity="0.6" clip-path="url(#chartclip_'+sensorId+')"/>'
-        +'<path d="'+loP+'" fill="none" stroke="#66bb6a" stroke-width="1" opacity="0.6" clip-path="url(#chartclip_'+sensorId+')"/>';
+      const hiP = 'M'+bandHi.map(p=>px(p.t).toFixed(1)+','+safeClamp(p.f).toFixed(1)).join(' L');
+      const loP = 'M'+bandLo.map(p=>px(p.t).toFixed(1)+','+safeClamp(p.f).toFixed(1)).join(' L');
+      return '<path d="'+bd+'" fill="'+bandFill+'" opacity="'+bandFillOp+'" stroke="none" clip-path="url(#chartclip_'+sensorId+')"/>'
+        +'<path d="'+hiP+'" fill="none" stroke="'+bandStroke+'" stroke-width="'+bandStrokeW+'" opacity="'+bandStrokeOp+'" clip-path="url(#chartclip_'+sensorId+')"/>'
+        +'<path d="'+loP+'" fill="none" stroke="'+bandStroke+'" stroke-width="'+bandStrokeW+'" opacity="'+bandStrokeOp+'" clip-path="url(#chartclip_'+sensorId+')"/>';
     })()}
-    <path d="${pathDash}" fill="none" stroke="#9060c0" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#chartclip_${sensorId})"/>
-    <line x1="${xNow.toFixed(1)}" y1="${PT}" x2="${xNow.toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="#cc0055" stroke-width="1.5" opacity="0.5"/>
-    <text x="${xNow.toFixed(1)}" y="${(PT-3).toFixed(1)}" font-size="9" font-weight="bold" fill="#cc0055" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>
-    <circle cx="${ex2.toFixed(1)}" cy="${ey2.toFixed(1)}" r="4" fill="${endColor2}" stroke="#fff" stroke-width="1.5"/>
-    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+ch).toFixed(1)}" stroke="#e8c8d8" stroke-width="1"/>
-    <line x1="${PL}" y1="${(PT+ch).toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="#e8c8d8" stroke-width="1"/>
+    <path d="${pathDash}" fill="none" stroke="${document.body.classList.contains('dark')?'#a080d0':'#6c5ce7'}" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#chartclip_${sensorId})"/>
+    <line x1="${xNow.toFixed(1)}" y1="${PT}" x2="${xNow.toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'#ff4477':'#e84393'}" stroke-width="1.5" opacity="0.5"/>
+    <text x="${xNow.toFixed(1)}" y="${(PT-3).toFixed(1)}" font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#ff4477':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
+    <line x1="${PL}" y1="${(PT+ch).toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
     ${yLabels}${hourlyMarks}
     <!-- Tooltip group -->
     <g id="chart-tt-${sensorId}" style="display:none;pointer-events:none;">
@@ -2706,7 +3267,7 @@ function buildMarkers() {
     />
   </svg>
   <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:'JetBrains Mono',monospace;">
-    <span><span style="color:#cc0055">— จริง</span>&nbsp;&nbsp;<span style="color:#9060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ ±15%</span>&nbsp;&nbsp;<span style="color:#43a047">◆ คาดการณ์เก่า</span></span>
+    <span><span style="color:${document.body.classList.contains('dark')?'#ff4477':'#e84393'}">— จริง</span>&nbsp;&nbsp;<span style="color:${document.body.classList.contains('dark')?'#a080d0':'#6c5ce7'}">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:${document.body.classList.contains('dark')?'#4ecca3':'#00b894'}">▓ Confidence Band (±10%)</span></span>
     <span style="color:${endColor2};font-weight:700">${frcEnd2 >= 1.0 ? '✓ ดี' : frcEnd2 >= 0.2 ? '✓ ผ่าน' : '⚠ ต่ำ'} ที่ ${toHHMM(nowHr+ttHours)}</span>
   </div>
 </div>`;
@@ -2765,7 +3326,7 @@ function buildMarkers() {
     var fMax = Math.max.apply(null,fArr), fMin = Math.min.apply(null,fArr);
     var yMax, yMin;
     if (!isEC) { yMax = Math.max(fMax*1.2,2.0); yMin = Math.max(0,fMin-0.15); }
-    else        { yMax = Math.max(fMax*1.15,700); yMin = Math.max(0,fMin*0.85); }
+    else        { yMax = Math.max(fMax*1.15,500); yMin = 0; }
     if (yMax - yMin < 0.01) { yMax += 1; }
     var yR = yMax - yMin;
 
@@ -3116,16 +3677,37 @@ map.on('mousemove',e=>{
   }
   _tipThrottled = true;
   setTimeout(() => { _tipThrottled = false; }, 50);
-  const v=idw(e.latlng.lat,e.latlng.lng);
+
+  // ── Snap-to-sensor: ถ้า hover ใกล้สถานี → แสดงค่าจริงจาก API ──
+  const _lat = e.latlng.lat, _lon = e.latlng.lng;
+  let snapSensor = null, snapDist = Infinity;
+  for (const s of SENSORS) {
+    const d = (s.lat - _lat)**2 + (s.lon - _lon)**2;
+    if (d < snapDist) { snapDist = d; snapSensor = s; }
+  }
+  const snapThresh = 0.002; // ~0.2km — ถ้าใกล้กว่านี้ snap เป็นค่าจริง
+  let v, isSnapped = false;
+  if (snapSensor && snapDist < snapThresh * snapThresh) {
+    v = getParamVal(snapSensor);
+    isSnapped = true;
+  } else {
+    v = idw(_lat, _lon);
+  }
+
   // สีแดงเมื่อต่ำกว่ามาตรฐาน (FRC<0.2 หรือ EC>600)
   const isAlert = PARAM_MODE==='frc' ? v < FRC_MIN : v >= EC_CONFIG.hi;
-  const alertColor = '#cc0000';
+  const _isDark = document.body.classList.contains('dark');
+  const alertColor = _isDark ? '#ff4444' : '#d63031';
+  const normalValColor = _isDark ? '#ffffff' : '#2d3436';
+  const normalStColor = _isDark ? '#4ecca3' : '#00b894';
   _tipValEl.textContent=paramFormat(v)+' '+paramUnit();
-  _tipValEl.style.color=isAlert ? alertColor : '#111';
-  _tipStEl.textContent=paramStatus(v);
-  _tipStEl.style.color=isAlert ? alertColor : '#111';
+  _tipValEl.style.setProperty('color', isAlert ? alertColor : normalValColor, 'important');
+  _tipStEl.textContent=isSnapped ? snapSensor.name : paramStatus(v);
+  _tipStEl.style.setProperty('color', isSnapped ? (_isDark?'#ff6699':'#cc0055') : (isAlert ? alertColor : normalStColor), 'important');
   _tipLlEl.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
-  _tipLabelEl.textContent=PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated';
+  _tipLabelEl.textContent=isSnapped
+    ? (PARAM_MODE==='ec'?'ค่า EC จริง (API)':'ค่า FRC จริง (API)')
+    : (PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated');
   const pt=map.latLngToContainerPoint(e.latlng);
   tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px'; tip.style.display='block';
 });
@@ -3138,6 +3720,13 @@ function toggleLayer(name) {
   else if(name==='sensors') buildMarkers();
   else if(name==='mwa') layers.mwa?map.addLayer(mwaGroup):map.removeLayer(mwaGroup);
   else if(name==='sta')  layers.sta?map.addLayer(staGroup):map.removeLayer(staGroup);
+  else if(name==='flow') { if(layers.flow) startFlowAnimation(); else stopFlowAnimation(); }
+}
+
+function toggleFlow() {
+  layers.flow = !layers.flow;
+  document.getElementById('flow-btn').classList.toggle('active', layers.flow);
+  if (layers.flow) startFlowAnimation(); else stopFlowAnimation();
 }
 
 function toggleSidebar(){
@@ -3145,6 +3734,41 @@ function toggleSidebar(){
   const ov=document.getElementById('sidebar-overlay');
   const open=sb.classList.toggle('open');
   ov.classList.toggle('open',open);
+  _syncFloatingBtns();
+}
+
+// ── Hide floating buttons when any panel overlaps them ──
+function _syncFloatingBtns() {
+  var sb = document.getElementById('sidebar');
+  var ai = document.getElementById('ai-panel');
+  var ze = document.getElementById('zone-editor-panel');
+  var anyOpen = (sb && sb.classList.contains('open')) ||
+                (ai && ai.classList.contains('open')) ||
+                (ze && ze.classList.contains('open'));
+  var btns = ['zone-editor-btn','ai-insight-btn','flow-btn'];
+  for (var i=0;i<btns.length;i++) {
+    var b = document.getElementById(btns[i]);
+    if (b) b.style.display = anyOpen ? 'none' : '';
+  }
+}
+
+// ── Accordion sidebar menus ──
+function toggleSbMenu(el) {
+  // Don't toggle if click was on a button/input/toggle inside sb-body
+  if (event && event.target.closest('.sb-body')) return;
+  var wasOpen = el.classList.contains('open');
+  // Close all menus
+  document.querySelectorAll('.sb-menu').forEach(function(m) {
+    m.classList.remove('open');
+    var body = m.querySelector('.sb-body');
+    if (body) body.style.display = 'none';
+  });
+  // Open clicked (if it wasn't already open)
+  if (!wasOpen) {
+    el.classList.add('open');
+    var body = el.querySelector('.sb-body');
+    if (body) body.style.display = 'block';
+  }
 }
 
 let activeTab='alert';
@@ -3204,38 +3828,35 @@ function flyTo(lat,lon){map.flyTo([lat,lon],13,{duration:1});}
 
 // ── updateStats: อัปเดต sidebar stats ────────────────────────────────────
 function updateStats() {
+  var _el = function(id) { return document.getElementById(id); };
+  var _set = function(id, val) { var e = _el(id); if(e) e.textContent = val; };
+  var _css = function(id, prop, val) { var e = _el(id); if(e) e.style[prop] = val; };
   const vals = SENSORS.map(s => getParamVal(s));
-  document.getElementById('s-total').textContent = SENSORS.length;
-  document.getElementById('s-avg').textContent   = PARAM_MODE==='ec'
+  _set('s-total', SENSORS.length);
+  _set('s-avg', PARAM_MODE==='ec'
     ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length).toString()
-    : (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3);
+    : (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3));
 
   if (PARAM_MODE === 'ec') {
     const hiCount = vals.filter(v=>v>=EC_CONFIG.hi).length;
     const loCount = vals.filter(v=>v<EC_CONFIG.lo).length;
-    document.getElementById('s-hi').textContent = hiCount;
-    document.getElementById('s-lo').textContent = loCount;
-    document.getElementById('s-avg-label').textContent = 'เฉลี่ย μS/cm';
-    document.getElementById('s-hi-label').textContent  = `⚡ EC ≥${EC_CONFIG.hi}`;
-    document.getElementById('s-lo-label').textContent  = `⚠ EC <${EC_CONFIG.lo}`;
-    document.getElementById('alert-badge').textContent = hiCount||'';
-    document.getElementById('s-total').style.color = '#1565c0';
-    document.getElementById('s-avg').style.color   = '#1565c0';
-    document.getElementById('s-hi').style.color    = '#b32800';
-    document.getElementById('s-lo').style.color    = '#1a7ab0';
+    _set('s-hi', hiCount); _set('s-lo', loCount);
+    _set('s-avg-label', 'เฉลี่ย μS/cm');
+    _set('s-hi-label', '⚡ EC ≥'+EC_CONFIG.hi);
+    _set('s-lo-label', '⚠ EC <'+EC_CONFIG.lo);
+    _set('alert-badge', hiCount||'');
+    _css('s-total','color','#1565c0'); _css('s-avg','color','#1565c0');
+    _css('s-hi','color','#b32800'); _css('s-lo','color','#1a7ab0');
   } else {
     const hiCount = vals.filter(v=>v>=1.0).length;
     const loCount = vals.filter(v=>v<0.2).length;
-    document.getElementById('s-hi').textContent = hiCount;
-    document.getElementById('s-lo').textContent = loCount;
-    document.getElementById('s-avg-label').textContent = 'เฉลี่ย mg/L';
-    document.getElementById('s-hi-label').textContent  = '🌸 FRC ≥ 1.0';
-    document.getElementById('s-lo-label').textContent  = '⚠ FRC < 0.2';
-    document.getElementById('alert-badge').textContent = loCount||'';
-    document.getElementById('s-total').style.color = '#cc0055';
-    document.getElementById('s-avg').style.color   = '#cc0055';
-    document.getElementById('s-hi').style.color    = '#cc0055';
-    document.getElementById('s-lo').style.color    = '#c08000';
+    _set('s-hi', hiCount); _set('s-lo', loCount);
+    _set('s-avg-label', 'เฉลี่ย mg/L');
+    _set('s-hi-label', '🌸 FRC ≥ 1.0');
+    _set('s-lo-label', '⚠ FRC < 0.2');
+    _set('alert-badge', loCount||'');
+    _css('s-total','color','#cc0055'); _css('s-avg','color','#cc0055');
+    _css('s-hi','color','#cc0055'); _css('s-lo','color','#c08000');
   }
 }
 
@@ -3267,6 +3888,11 @@ function updateLegendPanel() {
   const svgLine2 = document.querySelector('#lg-thresh-lines svg:last-child line');
   if (svgLine1) svgLine1.setAttribute('stroke', isEC ? '#1a7ab0' : '#c0a000');
   if (svgLine2) svgLine2.setAttribute('stroke', isEC ? '#b32800' : '#cc0055');
+  // Update marker symbols colors
+  var pumpRect = document.getElementById('lg-pump-rect');
+  var monCircle = document.getElementById('lg-monitor-circle');
+  if (pumpRect) pumpRect.setAttribute('fill', isEC ? '#1565c0' : '#cc0055');
+  if (monCircle) monCircle.setAttribute('fill', isEC ? '#4090d0' : '#e05080');
 }
 
 function setParam(mode) {
@@ -3275,14 +3901,14 @@ function setParam(mode) {
   document.getElementById('btn-ec').className  = 'param-btn' + (mode==='ec'?' active':'');
   document.getElementById('header-title').textContent =
     mode === 'ec'
-      ? '⚡ Chlorine Contour V.3.1 — EC Mode'
-      : '🌸 Chlorine Contour V.3.1';
+      ? '⚡ M sandbox Chlorine Contour V.6.0 — EC Mode'
+      : '🌸 M sandbox Chlorine Contour V.6.0';
   // อัปเดต disclaimer bar
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ V.3.1 — EC Mode · Zone-based nearest-neighbor · fix NaN chart · 20 Mar 2026</span>'
-      : '<span>⚠ V.3.1 — Performance optimized · fix NaN chart tooltip · 20 Mar 2026</span>';
+      ? '<span>⚠ V.6.0 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 20 มี.ค. 69</span>'
+      : '<span>⚠ V.6.0 — ใช้ EPANET + Zone Influence Model · Forecast Pair คู่ เช่น สจ. → ปลายทาง หาค่า K แต่ละคู่มาใช้คาดการณ์ · M 20 มี.ค. 69</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -3631,14 +4257,19 @@ async function fbLoadForecast() {
 }
 
 // realtime listener — อัปเดต badge เมื่อข้อมูลเปลี่ยน
+// ** CRITICAL: ไม่ overwrite ค่า API ด้วยค่าเก่าจาก Firebase **
+// Firebase /live ใช้เฉพาะเมื่อ API offline เท่านั้น
 let _fbUpdateTimer = null;
 function fbListenRealtime() {
   if (!window._fbReady || !window._fb) return;
   const r = window._fbRef(window._fb, 'live');
   window._fbOnValue(r, snap => {
     if (!snap.exists()) return;
+    // *** ถ้า API เคย poll สำเร็จแล้ว หรือกำลังรอ API → ไม่ใช้ Firebase /live ***
+    // ใช้ Firebase /live เฉพาะเมื่อ API confirmed offline (fallback) เท่านั้น
+    if (apiStatus !== 'fallback') return;
+    
     const live = snap.val();
-    // merge ค่าล่าสุดเข้า SENSORS
     let updated = 0;
     for (const s of SENSORS) {
       const key = String(s.id);
@@ -5207,6 +5838,7 @@ function toggleZoneEditor() {
     btn.classList.add('active');
     populateStationList();
   }
+  _syncFloatingBtns();
 }
 
 // ── Populate station list ─────────────────────────────────────────────
@@ -6021,6 +6653,252 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// 🌙 DARK MODE TOGGLE
+// ═══════════════════════════════════════════════════════════════════
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark');
+  const btn = document.getElementById('dark-toggle');
+  btn.textContent = isDark ? '☀️' : '🌙';
+  try { localStorage.setItem('mwa_dark_mode', isDark ? '1' : '0'); } catch(e) {}
+  // Rebuild markers so popup charts get correct dark/light colors
+  buildMarkers();
+}
+// Auto-restore dark mode from localStorage (default: dark)
+(function() {
+  try {
+    const stored = localStorage.getItem('mwa_dark_mode');
+    // Default to dark mode if no preference stored
+    if (stored !== '0') {
+      document.body.classList.add('dark');
+      const btn = document.getElementById('dark-toggle');
+      if (btn) btn.textContent = '☀️';
+    }
+  } catch(e) {
+    // fallback: default dark
+    document.body.classList.add('dark');
+    const btn = document.getElementById('dark-toggle');
+    if (btn) btn.textContent = '☀️';
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// 🧠 AI INSIGHT PANEL — วิเคราะห์แนวโน้มคุณภาพน้ำอัตโนมัติ
+// ═══════════════════════════════════════════════════════════════════
+
+function toggleAiPanel() {
+  const panel = document.getElementById('ai-panel');
+  const btn = document.getElementById('ai-insight-btn');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.remove('open');
+    btn.classList.remove('active');
+  } else {
+    panel.classList.add('open');
+    btn.classList.add('active');
+    runAiAnalysis();
+  }
+  _syncFloatingBtns();
+}
+
+function runAiAnalysis() {
+  const content = document.getElementById('ai-content');
+  const loading = document.getElementById('ai-loading');
+  loading.style.display = 'flex';
+  content.style.display = 'none';
+
+  setTimeout(() => {
+    const analysis = generateInsight();
+    content.innerHTML = analysis;
+    loading.style.display = 'none';
+    content.style.display = 'block';
+  }, 600);
+}
+
+function generateInsight() {
+  const mode = PARAM_MODE;
+  const vals = SENSORS.map(s => ({ name: s.name, id: s.id, type: s.type, val: getParamVal(s), lat: s.lat, lon: s.lon }));
+  const monitors = vals.filter(v => v.type === 'monitor');
+  const pumps = vals.filter(v => v.type === 'pump' || v.type === 'plant');
+  const total = vals.length;
+  const unit = paramUnit();
+
+  // ── Statistics ──
+  const allVals = vals.map(v => v.val).filter(v => v > 0);
+  const avg = allVals.reduce((a,b) => a+b, 0) / allVals.length;
+  const sorted = [...allVals].sort((a,b) => a-b);
+  const median = sorted[Math.floor(sorted.length/2)];
+  const min = sorted[0], max = sorted[sorted.length-1];
+  const std = Math.sqrt(allVals.reduce((s,v) => s + (v-avg)**2, 0) / allVals.length);
+
+  // ── Trend from history ──
+  const hist = loadHistory();
+  let trendDir = 'stable', trendPct = 0;
+  const histCodes = Object.keys(hist);
+  if (histCodes.length > 0) {
+    let sumSlope = 0, nSlope = 0;
+    for (const code of histCodes) {
+      const pts = hist[code];
+      if (!pts || pts.length < 6) continue;
+      const recent = pts.slice(-12);
+      if (recent.length < 4) continue;
+      const t0 = recent[0].ts, tN = recent[recent.length-1].ts;
+      const f0 = recent[0].frc, fN = recent[recent.length-1].frc;
+      if (tN > t0 && f0 > 0 && fN > 0) {
+        sumSlope += (fN - f0) / f0;
+        nSlope++;
+      }
+    }
+    if (nSlope > 0) {
+      trendPct = (sumSlope / nSlope) * 100;
+      trendDir = trendPct > 2 ? 'up' : trendPct < -2 ? 'down' : 'stable';
+    }
+  }
+
+  // ── Risk stations ──
+  let riskStations = [];
+  if (mode === 'frc') {
+    riskStations = monitors.filter(v => v.val < 0.2).sort((a,b) => a.val - b.val);
+  } else {
+    riskStations = monitors.filter(v => v.val >= EC_CONFIG.hi).sort((a,b) => b.val - a.val);
+  }
+
+  // ── Lowest / Highest ranking ──
+  const monSorted = [...monitors].sort((a,b) => a.val - b.val);
+  const lowest5 = monSorted.slice(0, 5);
+  const highest5 = [...monitors].sort((a,b) => b.val - a.val).slice(0, 5);
+
+  // ── Build HTML ──
+  let html = '';
+
+  // Section 1: Overview cards
+  const trendIcon = trendDir === 'up' ? '📈' : trendDir === 'down' ? '📉' : '➡️';
+  const trendClass = trendDir === 'up' ? 'ai-trend-up' : trendDir === 'down' ? 'ai-trend-down' : 'ai-trend-stable';
+  const trendText = trendDir === 'up' ? 'แนวโน้มเพิ่มขึ้น' : trendDir === 'down' ? 'แนวโน้มลดลง' : 'ทรงตัว';
+
+  const isFrc = mode === 'frc';
+  const riskCount = riskStations.length;
+  const passCount = isFrc ? monitors.filter(v => v.val >= 0.2).length : monitors.filter(v => v.val < EC_CONFIG.hi).length;
+  const passRate = monitors.length > 0 ? Math.round(passCount / monitors.length * 100) : 0;
+
+  html += '<div class="ai-section"><h4>ภาพรวมระบบ</h4>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  html += `<div class="ai-card">
+    <div class="ai-card-title">ค่าเฉลี่ย</div>
+    <div class="ai-card-val">${isFrc ? avg.toFixed(3) : Math.round(avg)}</div>
+    <div class="ai-card-sub">${unit} · ${total} สถานี</div>
+  </div>`;
+  html += `<div class="ai-card">
+    <div class="ai-card-title">ผ่านเกณฑ์</div>
+    <div class="ai-card-val" style="color:${passRate >= 80 ? '#4ecca3' : passRate >= 50 ? '#f0d220' : '#e94560'}">${passRate}%</div>
+    <div class="ai-card-sub">${passCount}/${monitors.length} จุดตรวจ</div>
+  </div>`;
+  html += `<div class="ai-card">
+    <div class="ai-card-title">${trendIcon} แนวโน้ม 1 ชม.</div>
+    <div class="ai-card-val ${trendClass}" style="font-size:16px;">${trendText}</div>
+    <div class="ai-card-sub">${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%</div>
+  </div>`;
+  html += `<div class="ai-card">
+    <div class="ai-card-title">⚠ จุดเสี่ยง</div>
+    <div class="ai-card-val" style="color:${riskCount > 0 ? '#e94560' : '#4ecca3'}">${riskCount}</div>
+    <div class="ai-card-sub">${isFrc ? 'FRC < 0.2 mg/L' : 'EC ≥ ' + EC_CONFIG.hi + ' μS/cm'}</div>
+  </div>`;
+  html += '</div></div>';
+
+  // Section 2: AI Recommendations
+  html += '<div class="ai-section"><h4>คำแนะนำ AI</h4>';
+
+  if (riskCount === 0) {
+    html += `<div class="ai-rec">
+      <div class="ai-rec-text"><span class="ai-rec-icon">✅</span>
+        <strong>สถานะดี</strong> — ทุกจุดตรวจ${isFrc ? 'ผ่านเกณฑ์ FRC ≥ 0.2 mg/L' : 'ค่า EC อยู่ในเกณฑ์ปกติ'}
+        ค่าเฉลี่ย ${isFrc ? avg.toFixed(3) + ' mg/L' : Math.round(avg) + ' μS/cm'}
+        ${trendDir === 'down' && isFrc ? '<br>⚡ <strong>เฝ้าระวัง:</strong> แนวโน้มลดลง ควรติดตามอย่างใกล้ชิด' : ''}
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="ai-rec">
+      <div class="ai-rec-text"><span class="ai-rec-icon">🚨</span>
+        <strong>พบ ${riskCount} จุดเสี่ยง</strong> — ${isFrc ? 'FRC ต่ำกว่า 0.2 mg/L' : 'EC สูงเกิน ' + EC_CONFIG.hi + ' μS/cm'}
+        <br>สถานีที่ต้องดำเนินการ:
+      </div>
+    </div>`;
+    riskStations.slice(0, 3).forEach(s => {
+      const shortName = s.name?.replace('บริษัท ','').replace(' จำกัด','').replace(' (มหาชน)','').replace('สำนักงานประปาสาขา','สาขา');
+      html += `<div class="ai-rec" style="cursor:pointer;padding:8px 14px;" onclick="map.flyTo([${s.lat},${s.lon}],13);toggleAiPanel();">
+        <div class="ai-rec-text"><span class="ai-rec-icon">📍</span>
+          <strong>${shortName}</strong><br>
+          ${isFrc ? s.val.toFixed(3) + ' mg/L' : Math.round(s.val) + ' μS/cm'}
+          — <strong style="color:#ff6b6b">ต้องดำเนินการ</strong>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Pump performance insight
+  if (isFrc && pumps.length > 0) {
+    const pumpAvg = pumps.map(v => v.val).reduce((a,b) => a+b, 0) / pumps.length;
+    const monAvg = monitors.length > 0 ? monitors.map(v => v.val).reduce((a,b) => a+b, 0) / monitors.length : 0;
+    const decayPct = pumpAvg > 0 ? Math.round((1 - monAvg/pumpAvg) * 100) : 0;
+    html += `<div class="ai-rec">
+      <div class="ai-rec-text"><span class="ai-rec-icon">🔬</span>
+        <strong>Decay Analysis:</strong> ค่า FRC ลดลงเฉลี่ย <strong>${decayPct}%</strong> จากสถานีสูบจ่าย (${pumpAvg.toFixed(2)}) ถึงจุดตรวจ (${monAvg.toFixed(2)})
+        ${decayPct > 60 ? '<br>⚡ decay สูงผิดปกติ — อาจมีปัญหาท่อเก่า/รั่ว' : ''}
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+
+  // Section 3: Risk Ranking
+  html += '<div class="ai-section"><h4>' + (isFrc ? 'สถานี FRC ต่ำสุด' : 'สถานี EC สูงสุด') + '</h4>';
+  const rankList = isFrc ? lowest5 : highest5;
+  rankList.forEach((s, i) => {
+    const shortName = s.name?.replace('บริษัท ','').replace(' จำกัด','').replace(' (มหาชน)','')
+      .replace('สำนักงานประปาสาขา','สาขา').replace('นิคมอุตสาหกรรม','นิคมฯ');
+    const valStr = isFrc ? s.val.toFixed(3) : Math.round(s.val);
+    const valColor = isFrc
+      ? (s.val < 0.2 ? '#e94560' : s.val < 0.5 ? '#f0d220' : '#4ecca3')
+      : (s.val >= EC_CONFIG.hi ? '#e94560' : '#87ceeb');
+    const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'rn';
+    html += `<div class="ai-rank-item" onclick="map.flyTo([${s.lat},${s.lon}],14);toggleAiPanel();" style="cursor:pointer;">
+      <div class="ai-rank-num ${rankCls}">${i+1}</div>
+      <div class="ai-rank-name">${shortName}</div>
+      <div class="ai-rank-val" style="color:${valColor}">${valStr}</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Section 4: System health
+  html += '<div class="ai-section"><h4>สุขภาพระบบ</h4>';
+  const healthScore = Math.min(100, Math.round(passRate * 0.6 + (trendDir !== 'down' ? 25 : 5) + (riskCount === 0 ? 15 : Math.max(0, 15 - riskCount * 3))));
+  const healthColor = healthScore >= 80 ? '#4ecca3' : healthScore >= 50 ? '#f0d220' : '#e94560';
+  const healthLabel = healthScore >= 80 ? 'ดีมาก' : healthScore >= 60 ? 'ดี' : healthScore >= 40 ? 'ปานกลาง' : 'ต้องปรับปรุง';
+  html += `<div class="ai-card" style="text-align:center;padding:16px;">
+    <div style="position:relative;width:80px;height:80px;margin:0 auto 8px;">
+      <svg viewBox="0 0 36 36" style="width:80px;height:80px;transform:rotate(-90deg);">
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="${healthColor}" stroke-width="3"
+          stroke-dasharray="${healthScore} ${100-healthScore}" stroke-linecap="round"
+          style="transition:stroke-dasharray 1s ease;"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="font-size:20px;font-weight:800;color:${healthColor};font-family:'JetBrains Mono',monospace;">${healthScore}</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:${healthColor};margin-bottom:2px;">${healthLabel}</div>
+    <div style="font-size:9px;color:#8888bb;">คะแนนสุขภาพระบบจ่ายน้ำ</div>
+  </div>`;
+  html += '</div>';
+
+  document.getElementById('ai-pts-count').textContent = allVals.length;
+  return html;
+}
+
+// Auto-refresh AI panel every 5 min if open
+setInterval(() => {
+  if (document.getElementById('ai-panel')?.classList.contains('open')) runAiAnalysis();
+}, 5 * 60 * 1000);
+
 // ── Auto-init after map ready ─────────────────────────────────────────
 // Wait until SENSORS populated
 const _zepInitTimer = setInterval(() => {
@@ -6029,7 +6907,321 @@ const _zepInitTimer = setInterval(() => {
     initZoneEditor();
   }
 }, 800);
-</script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.3.1 — Performance optimized · fix NaN chart tooltip · fix smoothPath · 20 Mar 2026</span></div>
-</body></html>
 
+
+// ══════════════════════════════════════════════════════════════════
+// 💧 WATER FLOW PARTICLE ANIMATION V5
+// Particles flow FROM pump/plant stations TOWARD their CUSTOM_ZONE
+// ══════════════════════════════════════════════════════════════════
+
+(function(){
+  var wrap = document.getElementById('map-wrap');
+  var fc = document.createElement('canvas');
+  fc.id = 'flow-canvas';
+  fc.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;display:none;';
+  wrap.appendChild(fc);
+
+  var _raf = null, _on = false, _parts = [];
+  var MAX = 800, TRAIL = 36;
+
+  // ── point-in-polygon ──
+  function pip(lat, lon, c) {
+    var ins = false;
+    for (var i = 0, j = c.length - 1; i < c.length; j = i++) {
+      var yi = c[i][0], xi = c[i][1], yj = c[j][0], xj = c[j][1];
+      if (((xi > lon) !== (xj > lon)) && (lat < (yj - yi) * (lon - xi) / (xj - xi) + yi)) ins = !ins;
+    }
+    return ins;
+  }
+
+  // ── bounding box of polygon ──
+  function polyBBox(coords) {
+    var minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+    for (var i=0;i<coords.length;i++) {
+      if(coords[i][0]<minLat) minLat=coords[i][0];
+      if(coords[i][0]>maxLat) maxLat=coords[i][0];
+      if(coords[i][1]<minLon) minLon=coords[i][1];
+      if(coords[i][1]>maxLon) maxLon=coords[i][1];
+    }
+    return {minLat:minLat,maxLat:maxLat,minLon:minLon,maxLon:maxLon};
+  }
+
+  // ── random point inside polygon (rejection sampling with bbox) ──
+  function randInPoly(coords, bbox) {
+    for (var tries = 0; tries < 30; tries++) {
+      var lat = bbox.minLat + Math.random() * (bbox.maxLat - bbox.minLat);
+      var lon = bbox.minLon + Math.random() * (bbox.maxLon - bbox.minLon);
+      if (pip(lat, lon, coords)) return [lat, lon];
+    }
+    // fallback: random vertex
+    var vi = Math.random() * coords.length | 0;
+    return [coords[vi][0], coords[vi][1]];
+  }
+
+  // ── find zone for a station ──
+  // Priority: CUSTOM_ZONES[stationId] > STA_POLYS > MWA_POLYS
+  function findStationZone(s) {
+    var sid = String(s.id);
+    var cz = window.CUSTOM_ZONES || {};
+    // 1. CUSTOM_ZONE keyed by station ID
+    if (cz[sid] && cz[sid].coords && cz[sid].coords.length >= 3) {
+      return cz[sid].coords;
+    }
+    // 2. CUSTOM_ZONE that contains the station
+    for (var k in cz) {
+      var z = cz[k];
+      if (z.type === 'polygon' && z.coords && z.coords.length >= 3 && pip(s.lat, s.lon, z.coords)) return z.coords;
+    }
+    // 3. STA_POLYS that contains station
+    for (var i = 0; i < STA_POLYS.length; i++) {
+      if (pip(s.lat, s.lon, STA_POLYS[i].coords)) return STA_POLYS[i].coords;
+    }
+    // 4. MWA_POLYS
+    for (var i = 0; i < MWA_POLYS.length; i++) {
+      if (pip(s.lat, s.lon, MWA_POLYS[i].coords)) return MWA_POLYS[i].coords;
+    }
+    return null;
+  }
+
+  // ── source cache ──
+  var srcList = []; // [{s, zone, bbox}]
+  function cacheSrc() {
+    srcList = [];
+    for (var i = 0; i < SENSORS.length; i++) {
+      var s = SENSORS[i];
+      if (s.type === 'pump' || s.type === 'plant') {
+        var zone = findStationZone(s);
+        srcList.push({
+          s: s,
+          zone: zone,
+          bbox: zone ? polyBBox(zone) : null
+        });
+      }
+    }
+  }
+
+  // ── FRC color string ──
+  // ── Flow particle color: Deep Navy Glow (single color) ──
+  function flowRGB(v, dark) {
+    return '20,60,160';
+  }
+
+  // ── spawn: pick source → pick random target inside zone → particle flows there ──
+  function spawnOne() {
+    if (!srcList.length) return null;
+    var idx = Math.random() * srcList.length | 0;
+    var entry = srcList[idx];
+    var s = entry.s;
+    var zone = entry.zone;
+
+    // Target: random point inside zone polygon
+    var tLat, tLon;
+    if (zone && entry.bbox) {
+      var pt = randInPoly(zone, entry.bbox);
+      tLat = pt[0]; tLon = pt[1];
+    } else {
+      // No zone: radial outward with random angle
+      var ang = Math.random() * 6.283;
+      var r = 0.02 + Math.random() * 0.05;
+      tLat = s.lat + Math.sin(ang) * r;
+      tLon = s.lon + Math.cos(ang) * r;
+    }
+
+    // Direction vector from source to target
+    var dLat = tLat - s.lat;
+    var dLon = tLon - s.lon;
+    var dDist = Math.sqrt(dLat*dLat + dLon*dLon) || 0.001;
+
+    // Speed: proportional to distance so particle reaches target within its lifetime
+    var life = 120 + (Math.random() * 160) | 0;
+    var baseSpd = dDist / life * 1.3; // slightly faster than needed
+
+    return {
+      lat: s.lat + (Math.random()-0.5)*0.003,
+      lon: s.lon + (Math.random()-0.5)*0.003,
+      olat: s.lat, olon: s.lon,
+      tLat: tLat, tLon: tLon,    // target
+      frc: s.frc || 1,
+      spd: baseSpd,
+      dirLat: dLat/dDist,          // normalized direction
+      dirLon: dLon/dDist,
+      tx: new Float32Array(TRAIL),
+      ty: new Float32Array(TRAIL),
+      tN: 0, age: 0,
+      life: life,
+      zone: zone
+    };
+  }
+
+  function doResize() {
+    var r = wrap.getBoundingClientRect();
+    fc.width = Math.round(r.width);
+    fc.height = Math.round(r.height);
+  }
+
+  function doFrame() {
+    if (!_on) return;
+    var W = fc.width, H = fc.height;
+    if (!W || !H) { doResize(); _raf = requestAnimationFrame(doFrame); return; }
+
+    var ctx = fc.getContext('2d');
+
+    // Trail fade
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,0.04)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Remove dead
+    var alive = [];
+    for (var i = 0; i < _parts.length; i++) {
+      if (_parts[i].age < _parts[i].life) alive.push(_parts[i]);
+    }
+    _parts = alive;
+
+    // Spawn
+    var bgt = 12;
+    while (_parts.length < MAX && bgt-- > 0) {
+      var np = spawnOne();
+      if (!np) break;
+      np.age = (Math.random() * 10) | 0;
+      _parts.push(np);
+    }
+
+    var dark = document.body.classList.contains('dark');
+    var isEC = (typeof PARAM_MODE !== 'undefined') && PARAM_MODE === 'ec';
+
+    // Offset + projection cache (avoid latLngToContainerPoint per particle)
+    var mapEl = document.getElementById('map');
+    var mRect = mapEl.getBoundingClientRect();
+    var wRect = wrap.getBoundingClientRect();
+    var offX = mRect.left - wRect.left;
+    var offY = mRect.top - wRect.top;
+    // Pre-compute lat/lon → pixel using two reference points
+    var bounds = map.getBounds();
+    var pNW = map.latLngToContainerPoint(bounds.getNorthWest());
+    var pSE = map.latLngToContainerPoint(bounds.getSouthEast());
+    var bN = bounds.getNorth(), bS = bounds.getSouth(), bW = bounds.getWest(), bE = bounds.getEast();
+    var pxPerLon = (pSE.x - pNW.x) / (bE - bW);
+    var pxPerLat = (pSE.y - pNW.y) / (bS - bN); // negative because lat goes up but y goes down
+
+    for (var k = 0; k < _parts.length; k++) {
+      var p = _parts[k];
+
+      // ── Physics: flow toward target with curl noise ──
+      // Remaining vector to target
+      var toTLat = p.tLat - p.lat;
+      var toTLon = p.tLon - p.lon;
+      var toDist = Math.sqrt(toTLat*toTLat + toTLon*toTLon) || 0.0001;
+
+      // Normalized toward-target direction (blend with initial direction for smooth curves)
+      var blend = Math.min(1, p.age / 30); // gradually steer toward target
+      var steerLat = p.dirLat * (1-blend*0.5) + (toTLat/toDist) * (blend*0.5 + 0.5);
+      var steerLon = p.dirLon * (1-blend*0.5) + (toTLon/toDist) * (blend*0.5 + 0.5);
+      var steerD = Math.sqrt(steerLat*steerLat + steerLon*steerLon) || 1;
+      steerLat /= steerD;
+      steerLon /= steerD;
+
+      // Curl noise — multi-octave for fluid, wavy, พริ้วไหว motion
+      var t = p.age * 0.025 + p.olat * 50 + p.olon * 50;
+      var curl1 = Math.sin(t + p.lat * 8) * Math.cos(t * 0.4 + p.lon * 8);
+      var curl2 = Math.sin(t * 1.7 + p.lat * 15) * 0.5;
+      var curl3 = Math.cos(t * 0.6 + p.lon * 12 + p.lat * 6) * 0.3;
+      var curl = curl1 + curl2 + curl3;
+      var perpLat = -steerLon, perpLon = steerLat;
+
+      // Speed: slightly faster near source, slow down near target
+      var progress = 1 - Math.min(1, toDist / (Math.sqrt((p.tLat-p.olat)*(p.tLat-p.olat)+(p.tLon-p.olon)*(p.tLon-p.olon)) || 0.01));
+      var spdMul = p.spd * (0.8 + 0.4 * (1 - progress));
+
+      p.lat += (steerLat * 0.6 + perpLat * curl * 0.4) * spdMul;
+      p.lon += (steerLon * 0.6 + perpLon * curl * 0.4) * spdMul;
+      p.age++;
+
+      // Zone containment check every 20 frames
+      if (p.zone && p.age > 5 && (p.age % 20 === 0)) {
+        if (!pip(p.lat, p.lon, p.zone)) { p.age = p.life; continue; }
+      }
+      // Global bounds
+      if (p.lat<13.4||p.lat>14.1||p.lon<100.2||p.lon>101.1) { p.age=p.life; continue; }
+
+      // Near target → kill (arrived)
+      if (toDist < 0.001) { p.age = p.life; continue; }
+
+      // ── Screen position (fast inline projection) ──
+      var sx = pNW.x + (p.lon - bW) * pxPerLon + offX;
+      var sy = pNW.y + (p.lat - bN) * pxPerLat + offY;
+
+      // Trail
+      if (p.tN < TRAIL) {
+        p.tx[p.tN] = sx; p.ty[p.tN] = sy; p.tN++;
+      } else {
+        p.tx.copyWithin(0, 1); p.ty.copyWithin(0, 1);
+        p.tx[TRAIL-1] = sx; p.ty[TRAIL-1] = sy;
+      }
+      if (p.tN < 2) continue;
+
+      // ── Alpha ──
+      var lf = p.age / p.life;
+      var aIn = p.age < 8 ? p.age / 8 : 1;
+      var aOut = lf > 0.75 ? (1-lf)/0.25 : 1;
+      var baseA = Math.min(aIn, aOut) * (dark ? 0.92 : 0.72);
+      if (baseA < 0.03) continue;
+
+      // ── Color (Cyan-Ice flow, FRC decay by distance) ──
+      var dSrc = Math.sqrt((p.lon-p.olon)*(p.lon-p.olon) + (p.lat-p.olat)*(p.lat-p.olat));
+      var fHere = isEC ? 1.2 : Math.max(0.05, p.frc * Math.exp(-dSrc * 8));
+      var cStr = flowRGB(fHere, dark);
+
+      // ── Draw trail ──
+      ctx.beginPath();
+      ctx.moveTo(p.tx[0], p.ty[0]);
+      for (var j = 1; j < p.tN; j++) ctx.lineTo(p.tx[j], p.ty[j]);
+      ctx.strokeStyle = 'rgba(' + cStr + ',' + (baseA * 0.7).toFixed(2) + ')';
+      ctx.lineWidth = 0.4 + baseA * 0.6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // ── Head dot (brighter glow) ──
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.8 + baseA * 0.3, 0, 6.283);
+      ctx.fillStyle = 'rgba(' + cStr + ',' + Math.min(1, baseA * 1.6).toFixed(2) + ')';
+      ctx.fill();
+    }
+
+    _raf = requestAnimationFrame(doFrame);
+  }
+
+  // ── Public API ──
+  window.startFlowAnimation = function() {
+    cacheSrc();
+    if (!srcList.length) { console.warn('[Flow] No pump/plant sources'); return; }
+    _on = true; _parts = [];
+    doResize();
+    fc.style.display = 'block';
+    fc.getContext('2d').clearRect(0, 0, fc.width, fc.height);
+    if (_raf) cancelAnimationFrame(_raf);
+    console.log('[Flow] V5 Started — ' + srcList.length + ' sources, ' +
+      srcList.filter(function(e){return e.zone;}).length + ' with zones');
+    doFrame();
+  };
+
+  window.stopFlowAnimation = function() {
+    _on = false;
+    fc.style.display = 'none';
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+    _parts = [];
+  };
+
+  map.on('movestart zoomstart', function() {
+    for (var i = 0; i < _parts.length; i++) _parts[i].tN = 0;
+  });
+  map.on('moveend zoomend', function() {
+    if (_on) { doResize(); for (var i = 0; i < _parts.length; i++) _parts[i].tN = 0; }
+  });
+  window.addEventListener('resize', function() { if (_on) doResize(); });
+})();
+</script>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.6.0 — ใช้ EPANET + Zone Influence Model · Forecast Pair คู่ เช่น สจ. → ปลายทาง หาค่า K แต่ละคู่มาใช้คาดการณ์ · M 20 มี.ค. 69</span></div>
+</body></html>
