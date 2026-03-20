@@ -4280,10 +4280,18 @@ function buildUnifiedTicks() {
   el.style.display = 'flex';
   el.style.justifyContent = 'space-between';
   el.style.padding = '0 2px';
-  const total = _unifiedFrames.length;
-  const showEvery = Math.ceil(total / 8);
-  _unifiedFrames.forEach((f, idx) => {
-    if (idx % showEvery !== 0 && idx !== FC_HIST_STEPS && idx !== total-1) return;
+
+  const slider = document.getElementById('forecast-slider');
+  const minI = parseInt(slider.min);
+  const maxI = parseInt(slider.max);
+
+  // แสดง tick เฉพาะ range ของ mode ปัจจุบัน
+  const frames = _unifiedFrames.slice(minI, maxI + 1);
+  const showEvery = Math.ceil(frames.length / 6);
+
+  frames.forEach((f, i) => {
+    const idx = minI + i;
+    if (i % showEvery !== 0 && !f.isNow && i !== frames.length - 1) return;
     const d = new Date(f.ts);
     const s = document.createElement('span');
     s.style.cssText = 'font-size:8px;color:' + (f.isNow ? '#ff6600' : f.isForecast ? '#88ccff' : '#aaa') + ';';
@@ -4709,9 +4717,9 @@ function setFcMode(mode) {
       slider.max   = lastI;  // ถึง +6h
       slider.value = nowI;   // เริ่มที่ปัจจุบัน
     }
+    buildUnifiedTicks(); // rebuild ticks ตาม range ใหม่
     seekForecastUnified(parseInt(slider.value));
   } else {
-    // unified ยังไม่โหลด → โหลดก่อน แล้ว set mode หลังโหลดเสร็จ
     loadUnifiedTimeline().then(() => setFcMode(mode));
   }
 }
