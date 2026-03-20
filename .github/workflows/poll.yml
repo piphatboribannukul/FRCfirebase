@@ -1,0 +1,79 @@
+name: Poll MWA API → Firebase
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # ทุก 5 นาที
+  workflow_dispatch:          # กด run ด้วยตัวเองได้
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch MWA API and push to Firebase
+        run: |
+          node << 'EOF'
+          const https = require('https');
+
+          const DB_URL  = 'https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const DB_SECRET = '${{ secrets.FIREBASE_DB_SECRET }}';
+          const API_URL = 'https://twqonline.mwa.co.th/TWQMSServicepublic/api/mwaonmobile/getStations';
+
+          // 1. fetch MWA API
+          https.get(API_URL, (res) => {
+            let raw = '';
+            res.on('data', d => raw += d);
+            res.on('end', async () => {
+              try {
+                const json = JSON.parse(raw);
+                // หา array ของ stations
+                const arr = Array.isArray(json) ? json
+                          : Array.isArray(json.data) ? json.data
+                          : Array.isArray(json.stations) ? json.stations
+                          : Object.values(json).find(v => Array.isArray(v)) || [];
+
+                const now = Date.now();
+                const live = {};
+                const hist = {};
+
+                for (const st of arr) {
+                  const keys = Object.keys(st);
+                  // หา id
+                  const id = st.stationCode || st.StationCode || st.code || st.id;
+                  if (!id) continue;
+                  // หา frc/ec
+                  const frc = parseFloat(
+                    st.frc ?? st.FRC ?? st.chlorine ?? st.Chlorine ?? st.value ?? 0
+                  );
+                  const ec = parseFloat(
+                    st.ec ?? st.EC ?? st.conductivity ?? st.Conductivity ?? 0
+                  );
+                  const safeId = String(id).replace(/[.#$/\[\]]/g, '_');
+                  live[safeId] = { frc, ec, ts: now };
+                  hist[safeId + '/' + now] = { frc, ec, ts: now };
+                }
+
+                console.log('Stations:', Object.keys(live).length);
+
+                // 2. push live
+                const liveRes = await fetch(
+                  DB_URL + '/live.json?auth=' + DB_SECRET,
+                  { method: 'PUT', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(live) }
+                );
+                console.log('live PUT:', liveRes.status);
+
+                // 3. push history (PATCH เพื่อไม่ลบข้อมูลเก่า)
+                const histRes = await fetch(
+                  DB_URL + '/history.json?auth=' + DB_SECRET,
+                  { method: 'PATCH', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(hist) }
+                );
+                console.log('history PATCH:', histRes.status);
+
+              } catch(e) {
+                console.error('Error:', e.message);
+                process.exit(1);
+              }
+            });
+          }).on('error', e => { console.error(e.message); process.exit(1); });
+          EOF
