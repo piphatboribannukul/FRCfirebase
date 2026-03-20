@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>Chlorine Contour V.2.0 — MWA Realtime</title>
+<title>Chlorine Contour V.3.0 — MWA Realtime</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -718,13 +718,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <body>
 <div id="header">
   <div class="live-dot"></div>
-  <h1 id="header-title">🌸 Chlorine Contour V.2.0</h1>
+  <h1 id="header-title">🌸 Chlorine Contour V.3.0</h1>
   <div id="param-switcher">
     <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">🌸 FRC</button>
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ EC</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V.2.0</span>
+  <span id="v2-badge">⬡ V.3.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <span id="clock"></span>
 </div>
@@ -1119,7 +1119,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">V.2.0 · Mar 2026 · Zone Editor enabled</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">V.3.0 · Mar 2026 · Perf optimized</div>
     </div>
 
     <!-- EC note -->
@@ -1152,7 +1152,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">V.2.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">V.3.0 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -1394,6 +1394,34 @@ function ecColorContour(v, alpha=0.72) {
 function paramColor(v, alpha=1) {
   return PARAM_MODE === 'ec' ? ecColorContour(v, alpha) : frcColor(v, alpha);
 }
+
+// ── Fast RGBA array return (no string alloc) — used in pixel-by-pixel render ──
+function frcColorRGBA(v, a) {
+  v = Math.max(0, Math.min(2.5, v));
+  let r, g, b;
+  if (v < 0.2) { r=255; g=255; b=130; }
+  else if (v < 1.0) { const u=(v-0.2)/0.8; r=255; g=lerp(255,179,u); b=lerp(255,204,u); }
+  else if (v < 2.0) { const u=(v-1.0)/1.0; r=lerp(255,233,u); g=lerp(179,30,u); b=lerp(204,140,u); }
+  else { r=173; g=20; b=87; }
+  return [r, g, b, Math.round(a * 255)];
+}
+function ecColorContourRGBA(v, a) {
+  function _lerp3(r1,g1,b1,r2,g2,b2,t) {
+    t = Math.max(0, Math.min(1, t));
+    return [Math.round(r1+(r2-r1)*t), Math.round(g1+(g2-g1)*t), Math.round(b1+(b2-b1)*t)];
+  }
+  let r,g,b;
+  if (v < 150) { [r,g,b] = [190, 230, 255]; }
+  else if (v < 210) { const t = (v-150)/60; [r,g,b] = _lerp3(190,230,255, 210,240,255, t); }
+  else if (v < 240) { const t = (v-210)/30; [r,g,b] = _lerp3(210,240,255, 170,255,32, t); }
+  else if (v < 500) { const t = (v-240)/260; [r,g,b] = _lerp3(170,255,32, 155,240,25, t); }
+  else if (v < 1200) { const t = (v-500)/700; [r,g,b] = _lerp3(155,240,25, 240,220,50, t); }
+  else { const t = Math.min(1, (v-1200)/300); [r,g,b] = _lerp3(240,210,30, 200,20,20, t); }
+  return [r, g, b, Math.round(a * 255)];
+}
+function paramColorRGBA(v, alpha) {
+  return PARAM_MODE === 'ec' ? ecColorContourRGBA(v, alpha) : frcColorRGBA(v, alpha);
+}
 function paramStatus(v) {
   return PARAM_MODE === 'ec' ? ecStatus(v) : statusText(v);
 }
@@ -1458,21 +1486,21 @@ function getAnchorLatLon(s) {
   return va ? { lat: va.lat, lon: va.lon } : { lat: s.lat, lon: s.lon };
 }
 
+// ── Pre-computed exclude sets (avoid per-call allocation) ────────────────────
+const _FRC_ZONE_EXCL_IDS = new Set(['SP01','SP02','SP03','SP11','1','2','3','11']);
+const _FRC_ZONE_EXCL_NAMES = new Set([
+  'สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
+  'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)',
+  'สถานีสูบส่งน้ำมหาสวัสดิ์',
+]);
+const _SOURCE_TYPES = new Set(['pump', 'plant']);
+
 function idwZone(lat, lon) {
   // EC test1: ใช้แค่ nearest pump/plant zone — ไม่มี monitor blend
-  const SOURCE_TYPES = new Set(['pump', 'plant']);
-  const EXCLUDE_NAMES = new Set([
-    'สถานีสูบส่งน้ำบางเขน 1 (TR1)',
-    'สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-    'สถานีสูบส่งน้ำบางเขน 3 (TR3)',
-    'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)',
-    'สถานีสูบส่งน้ำมหาสวัสดิ์',
-  ]);
-  const EXCLUDE_IDS = new Set([1,2,3,11,'SP01','SP02','SP03','SP11']);
   const sources = SENSORS.filter(s =>
-    SOURCE_TYPES.has(s.type) &&
-    !EXCLUDE_NAMES.has(s.name?.trim()) &&
-    !EXCLUDE_IDS.has(s.id)
+    _SOURCE_TYPES.has(s.type) &&
+    !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim()) &&
+    !_FRC_ZONE_EXCL_IDS.has(String(s.id))
   );
   if (sources.length === 0) return idwDirect(lat, lon, 4);
 
@@ -1489,44 +1517,36 @@ function idwZone(lat, lon) {
 // ── Zone-based FRC: nearest source station + EPANET decay ────────────────────
 // หาสถานีสูบจ่าย/สูบส่งที่ใกล้ที่สุด แล้ว decay FRC จากโซนนั้น
 // ไม่ถูก pull โดยสถานีโซนอื่น
+
+// ── MDIS Zone Override (static, hoisted) ──────────────────────────────────
+const _MDIS_ZONE = [
+  [14.10, 100.20], [14.10, 100.52],
+  [13.88, 100.52], [13.80, 100.50],
+  [13.78, 100.49], [13.74, 100.47],
+  [13.70, 100.47], [13.65, 100.46],
+  [13.65, 100.20],
+];
+function _inMdisZone(la, lo) {
+  let inside = false;
+  for (let i=0, j=_MDIS_ZONE.length-1; i<_MDIS_ZONE.length; j=i++) {
+    const [lati,loni]=_MDIS_ZONE[i], [latj,lonj]=_MDIS_ZONE[j];
+    if (((loni>lo)!==(lonj>lo)) && (la < (latj-lati)*(lo-loni)/(lonj-loni)+lati))
+      inside = !inside;
+  }
+  return inside;
+}
+
 function frcZone(lat, lon) {
-  const SOURCE_TYPES = new Set(['pump', 'plant']);
-  const EXCLUDE_CODES = new Set(['SP01','SP02','SP03','SP11']);
-  const EXCLUDE_NAMES_FRC = new Set([
-    'สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-    'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)',
-    'สถานีสูบส่งน้ำมหาสวัสดิ์',
-  ]);
   const sources = SENSORS.filter(s =>
-    SOURCE_TYPES.has(s.type) &&
-    !new Set(['SP01','SP02','SP03','SP11','1','2','3','11']).has(String(s.id)) &&
-    !EXCLUDE_CODES.has(s.id?.toString()) &&
-    !EXCLUDE_NAMES_FRC.has(s.name?.trim())
+    _SOURCE_TYPES.has(s.type) &&
+    !_FRC_ZONE_EXCL_IDS.has(String(s.id)) &&
+    !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim())
   );
   if (sources.length === 0) return idwDirect(lat, lon, 2);
 
-  // ── MDIS Zone Override ──────────────────────────────────────────────────
-  // ถ้าจุดอยู่ใน MDIS_ZONE → บังคับใช้ MDIS เป็น source เสมอ
-  const MDIS_ZONE = [
-    [14.10, 100.20], [14.10, 100.52],
-    [13.88, 100.52], [13.80, 100.50],
-    [13.78, 100.49], [13.74, 100.47],
-    [13.70, 100.47], [13.65, 100.46],
-    [13.65, 100.20],
-  ];
-  function inMdisZone(la, lo) {
-    let inside = false;
-    for (let i=0, j=MDIS_ZONE.length-1; i<MDIS_ZONE.length; j=i++) {
-      const [lati,loni]=MDIS_ZONE[i], [latj,lonj]=MDIS_ZONE[j];
-      if (((loni>lo)!==(lonj>lo)) && (la < (latj-lati)*(lo-loni)/(lonj-loni)+lati))
-        inside = !inside;
-    }
-    return inside;
-  }
-
   let nearest = null, minDist = Infinity;
 
-  if (inMdisZone(lat, lon)) {
+  if (_inMdisZone(lat, lon)) {
     // บังคับใช้ MDIS
     nearest = sources.find(s => s.name?.trim() === 'สถานีสูบจ่ายน้ำมหาสวัสดิ์' ||
                                 s.id === 'SP12' || s.id === 12);
@@ -1549,9 +1569,11 @@ function buildIdwCache() {
   _idwCache = new Float32Array(rows * rows);
   const dlat = (CACHE_LAT1 - CACHE_LAT0) / CACHE_RES;
   const dlon = (CACHE_LON1 - CACHE_LON0) / CACHE_RES;
-  // ใช้ window.frcZone / window.idwZone เพื่อให้ Custom Zone override ทำงานได้
+
+  // ใช้ window.frcZone / window.idwZone เพื่อให้ Custom Zone override ทำงานได้เสมอ
   const _frc = window.frcZone || frcZone;
   const _idw = window.idwZone || idwZone;
+
   for(let j=0; j<rows; j++) {
     const lat = CACHE_LAT0 + j * dlat;
     for(let i=0; i<rows; i++) {
@@ -1702,25 +1724,41 @@ function _drawOnCanvas() {
     mctx.fill('nonzero');
     const maskData = mctx.getImageData(0,0,W,H).data;
 
+    // ── Pre-compute lat/lon lookup tables (H+W Leaflet calls instead of W*H) ──
+    const _rowLat = new Float64Array(H);
+    const _colLon = new Float64Array(W);
+    for (let py2 = 0; py2 < H; py2++) {
+      const ll = map.layerPointToLatLng([origin.x, py2 + origin.y]);
+      _rowLat[py2] = ll.lat;
+    }
+    for (let px2 = 0; px2 < W; px2++) {
+      const ll = map.layerPointToLatLng([px2 + origin.x, origin.y]);
+      _colLon[px2] = ll.lng;
+    }
+    const bWest = b.getWest(), bNorth = b.getNorth();
+    const _invLatRange = RES / latRange;
+    const _invLonRange = RES / lonRange;
+
     for(let py2=0; py2<H; py2++) {
+      const lat = _rowLat[py2];
+      const fj = (bNorth - lat) * _invLatRange;
+      const j0 = Math.max(0, Math.min(RES-1, fj|0));
+      const ty = fj - j0;
+      const j0Row = j0 * (RES+1);
+      const j1Row = (j0+1) * (RES+1);
       for(let px2=0; px2<W; px2++) {
         const idx4 = (py2*W+px2)*4;
         if(maskData[idx4] < 128) continue; // outside clip
-        // map pixel → lat/lon → grid coords
-        const ll = map.layerPointToLatLng([px2+origin.x, py2+origin.y]);
-        const fi = (ll.lng - b.getWest())  / lonRange * RES;
-        const fj = (b.getNorth() - ll.lat) / latRange * RES;
-        const i0 = Math.max(0,Math.min(RES-1,Math.floor(fi)));
-        const j0 = Math.max(0,Math.min(RES-1,Math.floor(fj)));
-        const tx=fi-i0, ty=fj-j0;
-        const v = gv[j0*(RES+1)+i0]*(1-tx)*(1-ty)
-                + gv[j0*(RES+1)+i0+1]*tx*(1-ty)
-                + gv[(j0+1)*(RES+1)+i0]*(1-tx)*ty
-                + gv[(j0+1)*(RES+1)+i0+1]*tx*ty;
-        // frcColor → parse rgba
-        const col = paramColor(v, 0.82);
-        const m = col.match(/[\d.]+/g);
-        px[idx4]=+m[0]; px[idx4+1]=+m[1]; px[idx4+2]=+m[2]; px[idx4+3]=Math.round(+m[3]*255);
+        const lon = _colLon[px2];
+        const fi = (lon - bWest) * _invLonRange;
+        const i0 = Math.max(0, Math.min(RES-1, fi|0));
+        const tx = fi - i0;
+        const v = gv[j0Row+i0]*(1-tx)*(1-ty)
+                + gv[j0Row+i0+1]*tx*(1-ty)
+                + gv[j1Row+i0]*(1-tx)*ty
+                + gv[j1Row+i0+1]*tx*ty;
+        const _c = paramColorRGBA(v, 0.82);
+        px[idx4]=_c[0]; px[idx4+1]=_c[1]; px[idx4+2]=_c[2]; px[idx4+3]=_c[3];
       }
     }
     ctx.putImageData(imgData, 0, 0);
@@ -3003,6 +3041,7 @@ function buildMarkers() {
       <div class="pr"><span>พิกัด</span><span class="pv" style="color:#111">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</span></div>
       <div class="pr"><span>ประเภท</span><span class="pv" style="color:#111">${s.type==='plant'?'โรงงานผลิต':s.type==='pump'?'สถานีสูบ':'จุดตรวจวัด'}</span></div>
       <div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:${c}">${paramStatus(pv)}</span></div>
+      <div class="pr"><span style="font-size:9px;color:#aaa">อัปเดต</span><span class="pv" style="font-size:9px;color:#aaa">${new Date().toLocaleTimeString('th-TH')} (V3)</span></div>
       ${ecRow}
       ${ttHtml}
       ${sourceChart}
@@ -3022,36 +3061,74 @@ function pointInPoly(lat, lon, coords) {
   }
   return inside;
 }
-function isInServiceArea(lat, lon) {
+// ── Pre-computed service area bounding boxes for fast rejection ──────────────
+let _servicePolysBB = null;
+function _ensureServiceBB() {
+  if (_servicePolysBB) return;
   const allPolys = [...STA_POLYS, ...MWA_POLYS];
-  return allPolys.some(p => pointInPoly(lat, lon, p.coords));
+  _servicePolysBB = allPolys.map(p => {
+    let minLat=90, maxLat=-90, minLon=180, maxLon=-180;
+    for (const [la,lo] of p.coords) {
+      if (la < minLat) minLat = la; if (la > maxLat) maxLat = la;
+      if (lo < minLon) minLon = lo; if (lo > maxLon) maxLon = lo;
+    }
+    return { coords: p.coords, minLat, maxLat, minLon, maxLon };
+  });
+}
+function isInServiceArea(lat, lon) {
+  _ensureServiceBB();
+  for (const p of _servicePolysBB) {
+    if (lat < p.minLat || lat > p.maxLat || lon < p.minLon || lon > p.maxLon) continue;
+    if (pointInPoly(lat, lon, p.coords)) return true;
+  }
+  return false;
 }
 
-// Hover tooltip
+// Hover tooltip (throttled)
+let _tipThrottled = false;
+let _popupOpen = false;
+let _tipEl = null, _tipValEl = null, _tipStEl = null, _tipLlEl = null, _tipLabelEl = null;
+function _ensureTipEls() {
+  if (!_tipEl) {
+    _tipEl = document.getElementById('tip');
+    _tipValEl = document.getElementById('tip-val');
+    _tipStEl = document.getElementById('tip-st');
+    _tipLlEl = document.getElementById('tip-ll');
+    _tipLabelEl = document.getElementById('tip-label');
+  }
+}
+map.on('popupopen',  () => { _popupOpen = true;  _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; });
+map.on('popupclose', () => { _popupOpen = false; });
 map.on('mousemove',e=>{
-  const tip=document.getElementById('tip');
+  _ensureTipEls();
+  const tip=_tipEl;
   // ซ่อน tip เมื่อมี popup เปิดอยู่
-  if(document.querySelector('.leaflet-popup')) { tip.style.display='none'; return; }
+  if(_popupOpen) { tip.style.display='none'; return; }
   if(!isInServiceArea(e.latlng.lat, e.latlng.lng)) {
     tip.style.display='none'; return;
   }
+  // Throttle: ข้ามถ้ายังไม่ถึงเวลา (ทุก ~50ms)
+  if (_tipThrottled) {
+    const pt=map.latLngToContainerPoint(e.latlng);
+    tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px';
+    return;
+  }
+  _tipThrottled = true;
+  setTimeout(() => { _tipThrottled = false; }, 50);
   const v=idw(e.latlng.lat,e.latlng.lng);
   // สีแดงเมื่อต่ำกว่ามาตรฐาน (FRC<0.2 หรือ EC>600)
   const isAlert = PARAM_MODE==='frc' ? v < FRC_MIN : v >= EC_CONFIG.hi;
   const alertColor = '#cc0000';
-  document.getElementById('tip-val').textContent=paramFormat(v)+' '+paramUnit();
-  document.getElementById('tip-val').style.color=isAlert ? alertColor : '#111';
-  document.getElementById('tip-st').textContent=paramStatus(v);
-  document.getElementById('tip-st').style.color=isAlert ? alertColor : '#111';
-  document.getElementById('tip-ll').textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
-  document.getElementById('tip-label').textContent=PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated';
+  _tipValEl.textContent=paramFormat(v)+' '+paramUnit();
+  _tipValEl.style.color=isAlert ? alertColor : '#111';
+  _tipStEl.textContent=paramStatus(v);
+  _tipStEl.style.color=isAlert ? alertColor : '#111';
+  _tipLlEl.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+  _tipLabelEl.textContent=PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated';
   const pt=map.latLngToContainerPoint(e.latlng);
   tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px'; tip.style.display='block';
 });
-map.on('mouseout',()=>document.getElementById('tip').style.display='none');
-// ซ่อน tip เมื่อ popup เปิด — ป้องกันทับ chart tooltip
-map.on('popupopen',  () => { const t=document.getElementById('tip'); if(t) t.style.display='none'; });
-map.on('popupclose', () => { /* tip จะกลับมาเองเมื่อ hover */ });
+map.on('mouseout',()=>{ _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; });
 
 function toggleLayer(name) {
   layers[name]=!layers[name];
@@ -3197,14 +3274,14 @@ function setParam(mode) {
   document.getElementById('btn-ec').className  = 'param-btn' + (mode==='ec'?' active':'');
   document.getElementById('header-title').textContent =
     mode === 'ec'
-      ? '⚡ Chlorine Contour V.2.0 — EC Mode'
-      : '🌸 Chlorine Contour V.2.0';
+      ? '⚡ Chlorine Contour V.3.0 — EC Mode'
+      : '🌸 Chlorine Contour V.3.0';
   // อัปเดต disclaimer bar
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ อยู่ระหว่างพัฒนา — ใช้ Zone-based nearest-neighbor แทน IDW สำหรับ EC mode (นับอิทธิพลโรงสูบครับ) "M 16 Mar 2026 rev.25"</span>'
-      : '<span>⚠ V.2.0 — รองรับ Zone Influence Editor: วาดขอบเขตพื้นที่สูบจ่ายน้ำเองได้ · EPANET Decay Model · 18 Mar 2026</span>';
+      ? '<span>⚠ V.3.0 — EC Mode · Zone-based nearest-neighbor · Performance optimized · 20 Mar 2026</span>'
+      : '<span>⚠ V.3.0 — Performance optimized · ลด contour render 10× · throttle tooltip · hoist Sets · spike detection fix · 20 Mar 2026</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -3218,6 +3295,9 @@ function setParam(mode) {
   buildMarkers();
   updateStats();
   renderTab();
+  // reset unified timeline เมื่อเปลี่ยน mode (FRC/EC ใช้ frame ต่างกัน)
+  _unifiedLoaded = false;
+  _unifiedFrames = [];
 }
 
 
@@ -3550,6 +3630,7 @@ async function fbLoadForecast() {
 }
 
 // realtime listener — อัปเดต badge เมื่อข้อมูลเปลี่ยน
+let _fbUpdateTimer = null;
 function fbListenRealtime() {
   if (!window._fbReady || !window._fb) return;
   const r = window._fbRef(window._fb, 'live');
@@ -3567,15 +3648,21 @@ function fbListenRealtime() {
       }
     }
     if (updated > 0) {
-      buildIdwCache();
-      redrawContour();
-      updateStats();
-      renderTab();
-      const badge = document.querySelector('#header .badge');
-      if (badge) {
-        badge.textContent = '🔴 Live — ' + new Date().toLocaleTimeString('th-TH');
-        badge.style.color = '#006020';
-      }
+      // Debounce: Firebase may fire rapidly — batch updates
+      clearTimeout(_fbUpdateTimer);
+      _fbUpdateTimer = setTimeout(() => {
+        _histCache = null;
+        buildIdwCache();
+        redrawContour();
+        buildMarkers();
+        updateStats();
+        renderTab();
+        const badge = document.querySelector('#header .badge');
+        if (badge) {
+          badge.textContent = '🔴 Live — ' + new Date().toLocaleTimeString('th-TH');
+          badge.style.color = '#006020';
+        }
+      }, 500);
     }
   });
 }
@@ -3639,7 +3726,7 @@ function clearOldHistory() {
       hist[code] = hist[code].filter(p => p.ts >= cutoff);
       if (hist[code].length === 0) delete hist[code];
     }
-    localStorage.setItem(LS_KEY, JSON.stringify(hist));
+    saveHistory(hist);
   } catch(e) { localStorage.removeItem(LS_KEY); }
 }
 
@@ -3665,7 +3752,7 @@ function recordHistory(sensors) {
 
     // ข้อ 4: spike detection — ถ้าค่าใหม่ต่างจากค่าก่อนหน้า > 50% → ข้าม
     const last = hist[code][hist[code].length - 1];
-    if (last) {
+    if (last && last.frc > 0) {
       const changePct = Math.abs(s.frc - last.frc) / last.frc;
       if (changePct > 0.5) {
         console.warn(`[History] spike detected ${code}: ${last.frc.toFixed(3)} → ${s.frc.toFixed(3)} (${(changePct*100).toFixed(0)}%) ข้าม`);
@@ -3853,9 +3940,12 @@ function updateHistBadge(hist) {
 let apiStatus = 'loading'; // 'loading' | 'live' | 'fallback'
 
 async function fetchAndUpdate() {
+  console.log('%c[V3] fetchAndUpdate() เริ่มทำงาน...', 'color:#cc0055;font-weight:bold');
   const badge = document.querySelector('#header .badge');
   try {
+    console.log('[V3] กำลัง fetch API:', API_URL);
     const res = await fetch(API_URL, { cache: 'no-store' });
+    console.log('[V3] API response status:', res.status);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     const mapped = mapApiData(json);
@@ -3870,6 +3960,12 @@ async function fetchAndUpdate() {
     });
     SENSORS.length = 0;
     merged.forEach(s => SENSORS.push(s));
+
+    // DEBUG: log ค่า FRC จาก API เพื่อตรวจสอบ
+    console.log('%c[V3] API สำเร็จ! ได้ ' + mapped.length + ' สถานี', 'color:green;font-weight:bold');
+    const _debugSample = merged.filter(s => s.name && s.name.includes('ลาดกระบัง')).map(s => `${s.name}: frc=${s.frc}`);
+    if (_debugSample.length) console.log('[V3 DEBUG] API FRC:', _debugSample.join(', '));
+    console.log(`[V3 DEBUG] Total sensors: ${merged.length} (API: ${mapped.length}, fallback fill: ${merged.length - mapped.length})`);
 
     // บันทึกประวัติ + fit k
     const hist = recordHistory(SENSORS);
@@ -3891,7 +3987,7 @@ async function fetchAndUpdate() {
     badge.style.borderColor = '#80e0a0';
     badge.style.color      = '#006020';
   } catch (err) {
-    console.warn('[FRC] API error:', err.message);
+    console.error('%c[V3] API FAILED:', 'color:red;font-weight:bold', err.message, err);
     if (apiStatus === 'loading') {
       // ครั้งแรก: โหลด fallback
       SENSORS.length = 0;
@@ -3905,6 +4001,7 @@ async function fetchAndUpdate() {
   }
 
   // redraw ทุก layer
+  _histCache = null; // invalidate history cache after new data
   buildMarkers();
   buildIdwCache();   // rebuild cache หลังได้ข้อมูล sensor ใหม่
   redrawContour();
@@ -4190,20 +4287,28 @@ async function loadUnifiedTimeline() {
     }
     let arr;
     if (closest && closestD < 2*3600000) {
-      arr = PARAM_MODE==='ec'
-        ? await buildSnapFrameAsync(()=>buildSnapFrameEc(closest.snapEc||{}))
-        : await buildSnapFrameAsync(()=>buildSnapFrame(closest.snap||{}));
+      if (PARAM_MODE === 'ec') {
+        // ถ้า snapEc ว่าง (ช่วงก่อน fix) → ใช้ค่าปัจจุบัน (s.ec)
+        const snapEc = (Object.keys(closest.snapEc||{}).length > 0)
+          ? closest.snapEc : {};
+        arr = await buildSnapFrameAsync(()=>buildSnapFrameEc(snapEc));
+      } else {
+        arr = await buildSnapFrameAsync(()=>buildSnapFrame(closest.snap||{}));
+      }
     } else {
-      // ไม่มีข้อมูล → build จากค่าปัจจุบันด้วย FC_RES
-      arr = await buildSnapFrameAsync(()=>buildSnapFrame({}));
+      arr = PARAM_MODE === 'ec'
+        ? await buildSnapFrameAsync(()=>buildSnapFrameEc({}))
+        : await buildSnapFrameAsync(()=>buildSnapFrame({}));
     }
     _unifiedFrames.push({ ts: targetTs, arr, isHistory: true });
     if (lbl) lbl.textContent = `โหลด ${24-h}/24...`;
     await new Promise(r => setTimeout(r, 0)); // yield
   }
 
-  // ── NOW frame ── build ด้วย FC_RES เหมือนกัน
-  const nowArr = await buildSnapFrameAsync(()=>buildSnapFrame({}));
+  // ── NOW frame ──
+  const nowArr = PARAM_MODE === 'ec'
+    ? await buildSnapFrameAsync(()=>buildSnapFrameEc({}))
+    : await buildSnapFrameAsync(()=>buildSnapFrame({}));
   _unifiedFrames.push({ ts: nowMs, arr: nowArr, isNow: true });
 
   // ── FORECAST frames (+1h..+6h) ──
@@ -4216,9 +4321,12 @@ async function loadUnifiedTimeline() {
       await new Promise(r => setTimeout(r, 0));
     }
   } else {
+    // EC forecast: EC ไม่มี decay → ใช้ค่าปัจจุบันทุก frame
     for (let f = 1; f <= 6; f++) {
       const ts = nowMs + f * 3600000;
-      _unifiedFrames.push({ ts, arr: _idwCache ? new Float32Array(_idwCache) : null, isForecast: true });
+      const arr = await buildSnapFrameAsync(()=>buildSnapFrameEc({}));
+      _unifiedFrames.push({ ts, arr, isForecast: true });
+      await new Promise(r => setTimeout(r, 0));
     }
   }
 
@@ -4259,18 +4367,21 @@ function buildForecastSnap(foreHr) {
   const origFrc = {};
   for (const s of SENSORS) {
     origFrc[String(s.id)] = s.frc;
-    if (['pump','plant'].includes(s.type)) {
+    if (_SOURCE_TYPES.has(s.type)) {
       const frcNow = getParamVal(s) || 0;
       const k_hr   = getStationKhr(String(s.id)) || 0.062;
       s.frc = Math.max(0, frcNow * Math.exp(-k_hr * foreHr));
     }
   }
   // build frame โดยใช้ window.frcZone ที่รองรับ Custom Zone
-  const _frcFn = window.frcZone || frcZone;
-  const arr = buildOneFrame((lat, lon) => _frcFn(lat, lon));
-  // restore ค่าเดิม
-  for (const s of SENSORS) s.frc = origFrc[String(s.id)];
-  return arr;
+  try {
+    const _frcFn = window.frcZone || frcZone;
+    const arr = buildOneFrame((lat, lon) => _frcFn(lat, lon));
+    return arr;
+  } finally {
+    // restore ค่าเดิมเสมอ — แม้เกิด error
+    for (const s of SENSORS) s.frc = origFrc[String(s.id)];
+  }
 }
 
 function buildUnifiedTicks() {
@@ -4375,9 +4486,21 @@ function getSrcCodeFromLabel(rootLabel) {
   return s?.id?.toString() || null;
 }
 
+// ── History cache for forecast computation (avoid repeated JSON.parse) ────────
+let _histCache = null;
+let _histCacheTs = 0;
+function getHistCached() {
+  const now = Date.now();
+  if (!_histCache || now - _histCacheTs > 10000) { // refresh every 10s
+    _histCache = loadHistory();
+    _histCacheTs = now;
+  }
+  return _histCache;
+}
+
 // ── หา frc ต้นทาง ณ เวลา targetTs จาก history ───────────────────────────────
 function getHistFrcAt(srcCode, targetTs, fallback, fallbackSlope) {
-  const hist = loadHistory();
+  const hist = getHistCached();
   const pts = (hist[srcCode] || []).sort((a,b) => a.ts-b.ts);
   if (!pts.length) return fallback + (fallbackSlope||0)*((targetTs-Date.now())/3600000);
   let best = null, bestDt = Infinity;
@@ -4438,12 +4561,8 @@ function getForecastFrcForPump(pump, deltaHr) {
 // คำนวณ FRC forecast ที่จุด (lat,lon) ณ เวลา +deltaHr
 // = FRC_forecast ของ pump ต้นทาง × spatial decay
 function frcForecastAt(lat, lon, deltaHr) {
-  const SRC = new Set(['pump','plant']);
-  const EC = new Set(['SP01','SP02','SP03','SP11']);
-  const EN = new Set(['สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-    'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)','สถานีสูบส่งน้ำมหาสวัสดิ์']);
-  const sources = SENSORS.filter(s => SRC.has(s.type) && !new Set(['SP01','SP02','SP03','SP11','1','2','3','11']).has(String(s.id))
-    && !EC.has(s.id?.toString()) && !EN.has(s.name?.trim()));
+  const sources = SENSORS.filter(s => _SOURCE_TYPES.has(s.type) && !_FRC_ZONE_EXCL_IDS.has(String(s.id))
+    && !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim()));
   if (!sources.length) return 0;
   let nearest = null, minD = Infinity;
   for (const s of sources) {
@@ -4508,12 +4627,8 @@ function getHistoryBins() {
 
 function buildSnapFrameEc(snapEc) {
   // EC history snapshot — nearest zone ใช้ค่า EC จาก snapEc
-  const SOURCE_TYPES = new Set(['pump','plant']);
-  const EXCL = new Set(['SP01','SP02','SP03','SP11','1','2','3','11']);
-  const EXCL_N = new Set(['สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-    'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)','สถานีสูบส่งน้ำมหาสวัสดิ์']);
   const sources = SENSORS
-    .filter(s => SOURCE_TYPES.has(s.type) && !EXCL.has(String(s.id)) && !EXCL_N.has(s.name?.trim()))
+    .filter(s => _SOURCE_TYPES.has(s.type) && !_FRC_ZONE_EXCL_IDS.has(String(s.id)) && !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim()))
     .map(s => {
       const c = s.id?.toString();
       const ecVal = snapEc[c] != null ? snapEc[c] : (s.ec != null ? s.ec : getParamVal(s));
@@ -4543,17 +4658,10 @@ function buildSnapFrameEc(snapEc) {
 function buildSnapFrame(snap) {
   // สร้าง closure frcZone ที่ใช้ snap โดยตรง ไม่ต้อง override SENSORS
   // เพื่อป้องกัน race condition กับ poll API
-  const SOURCE_TYPES = new Set(['pump','plant']);
-  const EXCL_C = new Set(['SP01','SP02','SP03','SP11']);
-  const EXCL_N = new Set([
-    'สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-    'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)',
-    'สถานีสูบส่งน้ำมหาสวัสดิ์',
-  ]);
   // สร้าง sources พร้อม frc จาก snap (ไม่แตะ SENSORS จริง)
   const sources = SENSORS
-    .filter(s => SOURCE_TYPES.has(s.type) && !new Set(['SP01','SP02','SP03','SP11','1','2','3','11']).has(String(s.id))
-      && !EXCL_C.has(s.id?.toString()) && !EXCL_N.has(s.name?.trim()))
+    .filter(s => _SOURCE_TYPES.has(s.type) && !_FRC_ZONE_EXCL_IDS.has(String(s.id))
+      && !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim()))
     .map(s => {
       const c = s.id?.toString();
       return { ...s, frc: snap[c] != null ? snap[c] : s.frc };
@@ -4773,16 +4881,13 @@ function startLoadFc() {
       const ts = now0 + f*3600000;
       // pre-compute frc ของทุก pump ที่ t+dhr
       const pumpFrcs = {};
-      SENSORS.filter(s=>['pump','plant'].includes(s.type)).forEach(s=>{
+      SENSORS.filter(s=>_SOURCE_TYPES.has(s.type)).forEach(s=>{
         pumpFrcs[s.id?.toString()] = getForecastFrcForPump(s, dhr);
       });
       const _fcSrc = SENSORS.filter(s=>
-        ['pump','plant'].includes(s.type) &&
-        !['SP01','SP02','SP03','SP11','1','2','3','11'].includes(String(s.id)) &&
-        !['SP01','SP02','SP03','SP11'].includes(s.id?.toString()) &&
-        !['สถานีสูบส่งน้ำบางเขน 1 (TR1)','สถานีสูบส่งน้ำบางเขน 2 (TR2)',
-          'สถานีสูบส่งน้ำบางเขน 3 (TR3)','สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)',
-          'สถานีสูบส่งน้ำมหาสวัสดิ์'].includes(s.name?.trim())
+        _SOURCE_TYPES.has(s.type) &&
+        !_FRC_ZONE_EXCL_IDS.has(String(s.id)) &&
+        !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim())
       );
       tasks.push({ ts, build:()=>buildOneFrame(function(lat,lon){
         var sources = _fcSrc;
@@ -5089,6 +5194,10 @@ function initZoneEditor() {
 
   populateStationList();
   renderZoneList();
+
+  // Rebuild cache หลังโหลด DEFAULT_ZONES เพื่อให้ contour ใช้ zone ที่ถูกต้อง
+  buildIdwCache();
+  redrawContour();
 }
 
 // ── Toggle panel ──────────────────────────────────────────────────────
@@ -5925,5 +6034,5 @@ const _zepInitTimer = setInterval(() => {
   }
 }, 800);
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.2.0 — รองรับ Zone Influence Editor: วาดขอบเขตพื้นที่สูบจ่ายน้ำเองได้ · EPANET Decay Model · 18 Mar 2026</span></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.3.0 — Performance optimized · ลด contour render 10× · throttle tooltip · hoist Sets · spike detection fix · 20 Mar 2026</span></div>
 </body></html>
