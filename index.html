@@ -477,9 +477,10 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #src-modal { width: 98vw; max-height: 88vh; }
   .lpop { min-width: unset; width: 80vw; }
 
-  /* ── Zone editor — full width + ปุ่มปิดชัด ── */
-  #zone-editor-panel { width: 100% !important; max-height: 60vh !important; }
-  #zep-close { font-size: 24px !important; padding: 4px 8px !important; }
+  /* ── Zone editor — full width + overlay ปิดง่าย ── */
+  #zone-editor-panel { width: 100% !important; max-height: 70vh !important; top: auto !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; }
+  #zep-close { font-size: 28px !important; padding: 4px 10px !important; color: #ff8888 !important; }
+  #zep-header { padding: 14px 14px 10px !important; }
 
   /* ── About panel — เล็กลงบน mobile ── */
   #about-panel > div {
@@ -512,7 +513,8 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #feedback-btn { bottom: 48px !important; font-size: 9px !important; padding: 4px 8px !important; opacity: 0.9 !important; }
 
   /* ── Report panel — ปุ่มปิดชัดเจน ── */
-  #rp-close { font-size: 22px !important; padding: 4px 8px !important; }
+  #rp-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff4477 !important; }
+  #report-panel .rp-header { position: sticky !important; top: 0 !important; z-index: 10 !important; }
 }
 
 /* ═══════════════════════════════════════
@@ -6249,17 +6251,28 @@ function initZoneEditor() {
 
 // ── Toggle panel ──────────────────────────────────────────────────────
 function toggleZoneEditor() {
-  hideAllZoneLayers(); // ซ่อน zone เมื่อปิด panel
+  hideAllZoneLayers();
   const panel = document.getElementById('zone-editor-panel');
   const btn   = document.getElementById('zone-editor-btn');
   const isOpen = panel.classList.contains('open');
+  // จัดการ overlay
+  var overlay = document.getElementById('zep-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'zep-overlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:940;';
+    overlay.onclick = function(){ toggleZoneEditor(); };
+    document.body.appendChild(overlay);
+  }
   if (isOpen) {
     panel.classList.remove('open');
     btn.classList.remove('active');
+    overlay.style.display = 'none';
     if (_drawActive) cancelDraw();
   } else {
     panel.classList.add('open');
     btn.classList.add('active');
+    if (window.innerWidth <= 640) overlay.style.display = 'block';
     populateStationList();
   }
   _syncFloatingBtns();
@@ -7869,10 +7882,15 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
               document.body.appendChild(tooltipEl);
               // wheel event — ให้ scroll ภายใน + block scroll จอ
               inner2.addEventListener('wheel',function(e){
-                e.stopPropagation();
-                inner2.scrollTop+=e.deltaY;
-                e.preventDefault();
+                e.stopPropagation();inner2.scrollTop+=e.deltaY;e.preventDefault();
               },{passive:false});
+              // ปิด tooltip เมื่อ touch/click ที่อื่น
+              document.addEventListener('touchstart',function(e){
+                if(tooltipEl&&!tooltipEl.contains(e.target)){tooltipEl.style.opacity='0';tooltipEl.style.pointerEvents='none';}
+              },{passive:true});
+              document.addEventListener('click',function(e){
+                if(tooltipEl&&!tooltipEl.contains(e.target)){tooltipEl.style.opacity='0';tooltipEl.style.pointerEvents='none';}
+              });
             } else {
               inner2=document.getElementById('rp-chart-tooltip-inner');
             }
@@ -7885,7 +7903,7 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
               var d=new Date(ts);
               timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
             }
-            var html='<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#e0d0f0;margin-bottom:6px;font-weight:700;position:sticky;top:0;background:rgba(10,10,30,0.98);padding:4px 0 4px 0;z-index:1;">⏱ '+timeStr+'</div>';
+            var html='<div style="display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,30,0.98);padding:6px 0 4px 0;z-index:1;"><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:#e0d0f0;font-weight:700;">⏱ '+timeStr+'</span><button onclick="document.getElementById(\'rp-chart-tooltip\').style.opacity=\'0\';document.getElementById(\'rp-chart-tooltip\').style.pointerEvents=\'none\';" style="background:none;border:none;color:#ff8888;font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;">✕</button></div>';
             if(tooltip.body){
               tooltip.body.forEach(function(b,i){
                 var colors=tooltip.labelColors?tooltip.labelColors[i]:{borderColor:'#fff'};
