@@ -489,6 +489,11 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #zone-editor-panel { width: 270px; }
   #lg-toggle-btn { display: none !important; }
 }
+/* iPad/tablet with browser tab bar — เพิ่ม padding ด้านบน */
+@supports (-webkit-touch-callout: none) {
+  body { padding-top: max(env(safe-area-inset-top), 20px); }
+  #header { padding-top: 10px; }
+}
 
 
 /* ═══════════════════════════════════════════════
