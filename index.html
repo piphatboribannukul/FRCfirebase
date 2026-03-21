@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>M sandbox : Real-Time Chlorine Contour rev7.3</title>
+<title>M sandbox : Real-Time Chlorine Contour rev7.8</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -239,6 +239,11 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 .pk-pop .leaflet-popup-tip{background:#fff;}
 .pk-pop .leaflet-popup-close-button{color:#c080a0 !important;font-size:18px !important;transition:color .15s;}
 .pk-pop .leaflet-popup-close-button:hover{color:#cc0055 !important;}
+.leaflet-popup-pane{z-index:800 !important;}
+.leaflet-popup{z-index:800 !important;}
+#map .leaflet-pane.leaflet-popup-pane{z-index:800 !important;}
+.pk-pop .leaflet-popup-content-wrapper{position:relative;z-index:900 !important;}
+.pk-pop .leaflet-popup-tip-container{position:relative;z-index:900 !important;}
 /* EPANET Panel */
 .ep-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:8px;}
 .ep-label{font-size:11.5px;color:#5a3040;flex:1;}
@@ -720,44 +725,83 @@ body.dark #disclaimer-bar{
 #feedback-btn{
   position:fixed;bottom:42px;left:12px;z-index:1999;
   background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;
-  border:none;border-radius:12px;padding:8px 14px;
-  font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;
-  cursor:pointer;display:flex;align-items:center;gap:6px;
-  box-shadow:0 2px 12px rgba(204,0,85,.25),0 0 0 0 rgba(204,0,85,0);
-  transition:all .2s cubic-bezier(.4,0,.2,1);letter-spacing:.2px;
+  border:none;border-radius:10px;padding:5px 10px;
+  font-family:'Sarabun',sans-serif;font-size:10.5px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:5px;
+  box-shadow:0 2px 10px rgba(204,0,85,.2);
+  transition:all .2s cubic-bezier(.4,0,.2,1);letter-spacing:.2px;opacity:.85;
 }
-#feedback-btn:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(204,0,85,.35);}
-#feedback-btn:active{transform:translateY(0);}
-#feedback-btn svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
-body.dark #feedback-btn{background:linear-gradient(135deg,#e94560,#cc0055);box-shadow:0 2px 16px rgba(233,69,96,.3);}
-#fb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#feedback-btn:hover{opacity:1;transform:translateY(-1px);box-shadow:0 3px 14px rgba(204,0,85,.3);}
+#feedback-btn svg{width:13px;height:13px;fill:currentColor;flex-shrink:0;}
+body.dark #feedback-btn{background:linear-gradient(135deg,#e94560,#cc0055);}
+#fb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:3000;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 #fb-overlay.open{display:flex;}
-#fb-modal{background:#fff;border-radius:16px;width:min(420px,90vw);max-height:85vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:fbSlideIn .3s cubic-bezier(.4,0,.2,1);}
-@keyframes fbSlideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-#fb-modal-header{background:linear-gradient(135deg,#3a0a20,#cc0055);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
-#fb-modal-header h2{font-size:15px;font-weight:700;margin:0;letter-spacing:.2px;}
-#fb-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px;transition:color .15s;}
+#fb-modal{background:#fff;border-radius:14px;width:min(340px,88vw);max-height:80vh;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.18);animation:fbSlideIn .25s cubic-bezier(.4,0,.2,1);}
+@keyframes fbSlideIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+#fb-modal-header{background:linear-gradient(135deg,#3a0a20,#cc0055);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+#fb-modal-header h2{font-size:13px;font-weight:700;margin:0;}
+#fb-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:0 2px;transition:color .15s;}
 #fb-close:hover{color:#fff;}
-#fb-modal-body{padding:20px;}
-#fb-modal-body label{display:block;font-size:11px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
-#fb-name{width:100%;padding:10px 14px;border:1.5px solid #f0d0e0;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;margin-bottom:16px;transition:border-color .2s;outline:none;background:#fff;}
-#fb-name:focus{border-color:#cc0055;box-shadow:0 0 0 3px rgba(204,0,85,.08);}
-#fb-msg{width:100%;height:120px;padding:10px 14px;border:1.5px solid #f0d0e0;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;resize:vertical;transition:border-color .2s;outline:none;background:#fff;}
-#fb-msg:focus{border-color:#cc0055;box-shadow:0 0 0 3px rgba(204,0,85,.08);}
-#fb-submit{width:100%;margin-top:16px;padding:12px;background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
-#fb-submit:hover{background:linear-gradient(135deg,#e94560,#cc0055);box-shadow:0 4px 16px rgba(204,0,85,.3);}
+#fb-modal-body{padding:14px 16px;}
+#fb-modal-body label{display:block;font-size:9.5px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;}
+#fb-name{width:100%;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12.5px;margin-bottom:10px;transition:border-color .2s;outline:none;background:#fff;}
+#fb-name:focus{border-color:#cc0055;box-shadow:0 0 0 2px rgba(204,0,85,.06);}
+#fb-msg{width:100%;height:80px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12.5px;resize:vertical;transition:border-color .2s;outline:none;background:#fff;}
+#fb-msg:focus{border-color:#cc0055;box-shadow:0 0 0 2px rgba(204,0,85,.06);}
+#fb-submit{width:100%;margin-top:10px;padding:9px;background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .2s;}
+#fb-submit:hover{background:linear-gradient(135deg,#e94560,#cc0055);}
 #fb-submit:disabled{opacity:.5;cursor:not-allowed;}
-#fb-success{display:none;text-align:center;padding:30px 20px;}
-#fb-success .fb-check{width:56px;height:56px;margin:0 auto 16px;background:#f0fff5;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-#fb-success .fb-check svg{width:28px;height:28px;fill:#22c55e;}
-#fb-success h3{font-size:16px;color:#1a0a10;margin:0 0 6px;}
-#fb-success p{font-size:13px;color:#a06080;margin:0;}
+#fb-success{display:none;text-align:center;padding:20px 16px;}
+#fb-success .fb-check{width:44px;height:44px;margin:0 auto 10px;background:#f0fff5;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+#fb-success .fb-check svg{width:22px;height:22px;fill:#22c55e;}
+#fb-success h3{font-size:14px;color:#1a0a10;margin:0 0 4px;}
+#fb-success p{font-size:11px;color:#a06080;margin:0;}
 body.dark #fb-modal{background:#1a1a2e;border:1px solid rgba(233,69,96,.15);}
 body.dark #fb-modal-body label{color:#cc6688;}
 body.dark #fb-name,body.dark #fb-msg{background:rgba(255,255,255,.05);border-color:rgba(233,69,96,.2);color:#e0d0d8;}
-body.dark #fb-name:focus,body.dark #fb-msg:focus{border-color:#e94560;box-shadow:0 0 0 3px rgba(233,69,96,.1);}
+body.dark #fb-name:focus,body.dark #fb-msg:focus{border-color:#e94560;}
 body.dark #fb-success h3{color:#e0d0d8;}
 body.dark #fb-success p{color:#cc6688;}
+/* Trend list */
+.rp-trend-item:hover{background:#fff0f5 !important;}
+body.dark .rp-trend-item:hover{background:rgba(233,69,96,.08) !important;}
+body.dark #rp-trend-search{background:rgba(255,255,255,.05);border-color:rgba(233,69,96,.2);color:#e0d0d8;}
+body.dark #rp-trend-list{border-color:rgba(233,69,96,.15);}
+body.dark .rp-trend-item{color:#d0b0c0;border-color:rgba(255,255,255,.05) !important;}
+body.dark #rp-trend-param{background:rgba(255,255,255,.05);border-color:rgba(233,69,96,.2);color:#e0d0d8;}
+body.dark #rp-trend-chart-title{color:#e0d0d8 !important;}
+body.dark #rp-trend-stats{color:#c0a0b0 !important;}
+body.dark select[id^="rp-frc"],body.dark select[id^="rp-ec"]{background:rgba(255,255,255,.05) !important;border-color:rgba(233,69,96,.2) !important;color:#e0d0d8 !important;}
+body.dark select[id^="rp-frc"] optgroup,body.dark select[id^="rp-ec"] optgroup{background:#1a1028;color:#d0b0c0;}
+body.dark select[id^="rp-frc"] option,body.dark select[id^="rp-ec"] option{background:#1a1028;color:#e0d0d8;}
+/* ── Feedback Report Modal ── */
+#fbr-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3100;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#fbr-overlay.open{display:flex;}
+#fbr-modal{background:#fff;border-radius:14px;width:min(500px,92vw);max-height:85vh;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.2);animation:fbSlideIn .25s cubic-bezier(.4,0,.2,1);}
+#fbr-header{background:linear-gradient(135deg,#1a0a30,#4a1040);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+#fbr-header h2{font-size:13px;font-weight:700;margin:0;}
+#fbr-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:0 2px;}
+#fbr-close:hover{color:#fff;}
+#fbr-body{padding:14px 16px;overflow-y:auto;max-height:calc(85vh - 48px);}
+#fbr-login{text-align:center;}
+#fbr-login label{display:block;font-size:9.5px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;text-align:left;}
+#fbr-login input{width:100%;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12.5px;margin-bottom:8px;outline:none;}
+#fbr-login input:focus{border-color:#cc0055;}
+#fbr-login-btn{width:100%;padding:9px;background:linear-gradient(135deg,#4a1040,#7a2060);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;margin-top:4px;}
+#fbr-login-err{color:#cc0055;font-size:11px;margin-top:6px;display:none;}
+#fbr-list{display:none;}
+#fbr-list .fbr-item{background:#fff5f8;border-left:3px solid #cc0055;border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:8px;}
+#fbr-list .fbr-item-name{font-size:12px;font-weight:700;color:#3a0a20;}
+#fbr-list .fbr-item-time{font-size:9.5px;color:#c080a0;font-family:'JetBrains Mono',monospace;margin-left:8px;}
+#fbr-list .fbr-item-msg{font-size:12px;color:#5a3040;margin-top:4px;line-height:1.5;}
+#fbr-empty{text-align:center;color:#c080a0;font-size:12px;padding:20px 0;}
+body.dark #fbr-modal{background:#1a1a2e;border:1px solid rgba(233,69,96,.15);}
+body.dark #fbr-body{color:#e0d0d8;}
+body.dark #fbr-login label{color:#cc6688;}
+body.dark #fbr-login input{background:rgba(255,255,255,.05);border-color:rgba(233,69,96,.2);color:#e0d0d8;}
+body.dark #fbr-list .fbr-item{background:rgba(233,69,96,.05);border-color:#e94560;}
+body.dark #fbr-list .fbr-item-name{color:#ffaacc;}
+body.dark #fbr-list .fbr-item-msg{color:#d0b0c0;}
 /* Sidebar — deep frosted glass */
 body.dark #sidebar{
   background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
@@ -1217,7 +1261,7 @@ body.dark .leaflet-control-attribution a{color:var(--neon-blue) !important;}
 .param-btn.active{background:#cc0055;color:#fff;box-shadow:inset 0 1px 2px rgba(0,0,0,.1);}
 .param-btn:not(.active):hover{background:#fff0f5;color:#cc0055;}
 /* EC color overrides on legend */
-#legend-panel.ec-mode .lg-grad-bar{background:linear-gradient(to bottom,#c81414 0%,#f0d220 30%,#aaff20 55%,#c0e8ff 80%,#c8e8ff 100%)!important;}
+#legend-panel.ec-mode .lg-grad-bar{background:linear-gradient(to bottom,#dc1414 0%,#ffd200 28%,#a0e600 52%,#78d2ff 80%,#50b4ff 100%)!important;}
 
 #note-btn {
   width:100%;
@@ -1324,7 +1368,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev7.3</span>
+  <span id="v2-badge">⬡ rev7.8</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1338,7 +1382,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <button id="zone-editor-btn" onclick="toggleZoneEditor()" title="Zone Influence Editor — กำหนดขอบเขตพื้นที่อิทธิพลสถานีสูบจ่าย">🗺</button>
 
 <!-- AI Insight Button -->
-<button id="ai-insight-btn" onclick="toggleAiPanel()" title="AI Insight — วิเคราะห์แนวโน้ม">
+<button id="ai-insight-btn" onclick="toggleAiPanel()" title="วิเคราะห์แนวโน้ม">
   🧠
   <div class="ai-pulse"></div>
 </button>
@@ -1350,7 +1394,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="ai-panel">
   <div id="ai-panel-head">
     <span class="ai-icon">🧠</span>
-    <h3>AI Water Quality Insight</h3>
+    <h3>วิเคราะห์แนวโน้ม</h3>
     <button id="ai-close" onclick="toggleAiPanel()">✕</button>
   </div>
   <div id="ai-panel-body">
@@ -1361,7 +1405,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div id="ai-content" style="display:none;"></div>
   </div>
   <div class="ai-footer">
-    🧠 AI Insight Engine · วิเคราะห์จาก <span id="ai-pts-count">0</span> จุดข้อมูล · อัปเดตทุก 15 นาที
+    🧠 วิเคราะห์แนวโน้ม · จาก <span id="ai-pts-count">0</span> จุดข้อมูล · อัปเดตทุก 15 นาที
   </div>
 </div>
 
@@ -1695,12 +1739,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="lg-div"></div>
     <div id="lg-thresh-lines">
       <div class="lg-dline">
-        <svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#c0a000" stroke-width="1.2" stroke-dasharray="4,3"/></svg>
-        <span style="color:#a08000;" id="lg-line1-label">0.2 mg/L</span>
+        <svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#b40000" stroke-width="1.2" stroke-dasharray="4,3"/></svg>
+        <span style="color:#b40000;" id="lg-line1-label">0.2 mg/L</span>
       </div>
       <div class="lg-dline">
-        <svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#cc0055" stroke-width="1.2" stroke-dasharray="4,3"/></svg>
-        <span style="color:#cc0055;" id="lg-line2-label">1.0 mg/L</span>
+        <svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#0088dd" stroke-width="1.0" stroke-dasharray="4,3"/></svg>
+        <span style="color:#0088dd;" id="lg-line2-label">1.0 mg/L</span>
       </div>
     </div>
     <div class="lg-div"></div>
@@ -1767,7 +1811,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev7.3 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev7.8 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -1819,7 +1863,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev7.3 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev7.8 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -1834,7 +1878,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev7.3</h2>
+      <h2>📊 <span>Daily Report</span> — rev7.8</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -1843,34 +1887,125 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </div>
     <div class="rp-body">
       <div class="rp-tabs">
-        <button class="rp-tab active" onclick="rpTab('frc')">🌸 FRC Report</button>
-        <button class="rp-tab" onclick="rpTab('ec')">⚡ EC Report</button>
+        <button class="rp-tab active" onclick="rpTab('frc')">🌸 FRC</button>
+        <button class="rp-tab" onclick="rpTab('ec')">⚡ EC</button>
+        <button class="rp-tab" onclick="rpTab('feedback')">💬 ข้อเสนอแนะ</button>
+      </div>
+      <div id="rp-trend" style="display:none;">
+        <div class="rp-section">📊 กราฟเปรียบเทียบผลคาดการณ์</div>
+        <div class="rp-card" style="margin-bottom:10px;">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <select id="rp-trend-param" onchange="rpTrendRefresh()" style="padding:5px 8px;border:1.5px solid #e0c0d8;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;background:#fff;color:#3a0a20;outline:none;">
+              <option value="frc">FRC (mg/L)</option>
+              <option value="ec">EC (μS/cm)</option>
+            </select>
+          </div>
+          <input id="rp-trend-search" type="text" placeholder="🔍 ค้นหาสถานี..." oninput="rpTrendFilter()" style="width:100%;padding:6px 10px;border:1.5px solid #e0c0d8;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;margin-bottom:6px;outline:none;">
+          <div id="rp-trend-list" style="max-height:180px;overflow-y:auto;border:1px solid #f0d0e0;border-radius:8px;margin-bottom:10px;"></div>
+        </div>
+        <div id="rp-trend-chart" class="rp-card" style="display:none;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <div id="rp-trend-chart-title" style="font-size:11px;font-weight:700;color:#3a0a20;flex:1;"></div>
+            <button id="rp-trend-autofit-btn" onclick="rpTrendAutoFitK()" style="display:none;padding:4px 10px;font-size:10px;font-weight:700;font-family:'Sarabun',sans-serif;background:linear-gradient(135deg,#00b894,#009874);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🎯 Auto-fit K</button>
+          </div>
+          <canvas id="rp-trend-canvas" style="width:100%;height:320px;"></canvas>
+          <div id="rp-trend-stats" style="font-size:10px;color:#a06080;margin-top:6px;"></div>
+          <div id="rp-trend-kinfo" style="font-size:10px;color:#a06080;margin-top:4px;display:none;"></div>
+        </div>
+      </div>
+      <div id="rp-feedback" style="display:none;">
+        <div id="rp-fb-auth" style="text-align:center;padding:20px;">
+          <div style="font-size:11px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;">🔒 กรุณาเข้าสู่ระบบ</div>
+          <input id="rp-fb-user" type="text" placeholder="User" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:6px;outline:none;display:block;margin-left:auto;margin-right:auto;">
+          <input id="rp-fb-pass" type="password" placeholder="Password" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:8px;outline:none;display:block;margin-left:auto;margin-right:auto;">
+          <button onclick="rpFbLogin()" style="width:200px;padding:8px;background:linear-gradient(135deg,#4a1040,#7a2060);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">เข้าสู่ระบบ</button>
+          <div id="rp-fb-err" style="color:#cc0055;font-size:11px;margin-top:6px;display:none;">❌ User หรือ Password ไม่ถูกต้อง</div>
+        </div>
+        <div id="rp-fb-list" style="display:none;"></div>
       </div>
       <div id="rp-frc">
         <div class="rp-section">สรุป FRC ประจำวัน</div>
         <div class="rp-stats" id="rp-frc-stats"></div>
+        <div class="rp-section">📊 กราฟเปรียบเทียบผลคาดการณ์</div>
+        <div class="rp-card">
+          <button onclick="var el=document.getElementById('rp-frc-overview');el.style.display=el.style.display==='none'?'':'none';this.textContent=el.style.display==='none'?'▶ ภาพรวมการเปรียบเทียบ':'▼ ภาพรวมการเปรียบเทียบ';" style="width:100%;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Sarabun',sans-serif;background:rgba(204,0,85,.08);color:#cc0055;border:1.5px solid rgba(204,0,85,.2);border-radius:8px;cursor:pointer;text-align:left;margin-bottom:8px;">▶ ภาพรวมการเปรียบเทียบ</button>
+          <div id="rp-frc-overview" style="display:none;">
+            <div class="rp-compare" id="rp-frc-compare"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <select id="rp-frc-trend-sel" onchange="rpTrendFromReport('frc')" style="flex:1;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;outline:none;background:#fff;color:#3a0a20;">
+              <option value="">— เลือกสถานี —</option>
+            </select>
+            <button id="rp-frc-autofit-btn" onclick="rpTrendAutoFitK()" style="display:none;padding:4px 10px;font-size:10px;font-weight:700;font-family:'Sarabun',sans-serif;background:linear-gradient(135deg,#00b894,#009874);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🎯 Auto-fit K</button>
+          </div>
+          <div id="rp-frc-trend-chart" style="display:none;">
+            <button onclick="var el=document.getElementById('rp-frc-trend-inner');el.style.display=el.style.display==='none'?'':'none';this.textContent=el.style.display==='none'?'▶ หุบกราฟ':'▼ แสดงกราฟ';" style="width:100%;padding:5px;font-size:10px;font-weight:600;font-family:'Sarabun',sans-serif;background:transparent;color:#c080a0;border:1px solid rgba(204,0,85,.15);border-radius:6px;cursor:pointer;margin-bottom:6px;display:none;" id="rp-frc-trend-collapse">▼ แสดงกราฟ</button>
+            <div id="rp-frc-trend-inner">
+              <canvas id="rp-frc-trend-canvas" style="width:100%;height:320px;"></canvas>
+            </div>
+            <div id="rp-frc-trend-stats" style="font-size:10px;color:#a06080;margin-top:6px;"></div>
+            <div id="rp-frc-trend-kinfo" style="font-size:10px;color:#a06080;margin-top:4px;display:none;"></div>
+          </div>
+        </div>
         <div class="rp-section">สถานีเฝ้าระวัง</div>
         <div class="rp-card" id="rp-frc-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
-        <div class="rp-section">กราฟแนวโน้ม FRC 24 ชม.</div>
-        <div class="rp-card"><div style="font-size:10px;color:#a090b8;margin-bottom:4px;">สถานีสูบจ่าย / โรงผลิต</div><div class="rp-chart"><canvas id="rp-frc-chart-pump"></canvas></div></div>
-        <div class="rp-card"><div style="font-size:10px;color:#a090b8;margin-bottom:4px;">สถานี Monitor</div><div class="rp-chart"><canvas id="rp-frc-chart-mon"></canvas></div></div>
+        <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
+        <div class="rp-card">
+          <select id="rp-frc-pump-sel" onchange="rpChartSelectStation('frc','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
+            <option value="all">📊 แสดงทุกสถานี</option>
+          </select>
+          <div class="rp-chart"><canvas id="rp-frc-chart-pump"></canvas></div>
+        </div>
+        <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
+        <div class="rp-card">
+          <select id="rp-frc-mon-sel" onchange="rpChartSelectStation('frc','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
+            <option value="all">📊 แสดงทุกสถานี</option>
+          </select>
+          <div class="rp-chart"><canvas id="rp-frc-chart-mon"></canvas></div>
+        </div>
         <div class="rp-section">ตาราง FRC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>FRC</th><th>สถานะ</th></tr></thead><tbody id="rp-frc-tbody"></tbody></table></div></div>
-        <div class="rp-section">เปรียบเทียบ ค่าจริง vs คาดการณ์</div>
-        <div class="rp-compare" id="rp-frc-compare"></div>
       </div>
       <div id="rp-ec" style="display:none;">
         <div class="rp-section">สรุป EC ประจำวัน</div>
         <div class="rp-stats" id="rp-ec-stats"></div>
+        <div class="rp-section">📊 กราฟเปรียบเทียบผลคาดการณ์</div>
+        <div class="rp-card">
+          <button onclick="var el=document.getElementById('rp-ec-overview');el.style.display=el.style.display==='none'?'':'none';this.textContent=el.style.display==='none'?'▶ ภาพรวมการเปรียบเทียบ':'▼ ภาพรวมการเปรียบเทียบ';" style="width:100%;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Sarabun',sans-serif;background:rgba(16,64,160,.08);color:#1565c0;border:1.5px solid rgba(16,64,160,.2);border-radius:8px;cursor:pointer;text-align:left;margin-bottom:8px;">▶ ภาพรวมการเปรียบเทียบ</button>
+          <div id="rp-ec-overview" style="display:none;">
+            <div class="rp-compare" id="rp-ec-compare"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <select id="rp-ec-trend-sel" onchange="rpTrendFromReport('ec')" style="flex:1;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;outline:none;background:#fff;color:#0a1a3a;">
+              <option value="">— เลือกสถานี —</option>
+            </select>
+          </div>
+          <div id="rp-ec-trend-chart" style="display:none;">
+            <button onclick="var el=document.getElementById('rp-ec-trend-inner');el.style.display=el.style.display==='none'?'':'none';this.textContent=el.style.display==='none'?'▶ หุบกราฟ':'▼ แสดงกราฟ';" style="width:100%;padding:5px;font-size:10px;font-weight:600;font-family:'Sarabun',sans-serif;background:transparent;color:#6090c0;border:1px solid rgba(16,64,160,.15);border-radius:6px;cursor:pointer;margin-bottom:6px;display:none;" id="rp-ec-trend-collapse">▼ แสดงกราฟ</button>
+            <div id="rp-ec-trend-inner">
+              <canvas id="rp-ec-trend-canvas" style="width:100%;height:320px;"></canvas>
+            </div>
+            <div id="rp-ec-trend-stats" style="font-size:10px;color:#a06080;margin-top:6px;"></div>
+          </div>
+        </div>
         <div class="rp-section">สถานีเฝ้าระวัง</div>
         <div class="rp-card" id="rp-ec-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
-        <div class="rp-section">กราฟแนวโน้ม EC 24 ชม.</div>
-        <div class="rp-card"><div style="font-size:10px;color:#a090b8;margin-bottom:4px;">สถานีสูบจ่าย / โรงผลิต</div><div class="rp-chart"><canvas id="rp-ec-chart-pump"></canvas></div></div>
-        <div class="rp-card"><div style="font-size:10px;color:#a090b8;margin-bottom:4px;">สถานี Monitor</div><div class="rp-chart"><canvas id="rp-ec-chart-mon"></canvas></div></div>
+        <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
+        <div class="rp-card">
+          <select id="rp-ec-pump-sel" onchange="rpChartSelectStation('ec','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
+            <option value="all">📊 แสดงทุกสถานี</option>
+          </select>
+          <div class="rp-chart"><canvas id="rp-ec-chart-pump"></canvas></div>
+        </div>
+        <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
+        <div class="rp-card">
+          <select id="rp-ec-mon-sel" onchange="rpChartSelectStation('ec','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
+            <option value="all">📊 แสดงทุกสถานี</option>
+          </select>
+          <div class="rp-chart"><canvas id="rp-ec-chart-mon"></canvas></div>
+        </div>
         <div class="rp-section">ตาราง EC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl ec"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>EC</th><th>สถานะ</th></tr></thead><tbody id="rp-ec-tbody"></tbody></table></div></div>
-        <div class="rp-section">เปรียบเทียบ ค่าจริง vs คาดการณ์</div>
-        <div class="rp-compare" id="rp-ec-compare"></div>
       </div>
     </div>
   </div>
@@ -2084,28 +2219,28 @@ function ecColorContour(v, alpha=0.72) {
   }
   let r,g,b;
   if (v < 150) {
-    // ฟ้าอ่อน — น้ำ MH ต่ำมาก
-    [r,g,b] = [190, 230, 255];
+    // ฟ้าสด
+    [r,g,b] = [80, 180, 255];
   } else if (v < 210) {
-    // ฟ้าอ่อน → ฟ้าอ่อนมาก
+    // ฟ้าสด → ฟ้าอ่อนสด
     const t = (v - 150) / 60;
-    [r,g,b] = lerp(190,230,255, 210,240,255, t);
+    [r,g,b] = lerp(80,180,255, 120,210,255, t);
   } else if (v < 240) {
-    // ฟ้าอ่อน → เขียวสว่าง (transition เร็ว)
+    // ฟ้าอ่อนสด → เหลืองเขียวสด
     const t = (v - 210) / 30;
-    [r,g,b] = lerp(210,240,255, 170,255,32, t);
+    [r,g,b] = lerp(120,210,255, 160,230,0, t);
   } else if (v < 500) {
-    // เขียวสว่าง (คงสี)
+    // เหลืองเขียวสด → เหลืองเขียว
     const t = (v - 240) / 260;
-    [r,g,b] = lerp(170,255,32, 155,240,25, t);
+    [r,g,b] = lerp(160,230,0, 180,220,0, t);
   } else if (v < 1200) {
-    // เขียวสว่าง → เหลือง
+    // เขียวสด → เหลืองสด
     const t = (v - 500) / 700;
-    [r,g,b] = lerp(155,240,25, 240,220,50, t);
+    [r,g,b] = lerp(100,210,20, 255,210,0, t);
   } else {
-    // เหลือง → แดง
+    // เหลืองสด → แดงสด
     const t = Math.min(1, (v - 1200) / 300);
-    [r,g,b] = lerp(240,210,30, 200,20,20, t);
+    [r,g,b] = lerp(255,200,0, 220,20,20, t);
   }
   return `rgba(${r},${g},${b},${a})`;
 }
@@ -2133,12 +2268,12 @@ function ecColorContourRGBA(v, a) {
     return [Math.round(r1+(r2-r1)*t), Math.round(g1+(g2-g1)*t), Math.round(b1+(b2-b1)*t)];
   }
   let r,g,b;
-  if (v < 150) { [r,g,b] = [190, 230, 255]; }
-  else if (v < 210) { const t = (v-150)/60; [r,g,b] = _lerp3(190,230,255, 210,240,255, t); }
-  else if (v < 240) { const t = (v-210)/30; [r,g,b] = _lerp3(210,240,255, 170,255,32, t); }
-  else if (v < 500) { const t = (v-240)/260; [r,g,b] = _lerp3(170,255,32, 155,240,25, t); }
-  else if (v < 1200) { const t = (v-500)/700; [r,g,b] = _lerp3(155,240,25, 240,220,50, t); }
-  else { const t = Math.min(1, (v-1200)/300); [r,g,b] = _lerp3(240,210,30, 200,20,20, t); }
+  if (v < 150) { [r,g,b] = [80, 180, 255]; }
+  else if (v < 210) { const t = (v-150)/60; [r,g,b] = _lerp3(80,180,255, 120,210,255, t); }
+  else if (v < 240) { const t = (v-210)/30; [r,g,b] = _lerp3(120,210,255, 160,230,0, t); }
+  else if (v < 500) { const t = (v-240)/260; [r,g,b] = _lerp3(160,230,0, 180,220,0, t); }
+  else if (v < 1200) { const t = (v-500)/700; [r,g,b] = _lerp3(100,210,20, 255,210,0, t); }
+  else { const t = Math.min(1, (v-1200)/300); [r,g,b] = _lerp3(255,200,0, 220,20,20, t); }
   return [r, g, b, Math.round(a * 255)];
 }
 function paramColorRGBA(v, alpha) {
@@ -2557,8 +2692,8 @@ function _drawOnCanvas() {
       if(PARAM_MODE === 'ec' && isLabeled) continue;
       if(isLabeled && !layers.thresh) continue;
       ctx.beginPath();
-      if(is_lo)         {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(200,80,0,0.95)':'rgba(160,120,0,0.90)';ctx.lineWidth=1.2;ctx.setLineDash([8,4]);}
-      else if(is_hi)    {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(140,20,0,0.95)':'rgba(160,0,60,0.92)'; ctx.lineWidth=1.2;ctx.setLineDash([8,4]);}
+      if(is_lo)         {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(200,80,0,0.95)':'rgba(180,0,0,0.90)';ctx.lineWidth=1.2;ctx.setLineDash([6,4]);}
+      else if(is_hi)    {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(140,20,0,0.95)':'rgba(0,120,220,0.85)'; ctx.lineWidth=0.8;ctx.setLineDash([6,4]);}
       else if(PARAM_MODE==='ec' && level===210) {ctx.strokeStyle='rgba(60,60,60,0.75)';ctx.lineWidth=1.8;ctx.setLineDash([10,5]);}
       else if(PARAM_MODE==='ec' && level===250) {ctx.strokeStyle='rgba(80,80,80,0.70)';ctx.lineWidth=1.8;ctx.setLineDash([12,5]);}
       else if(PARAM_MODE==='ec' && level===200) {ctx.strokeStyle='rgba(0,160,140,0.80)';ctx.lineWidth=1.5;ctx.setLineDash([8,4]);}
@@ -2604,9 +2739,9 @@ function _drawOnCanvas() {
           labelText  = is_lo ? '300' : '600';
           fontSize   = 10;
         } else {
-          labelColor = is_lo ? 'rgba(120,90,0,1)' : 'rgba(130,0,50,1)';
+          labelColor = is_lo ? 'rgba(180,0,0,0.90)' : 'rgba(0,120,220,0.85)';
           labelText  = is_lo ? '0.2' : '1.0';
-          fontSize   = is_lo ? 10 : 11;
+          fontSize   = is_lo ? 7 : 8;
         }
         const step = Math.max(1, Math.floor(segs.length / 8));
         for(let si=0; si<segs.length; si+=step) {
@@ -2629,7 +2764,7 @@ function _drawOnCanvas() {
       if(angle < -Math.PI/2) angle += Math.PI;
       ctx.rotate(angle);
       ctx.font = `bold ${lb.fs}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillStyle = lb.color;
       ctx.fillText(lb.text, 0, 0);
       ctx.restore();
     }
@@ -3028,7 +3163,7 @@ function buildMarkers() {
       const y = py(v);
       if (y < PT-2 || y > PT+ch+2) continue;
       yLabels += '<line x1="'+(PL-3).toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+PL+'" y2="'+y.toFixed(1)+'" stroke="#c0d8f0" stroke-width="0.8"/>';
-      yLabels += '<text x="'+(PL-5).toFixed(1)+'" y="'+(y+3).toFixed(1)+'" font-size="9" font-weight="bold" fill="#222" text-anchor="end" font-family="JetBrains Mono,monospace">'+v+'</text>';
+      yLabels += '<text x="'+(PL-5).toFixed(1)+'" y="'+(y+3).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#c0c0e0':'#222')+'" text-anchor="end" font-family="JetBrains Mono,monospace">'+v+'</text>';
     }
 
     function toHHMM(hr) {
@@ -3070,7 +3205,8 @@ function buildMarkers() {
       } else {
         showDot = false;
       }
-      const ecColor  = ecVal != null ? (ecVal >= EC_CONFIG.hi ? '#b32800' : ecVal >= EC_CONFIG.lo ? '#1565c0' : '#40b0e0') : '#bbb';
+      const _dkMark = document.body.classList.contains('dark');
+      const ecColor  = ecVal != null ? (ecVal >= EC_CONFIG.hi ? (_dkMark?'#ff6666':'#b32800') : ecVal >= EC_CONFIG.lo ? (_dkMark?'#4ea8de':'#1565c0') : (_dkMark?'#6dd5fa':'#40b0e0')) : '#bbb';
       const cy = ecVal != null ? pyClamp(ecVal) : PT + ch/2;
       const lineColor = isNowTick ? '#1565c0' : beyondFore ? '#ccc' : isFuture ? '#4060c0' : '#b0c8e8';
       const sw = isNowTick ? 1.5 : 0.7;
@@ -3079,7 +3215,7 @@ function buildMarkers() {
       hourlyMarksEc +=
         '<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+lineColor+'" stroke-width="'+sw+'" stroke-dasharray="2,3" opacity="'+(isNowTick?0.8:beyondFore?0.3:0.45)+'"/>'
        +(showDot ? '<circle cx="'+x.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r+'" fill="'+(isNowTick?'#1565c0':isFuture?'#4060c0':'#1565c0')+'" stroke="#fff" stroke-width="1.2" opacity="'+(isFuture?0.8:1)+'"/>' : '')
-       +'<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+32).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+32).toFixed(1)+'" font-size="9" font-weight="bold" fill="#222" text-anchor="start" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>'
+       +'<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+32).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+32).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#c0c0e0':'#222')+'" text-anchor="start" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>'
        +(``);
     }
 
@@ -3090,20 +3226,20 @@ function buildMarkers() {
     const beyondW = xForeEnd - xTTend;
     const beyondZoneEc = '';
 
-    return '<div style="margin-top:8px;border-top:1px solid #d0e8f8;padding-top:7px;">'
-      +'<div style="font-size:9.5px;font-weight:700;color:#1040a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:#4060c0;text-transform:none;letter-spacing:0;background:#e8eeff;border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
-      +'<div style="font-size:9px;color:#6090c0;margin-bottom:4px;">'
+    return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;">'
+      +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
+      +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
       +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ (ถึง +'+ttHours+'ชม.)'
-      +(hasHistory ? ' · <span style="color:#006020">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:#a06000">⏳ รอสะสมข้อมูล</span>')
+      +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
       +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;">'
       +'<defs><clipPath id="ecclip_'+sensorId+'"><rect x="'+PL+'" y="'+PT+'" width="'+cw+'" height="'+ch+'"/></clipPath></defs>'
-      +'<rect x="'+PL+'" y="'+PT+'" width="'+cw+'" height="'+ch+'" fill="#f5f8ff" rx="3"/>'
-      +'<rect x="'+xNow.toFixed(1)+'" y="'+PT+'" width="'+(xTTend-xNow).toFixed(1)+'" height="'+ch+'" fill="#eef2ff" opacity="0.4"/>'
+      +'<rect x="'+PL+'" y="'+PT+'" width="'+cw+'" height="'+ch+'" fill="'+(document.body.classList.contains('dark')?'rgba(20,20,40,.85)':'#fafbff')+'" rx="3"/>'
+      +'<rect x="'+xNow.toFixed(1)+'" y="'+PT+'" width="'+(xTTend-xNow).toFixed(1)+'" height="'+ch+'" fill="'+(document.body.classList.contains('dark')?'rgba(30,80,160,.12)':'rgba(30,80,200,.06)')+'" opacity="0.5"/>'
       +beyondZoneEc
       +stdLines+stdLabels
-      +'<path d="'+smoothPath(pts1,px,py)+'" fill="none" stroke="#1565c0" stroke-width="2" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>'
-      +pts1.map(p=>'<circle cx="'+px(p.t).toFixed(1)+'" cy="'+py(p.f).toFixed(1)+'" r="2.5" fill="#1565c0" stroke="#fff" stroke-width="1" clip-path="url(#ecclip_'+sensorId+')"/>').join('')
+      +'<path d="'+smoothPath(pts1,px,py)+'" fill="none" stroke="'+(document.body.classList.contains('dark')?'#4ea8de':'#1565c0')+'" stroke-width="2" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>'
+      +pts1.map(p=>'<circle cx="'+px(p.t).toFixed(1)+'" cy="'+py(p.f).toFixed(1)+'" r="2.5" fill="'+(document.body.classList.contains('dark')?'#4ea8de':'#1565c0')+'" stroke="'+(document.body.classList.contains('dark')?'rgba(255,255,255,.3)':'#fff')+'" stroke-width="1" clip-path="url(#ecclip_'+sensorId+')"/>').join('')
       +(()=>{
         // Safe Zone Band ±20% — dark-mode aware
         const _dkEC = document.body.classList.contains('dark');
@@ -3115,13 +3251,13 @@ function buildMarkers() {
         bandD += ' Z';
         const hiPath = 'M'+pts2hi.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
         const loPath = 'M'+pts2lo.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
-        return '<path d="'+bandD+'" fill="'+(_dkEC?'#4ecca3':'#a5d6a7')+'" opacity="'+(_dkEC?'0.35':'0.35')+'" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+hiPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1.5':'1')+'" opacity="'+(_dkEC?'0.9':'0.7')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1.5':'1')+'" opacity="'+(_dkEC?'0.9':'0.7')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="'+(_dkEC?'#6090cc':'#4060c0')+'" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
+        return '<path d="'+bandD+'" fill="'+(_dkEC?'#4ecca3':'#a5d6a7')+'" opacity="'+(_dkEC?'0.15':'0.12')+'" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+hiPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1':'0.8')+'" opacity="'+(_dkEC?'0.6':'0.4')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1':'0.8')+'" opacity="'+(_dkEC?'0.6':'0.4')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="'+(_dkEC?'#80b0ff':'#4060c0')+'" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
       })()
-      +'<line x1="'+xNow.toFixed(1)+'" y1="'+PT+'" x2="'+xNow.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#1565c0" stroke-width="1.5" opacity="0.5"/>'
-      +'<text x="'+xNow.toFixed(1)+'" y="'+(PT-3).toFixed(1)+'" font-size="9" font-weight="bold" fill="#1565c0" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>'
+      +'<line x1="'+xNow.toFixed(1)+'" y1="'+PT+'" x2="'+xNow.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+(document.body.classList.contains('dark')?'#80b0ff':'#1565c0')+'" stroke-width="1.5" opacity="0.5"/>'
+      +'<text x="'+xNow.toFixed(1)+'" y="'+(PT-3).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#80b0ff':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>'
       +'<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#c0d8f0" stroke-width="1"/>'
       +'<line x1="'+PL+'" y1="'+(PT+ch).toFixed(1)+'" x2="'+(PL+cw).toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#c0d8f0" stroke-width="1"/>'
       +yLabels+hourlyMarksEc
@@ -3351,14 +3487,14 @@ function buildMarkers() {
         : '';
 
       return `
-<div style="margin-top:8px;border-top:1px solid #f5d8ec;padding-top:7px;">
-  <div style="font-size:9.5px;font-weight:700;color:#aa0044;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">
-    📈 คาดการณ์ FRC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:#cc0055;text-transform:none;letter-spacing:0;background:#fff0f5;border-radius:4px;padding:1px 6px;margin-left:4px;">← ${sourceName}</span>
+<div style="margin-top:8px;border-top:1px solid ${document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#f5d8ec'};padding-top:7px;">
+  <div style="font-size:9.5px;font-weight:700;color:${document.body.classList.contains('dark')?'#ff88aa':'#aa0044'};letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">
+    📈 คาดการณ์ FRC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:${document.body.classList.contains('dark')?'#ff6699':'#cc0055'};text-transform:none;letter-spacing:0;background:${document.body.classList.contains('dark')?'rgba(255,100,150,.1)':'#fff0f5'};border-radius:4px;padding:1px 6px;margin-left:4px;">← ${sourceName}</span>
   </div>
-  <div style="font-size:9px;color:#c080a0;margin-bottom:4px;">
+  <div style="font-size:9px;color:${document.body.classList.contains('dark')?'#d0a0c0':'#c080a0'};margin-bottom:4px;">
     ปัจจุบัน ${frc0.toFixed(3)} mg/L · คาดการณ์ (ถึง +${ttHours}ชม.)
-    ${hasHistory ? `· <span style="color:#006020">✅ ข้อมูลจริง ${destHist.length} จุด</span>` : `· <span style="color:#a06000">⏳ รอสะสมข้อมูล</span>`}
-    ${srcHistAll.length >= 3 ? `· <span style="color:#4060a0">trend ต้นทาง: ${srcSlope>=0?'↑':'↓'}${Math.abs(srcSlope*60).toFixed(2)}/ชม.</span>` : ''}
+    ${hasHistory ? `· <span style="color:${document.body.classList.contains('dark')?'#60dd80':'#006020'}">✅ ข้อมูลจริง ${destHist.length} จุด</span>` : `· <span style="color:${document.body.classList.contains('dark')?'#e0c060':'#a06000'}">⏳ รอสะสมข้อมูล</span>`}
+    ${srcHistAll.length >= 3 ? `· <span style="color:${document.body.classList.contains('dark')?'#80a0e0':'#4060a0'}">trend ต้นทาง: ${srcSlope>=0?'↑':'↓'}${Math.abs(srcSlope*60).toFixed(2)}/ชม.</span>` : ''}
   </div>
   <svg width="${W}" height="${H}" style="display:block;overflow:visible;">
     <defs>
@@ -3390,10 +3526,10 @@ function buildMarkers() {
       const FRC_BAND = 0.10;
       const _dk = document.body.classList.contains('dark');
       const bandFill = _dk ? '#4ecca3' : '#00b894';
-      const bandFillOp = _dk ? '0.30' : '0.18';
+      const bandFillOp = _dk ? '0.15' : '0.12';
       const bandStroke = _dk ? '#4ecca3' : '#00b894';
-      const bandStrokeOp = _dk ? '0.85' : '0.5';
-      const bandStrokeW = _dk ? '1.5' : '1';
+      const bandStrokeOp = _dk ? '0.6' : '0.4';
+      const bandStrokeW = _dk ? '1' : '0.8';
       if (pts2.length < 2) return '';
       // Minimum absolute spread of 0.06 mg/L so band is always visible even when FRC is low
       const MIN_ABS = 0.06;
@@ -3784,7 +3920,7 @@ function buildMarkers() {
       ${ttHtml}
       ${sourceChart}
       ${decayChart}
-    </div>`,{className:'pk-pop',maxWidth:520});
+    </div>`,{className:'pk-pop',maxWidth:520,autoPan:true,autoPanPadding:[60,60],keepInView:true});
   }
 }
 buildMarkers();
@@ -3835,8 +3971,8 @@ function _ensureTipEls() {
     _tipLabelEl = document.getElementById('tip-label');
   }
 }
-map.on('popupopen',  () => { _popupOpen = true;  _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; });
-map.on('popupclose', () => { _popupOpen = false; });
+map.on('popupopen',  () => { _popupOpen = true;  _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='0.08'; });
+map.on('popupclose', () => { _popupOpen = false; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='1'; });
 map.on('mousemove',e=>{
   _ensureTipEls();
   const tip=_tipEl;
@@ -4059,13 +4195,13 @@ function updateLegendPanel() {
        <div class="lg-item"><div class="lg-swatch" style="background:#f0aa14;"></div><span>0.2–0.3<br>ส้ม · เฝ้าระวัง</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง · ต่ำกว่ามาตรฐาน ⚠</span></div>`;
   document.getElementById('lg-line1-label').textContent = isEC ? '210 μS/cm' : '0.2 mg/L';
-  document.getElementById('lg-line1-label').style.color  = isEC ? '#1e78dc' : '#a08000';
+  document.getElementById('lg-line1-label').style.color  = isEC ? '#1e78dc' : '#b40000';
   document.getElementById('lg-line2-label').textContent = isEC ? '300 μS/cm' : '1.0 mg/L';
-  document.getElementById('lg-line2-label').style.color  = isEC ? '#c81414' : '#cc0055';
+  document.getElementById('lg-line2-label').style.color  = isEC ? '#c81414' : '#0088dd';
   const svgLine1 = document.querySelector('#lg-thresh-lines svg:first-child line');
   const svgLine2 = document.querySelector('#lg-thresh-lines svg:last-child line');
-  if (svgLine1) svgLine1.setAttribute('stroke', isEC ? '#1a7ab0' : '#c0a000');
-  if (svgLine2) svgLine2.setAttribute('stroke', isEC ? '#b32800' : '#cc0055');
+  if (svgLine1) svgLine1.setAttribute('stroke', isEC ? '#1a7ab0' : '#b40000');
+  if (svgLine2) svgLine2.setAttribute('stroke', isEC ? '#b32800' : '#0088dd');
   // Update marker symbols colors
   var pumpRect = document.getElementById('lg-pump-rect');
   var monCircle = document.getElementById('lg-monitor-circle');
@@ -4085,8 +4221,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev7.3 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 21 มี.ค. 69</span>'
-      : '<span>⚠ rev7.3 — Transparent Contour + Retina · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span>';
+      ? '<span>⚠ rev7.8 — EC Mode · Zone Influent Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : M 21 มี.ค.69</span>'
+      : '<span>⚠ rev7.8 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -4150,6 +4286,8 @@ const BASE_URL = 'https://twqonline.mwa.co.th/TWQMSServicepublic/api/mwaonmobile
 // เก็บ endpoint ที่ใช้ได้ และ k ที่ fit ได้รายสถานี
 let HIST_ENDPOINT = null;   // endpoint ที่ใช้ได้
 let STATION_K = {};         // { stationCode: k_per_hr }
+// โหลด K ที่ auto-fit ไว้จาก localStorage
+try { var _storedK = JSON.parse(localStorage.getItem('frc_station_k')||'{}'); Object.assign(STATION_K, _storedK); } catch(e){}
 
 // ── Default k ตามโซนโรงงาน (ใช้ก่อน auto-fit ได้ข้อมูลเพียงพอ) ──────────
 // โซนบางเขน/สามเสน/ธนบุรี: k = 0.06/hr
@@ -4175,9 +4313,9 @@ const STATION_K_DEFAULT = {};
 })();
 
 function getStationKhr(stationCode) {
-  // priority: manual override → auto-fit → default by zone → EPANET fallback
-  if (STATION_K_OVERRIDE[stationCode] != null) return STATION_K_OVERRIDE[stationCode];
+  // priority: auto-fit K (จาก user) → hardcode override → default by zone → fallback
   if (STATION_K[stationCode] != null) return STATION_K[stationCode];
+  if (STATION_K_OVERRIDE[stationCode] != null) return STATION_K_OVERRIDE[stationCode];
   // หา sensor name จาก stationCode
   const s = SENSORS.find(x => x.id != null && x.id.toString() === stationCode.toString());
   const name = s ? s.name : stationCode;
@@ -6854,9 +6992,584 @@ function closeReport() {
   _rpCharts = {};
 }
 function rpTab(mode) {
-  document.querySelectorAll('.rp-tab').forEach((b,i) => b.classList.toggle('active', (mode==='frc'&&i===0)||(mode==='ec'&&i===1)));
+  document.querySelectorAll('.rp-tab').forEach((b,i) => b.classList.toggle('active', (mode==='frc'&&i===0)||(mode==='ec'&&i===1)||(mode==='feedback'&&i===2)));
   document.getElementById('rp-frc').style.display = mode==='frc'?'':'none';
   document.getElementById('rp-ec').style.display = mode==='ec'?'':'none';
+  var trendEl = document.getElementById('rp-trend');
+  if (trendEl) trendEl.style.display = 'none';
+  document.getElementById('rp-feedback').style.display = mode==='feedback'?'':'none';
+}
+// ── Trend: เปรียบเทียบค่าจริง vs คาดการณ์ ย้อนหลัง 24 ชม. ──
+var _trendInited = false;
+function rpTrendInit() {
+  if (_trendInited) return;
+  _trendInited = true;
+  rpTrendRefresh();
+}
+function rpTrendRefresh() {
+  var list = document.getElementById('rp-trend-list');
+  var param = document.getElementById('rp-trend-param').value;
+  var stations = SENSORS.filter(function(s) { return true; });
+  // แบ่งกลุ่ม
+  var pumps = stations.filter(function(s){return s.type==='pump'||s.type==='plant';});
+  var mons = stations.filter(function(s){return s.type==='monitor';});
+  var html = '<div style="font-size:9px;color:#a06080;padding:4px 8px;font-weight:700;">สถานีสูบจ่าย / โรงผลิต</div>';
+  pumps.forEach(function(s){
+    html += '<div class="rp-trend-item" data-id="'+s.id+'" data-name="'+s.name+'" onclick="rpTrendSelect(\''+s.id+'\')" style="padding:5px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid #faeef4;transition:background .15s;">'+s.name+'</div>';
+  });
+  html += '<div style="font-size:9px;color:#a06080;padding:4px 8px;font-weight:700;border-top:2px solid #f0d0e0;">สถานี Monitor</div>';
+  mons.forEach(function(s){
+    html += '<div class="rp-trend-item" data-id="'+s.id+'" data-name="'+s.name+'" onclick="rpTrendSelect(\''+s.id+'\')" style="padding:5px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid #faeef4;transition:background .15s;">'+s.name+'</div>';
+  });
+  list.innerHTML = html;
+  document.getElementById('rp-trend-search').value = '';
+  document.getElementById('rp-trend-chart').style.display = 'none';
+}
+function rpTrendFilter() {
+  var q = document.getElementById('rp-trend-search').value.trim().toLowerCase();
+  var items = document.querySelectorAll('#rp-trend-list .rp-trend-item');
+  items.forEach(function(el){
+    var name = (el.getAttribute('data-name')||'').toLowerCase();
+    el.style.display = (!q || name.indexOf(q)>=0) ? '' : 'none';
+  });
+}
+async function rpTrendSelect(sid) {
+  var param = document.getElementById('rp-trend-param').value;
+  var s = SENSORS.find(function(x){return String(x.id)===String(sid);});
+  if (!s) return;
+  document.querySelectorAll('#rp-trend-list .rp-trend-item').forEach(function(el){
+    el.style.background = el.getAttribute('data-id')===String(sid) ? '#fff0f5' : '';
+    el.style.fontWeight = el.getAttribute('data-id')===String(sid) ? '700' : '';
+  });
+  document.getElementById('rp-trend-chart').style.display = '';
+  document.getElementById('rp-trend-chart-title').textContent = s.name + ' — ' + (param==='frc'?'FRC (mg/L)':'EC (μS/cm)');
+  
+  var code = String(s.id).replace(/\/|\./g, '-');
+  var nowMs = Date.now();
+  
+  // ใช้ data จาก buildReport ที่โหลดไว้แล้ว (เร็วมาก ไม่ต้องดึง Firebase ซ้ำ)
+  var fbHist = window._rpFirebaseHist || {};
+  var localHist = loadHistory();
+  
+  // ลอง key หลายรูปแบบ
+  var fbData = fbHist[code] || fbHist[String(s.id)] || [];
+  var localData = localHist[code] || localHist[String(s.id)] || [];
+  
+  // ถ้ายังไม่เจอ ลอง brute force
+  if (fbData.length === 0) {
+    var fbKeys = Object.keys(fbHist);
+    for (var i=0; i<fbKeys.length; i++) {
+      if (fbKeys[i].toLowerCase() === code.toLowerCase() || fbKeys[i] === String(s.id)) {
+        fbData = fbHist[fbKeys[i]]; break;
+      }
+    }
+  }
+  
+  // merge + deduplicate
+  var all = [].concat(fbData).concat(localData);
+  var seen = {};
+  var merged = all.filter(function(p) {
+    if (!p || !p.ts) return false;
+    var k = Math.round(p.ts / 60000);
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  }).sort(function(a,b){return a.ts - b.ts;});
+  
+  // debug info
+  var oldest = merged.length>0 ? new Date(merged[0].ts) : null;
+  var newest = merged.length>0 ? new Date(merged[merged.length-1].ts) : null;
+  var in24h = merged.filter(function(p){return p.ts >= nowMs-24*3600000;}).length;
+  
+  var statusMsg = 'Firebase: '+fbData.length+' จุด · localStorage: '+localData.length+' จุด · รวม: '+merged.length+' จุด';
+  statusMsg += '<br>ข้อมูล: '+(oldest?oldest.toLocaleString('th-TH'):'N/A')+' → '+(newest?newest.toLocaleString('th-TH'):'N/A')+' · ใน 24 ชม.: '+in24h+' จุด';
+  document.getElementById('rp-trend-stats').innerHTML = statusMsg;
+  
+  console.log('[Trend] code:', code, 'FB:', fbData.length, 'local:', localData.length, 'merged:', merged.length, 'fbHist keys:', Object.keys(fbHist).slice(0,5));
+  
+  // store สำหรับ auto-fit
+  _trendCurrentSensor = s;
+  _trendCurrentParam = param;
+  _trendCurrentData = merged;
+  
+  // แสดงปุ่ม Auto-fit K เฉพาะ FRC mode + มี source
+  var rootInfo = ROOT_SOURCE_MAP[(s.name||'').trim()] || ROOT_SOURCE_MAP[(s.name||'').replace(/\s+/g,' ')];
+  var showAutoFit = param === 'frc' && rootInfo && rootInfo.root;
+  document.getElementById('rp-trend-autofit-btn').style.display = showAutoFit ? '' : 'none';
+  document.getElementById(_trendKinfoId||'rp-trend-kinfo').style.display = 'none';
+  
+  rpTrendDraw(s, param, merged);
+}
+function rpTrendDraw(sensor, param, allData, _ids) {
+  var IDS = _ids || {};
+  var CVID = IDS.canvas || 'rp-trend-canvas';
+  var STID = IDS.stats || 'rp-trend-stats';
+  var KIID = IDS.kinfo || 'rp-trend-kinfo';
+  try {
+  var canvas = document.getElementById(CVID);
+  if (!canvas) { console.error('[TrendDraw] canvas not found:', CVID); return; }
+  // responsive: match CSS size
+  var rect = canvas.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) {
+    // retry after layout
+    setTimeout(function(){ rpTrendDraw(sensor, param, allData, _ids); }, 100);
+    return;
+  }
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  var W = rect.width, H = rect.height;
+  ctx.clearRect(0,0,W,H);
+  var isDk = document.body.classList.contains('dark');
+  var PL=46, PR=16, PT=16, PB=50;
+  var cw = W-PL-PR, ch = H-PT-PB;
+  var nowMs = Date.now();
+
+  var raw = allData || [];
+  var data = raw.filter(function(p){return p&&p.ts&&p.ts>=nowMs-24*3600000;}).sort(function(a,b){return a.ts-b.ts;});
+  if (data.length===0) data = raw.filter(function(p){return p&&p.ts;}).sort(function(a,b){return a.ts-b.ts;});
+
+  var actPts = [];
+  for (var i=0;i<data.length;i++) {
+    var v = param==='frc'?(data[i].frc||data[i].FRC):(data[i].ec||data[i].EC);
+    if (v!=null&&v>0&&isFinite(v)) actPts.push({ts:data[i].ts,v:Number(v)});
+  }
+
+  var statsEl = document.getElementById(STID);
+  if (actPts.length===0) {
+    ctx.fillStyle=isDk?'#ff8888':'#cc0044';ctx.font='bold 13px Sarabun,sans-serif';ctx.textAlign='center';
+    ctx.fillText('ไม่พบค่า '+(param==='frc'?'FRC':'EC')+' ใน '+data.length+' records',W/2,H/2-10);
+    if(data.length>0){ctx.font='10px JetBrains Mono';ctx.fillStyle=isDk?'#c0a0b0':'#a06080';ctx.fillText('fields: '+Object.keys(data[0]).join(', '),W/2,H/2+10);}
+    return;
+  }
+
+  // Source + forecast
+  var forePts=[], futPts=[];
+  var key=String(sensor.id).replace(/\/|\./g,'-');
+  var sName=(sensor.name||'').trim();
+  var rootInfo=ROOT_SOURCE_MAP[sName]||ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')];
+  var srcSensor=null, ttHours=0;
+  if (rootInfo&&rootInfo.root) {
+    var srcCode=typeof getSrcCodeFromLabel==='function'?getSrcCodeFromLabel(rootInfo.root):null;
+    srcSensor=srcCode?SENSORS.find(function(x){return x.id&&x.id.toString()===srcCode;}):null;
+    ttHours=rootInfo.ttRoot||0;
+  }
+  // forecast ย้อนหลัง — ใช้สูตรเดียวกับ buildDecayChart
+  if (param==='frc'&&srcSensor&&ttHours>0) {
+    var k_hr=typeof getStationKhr==='function'?getStationKhr(key):0.05;
+    var srcCode2=String(srcSensor.id).replace(/\/|\./g,'-');
+    for(var fi=0;fi<actPts.length;fi++){
+      // ณ เวลา actPts[fi].ts ค่าคาดการณ์ = source FRC ณ (t - ttHours) × e^(-k × tt)
+      var srcTargetTs = actPts[fi].ts - ttHours*3600000;
+      var srcFrcAtT = typeof getHistFrcAt==='function' 
+        ? getHistFrcAt(srcCode2, srcTargetTs, srcSensor.frc||1.5, 0)
+        : (srcSensor.frc||1.5);
+      var predicted = srcFrcAtT * Math.exp(-k_hr * ttHours);
+      if(!isFinite(predicted)) predicted = (srcSensor.frc||1.5)*Math.exp(-k_hr*ttHours);
+      forePts.push({ts:actPts[fi].ts, v:Math.max(0,predicted)});
+    }
+    // forecast อนาคต — blend เหมือน buildDecayChart
+    var lastActFrc = actPts[actPts.length-1].v;
+    var futSteps = 12;
+    for(var fs=0;fs<=futSteps;fs++){
+      var t = (fs/futSteps)*ttHours;
+      var frac = t/ttHours;
+      var fOld = lastActFrc * Math.exp(-k_hr * t);
+      var srcFutTs = nowMs + (t - ttHours)*3600000;
+      var fSrcFut = typeof getHistFrcAt==='function'
+        ? getHistFrcAt(srcCode2, srcFutTs, srcSensor.frc||1.5, 0)
+        : (srcSensor.frc||1.5);
+      var fNew = fSrcFut * Math.exp(-k_hr * ttHours);
+      var fVal = fOld*(1-frac) + fNew*frac;
+      if(!isFinite(fVal)) fVal = lastActFrc*Math.exp(-k_hr*t);
+      futPts.push({ts:nowMs+t*3600000, v:Math.max(0,fVal)});
+    }
+  } else if (param==='ec'&&srcSensor&&ttHours>0) {
+    var srcCode3=String(srcSensor.id).replace(/\/|\./g,'-');
+    var fbH2=window._rpFirebaseHist||{};var lcH2=loadHistory();
+    var srcArr2=fbH2[srcCode3]||lcH2[srcCode3]||fbH2[String(srcSensor.id)]||lcH2[String(srcSensor.id)]||[];
+    var srcHist2=srcArr2.filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
+    for(var fi2=0;fi2<actPts.length;fi2++){
+      var srcTs2=actPts[fi2].ts-ttHours*3600000,srcEc=srcSensor.ec||250;
+      for(var j2=0;j2<srcHist2.length;j2++){if(srcHist2[j2].ts<=srcTs2&&srcHist2[j2].ec!=null)srcEc=srcHist2[j2].ec;}
+      forePts.push({ts:actPts[fi2].ts,v:srcEc});
+    }
+    // forecast อนาคต
+    var lastEc=srcSensor.ec||250;
+    for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ttHours/6*3600000,v:lastEc});}
+  }
+
+  // Y/X range — include future forecast
+  var allVals=actPts.map(function(p){return p.v;}).concat(forePts.map(function(p){return p.v;})).concat(futPts.map(function(p){return p.v;}));
+  var yMin=0, yMax=Math.max.apply(null,allVals)*1.2;
+  if(param==='frc')yMax=Math.max(yMax,2.0);else yMax=Math.max(yMax,400);
+  var tMin=actPts[0].ts;
+  var tMax=futPts.length>0?futPts[futPts.length-1].ts:Math.max(actPts[actPts.length-1].ts,nowMs);
+  tMax=Math.max(tMax,nowMs+1*3600000);
+  if(tMax-tMin<3600000)tMax=tMin+3600000;
+
+  function px(ts){return PL+((ts-tMin)/(tMax-tMin))*cw;}
+  function py(v){return PT+(1-(v-yMin)/(yMax-yMin))*ch;}
+
+  // === BG ===
+  ctx.fillStyle=isDk?'rgba(20,20,40,.85)':'#fafbff';
+  ctx.fillRect(PL,PT,cw,ch);
+  // future zone
+  if(futPts.length>0){
+    ctx.fillStyle=isDk?'rgba(60,40,100,.15)':'rgba(100,70,200,.04)';
+    ctx.fillRect(px(nowMs),PT,px(tMax)-px(nowMs),ch);
+  }
+
+  // grid
+  for(var gi=0;gi<=4;gi++){
+    var gy=PT+ch*gi/4;
+    ctx.strokeStyle=isDk?'rgba(255,255,255,.08)':'#e8e0f0';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(PL,gy);ctx.lineTo(PL+cw,gy);ctx.stroke();
+    ctx.fillStyle=isDk?'#b0b0d0':'#806080';ctx.font='bold 9px JetBrains Mono,monospace';ctx.textAlign='right';
+    var lv=yMax-(yMax-yMin)*gi/4;
+    ctx.fillText(param==='frc'?lv.toFixed(2):Math.round(lv).toString(),PL-5,gy+3);
+  }
+
+  // X time labels
+  ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+  var totalHrs=Math.max(1,Math.round((tMax-tMin)/3600000));
+  var tickStep=totalHrs<=8?1:totalHrs<=24?3:6;
+  for(var h=0;h<=totalHrs;h+=tickStep){
+    var tx=tMin+h*3600000;if(tx>tMax)break;
+    var dd=new Date(tx);
+    var isFut=tx>nowMs;
+    ctx.fillStyle=isFut?(isDk?'#a080d0':'#6050a0'):(isDk?'#b0b0d0':'#806080');
+    ctx.fillText(String(dd.getHours()).padStart(2,'0')+':00',px(tx),PT+ch+13);
+    ctx.strokeStyle=isDk?'rgba(255,255,255,.04)':'rgba(0,0,0,.04)';ctx.lineWidth=0.3;
+    ctx.beginPath();ctx.moveTo(px(tx),PT);ctx.lineTo(px(tx),PT+ch);ctx.stroke();
+  }
+
+  // FRC thresholds
+  if(param==='frc'){
+    ctx.setLineDash([4,3]);
+    if(yMax>=0.2){ctx.strokeStyle='rgba(180,0,0,0.4)';ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(PL,py(0.2));ctx.lineTo(PL+cw,py(0.2));ctx.stroke();ctx.fillStyle=isDk?'#ff8888':'#b40000';ctx.font='bold 8px JetBrains Mono';ctx.textAlign='left';ctx.fillText('0.2',PL+3,py(0.2)-3);}
+    if(yMax>=1.0){ctx.strokeStyle='rgba(0,120,220,0.35)';ctx.beginPath();ctx.moveTo(PL,py(1.0));ctx.lineTo(PL+cw,py(1.0));ctx.stroke();ctx.fillStyle=isDk?'#80b0ff':'#0078dc';ctx.fillText('1.0',PL+3,py(1.0)-3);}
+    ctx.setLineDash([]);
+  }
+
+  // "ตอนนี้" line
+  ctx.strokeStyle=isDk?'rgba(255,255,255,.25)':'rgba(0,0,0,.15)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(px(nowMs),PT);ctx.lineTo(px(nowMs),PT+ch);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=isDk?'#e0d0f0':'#5030a0';ctx.font='bold 10px Sarabun,sans-serif';ctx.textAlign='center';
+  ctx.fillText('ตอนนี้',px(nowMs),PT-3);
+
+  // Confidence band (past)
+  if(forePts.length>=2){
+    ctx.fillStyle=isDk?'rgba(78,204,163,0.10)':'rgba(0,184,148,0.08)';
+    ctx.beginPath();
+    for(var bi=0;bi<forePts.length;bi++)ctx.lineTo(px(forePts[bi].ts),py(forePts[bi].v*1.15));
+    for(var bi2=forePts.length-1;bi2>=0;bi2--)ctx.lineTo(px(forePts[bi2].ts),py(Math.max(0,forePts[bi2].v*0.85)));
+    ctx.closePath();ctx.fill();
+  }
+  // Confidence band (future)
+  if(futPts.length>=2){
+    ctx.fillStyle=isDk?'rgba(120,80,200,0.10)':'rgba(100,70,200,0.06)';
+    ctx.beginPath();
+    for(var ci=0;ci<futPts.length;ci++)ctx.lineTo(px(futPts[ci].ts),py(futPts[ci].v*1.15));
+    for(var ci2=futPts.length-1;ci2>=0;ci2--)ctx.lineTo(px(futPts[ci2].ts),py(Math.max(0,futPts[ci2].v*0.85)));
+    ctx.closePath();ctx.fill();
+  }
+
+  // forecast line (past) — dashed green
+  if(forePts.length>=2){
+    ctx.strokeStyle=isDk?'#4ecca3':'#00b894';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.beginPath();ctx.moveTo(px(forePts[0].ts),py(forePts[0].v));
+    for(var fl=1;fl<forePts.length;fl++)ctx.lineTo(px(forePts[fl].ts),py(forePts[fl].v));
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  // forecast line (future) — dashed purple
+  if(futPts.length>=2){
+    ctx.strokeStyle=isDk?'#a080d0':'#7c5ce7';ctx.lineWidth=1.8;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(px(futPts[0].ts),py(futPts[0].v));
+    for(var fl2=1;fl2<futPts.length;fl2++)ctx.lineTo(px(futPts[fl2].ts),py(futPts[fl2].v));
+    ctx.stroke();ctx.setLineDash([]);
+    // label
+    var lastFut=futPts[futPts.length-1];
+    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.font='bold 9px Sarabun';ctx.textAlign='left';
+    ctx.fillText('คาดการณ์',px(lastFut.ts)+4,py(lastFut.v)+3);
+  }
+
+  // Actual line
+  var actColor=param==='frc'?(isDk?'#ff4477':'#e84393'):(isDk?'#4ea8de':'#1565c0');
+  ctx.strokeStyle=actColor;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(px(actPts[0].ts),py(actPts[0].v));
+  for(var ai=1;ai<actPts.length;ai++)ctx.lineTo(px(actPts[ai].ts),py(actPts[ai].v));
+  ctx.stroke();
+  // dots (every Nth for performance)
+  var dotStep=Math.max(1,Math.floor(actPts.length/60));
+  for(var di=0;di<actPts.length;di+=dotStep){
+    ctx.beginPath();ctx.arc(px(actPts[di].ts),py(actPts[di].v),1.8,0,Math.PI*2);
+    ctx.fillStyle=actColor;ctx.fill();
+  }
+
+  // Legend (bottom)
+  var ly=PT+ch+26;
+  ctx.font='10px Sarabun,sans-serif';ctx.textAlign='left';
+  var lx=PL;
+  // actual
+  ctx.fillStyle=actColor;ctx.fillRect(lx,ly-4,12,2.5);ctx.fillText('ค่าจริง ('+actPts.length+' จุด)',lx+16,ly);
+  lx+=130;
+  if(forePts.length>0){
+    ctx.strokeStyle=isDk?'#4ecca3':'#00b894';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
+    ctx.beginPath();ctx.moveTo(lx,ly-2);ctx.lineTo(lx+12,ly-2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=isDk?'#4ecca3':'#00b894';ctx.fillText('คาดการณ์ย้อนหลัง',lx+16,ly);
+    lx+=140;
+  }
+  if(futPts.length>0){
+    ctx.strokeStyle=isDk?'#a080d0':'#7c5ce7';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
+    ctx.beginPath();ctx.moveTo(lx,ly-2);ctx.lineTo(lx+12,ly-2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.fillText('คาดการณ์อนาคต (+'+Math.round(ttHours)+'ชม.)',lx+16,ly);
+    lx+=180;
+  }
+  if(forePts.length>0||futPts.length>0){
+    ctx.fillStyle=isDk?'rgba(78,204,163,0.35)':'rgba(0,184,148,0.25)';ctx.fillRect(lx,ly-6,12,10);
+    ctx.fillStyle=isDk?'#90b0a0':'#607060';ctx.fillText('Band ±15%',lx+16,ly);
+  }
+
+  // axis border
+  ctx.strokeStyle=isDk?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)';ctx.lineWidth=1;
+  ctx.strokeRect(PL,PT,cw,ch);
+
+  // Stats
+  var sh='';
+  if(forePts.length>0){
+    var errs=[],wb=0;
+    for(var si=0;si<Math.min(actPts.length,forePts.length);si++){
+      errs.push(Math.abs(actPts[si].v-forePts[si].v));
+      if(actPts[si].v>=forePts[si].v*0.85&&actPts[si].v<=forePts[si].v*1.15)wb++;
+    }
+    var mae=errs.reduce(function(a,b){return a+b;},0)/errs.length;
+    var pct=Math.round(wb/errs.length*100);
+    sh='📊 เปรียบเทียบ <b>'+errs.length+'</b> จุด · MAE: <b>'+(param==='frc'?mae.toFixed(3):Math.round(mae))+'</b> '+(param==='frc'?'mg/L':'μS/cm')+' · อยู่ใน Band: <b>'+pct+'%</b> '+(pct>=70?'<span style="color:'+(isDk?'#4ecca3':'#00b894')+'">✓ ดี</span>':pct>=50?'<span style="color:#e0a000">⚡ พอใช้</span>':'<span style="color:#e84393">⚠ ต้องปรับปรุง</span>');
+    if(srcSensor) sh+=' · source: '+((srcSensor.name||'').substring(0,20))+' (tt='+ttHours+'ชม.)';
+  } else {
+    sh='📊 ค่าจริง <b>'+actPts.length+'</b> จุด';
+    if(!srcSensor) sh+=' · <span style="color:'+(isDk?'#e0c060':'#a06000')+'">สถานี source — ไม่มีเส้นคาดการณ์</span>';
+  }
+  statsEl.innerHTML=sh;
+
+  } catch(e) {
+    console.error('[TrendDraw] ERROR:',e);
+    var c2=document.getElementById(CVID).getContext('2d');
+    c2.fillStyle='#ff4444';c2.font='bold 13px Sarabun';c2.textAlign='center';
+    c2.fillText('Error: '+e.message,300,160);
+    document.getElementById(STID).innerHTML='<b style="color:red;">'+e.message+'</b>';
+  }
+}
+
+
+// ── Report: Dropdown station filter for charts ──
+var _rpChartData = {};
+
+function rpPopulateDropdowns(pumps, mons, hist) {
+  var sels = {
+    'rp-frc-pump-sel': pumps, 'rp-frc-mon-sel': mons,
+    'rp-ec-pump-sel': pumps, 'rp-ec-mon-sel': mons
+  };
+  var trendSels = {'rp-frc-trend-sel': pumps.concat(mons), 'rp-ec-trend-sel': pumps.concat(mons)};
+  
+  Object.keys(sels).forEach(function(id){
+    var sel=document.getElementById(id); if(!sel) return;
+    while(sel.options.length>1) sel.remove(1);
+    sels[id].forEach(function(s){
+      var o=document.createElement('option'); o.value=String(s.id); o.textContent=s.name; sel.appendChild(o);
+    });
+  });
+  Object.keys(trendSels).forEach(function(id){
+    var sel=document.getElementById(id); if(!sel) return;
+    while(sel.options.length>1) sel.remove(1);
+    // แบ่งกลุ่ม
+    var og1=document.createElement('optgroup'); og1.label='สถานีสูบจ่าย / โรงผลิต';
+    pumps.forEach(function(s){var o=document.createElement('option');o.value=String(s.id);o.textContent=s.name;og1.appendChild(o);});
+    sel.appendChild(og1);
+    var og2=document.createElement('optgroup'); og2.label='สถานี Monitor';
+    mons.forEach(function(s){var o=document.createElement('option');o.value=String(s.id);o.textContent=s.name;og2.appendChild(o);});
+    sel.appendChild(og2);
+  });
+  _rpChartData = {pumps:pumps, mons:mons, hist:hist};
+}
+
+function rpChartSelectStation(param, type) {
+  var sel=document.getElementById('rp-'+param+'-'+type+'-sel'); if(!sel) return;
+  var sid=sel.value, d=_rpChartData;
+  var stations=type==='pump'?d.pumps:d.mons;
+  var thr=param==='frc'?[FRC_MIN,FRC_HI]:[EC_LO,EC_HI];
+  rpBuildChart('rp-'+param+'-chart-'+type, sid==='all'?stations:stations.filter(function(s){return String(s.id)===sid;}), d.hist, param, thr);
+}
+
+async function rpTrendFromReport(param) {
+  var sel=document.getElementById('rp-'+param+'-trend-sel');
+  var chartDiv=document.getElementById('rp-'+param+'-trend-chart');
+  if(!sel||!sel.value){if(chartDiv)chartDiv.style.display='none';return;}
+  var s=SENSORS.find(function(x){return String(x.id)===String(sel.value);});
+  if(!s) return;
+  chartDiv.style.display='';
+  _trendCurrentSensor=s; _trendCurrentParam=param;
+  // load data
+  var code=String(s.id).replace(/\/|\./g,'-');
+  var fbH=window._rpFirebaseHist||{}, lcH=loadHistory();
+  var fb=fbH[code]||fbH[String(s.id)]||[], lc=lcH[code]||lcH[String(s.id)]||[];
+  var seen={};
+  var merged=[].concat(fb).concat(lc).filter(function(p){if(!p||!p.ts)return false;var k=Math.round(p.ts/60000);if(seen[k])return false;seen[k]=true;return true;}).sort(function(a,b){return a.ts-b.ts;});
+  _trendCurrentData=merged;
+  _trendKinfoId='rp-'+param+'-trend-kinfo';
+  // auto-fit button
+  var ri=ROOT_SOURCE_MAP[(s.name||'').trim()]||ROOT_SOURCE_MAP[(s.name||'').replace(/\s+/g,' ')];
+  var afBtn=document.getElementById('rp-'+param+'-autofit-btn');
+  if(afBtn) afBtn.style.display=(param==='frc'&&ri&&ri.root)?'':'none';
+  var ki=document.getElementById('rp-'+param+'-trend-kinfo');
+  if(ki) ki.style.display='none';
+  // draw with correct IDs — ต้องรอ browser render ก่อน
+  requestAnimationFrame(function(){
+    rpTrendDraw(s, param, merged, {
+      canvas: 'rp-'+param+'-trend-canvas',
+      stats: 'rp-'+param+'-trend-stats',
+      kinfo: 'rp-'+param+'-trend-kinfo'
+    });
+  });
+}
+
+// store สำหรับ auto-fit
+var _trendCurrentSensor = null, _trendCurrentParam = null, _trendCurrentData = null;
+var _trendKinfoId = 'rp-trend-kinfo';
+
+// ── Auto-fit K: หาค่า K ที่ minimize MAE จาก actual vs forecast ──
+function rpTrendAutoFitK() {
+  var sensor = _trendCurrentSensor;
+  var param = _trendCurrentParam;
+  var allData = _trendCurrentData;
+  if (!sensor || param !== 'frc' || !allData) return;
+
+  var isDk = document.body.classList.contains('dark');
+  var nowMs = Date.now();
+  var key = String(sensor.id).replace(/\/|\./g, '-');
+  var sName = (sensor.name || '').trim();
+  var rootInfo = ROOT_SOURCE_MAP[sName] || ROOT_SOURCE_MAP[sName.replace(/\s+/g, ' ')];
+  if (!rootInfo || !rootInfo.root) {
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').style.display = '';
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').innerHTML = '⚠ ไม่สามารถ fit K ได้ — สถานีนี้ไม่มี source mapping';
+    return;
+  }
+  var srcCode = typeof getSrcCodeFromLabel === 'function' ? getSrcCodeFromLabel(rootInfo.root) : null;
+  var srcSensor = srcCode ? SENSORS.find(function(x) { return x.id && x.id.toString() === srcCode; }) : null;
+  if (!srcSensor) {
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').style.display = '';
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').innerHTML = '⚠ ไม่พบ source sensor สำหรับ ' + rootInfo.root;
+    return;
+  }
+  var ttHours = rootInfo.ttRoot || 0;
+  if (ttHours <= 0) return;
+
+  var srcCode2 = String(srcSensor.id).replace(/\/|\./g, '-');
+
+  // ดึง actual points
+  var data = (allData || []).filter(function(p) { return p && p.ts && p.ts >= nowMs - 24 * 3600000; }).sort(function(a, b) { return a.ts - b.ts; });
+  var actPts = [];
+  for (var i = 0; i < data.length; i++) {
+    var v = data[i].frc || data[i].FRC;
+    if (v != null && v > 0 && isFinite(v)) actPts.push({ ts: data[i].ts, v: Number(v) });
+  }
+  if (actPts.length < 5) {
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').style.display = '';
+    document.getElementById(_trendKinfoId||'rp-trend-kinfo').innerHTML = '⚠ ข้อมูลไม่เพียงพอ (ต้องมีอย่างน้อย 5 จุด, มี ' + actPts.length + ')';
+    return;
+  }
+
+  // Grid search K: 0.001 → 0.200 step 0.001
+  var bestK = 0.05, bestMAE = Infinity;
+  for (var kTry = 0.001; kTry <= 0.200; kTry += 0.001) {
+    var totalErr = 0, count = 0;
+    for (var j = 0; j < actPts.length; j++) {
+      var srcTs = actPts[j].ts - ttHours * 3600000;
+      var srcFrc = typeof getHistFrcAt === 'function'
+        ? getHistFrcAt(srcCode2, srcTs, srcSensor.frc || 1.5, 0)
+        : (srcSensor.frc || 1.5);
+      var predicted = srcFrc * Math.exp(-kTry * ttHours);
+      if (isFinite(predicted) && predicted > 0) {
+        totalErr += Math.abs(actPts[j].v - predicted);
+        count++;
+      }
+    }
+    if (count > 0) {
+      var mae = totalErr / count;
+      if (mae < bestMAE) { bestMAE = mae; bestK = kTry; }
+    }
+  }
+
+  // คำนวณ half-life
+  var halfLife = Math.round(0.693 / bestK);
+  var oldK = typeof getStationKhr === 'function' ? getStationKhr(key) : 0.008;
+  var oldMAE = 0;
+  // คำนวณ MAE ของ K เดิม
+  for (var j2 = 0; j2 < actPts.length; j2++) {
+    var srcTs2 = actPts[j2].ts - ttHours * 3600000;
+    var srcFrc2 = typeof getHistFrcAt === 'function'
+      ? getHistFrcAt(srcCode2, srcTs2, srcSensor.frc || 1.5, 0)
+      : (srcSensor.frc || 1.5);
+    var pred2 = srcFrc2 * Math.exp(-oldK * ttHours);
+    if (isFinite(pred2)) oldMAE += Math.abs(actPts[j2].v - pred2);
+  }
+  oldMAE = oldMAE / actPts.length;
+  var improvement = oldMAE > 0 ? Math.round((1 - bestMAE / oldMAE) * 100) : 0;
+
+  // แสดงผล
+  var kinfo = document.getElementById(_trendKinfoId||'rp-trend-kinfo');
+  kinfo.style.display = '';
+  kinfo.innerHTML = '🎯 <b>Auto-fit K</b>: <span style="color:' + (isDk ? '#4ecca3' : '#00b894') + ';font-family:JetBrains Mono;font-weight:700;">' + bestK.toFixed(4) + '</span>/ชม. (half-life ' + halfLife + ' ชม.)'
+    + ' · MAE ใหม่: <b>' + bestMAE.toFixed(3) + '</b> mg/L'
+    + ' · K เดิม: ' + oldK.toFixed(4) + ' (MAE ' + oldMAE.toFixed(3) + ')'
+    + (improvement > 0 ? ' · <span style="color:' + (isDk ? '#4ecca3' : '#00b894') + '">ดีขึ้น ' + improvement + '%</span>' : '')
+    + '<br><button onclick="rpTrendApplyK(\'' + key + '\',' + bestK + ')" style="margin-top:4px;padding:4px 12px;font-size:10px;font-weight:700;font-family:Sarabun,sans-serif;background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border:none;border-radius:6px;cursor:pointer;">✅ ใช้ K = ' + bestK.toFixed(4) + ' สำหรับสถานีนี้</button>'
+    + ' <button onclick="document.getElementById(_trendKinfoId||\'rp-trend-kinfo\').style.display=\'none\'" style="margin-top:4px;padding:4px 10px;font-size:10px;font-family:Sarabun,sans-serif;background:#555;color:#ddd;border:none;border-radius:6px;cursor:pointer;">ยกเลิก</button>';
+}
+
+function rpTrendApplyK(stationCode, newK) {
+  // บันทึก K ลง STATION_K (runtime) + localStorage
+  STATION_K[stationCode] = newK;
+  try {
+    var stored = JSON.parse(localStorage.getItem('frc_station_k') || '{}');
+    stored[stationCode] = newK;
+    localStorage.setItem('frc_station_k', JSON.stringify(stored));
+  } catch (e) { }
+  document.getElementById(_trendKinfoId||'rp-trend-kinfo').innerHTML = '✅ บันทึก K = ' + newK.toFixed(4) + ' สำหรับ ' + stationCode + ' เรียบร้อย — กำลังวาดกราฟใหม่...';
+  // วาดกราฟใหม่
+  setTimeout(function () {
+    if (_trendCurrentParam) {
+      rpTrendFromReport(_trendCurrentParam);
+    }
+  }, 300);
+}
+
+function rpFbLogin(){
+  var u=document.getElementById('rp-fb-user').value.trim();
+  var p=document.getElementById('rp-fb-pass').value.trim();
+  if(u==='00102430'&&p==='09122531'){
+    document.getElementById('rp-fb-auth').style.display='none';
+    document.getElementById('rp-fb-list').style.display='';
+    rpRenderFeedbacks();
+  } else {
+    document.getElementById('rp-fb-err').style.display='block';
+  }
+}
+function rpRenderFeedbacks(){
+  var feedbacks=JSON.parse(localStorage.getItem('frc_feedbacks')||'[]');
+  var el=document.getElementById('rp-fb-list');
+  if(feedbacks.length===0){el.innerHTML='<div style="text-align:center;padding:20px;color:#c080a0;font-size:12px;">ยังไม่มีข้อเสนอแนะ</div>';return;}
+  feedbacks.sort(function(a,b){return new Date(b.time)-new Date(a.time);});
+  var h='<div style="font-size:11px;color:#a06080;margin-bottom:8px;">ทั้งหมด '+feedbacks.length+' รายการ</div>';
+  for(var i=0;i<feedbacks.length;i++){
+    var f=feedbacks[i];var d=new Date(f.time);
+    var ts=d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    h+='<div style="background:#fff5f8;border-left:3px solid #cc0055;border-radius:0 8px 8px 0;padding:8px 10px;margin-bottom:6px;"><span style="font-size:11.5px;font-weight:700;color:#3a0a20;">'+f.name+'</span><span style="font-size:9px;color:#c080a0;font-family:JetBrains Mono,monospace;margin-left:8px;">'+ts+'</span><div style="font-size:11.5px;color:#5a3040;margin-top:3px;line-height:1.4;">'+f.msg.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div>';
+  }
+  el.innerHTML=h;
 }
 
 async function buildReport() {
@@ -6892,6 +7605,8 @@ async function buildReport() {
   const loadMs = Math.round(performance.now() - t0);
   const histCount = Object.keys(hist).length;
   const histPts = Object.values(hist).reduce((a,b) => a+b.length, 0);
+  // เก็บ Firebase hist ไว้ให้ trend tab ใช้
+  window._rpFirebaseHist = hist;
   document.getElementById('rp-info').textContent = `${SENSORS.length} สถานี · Firebase: ${histCount} สถานี (${histPts.toLocaleString()} จุด · ${loadMs}ms) · ${now.toLocaleTimeString('th-TH')}`;
 
   // ── FRC Report ──
@@ -6933,11 +7648,10 @@ async function buildReport() {
   });
   document.getElementById('rp-frc-tbody').innerHTML = tb;
 
-  // Charts
+  // Charts + Dropdowns
+  rpPopulateDropdowns(pumps, mons, hist);
   rpBuildChart('rp-frc-chart-pump', pumps, hist, 'frc', [FRC_MIN, FRC_HI]);
   rpBuildChart('rp-frc-chart-mon', mons, hist, 'frc', [FRC_MIN, FRC_HI]);
-
-  // Compare
   rpBuildCompare('rp-frc-compare', 'frc');
 
   // ── EC Report ──
@@ -6990,7 +7704,7 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
     const pts = hist[code] || [];
     const data = pts.map(p => ({ x: p.ts, y: isFRC ? (p.frc??null) : (p.ec??null) })).filter(d => d.y!=null && d.y>0);
     if (!data.length) return;
-    datasets.push({ label: s.name.length>18?s.name.substring(0,16)+'…':s.name, data, borderColor: _rpColors[i%_rpColors.length], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.3 });
+    datasets.push({ label: s.name, _fullName: s.name, data, borderColor: _rpColors[i%_rpColors.length], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.3 });
   });
   if (!datasets.length) { ctx.parentElement.innerHTML = '<div style="text-align:center;padding:30px;color:#706080;">ไม่มีข้อมูล 24 ชม. ใน Firebase</div>'; return; }
   _rpCharts[canvasId] = new Chart(ctx, {
@@ -6998,7 +7712,72 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'nearest',axis:'x',intersect:false},
-      plugins:{legend:{display:true,position:'bottom',labels:{color:'#a090b8',font:{size:8,family:'Sarabun'},boxWidth:10,padding:6}}},
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{color:'#d0b8d8',font:{size:9,family:'Sarabun'},boxWidth:10,padding:6,
+          generateLabels:function(chart){
+            return chart.data.datasets.map(function(ds,i){
+              return {text:ds.label, fillStyle:ds.borderColor, strokeStyle:ds.borderColor, lineWidth:2, hidden:!chart.isDatasetVisible(i), datasetIndex:i, fontColor:'#d0b8d8'};
+            });
+          }
+        }},
+        tooltip:{
+          enabled:false,
+          mode:'index',intersect:false,
+          external:function(context){
+            var tooltipEl=document.getElementById('rp-chart-tooltip');
+            var inner2;
+            if(!tooltipEl){
+              tooltipEl=document.createElement('div');
+              tooltipEl.id='rp-chart-tooltip';
+              tooltipEl.style.cssText='position:fixed;z-index:99999;background:rgba(10,10,30,0.95);color:#f0e8ff;font-family:Sarabun,sans-serif;font-size:11px;border-radius:8px;padding:0;max-height:320px;min-width:220px;max-width:450px;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:opacity .15s;display:flex;flex-direction:column;pointer-events:auto;';
+              inner2=document.createElement('div');
+              inner2.id='rp-chart-tooltip-inner';
+              inner2.style.cssText='overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:8px 10px;flex:1;scrollbar-width:thin;scrollbar-color:#666 transparent;max-height:310px;';
+              tooltipEl.appendChild(inner2);
+              document.body.appendChild(tooltipEl);
+              // wheel event — ให้ scroll ภายใน + block scroll จอ
+              inner2.addEventListener('wheel',function(e){
+                e.stopPropagation();
+                inner2.scrollTop+=e.deltaY;
+                e.preventDefault();
+              },{passive:false});
+            } else {
+              inner2=document.getElementById('rp-chart-tooltip-inner');
+            }
+            var tooltip=context.tooltip;
+            if(tooltip.opacity===0){tooltipEl.style.opacity='0';tooltipEl.style.pointerEvents='none';return;}
+            // แปลงเวลาจาก tooltip data point
+            var timeStr='';
+            if(tooltip.dataPoints&&tooltip.dataPoints.length>0){
+              var ts=tooltip.dataPoints[0].parsed.x;
+              var d=new Date(ts);
+              timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+            }
+            var html='<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#e0d0f0;margin-bottom:6px;font-weight:700;position:sticky;top:0;background:rgba(10,10,30,0.98);padding:4px 0 4px 0;z-index:1;">⏱ '+timeStr+'</div>';
+            if(tooltip.body){
+              tooltip.body.forEach(function(b,i){
+                var colors=tooltip.labelColors?tooltip.labelColors[i]:{borderColor:'#fff'};
+                html+='<div style="display:flex;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(colors.borderColor||'#fff')+';flex-shrink:0;"></span><span style="flex:1;">'+b.lines[0]+'</span></div>';
+              });
+            }
+            if(tooltip.body&&tooltip.body.length>10){
+              html+='<div style="font-size:9px;color:#8070a0;margin-top:4px;text-align:center;position:sticky;bottom:0;background:rgba(10,10,30,0.95);padding:2px 0;">↕ เลื่อนเพื่อดูทั้งหมด '+tooltip.body.length+' สถานี</div>';
+            }
+            inner2.innerHTML=html;
+            tooltipEl.style.opacity='1';
+            tooltipEl.style.pointerEvents='auto';
+            var pos=context.chart.canvas.getBoundingClientRect();
+            var left=pos.left+tooltip.caretX+12;
+            var top=pos.top+tooltip.caretY-20;
+            if(left+460>window.innerWidth) left=pos.left+tooltip.caretX-460;
+            if(left<4) left=4;
+            if(top+330>window.innerHeight) top=window.innerHeight-330;
+            if(top<0) top=0;
+            tooltipEl.style.left=left+'px';
+            tooltipEl.style.top=top+'px';
+          }
+        }
+      },
       scales:{
         x:{type:'linear',ticks:{color:'#706080',font:{size:8,family:'JetBrains Mono'},callback:v=>new Date(v).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),maxTicksLimit:10},grid:{color:'rgba(204,0,85,.06)'}},
         y:{ticks:{color:'#706080',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(204,0,85,.08)'}}
@@ -7010,31 +7789,39 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
 
 function rpBuildCompare(containerId, mode) {
   const el = document.getElementById(containerId);
-  const RSM = typeof ROOT_SOURCE_MAP_FULL !== 'undefined' ? ROOT_SOURCE_MAP_FULL : {
-    'SW01':['SP04',2.5],'SW02':['SP05',2.0],'SW03':['SP05',2.5],'SW04':['SP04',4.0],
-    'SW05':['SP05',3.5],'SW06':['SP05',4.0],'SW07':['SP04',5.0],'SW08':['SP12',3.0],
-    'SW09':['SP12',3.5],'SW10':['SP12',2.5],'SW11':['SP04',1.5]
-  };
+  if (!el) return;
   let h = '';
-  SENSORS.filter(s=>String(s.id).startsWith('SW')).forEach(s => {
-    const m = RSM[String(s.id)]; if (!m) return;
-    const src = SENSORS.find(x=>String(x.id)===m[0]); if (!src) return;
-    const tt = m[1];
+  // ใช้ ROOT_SOURCE_MAP + getStationKhr เหมือนกราฟ
+  SENSORS.forEach(s => {
+    const sName = (s.name||'').trim();
+    const rootInfo = ROOT_SOURCE_MAP[sName] || ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')];
+    if (!rootInfo || !rootInfo.root) return;
+    const srcCode = typeof getSrcCodeFromLabel==='function' ? getSrcCodeFromLabel(rootInfo.root) : null;
+    const src = srcCode ? SENSORS.find(x => x.id && x.id.toString()===srcCode) : null;
+    if (!src) return;
+    const tt = rootInfo.ttRoot || 0;
+    if (tt <= 0) return;
+    const stCode = String(s.id).replace(/\/|\./g,'-');
+    const k = typeof getStationKhr==='function' ? getStationKhr(stCode) : 0.05;
+    const srcLabel = rootInfo.root.replace(/^จาก\s*/,'');
     if (mode==='frc') {
-      const fore = src.frc * Math.exp(-0.05 * tt);
+      if (!src.frc || !s.frc) return;
+      const fore = src.frc * Math.exp(-k * tt);
       const diff = s.frc - fore;
       const pct = fore>0?((diff/fore)*100).toFixed(1):'—';
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
-        <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${src.name.substring(0,18)}</span></div>
+        <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${srcLabel} (${src.name.length>20?src.name.substring(0,18)+'…':src.name})</span></div>
         <div class="cc-r"><span style="color:#706080">FRC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${src.frc.toFixed(2)}</span></div>
+        <div class="cc-r"><span style="color:#706080">K</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${k.toFixed(4)}/ชม. (hl=${Math.round(0.693/k)}h) · tt=${tt}ชม.</span></div>
         <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${fore.toFixed(2)}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace;color:${s.frc>=FRC_HI?'#2dd4a0':s.frc>=FRC_MIN?'#f0a030':'#e04060'}">${s.frc.toFixed(2)}</span></div>
-        <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${diff>=0?'#2dd4a0':'#e04060'}">${diff>=0?'+':''}${diff.toFixed(2)} (${pct}%)</span></div></div>`;
+        <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${Math.abs(diff/fore)<0.15?'#2dd4a0':Math.abs(diff/fore)<0.3?'#f0a030':'#e04060'}">${diff>=0?'+':''}${diff.toFixed(2)} (${pct}%)</span></div></div>`;
     } else {
-      const srcEc = src.ec??EC_FALLBACK[src.id]??250;
-      const actEc = s.ec??EC_FALLBACK[s.id]??250;
+      const srcEc = src.ec||250;
+      const actEc = s.ec||250;
       const diff = actEc - srcEc;
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
+        <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${srcLabel}</span></div>
         <div class="cc-r"><span style="color:#706080">EC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(actEc)}</span></div>
@@ -7199,7 +7986,7 @@ function generateInsight() {
   html += '</div></div>';
 
   // Section 2: AI Recommendations
-  html += '<div class="ai-section"><h4>คำแนะนำ AI</h4>';
+  html += '<div class="ai-section"><h4>คำแนะนำ</h4>';
 
   if (riskCount === 0) {
     html += `<div class="ai-rec">
@@ -7814,42 +8601,91 @@ const _zepInitTimer = setInterval(() => {
   window.addEventListener('resize', function() { if (_on) doResize(); });
 })();
 </script>
-<button id="feedback-btn" onclick="document.getElementById('fb-overlay').classList.add('open');document.getElementById('fb-form').style.display='';document.getElementById('fb-success').style.display='none';document.getElementById('fb-name').value='';document.getElementById('fb-msg').value='';"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>ข้อเสนอแนะ</button>
+<button id="feedback-btn" onclick="document.getElementById('fb-overlay').classList.add('open');document.getElementById('fb-form').style.display='';document.getElementById('fb-success').style.display='none';document.getElementById('fb-name').value='';document.getElementById('fb-msg').value='';"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>ติดต่อสอบถาม : นายพิพัฒน์ บริบาลนุกูล นว.5 กบน. ฝคภ.</button>
 <div id="fb-overlay" onclick="if(event.target===this)this.classList.remove('open');">
 <div id="fb-modal">
-<div id="fb-modal-header"><h2>💬 ข้อเสนอแนะ / Feedback</h2><button id="fb-close" onclick="document.getElementById('fb-overlay').classList.remove('open');">✕</button></div>
+<div id="fb-modal-header"><h2>📞 ติดต่อสอบถาม</h2><button id="fb-close" onclick="document.getElementById('fb-overlay').classList.remove('open');">✕</button></div>
 <div id="fb-modal-body">
 <div id="fb-form">
 <label>ชื่อผู้เสนอแนะ</label>
-<input id="fb-name" type="text" placeholder="ระบุชื่อ-นามสกุล หรือชื่อเล่น" autocomplete="name">
-<label>ข้อเสนอแนะ / ความคิดเห็น</label>
-<textarea id="fb-msg" placeholder="พิมพ์ข้อเสนอแนะของคุณที่นี่..."></textarea>
+<input id="fb-name" type="text" placeholder="ชื่อ-นามสกุล หรือชื่อเล่น" autocomplete="name">
+<label>ข้อเสนอแนะ</label>
+<textarea id="fb-msg" placeholder="พิมพ์ข้อเสนอแนะที่นี่..."></textarea>
 <button id="fb-submit" onclick="submitFeedback()">ส่งข้อเสนอแนะ</button>
 </div>
 <div id="fb-success">
 <div class="fb-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-<h3>ขอบคุณสำหรับข้อเสนอแนะ!</h3>
-<p>ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+<h3>ขอบคุณครับ!</h3>
+<p>บันทึกข้อเสนอแนะเรียบร้อยแล้ว</p>
 </div>
 </div>
 </div>
 </div>
+
 <script>
 function submitFeedback(){
   var name=document.getElementById('fb-name').value.trim();
   var msg=document.getElementById('fb-msg').value.trim();
   if(!name){alert('กรุณาระบุชื่อผู้เสนอแนะ');document.getElementById('fb-name').focus();return;}
   if(!msg){alert('กรุณาพิมพ์ข้อเสนอแนะ');document.getElementById('fb-msg').focus();return;}
-  // บันทึกลง localStorage
   var feedbacks=JSON.parse(localStorage.getItem('frc_feedbacks')||'[]');
   feedbacks.push({name:name,msg:msg,time:new Date().toISOString()});
   localStorage.setItem('frc_feedbacks',JSON.stringify(feedbacks));
   console.log('[Feedback]',{name:name,msg:msg,time:new Date().toISOString()});
-  // แสดง success
   document.getElementById('fb-form').style.display='none';
   document.getElementById('fb-success').style.display='';
-  setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},2000);
+  setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev7.3 — Transparent Contour + Retina · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev7.8 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span></div></div>
+<button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
+<div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+<div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
+<button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+<h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev7.8 — March 2026 · M sandbox</p>
+
+<h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
+<div style="background:#f0f4ff;border-radius:8px;padding:10px;text-align:center;font-size:14px;font-weight:700;color:#1565c0;margin:8px 0;">FRC(t) = FRC₀ × e<sup>(-K × t)</sup></div>
+<table style="width:100%;font-size:11px;border-collapse:collapse;margin:8px 0;"><tr style="background:#cc0055;color:#fff;font-weight:700;"><th style="padding:6px 8px;text-align:left;">ตัวแปร</th><th style="padding:6px 8px;text-align:left;">ความหมาย</th></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">FRC₀</td><td style="padding:5px 8px;color:#111;">ค่า FRC ที่สถานีต้นทาง</td></tr>
+<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">K</td><td style="padding:5px 8px;color:#111;">อัตราการสลายตัว (1/ชม.) — แต่ละสถานีต่างกัน, fit จากข้อมูลจริง 3 เดือน</td></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">t</td><td style="padding:5px 8px;color:#111;">เวลาเดินทางของน้ำ (Travel Time, ชม.)</td></tr></table>
+<p style="font-size:11px;color:#444;"><b>Blend Formula:</b> Forecast = fOld×(1-frac) + fNew×frac<br>fOld = decay จากค่าจริงปัจจุบัน, fNew = decay จาก source ย้อนหลัง</p>
+
+<h3 style="color:#1565c0;font-size:15px;margin:16px 0 6px;">⚡ EC Model — ค่าการนำไฟฟ้า</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">EC <b>ไม่สลายตัว</b>ระหว่างเดินทาง → ค่า EC ปลายทาง ≈ EC ต้นทาง (delay ตาม travel time)</p>
+
+<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">📊 ค่า K (Decay Rate)</h3>
+<p style="font-size:11px;line-height:1.6;color:#111;">
+<b>ลำดับการใช้:</b> Auto-fit K (จาก user) → STATION_K_OVERRIDE (fit 3 เดือน 61 สถานี) → Default by zone → 0.008<br>
+<b>Auto-fit:</b> Grid search K=0.001–0.200 → เลือก MAE ต่ำสุด → บันทึกใน localStorage → มีผลทั้ง popup chart และ report
+</p>
+
+<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">🗺️ เส้นทางน้ำ (Source Mapping)</h3>
+<p style="font-size:11px;line-height:1.8;color:#222;">
+<b style="color:#cc0055;">กลุ่มเจ้าพระยา (CP):</b><br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR1 → สจ.ลุมพินี (6ชม.), สจ.พหลโยธิน (5ชม.), สจ.สำโรง (7ชม.) → monitor<br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR2 → สจ.ลาดพร้าว (3ชม.), สจ.คลองเตย (4ชม.) → monitor<br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR3 → สจ.บางพลี (13ชม.), สจ.มีนบุรี (7ชม.), สจ.ลาดกระบัง (8ชม.) → monitor<br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → Dis1/Dis2 → monitor<br>
+&nbsp;&nbsp;• โรงงานผลิตน้ำธนบุรี → โรงพยาบาลศิริราช (2ชม.)<br>
+&nbsp;&nbsp;• โรงผลิตน้ำสามเสน 1-4 → monitor<br>
+<br>
+<b style="color:#1565c0;">กลุ่มแม่กลอง (MH):</b><br>
+&nbsp;&nbsp;• โรงผลิตน้ำมหาสวัสดิ์ → MTR (อุโมงค์) → MDIS (สถานีสูบจ่ายมหาสวัสดิ์) → monitor<br>
+&nbsp;&nbsp;• MDIS → สจ.ราษฎร์บูรณะ (7ชม.), สจ.เพชรเกษม (2ชม.), สจ.ท่าพระ (7ชม.) → monitor
+</p>
+
+<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">⚠ ข้อจำกัด</h3>
+<p style="font-size:11px;line-height:1.6;color:#444;">
+• FRC Model อาศัย K ที่ fit จากข้อมูลย้อนหลัง — ถ้าสภาพท่อเปลี่ยนต้อง re-fit<br>
+• EC Model สมมติไม่มีการเปลี่ยนแปลงระหว่างทาง<br>
+• Travel Time เป็นค่าประมาณ อาจต่างตามปริมาณน้ำใช้จริง<br>
+• Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
+</p>
+
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev7.8 · M sandbox · Water Quality Division · March 2026</div>
+</div></div>
 </body></html>
