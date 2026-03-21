@@ -4351,34 +4351,37 @@ try { var _storedK = JSON.parse(localStorage.getItem('frc_station_k')||'{}'); Ob
 
 // โหลด K จาก Firebase (ข้ามเครื่อง) — async
 async function fbLoadStationK() {
-  if (!window._fbReady || !window._fb) return;
+  if (!window._fbReady || !window._fb) { console.warn('[K] Firebase not ready'); return; }
   try {
     var snap = await window._fbGet(window._fbRef(window._fb, 'history/_station_k'));
     if (snap.exists()) {
       var fbK = {};
+      var count = 0;
       snap.forEach(function(child) {
         var val = child.val();
-        if (val && val.k > 0) fbK[child.key] = val.k;
+        if (val && val.k > 0) { fbK[child.key] = val.k; count++; }
       });
       // Firebase K เป็น truth — overwrite ทั้งหมด
       Object.keys(fbK).forEach(function(code) {
         STATION_K[code] = fbK[code];
       });
-      console.log('[K] loaded from Firebase:', Object.keys(fbK).length, 'stations');
+      console.log('[K] loaded from Firebase: ' + count + ' stations', JSON.stringify(fbK).substring(0,200));
       // บันทึกลง localStorage ด้วย
       try {
-        var local = JSON.parse(localStorage.getItem('frc_station_k')||'{}');
-        Object.assign(local, fbK);
-        localStorage.setItem('frc_station_k', JSON.stringify(local));
+        localStorage.setItem('frc_station_k', JSON.stringify(Object.assign({}, fbK)));
       } catch(e){}
       // rebuild report ถ้าเปิดอยู่
       var rp = document.getElementById('report-panel');
       if (rp && rp.classList.contains('open') && typeof buildReport === 'function') {
-        console.log('[K] Firebase K loaded — rebuilding report...');
+        console.log('[K] rebuilding report with Firebase K...');
         buildReport();
       }
+      return count;
+    } else {
+      console.log('[K] Firebase station_k path is empty');
+      return 0;
     }
-  } catch(e) { console.warn('[K] FB load error', e); }
+  } catch(e) { console.error('[K] FB load error:', e.message); return -1; }
 }
 // เรียกหลัง Firebase ready — retry หลายครั้ง
 function _tryLoadK(attempts) {
@@ -7666,9 +7669,15 @@ function rpTrendApplyK(stationCode, newK) {
   if (window._fbReady && window._fb) {
     try {
       var r = window._fbRef(window._fb, 'history/_station_k/' + stationCode.replace(/\/|\./g, '-'));
-      window._fbSet(r, { k: newK, ts: Date.now() });
-      console.log('[K] saved to Firebase:', stationCode, newK);
-    } catch(e) { console.warn('[K] FB save error', e); }
+      window._fbSet(r, { k: newK, ts: Date.now() }).then(function(){
+        console.log('[K] ✅ saved to Firebase:', stationCode, newK);
+      }).catch(function(err){
+        console.error('[K] ❌ Firebase save FAILED:', err.message);
+        alert('⚠ Firebase save failed: ' + err.message);
+      });
+    } catch(e) { console.error('[K] FB save error', e); alert('⚠ K save error: '+e.message); }
+  } else {
+    console.warn('[K] Firebase not ready — saved to localStorage only');
   }
   document.getElementById(_trendKinfoId||'rp-trend-kinfo').innerHTML = '✅ บันทึก K = ' + newK.toFixed(4) + ' สำหรับ ' + stationCode + ' เรียบร้อย (Firebase + localStorage) — กำลังวาดกราฟใหม่...';
   // วาดกราฟใหม่
@@ -7732,6 +7741,11 @@ async function buildReport() {
   const now = new Date();
   document.getElementById('rp-date').textContent = now.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rp-info').textContent = 'กำลังโหลดจาก Firebase...';
+
+  // Force reload K จาก Firebase ก่อน build report
+  if (window._fbReady) {
+    try { await fbLoadStationK(); } catch(e) { console.warn('[Report] K load failed', e); }
+  }
 
   // ถ้า SENSORS ยังว่าง (API ยังไม่ poll) ใช้ fallback
   if (!SENSORS.length) {
