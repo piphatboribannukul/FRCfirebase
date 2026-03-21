@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>M sandbox Chlorine Contour V.7.2 — MWA Realtime</title>
+<title>M sandbox : Real-Time Chlorine Contour rev7.3</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1276,13 +1276,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <body>
 <div id="header">
   <div class="live-dot"></div>
-  <h1 id="header-title">🌸 M sandbox Chlorine Contour V.7.2</h1>
+  <h1 id="header-title">🌸 M sandbox : Real-Time Chlorine Contour</h1>
   <div id="param-switcher">
     <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">🌸 FRC</button>
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V.7.2</span>
+  <span id="v2-badge">⬡ rev7.3</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1725,7 +1725,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">V.7.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev7.3 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -1777,7 +1777,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">V.7.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev7.3 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -1792,7 +1792,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — V.7.0</h2>
+      <h2>📊 <span>Daily Report</span> — rev7.3</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -2313,7 +2313,7 @@ setTimeout(() => {
 }, 6000);
 L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
 
-const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:false};
+const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true};
 
 // ══════════════════════════════════════════════════════════════════
 // CONTOUR: Single offscreen canvas rendered in lat/lon space
@@ -4037,14 +4037,14 @@ function setParam(mode) {
   document.getElementById('btn-ec').className  = 'param-btn' + (mode==='ec'?' active':'');
   document.getElementById('header-title').textContent =
     mode === 'ec'
-      ? '⚡ M sandbox Chlorine Contour V.7.2 — EC Mode'
-      : '🌸 M sandbox Chlorine Contour V.7.2';
+      ? '⚡ M sandbox : Real-Time Chlorine Contour — EC Mode'
+      : '🌸 M sandbox : Real-Time Chlorine Contour';
   // อัปเดต disclaimer bar
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ V.7.2 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 21 มี.ค. 69</span>'
-      : '<span>⚠ V.7.2 — Transparent Contour · เห็นรายละเอียดแผนที่ · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span>';
+      ? '<span>⚠ rev7.3 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 21 มี.ค. 69</span>'
+      : '<span>⚠ rev7.3 — Transparent Contour + Retina · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -4950,6 +4950,14 @@ function showExportMsg(msg, color) {
 buildIdwCache();                           // pre-compute cache ด้วย fallback sensors
 fetchAndUpdate();                          // โหลดครั้งแรก
 setInterval(fetchAndUpdate, POLL_INTERVAL); // poll ทุก 15 นาที
+
+// ── Auto-start flow เมื่อแผนที่พร้อม ──
+setTimeout(function() {
+  if (layers.flow && typeof startFlowAnimation === 'function') {
+    document.getElementById('flow-btn').classList.add('active');
+    startFlowAnimation();
+  }
+}, 800);
 
 // โหลด history จาก Firebase เมื่อ SDK พร้อม
 async function initFromFirebase() {
@@ -7265,7 +7273,7 @@ const _zepInitTimer = setInterval(() => {
   wrap.appendChild(fc);
 
   var _raf = null, _on = false, _parts = [];
-  var MAX = 800, TRAIL = 36;
+  var MAX = 2000, TRAIL = 16;
 
   // ── point-in-polygon ──
   function pip(lat, lon, c) {
@@ -7327,18 +7335,37 @@ const _zepInitTimer = setInterval(() => {
   }
 
   // ── source cache ──
-  var srcList = []; // [{s, zone, bbox}]
+  var srcList = []; // [{s, zone, bbox, area}]
+  var srcWeights = []; // cumulative weight for weighted random
+  var srcTotalWeight = 0;
+
+  // ── Calculate polygon area (Shoelace formula) ──
+  function polyArea(coords) {
+    var a = 0;
+    for (var i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+      a += (coords[j][1] + coords[i][1]) * (coords[j][0] - coords[i][0]);
+    }
+    return Math.abs(a) / 2;
+  }
+
   function cacheSrc() {
     srcList = [];
+    srcWeights = [];
+    srcTotalWeight = 0;
     for (var i = 0; i < SENSORS.length; i++) {
       var s = SENSORS[i];
       if (s.type === 'pump' || s.type === 'plant') {
         var zone = findStationZone(s);
+        var area = zone ? polyArea(zone) : 0.0001;
         srcList.push({
           s: s,
           zone: zone,
-          bbox: zone ? polyBBox(zone) : null
+          bbox: zone ? polyBBox(zone) : null,
+          area: area
         });
+        srcTotalWeight += area;
+        srcWeights.push(srcTotalWeight);
+      }
       }
     }
   }
@@ -7349,10 +7376,16 @@ const _zepInitTimer = setInterval(() => {
     return '20,60,160';
   }
 
-  // ── spawn: pick source → pick random target inside zone → particle flows there ──
+  // ── spawn: weighted by zone area → โซนกว้างได้ particle เยอะกว่า ──
   function spawnOne() {
     if (!srcList.length) return null;
-    var idx = Math.random() * srcList.length | 0;
+
+    // Weighted random: โซนพื้นที่ใหญ่ ถูกเลือกบ่อยกว่า
+    var r = Math.random() * srcTotalWeight;
+    var idx = 0;
+    for (var i = 0; i < srcWeights.length; i++) {
+      if (r <= srcWeights[i]) { idx = i; break; }
+    }
     var entry = srcList[idx];
     var s = entry.s;
     var zone = entry.zone;
@@ -7375,18 +7408,18 @@ const _zepInitTimer = setInterval(() => {
     var dLon = tLon - s.lon;
     var dDist = Math.sqrt(dLat*dLat + dLon*dLon) || 0.001;
 
-    // Speed: proportional to distance so particle reaches target within its lifetime
-    var life = 120 + (Math.random() * 160) | 0;
-    var baseSpd = dDist / life * 1.3; // slightly faster than needed
+    // Long life, slow graceful flow
+    var life = 250 + (Math.random() * 300) | 0;
+    var baseSpd = dDist / life * 1.1;
 
     return {
       lat: s.lat + (Math.random()-0.5)*0.003,
       lon: s.lon + (Math.random()-0.5)*0.003,
       olat: s.lat, olon: s.lon,
-      tLat: tLat, tLon: tLon,    // target
+      tLat: tLat, tLon: tLon,
       frc: s.frc || 1,
       spd: baseSpd,
-      dirLat: dLat/dDist,          // normalized direction
+      dirLat: dLat/dDist,
       dirLon: dLon/dDist,
       tx: new Float32Array(TRAIL),
       ty: new Float32Array(TRAIL),
@@ -7402,28 +7435,33 @@ const _zepInitTimer = setInterval(() => {
     fc.height = Math.round(r.height);
   }
 
+  var _frameCount = 0;
+
   function doFrame() {
     if (!_on) return;
     var W = fc.width, H = fc.height;
     if (!W || !H) { doResize(); _raf = requestAnimationFrame(doFrame); return; }
 
+    _frameCount++;
     var ctx = fc.getContext('2d');
 
-    // Trail fade
+    // Gentle fade
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = 'rgba(0,0,0,0.04)';
     ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'source-over';
 
-    // Remove dead
-    var alive = [];
-    for (var i = 0; i < _parts.length; i++) {
-      if (_parts[i].age < _parts[i].life) alive.push(_parts[i]);
+    // Remove dead (ทำทุก 3 เฟรม เพื่อลด GC)
+    if (_frameCount % 3 === 0) {
+      var alive = [];
+      for (var i = 0; i < _parts.length; i++) {
+        if (_parts[i].age < _parts[i].life) alive.push(_parts[i]);
+      }
+      _parts = alive;
     }
-    _parts = alive;
 
-    // Spawn
-    var bgt = 12;
+    // Spawn very gently — อายุยาวขึ้นจึง spawn น้อยลง
+    var bgt = 3;
     while (_parts.length < MAX && bgt-- > 0) {
       var np = spawnOne();
       if (!np) break;
@@ -7432,70 +7470,67 @@ const _zepInitTimer = setInterval(() => {
     }
 
     var dark = document.body.classList.contains('dark');
-    var isEC = (typeof PARAM_MODE !== 'undefined') && PARAM_MODE === 'ec';
 
-    // Offset + projection cache (avoid latLngToContainerPoint per particle)
-    var mapEl = document.getElementById('map');
+    // Projection cache (cache DOM lookup)
+    if (!doFrame._mapEl) doFrame._mapEl = document.getElementById('map');
+    var mapEl = doFrame._mapEl;
     var mRect = mapEl.getBoundingClientRect();
     var wRect = wrap.getBoundingClientRect();
     var offX = mRect.left - wRect.left;
     var offY = mRect.top - wRect.top;
-    // Pre-compute lat/lon → pixel using two reference points
     var bounds = map.getBounds();
     var pNW = map.latLngToContainerPoint(bounds.getNorthWest());
     var pSE = map.latLngToContainerPoint(bounds.getSouthEast());
     var bN = bounds.getNorth(), bS = bounds.getSouth(), bW = bounds.getWest(), bE = bounds.getEast();
     var pxPerLon = (pSE.x - pNW.x) / (bE - bW);
-    var pxPerLat = (pSE.y - pNW.y) / (bS - bN); // negative because lat goes up but y goes down
+    var pxPerLat = (pSE.y - pNW.y) / (bS - bN);
+
+    // ── Mega-batch: 4 width buckets × 8 alpha bands = 32 paths max ──
+    var ABANDS = 8;
+    // buckets[widthIdx][alphaIdx] = Path2D
+    var paths = new Array(4);
+    for (var wi = 0; wi < 4; wi++) {
+      paths[wi] = new Array(ABANDS);
+      for (var ai = 0; ai < ABANDS; ai++) paths[wi][ai] = null;
+    }
+    var widths = [0.06, 0.2, 0.45, 0.8];
+    var headX = [], headY = [], headAlpha = [];
 
     for (var k = 0; k < _parts.length; k++) {
       var p = _parts[k];
+      if (p.age >= p.life) continue;
 
-      // ── Physics: flow toward target with curl noise ──
-      // Remaining vector to target
+      // ── Physics ──
       var toTLat = p.tLat - p.lat;
       var toTLon = p.tLon - p.lon;
       var toDist = Math.sqrt(toTLat*toTLat + toTLon*toTLon) || 0.0001;
 
-      // Normalized toward-target direction (blend with initial direction for smooth curves)
-      var blend = Math.min(1, p.age / 30); // gradually steer toward target
+      var blend = Math.min(1, p.age / 30);
       var steerLat = p.dirLat * (1-blend*0.5) + (toTLat/toDist) * (blend*0.5 + 0.5);
       var steerLon = p.dirLon * (1-blend*0.5) + (toTLon/toDist) * (blend*0.5 + 0.5);
       var steerD = Math.sqrt(steerLat*steerLat + steerLon*steerLon) || 1;
-      steerLat /= steerD;
-      steerLon /= steerD;
+      steerLat /= steerD; steerLon /= steerD;
 
-      // Curl noise — multi-octave for fluid, wavy, พริ้วไหว motion
-      var t = p.age * 0.025 + p.olat * 50 + p.olon * 50;
-      var curl1 = Math.sin(t + p.lat * 8) * Math.cos(t * 0.4 + p.lon * 8);
-      var curl2 = Math.sin(t * 1.7 + p.lat * 15) * 0.5;
-      var curl3 = Math.cos(t * 0.6 + p.lon * 12 + p.lat * 6) * 0.3;
-      var curl = curl1 + curl2 + curl3;
+      var t = p.age * 0.02 + p.olat * 50 + p.olon * 50;
+      var curl = Math.sin(t + p.lat * 8) * Math.cos(t * 0.4 + p.lon * 8)
+               + Math.sin(t * 1.7 + p.lat * 15) * 0.5
+               + Math.cos(t * 0.6 + p.lon * 12 + p.lat * 6) * 0.3;
       var perpLat = -steerLon, perpLon = steerLat;
 
-      // Speed: slightly faster near source, slow down near target
-      var progress = 1 - Math.min(1, toDist / (Math.sqrt((p.tLat-p.olat)*(p.tLat-p.olat)+(p.tLon-p.olon)*(p.tLon-p.olon)) || 0.01));
-      var spdMul = p.spd * (0.8 + 0.4 * (1 - progress));
-
+      var spdMul = p.spd * (0.9 + 0.15 * Math.sin(p.age * 0.05));
       p.lat += (steerLat * 0.6 + perpLat * curl * 0.4) * spdMul;
       p.lon += (steerLon * 0.6 + perpLon * curl * 0.4) * spdMul;
       p.age++;
 
-      // Zone containment check every 20 frames
-      if (p.zone && p.age > 5 && (p.age % 20 === 0)) {
+      if (p.zone && p.age > 5 && (p.age % 30 === 0)) {
         if (!pip(p.lat, p.lon, p.zone)) { p.age = p.life; continue; }
       }
-      // Global bounds
       if (p.lat<13.4||p.lat>14.1||p.lon<100.2||p.lon>101.1) { p.age=p.life; continue; }
-
-      // Near target → kill (arrived)
       if (toDist < 0.001) { p.age = p.life; continue; }
 
-      // ── Screen position (fast inline projection) ──
       var sx = pNW.x + (p.lon - bW) * pxPerLon + offX;
       var sy = pNW.y + (p.lat - bN) * pxPerLat + offY;
 
-      // Trail
       if (p.tN < TRAIL) {
         p.tx[p.tN] = sx; p.ty[p.tN] = sy; p.tN++;
       } else {
@@ -7504,33 +7539,58 @@ const _zepInitTimer = setInterval(() => {
       }
       if (p.tN < 2) continue;
 
-      // ── Alpha ──
       var lf = p.age / p.life;
-      var aIn = p.age < 8 ? p.age / 8 : 1;
+      var aIn = p.age < 10 ? p.age / 10 : 1;
       var aOut = lf > 0.75 ? (1-lf)/0.25 : 1;
-      var baseA = Math.min(aIn, aOut) * (dark ? 0.92 : 0.72);
-      if (baseA < 0.03) continue;
+      var baseA = Math.min(aIn, aOut) * (dark ? 0.20 : 0.12);
+      if (baseA < 0.01) continue;
 
-      // ── Color (Cyan-Ice flow, FRC decay by distance) ──
-      var dSrc = Math.sqrt((p.lon-p.olon)*(p.lon-p.olon) + (p.lat-p.olat)*(p.lat-p.olat));
-      var fHere = isEC ? 1.2 : Math.max(0.05, p.frc * Math.exp(-dSrc * 8));
-      var cStr = flowRGB(fHere, dark);
+      // Add segments to Path2D buckets
+      var nSeg = p.tN;
+      var invNSeg = 1 / (nSeg - 1);
+      for (var j = 1; j < nSeg; j++) {
+        var segP = j * invNSeg;
+        var segA = baseA * segP * segP * segP;
+        if (segA < 0.003) continue;
+        var wi2 = segP < 0.25 ? 0 : segP < 0.5 ? 1 : segP < 0.75 ? 2 : 3;
+        var ai2 = Math.min(ABANDS - 1, (segA * ABANDS / 0.20) | 0);
+        var path = paths[wi2][ai2];
+        if (!path) { path = new Path2D(); paths[wi2][ai2] = path; }
+        path.moveTo(p.tx[j-1], p.ty[j-1]);
+        path.lineTo(p.tx[j], p.ty[j]);
+      }
 
-      // ── Draw trail ──
-      ctx.beginPath();
-      ctx.moveTo(p.tx[0], p.ty[0]);
-      for (var j = 1; j < p.tN; j++) ctx.lineTo(p.tx[j], p.ty[j]);
-      ctx.strokeStyle = 'rgba(' + cStr + ',' + (baseA * 0.7).toFixed(2) + ')';
-      ctx.lineWidth = 0.4 + baseA * 0.6;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
+      // Head dot
+      var headA2 = baseA * (dark ? 0.5 : 0.35);
+      if (headA2 > 0.008) { headX.push(sx); headY.push(sy); headAlpha.push(headA2); }
+    }
 
-      // ── Head dot (brighter glow) ──
-      ctx.beginPath();
-      ctx.arc(sx, sy, 0.8 + baseA * 0.3, 0, 6.283);
-      ctx.fillStyle = 'rgba(' + cStr + ',' + Math.min(1, baseA * 1.6).toFixed(2) + ')';
-      ctx.fill();
+    // ── Draw all paths: max 32 draw calls ──
+    var cr = dark ? 230 : 60, cg = dark ? 240 : 100, cb = dark ? 255 : 210;
+    ctx.lineCap = 'round';
+    for (var wi3 = 0; wi3 < 4; wi3++) {
+      ctx.lineWidth = widths[wi3] * (dark ? 1.0 : 0.85);
+      for (var ai3 = 0; ai3 < ABANDS; ai3++) {
+        var p2d = paths[wi3][ai3];
+        if (!p2d) continue;
+        var bandA = ((ai3 + 0.5) / ABANDS * 0.20).toFixed(3);
+        ctx.strokeStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + bandA + ')';
+        ctx.stroke(p2d);
+      }
+    }
+
+    // ── Head dots: batch by alpha band ──
+    if (headX.length) {
+      var dotR = dark ? 0.55 : 0.45;
+      // Simple: just draw all with average alpha for perf
+      for (var di = 0; di < headX.length; di++) {
+        ctx.beginPath();
+        ctx.arc(headX[di], headY[di], dotR, 0, 6.283);
+        ctx.fillStyle = dark
+          ? 'rgba(255,255,255,' + headAlpha[di].toFixed(3) + ')'
+          : 'rgba(40,80,200,' + headAlpha[di].toFixed(3) + ')';
+        ctx.fill();
+      }
     }
 
     _raf = requestAnimationFrame(doFrame);
@@ -7545,8 +7605,36 @@ const _zepInitTimer = setInterval(() => {
     fc.style.display = 'block';
     fc.getContext('2d').clearRect(0, 0, fc.width, fc.height);
     if (_raf) cancelAnimationFrame(_raf);
-    console.log('[Flow] V5 Started — ' + srcList.length + ' sources, ' +
-      srcList.filter(function(e){return e.zone;}).length + ' with zones');
+
+    // ── Pre-fill: spawn 1400 ตัว กระจายทั่วแผนที่ทันที ──
+    for (var i = 0; i < MAX; i++) {
+      var np = spawnOne();
+      if (!np) break;
+      var preAge = (Math.random() * np.life * 0.93) | 0;
+      // Simulate ทุก 3 step เพื่อไม่ให้ blocking (เร็วขึ้น 3x)
+      var simSteps = (preAge / 3) | 0;
+      var spdX3 = np.spd * 3;
+      for (var step = 0; step < simSteps; step++) {
+        var toTLat = np.tLat - np.lat;
+        var toTLon = np.tLon - np.lon;
+        var toDist = Math.sqrt(toTLat*toTLat + toTLon*toTLon) || 0.0001;
+        if (toDist < 0.001) break;
+        var stLat = toTLat / toDist;
+        var stLon = toTLon / toDist;
+        var t = step * 0.06 + np.olat * 50 + np.olon * 50;
+        var curl = Math.sin(t + np.lat * 8) * Math.cos(t * 0.4 + np.lon * 8);
+        var pLat = -stLon, pLon = stLat;
+        np.lat += (stLat * 0.6 + pLat * curl * 0.4) * spdX3;
+        np.lon += (stLon * 0.6 + pLon * curl * 0.4) * spdX3;
+      }
+      np.age = preAge;
+      // ตรวจสอบว่ายังอยู่ใน bounds
+      if (np.lat >= 13.4 && np.lat <= 14.1 && np.lon >= 100.2 && np.lon <= 101.1) {
+        _parts.push(np);
+      }
+    }
+
+    console.log('[Flow] Started — ' + srcList.length + ' sources, pre-filled ' + _parts.length + ' particles');
     doFrame();
   };
 
@@ -7566,5 +7654,5 @@ const _zepInitTimer = setInterval(() => {
   window.addEventListener('resize', function() { if (_on) doResize(); });
 })();
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.7.2 — Transparent Contour · เห็นรายละเอียดแผนที่ · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev7.3 — Transparent Contour + Retina · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span></div>
 </body></html>
