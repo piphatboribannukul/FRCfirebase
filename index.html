@@ -476,6 +476,43 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #tip .tv { font-size: 17px; }
   #src-modal { width: 98vw; max-height: 88vh; }
   .lpop { min-width: unset; width: 80vw; }
+
+  /* ── Zone editor — full width + ปุ่มปิดชัด ── */
+  #zone-editor-panel { width: 100% !important; max-height: 60vh !important; }
+  #zep-close { font-size: 24px !important; padding: 4px 8px !important; }
+
+  /* ── About panel — เล็กลงบน mobile ── */
+  #about-panel > div {
+    max-width: 95vw !important;
+    max-height: 75vh !important;
+    padding: 16px 14px !important;
+    font-size: 10px !important;
+  }
+  #about-panel h2 { font-size: 16px !important; }
+  #about-panel h3 { font-size: 12px !important; }
+  #about-panel p, #about-panel table { font-size: 10px !important; }
+
+  /* ── About button — ขยับขึ้นพ้นปุ่มติดต่อสอบถาม ── */
+  #about-btn { bottom: 90px !important; right: 8px !important; width: 30px !important; height: 30px !important; font-size: 14px !important; }
+
+  /* ── Forecast bar — เวลาไม่ทับ ── */
+  #forecast-bar {
+    padding: 8px 10px !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    gap: 4px !important;
+    max-height: 45vh !important;
+    overflow-y: auto !important;
+  }
+  #forecast-time-label { font-size: 11px !important; min-width: 80px !important; }
+  #forecast-top { flex-wrap: wrap; gap: 6px !important; }
+  #forecast-controls { flex-wrap: wrap; gap: 4px !important; }
+  .fc-btn { padding: 4px 8px !important; font-size: 10px !important; }
+
+  /* ── Feedback button (ติดต่อสอบถาม) — ขยับขึ้น ── */
+  #feedback-btn { bottom: 48px !important; font-size: 9px !important; padding: 4px 8px !important; opacity: 0.9 !important; }
+
+  /* ── Report panel — ปุ่มปิดชัดเจน ── */
+  #rp-close { font-size: 22px !important; padding: 4px 8px !important; }
 }
 
 /* ═══════════════════════════════════════
@@ -3774,7 +3811,7 @@ function buildMarkers() {
     // marker color: FRC ใช้ statusColor (solid #cc0055/#e05080/#b07000 เหมือนต้นฉบับ)
     //               EC  ใช้ ecColor (solid blue/orange)
     const c = PARAM_MODE === 'frc' ? statusColor(pv) : ecStatus(pv) === `เกินมาตรฐาน ⚠ (≥${EC_CONFIG.hi})` ? '#b32800' : pv >= EC_CONFIG.lo ? '#1565c0' : '#1a7ab0';
-    const sz=s.type==='plant'?16:s.type==='pump'?13:10;
+    const sz=s.type==='plant'?12:s.type==='pump'?10:7;
     const br=s.type==='monitor'?'50%':'3px';
     const tt = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name.replace(/\s+/g, ' ').trim()];
 
