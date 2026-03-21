@@ -716,6 +716,48 @@ body.dark #disclaimer-bar{
   background:rgba(8,8,20,.85) !important;border-color:var(--glass-border) !important;color:#cc6688 !important;
   backdrop-filter:var(--glass-blur) !important;
 }
+/* ── Feedback Button & Modal ── */
+#feedback-btn{
+  position:fixed;bottom:42px;left:12px;z-index:1999;
+  background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;
+  border:none;border-radius:12px;padding:8px 14px;
+  font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  box-shadow:0 2px 12px rgba(204,0,85,.25),0 0 0 0 rgba(204,0,85,0);
+  transition:all .2s cubic-bezier(.4,0,.2,1);letter-spacing:.2px;
+}
+#feedback-btn:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(204,0,85,.35);}
+#feedback-btn:active{transform:translateY(0);}
+#feedback-btn svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
+body.dark #feedback-btn{background:linear-gradient(135deg,#e94560,#cc0055);box-shadow:0 2px 16px rgba(233,69,96,.3);}
+#fb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#fb-overlay.open{display:flex;}
+#fb-modal{background:#fff;border-radius:16px;width:min(420px,90vw);max-height:85vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:fbSlideIn .3s cubic-bezier(.4,0,.2,1);}
+@keyframes fbSlideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+#fb-modal-header{background:linear-gradient(135deg,#3a0a20,#cc0055);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+#fb-modal-header h2{font-size:15px;font-weight:700;margin:0;letter-spacing:.2px;}
+#fb-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px;transition:color .15s;}
+#fb-close:hover{color:#fff;}
+#fb-modal-body{padding:20px;}
+#fb-modal-body label{display:block;font-size:11px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
+#fb-name{width:100%;padding:10px 14px;border:1.5px solid #f0d0e0;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;margin-bottom:16px;transition:border-color .2s;outline:none;background:#fff;}
+#fb-name:focus{border-color:#cc0055;box-shadow:0 0 0 3px rgba(204,0,85,.08);}
+#fb-msg{width:100%;height:120px;padding:10px 14px;border:1.5px solid #f0d0e0;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;resize:vertical;transition:border-color .2s;outline:none;background:#fff;}
+#fb-msg:focus{border-color:#cc0055;box-shadow:0 0 0 3px rgba(204,0,85,.08);}
+#fb-submit{width:100%;margin-top:16px;padding:12px;background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
+#fb-submit:hover{background:linear-gradient(135deg,#e94560,#cc0055);box-shadow:0 4px 16px rgba(204,0,85,.3);}
+#fb-submit:disabled{opacity:.5;cursor:not-allowed;}
+#fb-success{display:none;text-align:center;padding:30px 20px;}
+#fb-success .fb-check{width:56px;height:56px;margin:0 auto 16px;background:#f0fff5;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+#fb-success .fb-check svg{width:28px;height:28px;fill:#22c55e;}
+#fb-success h3{font-size:16px;color:#1a0a10;margin:0 0 6px;}
+#fb-success p{font-size:13px;color:#a06080;margin:0;}
+body.dark #fb-modal{background:#1a1a2e;border:1px solid rgba(233,69,96,.15);}
+body.dark #fb-modal-body label{color:#cc6688;}
+body.dark #fb-name,body.dark #fb-msg{background:rgba(255,255,255,.05);border-color:rgba(233,69,96,.2);color:#e0d0d8;}
+body.dark #fb-name:focus,body.dark #fb-msg:focus{border-color:#e94560;box-shadow:0 0 0 3px rgba(233,69,96,.1);}
+body.dark #fb-success h3{color:#e0d0d8;}
+body.dark #fb-success p{color:#cc6688;}
 /* Sidebar — deep frosted glass */
 body.dark #sidebar{
   background:var(--glass-bg-deep) !important;border-color:var(--glass-border) !important;
@@ -7348,6 +7390,24 @@ const _zepInitTimer = setInterval(() => {
     return Math.abs(a) / 2;
   }
 
+  // ── Weight multiplier: ปรับน้ำหนัก particle spawn ต่อสถานี ──
+  var SPAWN_WEIGHT_MUL = {
+    'SP12': 1.0,    // สถานีสูบจ่ายน้ำมหาสวัสดิ์ — ปกติ
+    'SP06': 3.0,    // โรงงานผลิตน้ำธนบุรี — เพิ่ม 3x
+    'SW02': 3.5,    // สถานีสูบจ่ายน้ำลาดพร้าว — เพิ่ม 3.5x
+    'SW03': 4.0,    // สถานีสูบจ่ายน้ำคลองเตย — เพิ่ม 4x
+    'SW10': 3.5,    // สถานีสูบจ่ายน้ำท่าพระ — เพิ่ม 3.5x
+    'SP05': 3.0,    // สถานีสูบจ่ายน้ำบางเขน 2 (Dis2) — เพิ่ม 3x
+  };
+
+  // ── อุโมงค์ส่งน้ำ — ไม่ spawn particle (ไม่ใช่สถานีสูบจ่าย) ──
+  var SPAWN_EXCLUDE = {
+    'SP01': true,   // สถานีสูบส่งน้ำบางเขน 1 (TR1)
+    'SP02': true,   // สถานีสูบส่งน้ำบางเขน 2 (TR2)
+    'SP03': true,   // สถานีสูบส่งน้ำบางเขน 3 (TR3)
+    'SP11': true    // สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)
+  };
+
   function cacheSrc() {
     srcList = [];
     srcWeights = [];
@@ -7355,17 +7415,21 @@ const _zepInitTimer = setInterval(() => {
     for (var i = 0; i < SENSORS.length; i++) {
       var s = SENSORS[i];
       if (s.type === 'pump' || s.type === 'plant') {
+        // ข้ามอุโมงค์ส่งน้ำ
+        if (SPAWN_EXCLUDE[String(s.id)]) continue;
         var zone = findStationZone(s);
         var area = zone ? polyArea(zone) : 0.0001;
+        // ใช้ weight multiplier ถ้ามี
+        var mul = SPAWN_WEIGHT_MUL[String(s.id)] || 1.0;
+        var weightedArea = area * mul;
         srcList.push({
           s: s,
           zone: zone,
           bbox: zone ? polyBBox(zone) : null,
-          area: area
+          area: weightedArea
         });
-        srcTotalWeight += area;
+        srcTotalWeight += weightedArea;
         srcWeights.push(srcTotalWeight);
-      }
       }
     }
   }
@@ -7460,13 +7524,49 @@ const _zepInitTimer = setInterval(() => {
       _parts = alive;
     }
 
-    // Spawn very gently — อายุยาวขึ้นจึง spawn น้อยลง
-    var bgt = 3;
+    // Spawn: ผสม source-based + scatter ในโซน เพื่อรักษาความหนาแน่นทั่วพื้นที่
+    var bgt = 5;
     while (_parts.length < MAX && bgt-- > 0) {
-      var np = spawnOne();
-      if (!np) break;
-      np.age = (Math.random() * 10) | 0;
-      _parts.push(np);
+      // 50% spawn จาก source (เดิม), 50% scatter ตรงจุดสุ่มในโซน
+      if (Math.random() < 0.5) {
+        var np = spawnOne();
+        if (!np) break;
+        np.age = (Math.random() * 10) | 0;
+        _parts.push(np);
+      } else {
+        // scatter spawn — ทิศ outward จาก source เสมอ
+        if (!srcList.length) break;
+        var r2 = Math.random() * srcTotalWeight;
+        var idx2 = 0;
+        for (var si = 0; si < srcWeights.length; si++) {
+          if (r2 <= srcWeights[si]) { idx2 = si; break; }
+        }
+        var en = srcList[idx2];
+        if (!en.zone || !en.bbox) continue;
+        var spt = randInPoly(en.zone, en.bbox);
+        // ทิศ outward จาก source
+        var soLat = spt[0] - en.s.lat;
+        var soLon = spt[1] - en.s.lon;
+        var soD = Math.sqrt(soLat*soLat + soLon*soLon) || 0.001;
+        var soDirLat = soLat / soD;
+        var soDirLon = soLon / soD;
+        var sProjD = 0.01 + Math.random() * 0.04;
+        var sTLat = spt[0] + soDirLat * sProjD;
+        var sTLon = spt[1] + soDirLon * sProjD;
+        var sdLat = sTLat - spt[0], sdLon = sTLon - spt[1];
+        var sdD = Math.sqrt(sdLat*sdLat+sdLon*sdLon)||0.001;
+        var slife = 250+(Math.random()*300)|0;
+        var ssp = {
+          lat:spt[0], lon:spt[1],
+          olat:en.s.lat, olon:en.s.lon,
+          tLat:sTLat, tLon:sTLon,
+          frc:en.s.frc||1, spd:sdD/slife*1.1,
+          dirLat:soDirLat, dirLon:soDirLon,
+          tx:new Float32Array(TRAIL), ty:new Float32Array(TRAIL),
+          tN:0, age:(Math.random()*8)|0, life:slife, zone:en.zone
+        };
+        _parts.push(ssp);
+      }
     }
 
     var dark = document.body.classList.contains('dark');
@@ -7606,12 +7706,16 @@ const _zepInitTimer = setInterval(() => {
     fc.getContext('2d').clearRect(0, 0, fc.width, fc.height);
     if (_raf) cancelAnimationFrame(_raf);
 
-    // ── Pre-fill: spawn 1400 ตัว กระจายทั่วแผนที่ทันที ──
-    for (var i = 0; i < MAX; i++) {
+    // ── Pre-fill: กระจาย particle ทั่วทั้งพื้นที่โซน รวมถึงขอบ ──
+    // Strategy: 40% spawn จาก source แล้ว simulate (เดิม), 60% spawn ตรงจุดสุ่มในโซน (ใหม่)
+    var preFillFromSrc = Math.round(MAX * 0.4);
+    var preFillScatter = MAX - preFillFromSrc;
+
+    // --- Part A: spawn จาก source แล้ว simulate (เดิม แต่ preAge กว้างขึ้น) ---
+    for (var i = 0; i < preFillFromSrc; i++) {
       var np = spawnOne();
       if (!np) break;
-      var preAge = (Math.random() * np.life * 0.93) | 0;
-      // Simulate ทุก 3 step เพื่อไม่ให้ blocking (เร็วขึ้น 3x)
+      var preAge = (Math.random() * np.life * 0.96) | 0;
       var simSteps = (preAge / 3) | 0;
       var spdX3 = np.spd * 3;
       for (var step = 0; step < simSteps; step++) {
@@ -7628,9 +7732,65 @@ const _zepInitTimer = setInterval(() => {
         np.lon += (stLon * 0.6 + pLon * curl * 0.4) * spdX3;
       }
       np.age = preAge;
-      // ตรวจสอบว่ายังอยู่ใน bounds
       if (np.lat >= 13.4 && np.lat <= 14.1 && np.lon >= 100.2 && np.lon <= 101.1) {
         _parts.push(np);
+      }
+    }
+
+    // --- Part B: scatter ตรงจุดสุ่มทั่วโซน — ทิศทางวิ่งออกจาก source เสมอ ---
+    for (var i = 0; i < preFillScatter; i++) {
+      if (!srcList.length) break;
+      // Weighted random เลือกโซน
+      var r = Math.random() * srcTotalWeight;
+      var idx = 0;
+      for (var wi = 0; wi < srcWeights.length; wi++) {
+        if (r <= srcWeights[wi]) { idx = wi; break; }
+      }
+      var entry = srcList[idx];
+      var s = entry.s;
+      var zone = entry.zone;
+      if (!zone || !entry.bbox) continue;
+
+      // สุ่มจุดภายในโซนโดยตรง
+      var pt = randInPoly(zone, entry.bbox);
+      var scLat = pt[0], scLon = pt[1];
+
+      // ทิศทาง outward = จาก source ผ่านจุดนี้แล้วยิงออกไป
+      var outLat = scLat - s.lat;
+      var outLon = scLon - s.lon;
+      var outDist = Math.sqrt(outLat*outLat + outLon*outLon) || 0.001;
+      var outDirLat = outLat / outDist;
+      var outDirLon = outLon / outDist;
+
+      // target = ยิงต่อจากจุดปัจจุบันไปในทิศ outward
+      var projDist = 0.01 + Math.random() * 0.04;
+      var tLat2 = scLat + outDirLat * projDist;
+      var tLon2 = scLon + outDirLon * projDist;
+
+      var dLat = tLat2 - scLat;
+      var dLon = tLon2 - scLon;
+      var dDist = Math.sqrt(dLat*dLat + dLon*dLon) || 0.001;
+
+      var life = 250 + (Math.random() * 300) | 0;
+      var baseSpd = dDist / life * 1.1;
+      var preAge = (Math.random() * life * 0.85) | 0;
+
+      var sp = {
+        lat: scLat, lon: scLon,
+        olat: s.lat, olon: s.lon,
+        tLat: tLat2, tLon: tLon2,
+        frc: s.frc || 1,
+        spd: baseSpd,
+        dirLat: outDirLat, dirLon: outDirLon,
+        tx: new Float32Array(TRAIL),
+        ty: new Float32Array(TRAIL),
+        tN: 0, age: preAge,
+        life: life,
+        zone: zone
+      };
+
+      if (sp.lat >= 13.4 && sp.lat <= 14.1 && sp.lon >= 100.2 && sp.lon <= 101.1) {
+        _parts.push(sp);
       }
     }
 
@@ -7653,6 +7813,43 @@ const _zepInitTimer = setInterval(() => {
   });
   window.addEventListener('resize', function() { if (_on) doResize(); });
 })();
+</script>
+<button id="feedback-btn" onclick="document.getElementById('fb-overlay').classList.add('open');document.getElementById('fb-form').style.display='';document.getElementById('fb-success').style.display='none';document.getElementById('fb-name').value='';document.getElementById('fb-msg').value='';"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>ข้อเสนอแนะ</button>
+<div id="fb-overlay" onclick="if(event.target===this)this.classList.remove('open');">
+<div id="fb-modal">
+<div id="fb-modal-header"><h2>💬 ข้อเสนอแนะ / Feedback</h2><button id="fb-close" onclick="document.getElementById('fb-overlay').classList.remove('open');">✕</button></div>
+<div id="fb-modal-body">
+<div id="fb-form">
+<label>ชื่อผู้เสนอแนะ</label>
+<input id="fb-name" type="text" placeholder="ระบุชื่อ-นามสกุล หรือชื่อเล่น" autocomplete="name">
+<label>ข้อเสนอแนะ / ความคิดเห็น</label>
+<textarea id="fb-msg" placeholder="พิมพ์ข้อเสนอแนะของคุณที่นี่..."></textarea>
+<button id="fb-submit" onclick="submitFeedback()">ส่งข้อเสนอแนะ</button>
+</div>
+<div id="fb-success">
+<div class="fb-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+<h3>ขอบคุณสำหรับข้อเสนอแนะ!</h3>
+<p>ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+</div>
+</div>
+</div>
+</div>
+<script>
+function submitFeedback(){
+  var name=document.getElementById('fb-name').value.trim();
+  var msg=document.getElementById('fb-msg').value.trim();
+  if(!name){alert('กรุณาระบุชื่อผู้เสนอแนะ');document.getElementById('fb-name').focus();return;}
+  if(!msg){alert('กรุณาพิมพ์ข้อเสนอแนะ');document.getElementById('fb-msg').focus();return;}
+  // บันทึกลง localStorage
+  var feedbacks=JSON.parse(localStorage.getItem('frc_feedbacks')||'[]');
+  feedbacks.push({name:name,msg:msg,time:new Date().toISOString()});
+  localStorage.setItem('frc_feedbacks',JSON.stringify(feedbacks));
+  console.log('[Feedback]',{name:name,msg:msg,time:new Date().toISOString()});
+  // แสดง success
+  document.getElementById('fb-form').style.display='none';
+  document.getElementById('fb-success').style.display='';
+  setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},2000);
+}
 </script>
 <div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev7.3 — Transparent Contour + Retina · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span></div>
 </body></html>
