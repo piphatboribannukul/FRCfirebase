@@ -4340,7 +4340,7 @@ try { var _storedK = JSON.parse(localStorage.getItem('frc_station_k')||'{}'); Ob
 async function fbLoadStationK() {
   if (!window._fbReady || !window._fb) return;
   try {
-    var snap = await window._fbGet(window._fbRef(window._fb, 'station_k'));
+    var snap = await window._fbGet(window._fbRef(window._fb, 'history/_station_k'));
     if (snap.exists()) {
       var fbK = {};
       snap.forEach(function(child) {
@@ -4523,7 +4523,7 @@ async function fitKFromHistory(result) {
       if (window._fbReady && window._fb) {
         try {
           Object.keys(STATION_K).forEach(function(c){
-            var r = window._fbRef(window._fb, 'station_k/' + c.replace(/\/|\./g, '-'));
+            var r = window._fbRef(window._fb, 'history/_station_k/' + c.replace(/\/|\./g, '-'));
             window._fbSet(r, { k: STATION_K[c], ts: Date.now() });
           });
           console.log('[K Tuner] saved to Firebase:', Object.keys(STATION_K).length);
@@ -7641,7 +7641,7 @@ function rpTrendApplyK(stationCode, newK) {
   // บันทึกลง Firebase เพื่อใช้ข้ามเครื่อง
   if (window._fbReady && window._fb) {
     try {
-      var r = window._fbRef(window._fb, 'station_k/' + stationCode.replace(/\/|\./g, '-'));
+      var r = window._fbRef(window._fb, 'history/_station_k/' + stationCode.replace(/\/|\./g, '-'));
       window._fbSet(r, { k: newK, ts: Date.now() });
       console.log('[K] saved to Firebase:', stationCode, newK);
     } catch(e) { console.warn('[K] FB save error', e); }
@@ -7672,7 +7672,7 @@ function rpRenderFeedbacks(){
   
   // โหลดจาก Firebase แล้ว render
   if(window._fbReady&&window._fb){
-    window._fbGet(window._fbRef(window._fb,'feedbacks')).then(function(snap){
+    window._fbGet(window._fbRef(window._fb,'history/_feedbacks')).then(function(snap){
       var fbFb=[];
       if(snap.exists()){
         snap.forEach(function(child){var v=child.val();if(v&&v.msg) fbFb.push(v);});
@@ -8768,7 +8768,7 @@ function submitFeedback(){
   if(window._fbReady&&window._fb){
     try{
       var fbId='fb_'+Date.now()+'_'+Math.random().toString(36).substring(2,8);
-      var r=window._fbRef(window._fb,'feedbacks/'+fbId);
+      var r=window._fbRef(window._fb,'history/_feedbacks/'+fbId);
       window._fbSet(r,fbEntry);
       console.log('[Feedback] saved to Firebase');
     }catch(e){console.warn('[Feedback] FB save error',e);}
