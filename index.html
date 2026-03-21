@@ -4347,9 +4347,9 @@ async function fbLoadStationK() {
         var val = child.val();
         if (val && val.k > 0) fbK[child.key] = val.k;
       });
-      // merge: Firebase K เป็น fallback ถ้า localStorage ไม่มี
+      // Firebase K เป็น truth — overwrite ทั้งหมด
       Object.keys(fbK).forEach(function(code) {
-        if (STATION_K[code] == null) STATION_K[code] = fbK[code];
+        STATION_K[code] = fbK[code];
       });
       console.log('[K] loaded from Firebase:', Object.keys(fbK).length, 'stations');
       // บันทึกลง localStorage ด้วย
@@ -4358,11 +4358,21 @@ async function fbLoadStationK() {
         Object.assign(local, fbK);
         localStorage.setItem('frc_station_k', JSON.stringify(local));
       } catch(e){}
+      // rebuild report ถ้าเปิดอยู่
+      var rp = document.getElementById('report-panel');
+      if (rp && rp.classList.contains('open') && typeof buildReport === 'function') {
+        console.log('[K] Firebase K loaded — rebuilding report...');
+        buildReport();
+      }
     }
   } catch(e) { console.warn('[K] FB load error', e); }
 }
-// เรียกหลัง Firebase ready
-setTimeout(function(){ if(window._fbReady) fbLoadStationK(); else setTimeout(fbLoadStationK, 5000); }, 3000);
+// เรียกหลัง Firebase ready — retry หลายครั้ง
+function _tryLoadK(attempts) {
+  if (window._fbReady) { fbLoadStationK(); }
+  else if (attempts > 0) { setTimeout(function(){ _tryLoadK(attempts-1); }, 2000); }
+}
+setTimeout(function(){ _tryLoadK(5); }, 2000);
 
 // ── Default k ตามโซนโรงงาน (ใช้ก่อน auto-fit ได้ข้อมูลเพียงพอ) ──────────
 // โซนบางเขน/สามเสน/ธนบุรี: k = 0.06/hr
