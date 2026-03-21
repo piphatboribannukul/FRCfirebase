@@ -347,8 +347,9 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* ── Legend — collapsed bar ที่ล่าง ── */
   #legend-panel {
-    position: absolute !important;
+    position: fixed !important;
     bottom: 0 !important; left: 0 !important; right: 0 !important;
+    top: auto !important;
     width: 100% !important;
     height: 44px !important;
     max-height: 44px !important;
@@ -361,7 +362,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     padding: 0 12px !important;
     overflow: hidden !important;
     transition: max-height .3s cubic-bezier(.4,0,.2,1), height .3s !important;
-    z-index: 600 !important;
+    z-index: 1500 !important;
     background: #fff !important;
     box-shadow: 0 -2px 12px rgba(180,0,80,.10) !important;
     box-sizing: border-box !important;
@@ -382,8 +383,8 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    position: absolute !important;
-    z-index: 600 !important;
+    position: fixed !important;
+    z-index: 1500 !important;
   }
   #legend-panel h4 {
     font-size: 12px;
@@ -477,7 +478,11 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #src-modal { width: 98vw; max-height: 88vh; }
   .lpop { min-width: unset; width: 80vw; }
 
-  /* ── Zone editor — full width + overlay ปิดง่าย ── */
+  /* ── Zone editor button — ซ่อนบน mobile (ย้ายเข้า hamburger) ── */
+  #zone-editor-btn { display: none !important; }
+  #sb-zone-mobile { display: block !important; }
+
+  /* ── Zone editor panel — full width bottom sheet ── */
   #zone-editor-panel { width: 100% !important; max-height: 70vh !important; top: auto !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; }
   #zep-close { font-size: 28px !important; padding: 4px 10px !important; color: #ff8888 !important; }
   #zep-header { padding: 14px 14px 10px !important; }
@@ -1541,6 +1546,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="toggle-row"><span>ขอบเขตพื้นที่สาขา</span><div class="tog on" id="t-sta" onclick="toggleLayer('sta')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>เส้น 0.2 / 1.0 mg/L</span><div class="tog on" id="t-thresh" onclick="toggleLayer('thresh')"><div class="tok"></div></div></div>
     </div><!-- /sb-body ชั้นข้อมูล -->
+  </div>
+  <!-- Zone Influence (mobile) -->
+  <div class="sblock sb-zone-mobile" id="sb-zone-mobile" style="display:none;">
+    <button onclick="toggleSidebar();setTimeout(toggleZoneEditor,300);" style="width:100%;padding:10px 14px;background:linear-gradient(135deg,#f0e0f0,#fff5fa);border:1.5px solid #e0c0d8;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#3a0a20;">
+      <span style="font-size:18px;">🗺</span> Zone Influence Editor
+    </button>
   </div>
   <!-- แจ้งเตือน / รายการสถานี -->
   <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
