@@ -2336,7 +2336,9 @@ function _drawOnCanvas() {
   contourEl.style.display = '';
 
   // ── Retina / HiDPI support ──
-  const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x
+  // Safari/iOS มี canvas pixel limit (~16M pixels) — ต้อง cap ไม่ให้เกิน
+  const MAX_CANVAS_PIXELS = 4194304; // 4M pixels = safe for all devices
+  const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
 
   // คำนวณ bounds ที่จะวาด (viewport + margin)
   const vb   = map.getBounds();
@@ -2353,6 +2355,12 @@ function _drawOnCanvas() {
   const ne = map.latLngToContainerPoint(b.getNorthEast());
   const W  = Math.abs(ne.x - sw.x);
   const H  = Math.abs(sw.y - ne.y);
+
+  // ลด dpr อัตโนมัติถ้า canvas จะใหญ่เกิน limit
+  let dpr = rawDpr;
+  if (W * dpr * H * dpr > MAX_CANVAS_PIXELS) {
+    dpr = Math.max(1, Math.sqrt(MAX_CANVAS_PIXELS / (W * H)));
+  }
 
   // ขนาด canvas จริง (physical pixels) = logical × dpr
   const PW = Math.round(W * dpr);
