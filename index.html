@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>M sandbox Chlorine Contour V.7.1 — MWA Realtime</title>
+<title>M sandbox Chlorine Contour V.7.2 — MWA Realtime</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1276,13 +1276,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <body>
 <div id="header">
   <div class="live-dot"></div>
-  <h1 id="header-title">🌸 M sandbox Chlorine Contour V.7.1</h1>
+  <h1 id="header-title">🌸 M sandbox Chlorine Contour V.7.2</h1>
   <div id="param-switcher">
     <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">🌸 FRC</button>
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V.7.1</span>
+  <span id="v2-badge">⬡ V.7.2</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2335,6 +2335,9 @@ function _drawOnCanvas() {
   }
   contourEl.style.display = '';
 
+  // ── Retina / HiDPI support ──
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x
+
   // คำนวณ bounds ที่จะวาด (viewport + margin)
   const vb   = map.getBounds();
   const dlat = (vb.getNorth() - vb.getSouth()) * OVER;
@@ -2345,13 +2348,17 @@ function _drawOnCanvas() {
   );
   _canvasBounds = b;
 
-  // ขนาด canvas ตาม pixel บนหน้าจอ (คูณ 2× เพราะขยาย OVER ทั้งสองด้าน)
+  // ขนาด CSS (logical pixels)
   const sw = map.latLngToContainerPoint(b.getSouthWest());
   const ne = map.latLngToContainerPoint(b.getNorthEast());
   const W  = Math.abs(ne.x - sw.x);
   const H  = Math.abs(sw.y - ne.y);
-  contourEl.width  = W;
-  contourEl.height = H;
+
+  // ขนาด canvas จริง (physical pixels) = logical × dpr
+  const PW = Math.round(W * dpr);
+  const PH = Math.round(H * dpr);
+  contourEl.width  = PW;
+  contourEl.height = PH;
 
   // วาง canvas ใน overlayPane (ซึ่ง transform มาจาก Leaflet อยู่แล้ว)
   const origin   = map.latLngToLayerPoint(b.getNorthWest());
@@ -2360,9 +2367,10 @@ function _drawOnCanvas() {
   contourEl.style.transform = `translate(${origin.x}px,${origin.y}px)`;
 
   const ctx = contourEl.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale context for Retina
   ctx.clearRect(0, 0, W, H);
 
-  // helper: lat/lon → canvas pixel
+  // helper: lat/lon → canvas pixel (logical coords — ctx.scale handles physical)
   const toXY = (lat, lon) => {
     const pt = map.latLngToLayerPoint([lat, lon]);
     return [pt.x - origin.x, pt.y - origin.y];
@@ -2380,15 +2388,17 @@ function _drawOnCanvas() {
     }
   }
 
-  // ── 2. Fill: render pixel-by-pixel ด้วย ImageData → เนียนสมบูรณ์ ──
+  // ── 2. Fill: render pixel-by-pixel ด้วย ImageData (at physical resolution) ──
   if(layers.fill) {
-    const imgData = ctx.createImageData(W, H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset for pixel-level rendering
+    const imgData = ctx.createImageData(PW, PH);
     const px = imgData.data;
 
-    // สร้าง clip mask ก่อน (วาดบน offscreen canvas)
+    // สร้าง clip mask ก่อน (วาดบน offscreen canvas at physical resolution)
     const maskC = document.createElement('canvas');
-    maskC.width=W; maskC.height=H;
+    maskC.width=PW; maskC.height=PH;
     const mctx = maskC.getContext('2d');
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     mctx.fillStyle='#000';
     mctx.fillRect(0,0,W,H);
     mctx.fillStyle='#fff';
@@ -2402,32 +2412,32 @@ function _drawOnCanvas() {
       mctx.closePath();
     }
     mctx.fill('nonzero');
-    const maskData = mctx.getImageData(0,0,W,H).data;
+    const maskData = mctx.getImageData(0,0,PW,PH).data;
 
-    // ── Pre-compute lat/lon lookup tables (H+W Leaflet calls instead of W*H) ──
-    const _rowLat = new Float64Array(H);
-    const _colLon = new Float64Array(W);
-    for (let py2 = 0; py2 < H; py2++) {
-      const ll = map.layerPointToLatLng([origin.x, py2 + origin.y]);
+    // ── Pre-compute lat/lon lookup tables (PH+PW Leaflet calls) ──
+    const _rowLat = new Float64Array(PH);
+    const _colLon = new Float64Array(PW);
+    for (let py2 = 0; py2 < PH; py2++) {
+      const ll = map.layerPointToLatLng([origin.x, py2/dpr + origin.y]);
       _rowLat[py2] = ll.lat;
     }
-    for (let px2 = 0; px2 < W; px2++) {
-      const ll = map.layerPointToLatLng([px2 + origin.x, origin.y]);
+    for (let px2 = 0; px2 < PW; px2++) {
+      const ll = map.layerPointToLatLng([px2/dpr + origin.x, origin.y]);
       _colLon[px2] = ll.lng;
     }
     const bWest = b.getWest(), bNorth = b.getNorth();
     const _invLatRange = RES / latRange;
     const _invLonRange = RES / lonRange;
 
-    for(let py2=0; py2<H; py2++) {
+    for(let py2=0; py2<PH; py2++) {
       const lat = _rowLat[py2];
       const fj = (bNorth - lat) * _invLatRange;
       const j0 = Math.max(0, Math.min(RES-1, fj|0));
       const ty = fj - j0;
       const j0Row = j0 * (RES+1);
       const j1Row = (j0+1) * (RES+1);
-      for(let px2=0; px2<W; px2++) {
-        const idx4 = (py2*W+px2)*4;
+      for(let px2=0; px2<PW; px2++) {
+        const idx4 = (py2*PW+px2)*4;
         if(maskData[idx4] < 128) continue; // outside clip
         const lon = _colLon[px2];
         const fi = (lon - bWest) * _invLonRange;
@@ -2437,11 +2447,12 @@ function _drawOnCanvas() {
                 + gv[j0Row+i0+1]*tx*(1-ty)
                 + gv[j1Row+i0]*(1-tx)*ty
                 + gv[j1Row+i0+1]*tx*ty;
-        const _c = paramColorRGBA(v, 0.82);
+        const _c = paramColorRGBA(v, 0.60);
         px[idx4]=_c[0]; px[idx4+1]=_c[1]; px[idx4+2]=_c[2]; px[idx4+3]=_c[3];
       }
     }
     ctx.putImageData(imgData, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // restore scale for lines
   }
 
   // ── 3. Contour lines (marching squares บน grid) ─────────────────────
@@ -4018,14 +4029,14 @@ function setParam(mode) {
   document.getElementById('btn-ec').className  = 'param-btn' + (mode==='ec'?' active':'');
   document.getElementById('header-title').textContent =
     mode === 'ec'
-      ? '⚡ M sandbox Chlorine Contour V.7.0 — EC Mode'
-      : '🌸 M sandbox Chlorine Contour V.7.0';
+      ? '⚡ M sandbox Chlorine Contour V.7.2 — EC Mode'
+      : '🌸 M sandbox Chlorine Contour V.7.2';
   // อัปเดต disclaimer bar
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ V.7.0 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 20 มี.ค. 69</span>'
-      : '<span>⚠ V.7.0 — ใช้ EPANET + Zone Influence Model · Forecast Pair คู่ เช่น สจ. → ปลายทาง หาค่า K แต่ละคู่มาใช้คาดการณ์ · M 20 มี.ค. 69</span>';
+      ? '<span>⚠ V.7.2 — EC Mode · ใช้ Zone Influence Model คาดการณ์จาก Source เลย โรงงาน → ปลายทาง (เพราะไม่มีการสลายตัว จึงใช้คาดการณ์ระยะยาวได้) · M 21 มี.ค. 69</span>'
+      : '<span>⚠ V.7.2 — Transparent Contour · เห็นรายละเอียดแผนที่ · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -7547,5 +7558,5 @@ const _zepInitTimer = setInterval(() => {
   window.addEventListener('resize', function() { if (_on) doResize(); });
 })();
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.7.1 — UI/UX Enhanced · EPANET + Zone Influence Model · Forecast Pair คู่ เช่น สจ. → ปลายทาง หาค่า K แต่ละคู่มาใช้คาดการณ์ · M 21 มี.ค. 69</span></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ V.7.2 — Transparent Contour · เห็นรายละเอียดแผนที่ · EPANET + Zone Influence Model · Forecast Pair คู่ · M 21 มี.ค. 69</span></div>
 </body></html>
