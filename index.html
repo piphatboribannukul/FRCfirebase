@@ -2716,14 +2716,10 @@ function _drawOnCanvas() {
   }
   contourEl.style.display = '';
 
-  // ── Retina / HiDPI support (rev8.4: adaptive 3x) ──
-  // PC/Mac: ใช้ได้ถึง 3x, canvas limit 16M pixels
-  // iOS/iPad: จำกัด canvas limit 4M pixels (Safari WebKit constraint)
-  const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const _isMobile = window.innerWidth <= 640;
-  const MAX_CANVAS_PIXELS = _isIOS ? 4194304 : (_isMobile ? 6291456 : 16777216); // iOS=4M, mobile=6M, PC=16M
-  const MAX_DPR = _isIOS ? 2.5 : 3; // iOS cap 2.5x, PC/Mac 3x
-  const rawDpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  // ── Retina / HiDPI support ──
+  // Safari/iOS มี canvas pixel limit (~16M pixels) — ต้อง cap ไม่ให้เกิน
+  const MAX_CANVAS_PIXELS = 4194304; // 4M pixels = safe for all devices
+  const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
 
   // คำนวณ bounds ที่จะวาด (viewport + margin)
   const vb   = map.getBounds();
@@ -2770,7 +2766,7 @@ function _drawOnCanvas() {
   };
 
   // ── 1. สร้าง IDW value grid ในพิกัด lat/lon (RES×RES) ──────────────
-  const RES = _isIOS ? 100 : (_isMobile ? 100 : 140); // PC=140 for sharper contour lines
+  const RES = 100;
   const latRange = b.getNorth() - b.getSouth();
   const lonRange = b.getEast()  - b.getWest();
   const gv = new Float32Array((RES+1)*(RES+1));
