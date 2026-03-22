@@ -601,9 +601,9 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 }
 /* iPad/tablet with browser tab bar — เพิ่ม padding ด้านบน */
 @supports (-webkit-touch-callout: none) {
-  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: 36px !important; }
-  #header { padding-top: max(2px, env(safe-area-inset-top)); }
-  /* iOS: disclaimer fixed bottom — ไม่ถูกดันออกนอกจอ */
+  body { padding-top: max(env(safe-area-inset-top), 20px); padding-bottom: 36px !important; }
+  #header { padding-top: 10px; }
+  /* iOS: disclaimer fixed bottom */
   #disclaimer-bar {
     display: flex !important;
     visibility: visible !important;
