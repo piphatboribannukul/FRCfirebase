@@ -237,7 +237,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 #tip .tv{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:#2d3436;letter-spacing:-.3px;}
 #tip .ts{font-size:11px;margin-top:4px;font-weight:700;color:#00b894;}
 #tip .tll{font-size:9px;color:#b0b4c0;margin-top:4px;font-family:'JetBrains Mono',monospace;}
-.lpop h4{font-size:14px;font-weight:700;color:#111;margin-bottom:8px;border-bottom:1.5px solid #f5d8ec;padding-bottom:7px;font-family:'Sarabun',sans-serif;} .lpop{min-width:min(420px,88vw);max-width:min(520px,92vw);}
+.lpop h4{font-size:14px;font-weight:700;color:#111;margin-bottom:8px;border-bottom:1.5px solid #f5d8ec;padding-bottom:7px;font-family:'Sarabun',sans-serif;} .lpop{min-width:min(420px,88vw);max-width:min(520px,92vw);overflow:hidden;word-wrap:break-word;}
 .lpop .pr{display:flex;justify-content:space-between;margin-bottom:5px;color:#666;gap:8px;font-family:'Sarabun',sans-serif;font-size:12px;}
 .lpop .pv{color:#111;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;}
 .lpop .bigval{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;margin:6px 0;letter-spacing:-.5px;}
@@ -538,16 +538,18 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* ── Popup — เล็กลง ไม่ล้นจอ ── */
   #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .lpop { max-width: 88vw !important; width: 88vw !important; font-size: 9px !important; }
-  .lpop h4 { font-size: 11px !important; }
+  .lpop { max-width: 86vw !important; width: 86vw !important; font-size: 9px !important; overflow: hidden !important; box-sizing: border-box !important; }
+  .lpop * { max-width: 100% !important; box-sizing: border-box !important; }
+  .lpop h4 { font-size: 11px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
   .lpop .tv, .lpop .bigval { font-size: 18px !important; }
-  .lpop .pr { font-size: 9px !important; gap: 4px !important; margin-bottom: 3px !important; }
-  .lpop .pv { font-size: 9px !important; }
-  .lpop canvas { max-width: 100% !important; height: 180px !important; }
-  .leaflet-popup-content-wrapper { max-width: 90vw !important; max-height: 60vh !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
-  .leaflet-popup-content { max-width: 86vw !important; overflow-x: hidden !important; padding: 6px !important; width: 86vw !important; }
-  .leaflet-popup-close-button { font-size: 24px !important; right: 4px !important; top: 4px !important; color: #cc0055 !important; }
-  .leaflet-popup { max-width: 92vw !important; }
+  .lpop .pr { font-size: 9px !important; gap: 4px !important; margin-bottom: 3px !important; flex-wrap: wrap !important; }
+  .lpop .pv { font-size: 9px !important; word-break: break-all !important; }
+  .lpop canvas { max-width: 100% !important; width: 100% !important; height: 160px !important; }
+  .lpop div[style*="display:flex"] { flex-wrap: wrap !important; }
+  .leaflet-popup { max-width: 90vw !important; }
+  .leaflet-popup-content-wrapper { max-width: 88vw !important; max-height: 60vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { max-width: 84vw !important; width: 84vw !important; overflow: hidden !important; padding: 6px !important; }
+  .leaflet-popup-close-button { font-size: 24px !important; right: 4px !important; top: 4px !important; color: #cc0055 !important; z-index: 10 !important; }
 
   /* ── About button — เล็กลง ── */
   #about-btn { width: 26px !important; height: 26px !important; font-size: 12px !important; bottom: 76px !important; right: 6px !important; opacity: 0.8 !important; }
