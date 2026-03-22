@@ -9969,7 +9969,7 @@ function submitFeedback(){
       if (!_isOpen) return;
       _raf3d = requestAnimationFrame(animate);
       if (_autoRotate) {
-        _autoRotateTime += 0.008;
+        _autoRotateTime += 0.003;
         // Oscillate Y within limits (smooth sine wave ±80°)
         _rotY = Math.sin(_autoRotateTime) * _rotYmax * 0.9;
         // Gentle X sway (depth tilt) — stays within looking-down range
