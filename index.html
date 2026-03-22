@@ -532,6 +532,14 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   /* ── Legend bar ขยับขึ้นพ้น disclaimer ── */
   #legend-panel { bottom: 28px !important; }
 
+  /* ── AI panel — full width + ปุ่มปิดชัด ── */
+  #ai-panel { width: 100% !important; padding-top: 52px !important; }
+  #ai-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff6688 !important; }
+
+  /* ── Popup (#tip) — ไม่ตกขอบ ── */
+  #tip { max-width: 85vw !important; left: 4px !important; right: auto !important; }
+  .lpop { max-width: 90vw !important; }
+
   /* ── Report panel — ปุ่มปิดชัดเจน ── */
   #rp-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff4477 !important; }
   #report-panel .rp-header { position: sticky !important; top: 0 !important; z-index: 10 !important; }
@@ -8226,12 +8234,23 @@ function toggleAiPanel() {
   const panel = document.getElementById('ai-panel');
   const btn = document.getElementById('ai-insight-btn');
   const isOpen = panel.classList.contains('open');
+  // overlay
+  var overlay = document.getElementById('ai-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ai-overlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:940;';
+    overlay.onclick = function(){ toggleAiPanel(); };
+    document.body.appendChild(overlay);
+  }
   if (isOpen) {
     panel.classList.remove('open');
-    btn.classList.remove('active');
+    if(btn) btn.classList.remove('active');
+    overlay.style.display = 'none';
   } else {
     panel.classList.add('open');
-    btn.classList.add('active');
+    if(btn) btn.classList.add('active');
+    if (window.innerWidth <= 640) overlay.style.display = 'block';
     runAiAnalysis();
   }
   _syncFloatingBtns();
