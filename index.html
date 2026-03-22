@@ -601,14 +601,19 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 }
 /* iPad/tablet with browser tab bar — เพิ่ม padding ด้านบน */
 @supports (-webkit-touch-callout: none) {
-  body { padding-top: env(safe-area-inset-top, 0px); }
+  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: 36px !important; }
   #header { padding-top: max(2px, env(safe-area-inset-top)); }
-  /* iOS: disclaimer visible + พ้น Safari bottom bar */
+  /* iOS: disclaimer fixed bottom — ไม่ถูกดันออกนอกจอ */
   #disclaimer-bar {
     display: flex !important;
     visibility: visible !important;
     flex-shrink: 0 !important;
-    margin-bottom: env(safe-area-inset-bottom, 0px) !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 2000 !important;
+    margin-bottom: 0 !important;
   }
   #disclaimer-bar .ticker-track {
     display: inline-block !important;
