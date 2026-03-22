@@ -7,11 +7,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.4</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.5</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
@@ -344,6 +345,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #zone-editor-btn { display: none !important; }
   #ai-insight-btn { display: none !important; }
   #flow-btn { display: none !important; }
+  #terrain3d-btn { display: none !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -1448,6 +1450,91 @@ body.dark .leaflet-control-attribution a{color:var(--neon-blue) !important;}
 .note-tbl.ec tr:nth-child(even) td { background:#f0f4ff; }
 .note-tbl td:first-child { font-weight:600; color:#aa0044; white-space:nowrap; width:38%; }
 .note-tbl.ec td:first-child { color:#1040a0; }
+/* ═══════════════════════════════════════
+   V8.5 — 3D TERRAIN CONTOUR
+   ═══════════════════════════════════════ */
+#terrain3d-btn{
+  position:absolute;top:148px;left:10px;z-index:1100;
+  background:linear-gradient(135deg,#1a2a4a,#0a1830);border:1.5px solid #2060b0;border-radius:10px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 2px 12px rgba(20,60,160,.25);
+  font-size:15px;transition:all .25s cubic-bezier(.4,0,.2,1);color:#60a0ff;
+}
+#terrain3d-btn:hover{background:linear-gradient(135deg,#0a1830,#0f3460);box-shadow:0 4px 20px rgba(40,100,220,.3);transform:translateY(-1px);}
+#terrain3d-btn.active{background:#2060b0;color:#fff;border-color:#60a0ff;box-shadow:0 0 24px rgba(40,100,220,.5);}
+body.dark #terrain3d-btn{background:rgba(16,16,32,.65);border-color:rgba(40,100,220,.4);box-shadow:0 2px 12px rgba(0,0,0,.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
+#terrain3d-overlay{
+  display:none;position:fixed;inset:0;z-index:99999;
+  background:#0a0a1a;
+}
+#terrain3d-overlay.open{display:flex;flex-direction:column;}
+#terrain3d-header{
+  background:linear-gradient(90deg,#0a1020,#102040,#0a1020);
+  border-bottom:1.5px solid rgba(40,100,220,.3);
+  padding:10px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+  z-index:2;position:relative;
+}
+#terrain3d-header h3{font-size:14px;font-weight:700;color:#80c0ff;margin:0;flex:1;font-family:'Sarabun',sans-serif;letter-spacing:.3px;}
+#terrain3d-close{background:none;border:1px solid rgba(255,100,100,.3);color:#ff6060;font-size:13px;cursor:pointer;padding:5px 14px;border-radius:7px;font-weight:700;font-family:'Sarabun',sans-serif;transition:all .2s;}
+#terrain3d-close:hover{background:rgba(255,60,60,.15);color:#ff8080;}
+.t3d-ctrl{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#a0c0ff;
+  border-radius:7px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:'Sarabun',sans-serif;transition:all .2s;white-space:nowrap;
+}
+.t3d-ctrl:hover{background:rgba(40,100,220,.15);color:#c0e0ff;}
+.t3d-ctrl.active{background:rgba(40,100,220,.3);color:#fff;border-color:rgba(40,100,220,.5);}
+#terrain3d-canvas-wrap{flex:1;position:relative;overflow:hidden;}
+/* 3D Color Legend (right side) */
+#t3d-legend{
+  position:absolute;top:50%;right:14px;transform:translateY(-50%);z-index:3;
+  background:rgba(8,10,25,.82);border:1px solid rgba(60,100,200,.2);border-radius:12px;
+  padding:12px 14px;font-family:'Sarabun',sans-serif;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  min-width:90px;
+}
+#t3d-legend-title{font-size:11px;font-weight:700;color:#80b0ff;text-align:center;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase;}
+#t3d-legend-bar{display:flex;gap:6px;align-items:stretch;margin-bottom:10px;}
+#t3d-legend-grad{
+  width:16px;flex-shrink:0;border-radius:4px;
+  background:linear-gradient(to bottom,#642896 0%,#2850b4 18%,#32beaa 38%,#78c850 55%,#f0aa14 75%,#be1e14 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+  min-height:140px;
+}
+#t3d-legend-ticks{
+  display:flex;flex-direction:column;justify-content:space-between;
+  font-size:10px;color:#c0d0ff;font-family:'JetBrains Mono',monospace;font-weight:600;
+}
+#t3d-legend-labels{margin-bottom:8px;}
+#t3d-legend-labels div{display:flex;align-items:center;gap:6px;font-size:10px;color:#a0b8e0;margin-bottom:3px;}
+#t3d-legend-labels span{width:10px;height:10px;border-radius:3px;flex-shrink:0;display:inline-block;box-shadow:0 0 4px rgba(0,0,0,.3);}
+#t3d-legend-note{font-size:9px;color:#5070a0;border-top:1px solid rgba(60,100,200,.15);padding-top:6px;line-height:1.6;}
+/* EC legend override (JS toggles class) */
+#t3d-legend.ec-mode #t3d-legend-grad{
+  background:linear-gradient(to bottom,#dc1414 0%,#ffd200 28%,#a0e600 52%,#78d2ff 80%,#50b4ff 100%) !important;
+}
+#terrain3d-loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,10,26,.9);z-index:5;
+  font-family:'Sarabun',sans-serif;color:#60a0ff;font-size:15px;font-weight:700;
+  flex-direction:column;gap:12px;
+}
+#terrain3d-loading .t3d-spinner{width:36px;height:36px;border:3px solid rgba(40,100,220,.2);border-top-color:#60a0ff;border-radius:50%;animation:t3dSpin 0.8s linear infinite;}
+@keyframes t3dSpin{to{transform:rotate(360deg);}}
+@media(max-width:640px){
+  #terrain3d-btn{top:100px;left:8px;width:34px;height:34px;font-size:13px;}
+  #terrain3d-header{padding:8px 12px;gap:8px;}
+  #terrain3d-header h3{font-size:12px;}
+  .t3d-ctrl{font-size:10px;padding:3px 8px;}
+  #t3d-legend{right:6px;padding:8px 10px;min-width:70px;}
+  #t3d-legend-grad{min-height:100px;width:12px;}
+  #t3d-legend-title{font-size:9px;}
+  #t3d-legend-ticks{font-size:8px;}
+  #t3d-legend-labels div{font-size:8px;}
+  #t3d-legend-labels span{width:8px;height:8px;}
+  #t3d-legend-note{font-size:8px;}
+}
 
 </style>
 <script>
@@ -1562,7 +1649,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.4</span>
+  <span id="v2-badge">⬡ rev8.5</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1583,6 +1670,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
 <!-- Flow Direction Button -->
 <button id="flow-btn" onclick="toggleFlow()" title="ทิศทางน้ำ — แสดงการไหลของน้ำจากสถานีสูบจ่าย">💧</button>
+
+<!-- v8.5: 3D Terrain Contour Button -->
+<button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Terrain Contour — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ">🏔</button>
 
 <!-- AI Insight Panel -->
 <div id="ai-panel">
@@ -1701,6 +1791,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <div class="sblock sb-mobile-only" id="sb-flow-mobile" style="display:none;">
     <div class="sb-menu" onclick="toggleSidebar();setTimeout(toggleFlow,300);">
       <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">💧 ทิศทางน้ำ <span class="sb-arrow">▸</span></h3>
+    </div>
+  </div>
+  <!-- 3D Terrain (mobile) -->
+  <div class="sblock sb-mobile-only" id="sb-3d-mobile" style="display:none;">
+    <div class="sb-menu" onclick="toggleSidebar();setTimeout(open3DTerrain,300);">
+      <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🏔 3D Terrain Contour <span class="sb-arrow">▸</span></h3>
     </div>
   </div>
   <!-- แจ้งเตือน / รายการสถานี -->
@@ -2021,7 +2117,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.4 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.5 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2073,7 +2169,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.4 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.5 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2088,7 +2184,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.4</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.5</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -4439,8 +4535,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.4 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.4 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.5 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.5 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -9324,7 +9420,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.4 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.5 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -9348,12 +9444,527 @@ function submitFeedback(){
   }
 })();
 </script>
+<!-- ═══ v8.5: 3D Terrain Contour Overlay ═══ -->
+<div id="terrain3d-overlay">
+  <div id="terrain3d-header">
+    <span style="font-size:18px;">🏔</span>
+    <h3>3D Terrain Contour — <span id="t3d-param-label">FRC (mg/L)</span></h3>
+    <button class="t3d-ctrl active" id="t3d-rotate-btn" onclick="t3dToggleRotate()">⟳ Auto-Rotate</button>
+    <button class="t3d-ctrl active" id="t3d-wire-btn" onclick="t3dToggleWireframe()">▦ Wireframe</button>
+    <button class="t3d-ctrl" id="t3d-height-btn" onclick="t3dCycleHeight()">↕ ×0.6</button>
+    <button id="terrain3d-close" onclick="close3DTerrain()">✕ ปิด</button>
+  </div>
+  <div id="terrain3d-canvas-wrap">
+    <div id="terrain3d-loading">
+      <div class="t3d-spinner"></div>
+      <span>กำลังสร้างภูมิประเทศ 3 มิติ...</span>
+    </div>
+  </div>
+  <!-- Color Legend (right side) -->
+  <div id="t3d-legend">
+    <div id="t3d-legend-title">มาตราส่วนสี</div>
+    <div id="t3d-legend-bar">
+      <div id="t3d-legend-grad"></div>
+      <div id="t3d-legend-ticks" class="t3d-frc-ticks">
+        <span>≥1.2</span><span>1.0</span><span>0.8</span><span>0.5</span><span>0.3</span><span>0.2</span><span>&lt;0.2</span>
+      </div>
+    </div>
+    <div id="t3d-legend-labels">
+      <div><span style="background:#642896;"></span> สูงมาก</div>
+      <div><span style="background:#2850b4;"></span> ดีมาก</div>
+      <div><span style="background:#32beaa;"></span> ดี</div>
+      <div><span style="background:#78c850;"></span> ผ่าน</div>
+      <div><span style="background:#f0aa14;"></span> เฝ้าระวัง</div>
+      <div><span style="background:#be1e14;"></span> ต่ำ ⚠</div>
+    </div>
+    <div id="t3d-legend-note">
+      🖱 ลาก=หมุน · Scroll=ซูม<br>
+      📱 1นิ้ว=หมุน · 2นิ้ว=ซูม
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   V8.5 — 3D TERRAIN CONTOUR (Three.js)
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  var _scene, _camera, _renderer, _mesh, _raf3d, _autoRotate = true, _wireframe = true;
+  var _heightMul = 0.6;
+  var _heightSteps = [0.3, 0.6, 1.0, 2.0];
+  var _heightIdx = 1;
+  var _mouseDown = false, _lastMx = 0, _lastMy = 0;
+  var _rotX = -0.55, _rotY = 0.0, _dist = 3.2;
+  var _touchDist = 0;
+  var _isOpen = false;
+  var _gridData = null;
+
+  window.open3DTerrain = function() {
+    var ov = document.getElementById('terrain3d-overlay');
+    ov.classList.add('open');
+    _isOpen = true;
+    document.getElementById('terrain3d-btn').classList.add('active');
+    var isEC = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
+    document.getElementById('t3d-param-label').textContent = isEC ? 'EC (μS/cm)' : 'FRC (mg/L)';
+    // EC default ×1.0, FRC default ×0.6
+    if (isEC) { _heightIdx = 2; _heightMul = 1.0; }
+    else      { _heightIdx = 1; _heightMul = 0.6; }
+    _wireframe = true;
+    document.getElementById('t3d-height-btn').textContent = '↕ ×' + _heightMul.toFixed(1);
+    document.getElementById('t3d-wire-btn').classList.add('active');
+    // Legend mode
+    var legend = document.getElementById('t3d-legend');
+    if (isEC) {
+      legend.classList.add('ec-mode');
+      document.getElementById('t3d-legend-title').textContent = 'EC (μS/cm)';
+      document.querySelector('#t3d-legend-ticks').innerHTML = '<span>&gt;1200</span><span>600</span><span>500</span><span>300</span><span>210</span><span>150</span><span>&lt;150</span>';
+      document.querySelector('#t3d-legend-labels').innerHTML =
+        '<div><span style="background:#dc1414;"></span> สูงกว่ามาตรฐาน</div>'
+       +'<div><span style="background:#ffd200;"></span> เฝ้าระวัง</div>'
+       +'<div><span style="background:#a0e600;"></span> ผ่านมาตรฐาน</div>'
+       +'<div><span style="background:#78d2ff;"></span> ดี</div>'
+       +'<div><span style="background:#50b4ff;"></span> ดีมาก</div>';
+    } else {
+      legend.classList.remove('ec-mode');
+      document.getElementById('t3d-legend-title').textContent = 'FRC (mg/L)';
+      document.querySelector('#t3d-legend-ticks').innerHTML = '<span>≥1.2</span><span>1.0</span><span>0.8</span><span>0.5</span><span>0.3</span><span>0.2</span><span>&lt;0.2</span>';
+      document.querySelector('#t3d-legend-labels').innerHTML =
+        '<div><span style="background:#642896;"></span> สูงมาก</div>'
+       +'<div><span style="background:#2850b4;"></span> ดีมาก</div>'
+       +'<div><span style="background:#32beaa;"></span> ดี</div>'
+       +'<div><span style="background:#78c850;"></span> ผ่าน</div>'
+       +'<div><span style="background:#f0aa14;"></span> เฝ้าระวัง</div>'
+       +'<div><span style="background:#be1e14;"></span> ต่ำ ⚠</div>';
+    }
+    document.getElementById('terrain3d-loading').style.display = 'flex';
+    setTimeout(function(){ buildTerrain3D(); }, 80);
+  };
+
+  window.close3DTerrain = function() {
+    _isOpen = false;
+    document.getElementById('terrain3d-overlay').classList.remove('open');
+    document.getElementById('terrain3d-btn').classList.remove('active');
+    if (_raf3d) cancelAnimationFrame(_raf3d);
+    _raf3d = null;
+    // Cleanup
+    var wrap = document.getElementById('terrain3d-canvas-wrap');
+    var cvs = wrap.querySelector('canvas');
+    if (cvs) wrap.removeChild(cvs);
+    if (_renderer) { _renderer.dispose(); _renderer = null; }
+    _scene = null; _camera = null; _mesh = null;
+  };
+
+  window.t3dToggleRotate = function() {
+    _autoRotate = !_autoRotate;
+    document.getElementById('t3d-rotate-btn').classList.toggle('active', _autoRotate);
+  };
+
+  window.t3dToggleWireframe = function() {
+    _wireframe = !_wireframe;
+    document.getElementById('t3d-wire-btn').classList.toggle('active', _wireframe);
+    if (_mesh) _mesh.material.wireframe = _wireframe;
+  };
+
+  window.t3dCycleHeight = function() {
+    _heightIdx = (_heightIdx + 1) % _heightSteps.length;
+    _heightMul = _heightSteps[_heightIdx];
+    document.getElementById('t3d-height-btn').textContent = '↕ ×' + _heightMul.toFixed(1);
+    if (_gridData && _mesh) applyHeight(_mesh.geometry, _gridData);
+  };
+
+  // ── Point-in-polygon test (ray casting) ────────────────
+  function _pip3d(lat, lon, coords) {
+    var inside = false;
+    for (var i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+      var lati = coords[i][0], loni = coords[i][1];
+      var latj = coords[j][0], lonj = coords[j][1];
+      if (((loni > lon) !== (lonj > lon)) &&
+          (lat < (latj - lati) * (lon - loni) / (lonj - loni) + lati))
+        inside = !inside;
+    }
+    return inside;
+  }
+
+  // ── Check if point is inside any MWA service polygon ────
+  function _inMWA(lat, lon) {
+    var polys = [];
+    if (typeof STA_POLYS !== 'undefined') polys = polys.concat(STA_POLYS);
+    if (typeof MWA_POLYS !== 'undefined') polys = polys.concat(MWA_POLYS);
+    for (var p = 0; p < polys.length; p++) {
+      if (_pip3d(lat, lon, polys[p].coords)) return true;
+    }
+    return false;
+  }
+
+  function sampleGrid() {
+    var RES = 100;
+    var grid = new Float32Array((RES+1)*(RES+1));
+    var mask = new Uint8Array((RES+1)*(RES+1)); // 1 = inside MWA, 0 = outside
+    var lat0 = 13.45, lat1 = 14.05, lon0 = 100.25, lon1 = 101.00;
+    var isEC = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
+
+    // Build mask first
+    for (var mj = 0; mj <= RES; mj++) {
+      var mlat = lat0 + (mj/RES) * (lat1-lat0);
+      for (var mi = 0; mi <= RES; mi++) {
+        var mlon = lon0 + (mi/RES) * (lon1-lon0);
+        mask[mj*(RES+1)+mi] = _inMWA(mlat, mlon) ? 1 : 0;
+      }
+    }
+
+    if (typeof _idwCache !== 'undefined' && _idwCache && typeof CACHE_RES !== 'undefined') {
+      var cacheRows = CACHE_RES + 1;
+      for (var j = 0; j <= RES; j++) {
+        var fj = j / RES * CACHE_RES;
+        var j0 = Math.min(CACHE_RES-1, Math.floor(fj));
+        var jt = fj - j0;
+        for (var i = 0; i <= RES; i++) {
+          var idx = j*(RES+1)+i;
+          if (!mask[idx]) { grid[idx] = -1; continue; }
+          var fi = i / RES * CACHE_RES;
+          var i0 = Math.min(CACHE_RES-1, Math.floor(fi));
+          var it = fi - i0;
+          var v = _idwCache[j0*cacheRows+i0]*(1-it)*(1-jt)
+                + _idwCache[j0*cacheRows+i0+1]*it*(1-jt)
+                + _idwCache[(j0+1)*cacheRows+i0]*(1-it)*jt
+                + _idwCache[(j0+1)*cacheRows+i0+1]*it*jt;
+          grid[idx] = v;
+        }
+      }
+    } else {
+      for (var j2 = 0; j2 <= RES; j2++) {
+        var lat = lat0 + (j2/RES) * (lat1-lat0);
+        for (var i2 = 0; i2 <= RES; i2++) {
+          var idx2 = j2*(RES+1)+i2;
+          if (!mask[idx2]) { grid[idx2] = -1; continue; }
+          var lon = lon0 + (i2/RES) * (lon1-lon0);
+          grid[idx2] = (typeof idw === 'function') ? idw(lat, lon) : 0.5;
+        }
+      }
+    }
+    return { grid: grid, res: RES, mask: mask };
+  }
+
+  function frcToColor(v) {
+    // Same color scale as the contour map
+    v = Math.max(0, Math.min(2.5, v));
+    var r, g, b;
+    function lerp(a,b2,t){ return a+(b2-a)*t; }
+    if (v < 0.2) { var u=v/0.2; r=lerp(190,220,u)/255; g=lerp(30,80,u)/255; b=lerp(20,10,u)/255; }
+    else if (v < 0.3) { var u2=(v-0.2)/0.1; r=lerp(220,240,u2)/255; g=lerp(80,170,u2)/255; b=lerp(10,20,u2)/255; }
+    else if (v < 0.5) { var u3=(v-0.3)/0.2; r=lerp(240,120,u3)/255; g=lerp(170,200,u3)/255; b=lerp(20,80,u3)/255; }
+    else if (v < 0.8) { var u4=(v-0.5)/0.3; r=lerp(120,50,u4)/255; g=lerp(200,190,u4)/255; b=lerp(80,170,u4)/255; }
+    else if (v < 1.2) { var u5=(v-0.8)/0.4; r=lerp(50,40,u5)/255; g=lerp(190,80,u5)/255; b=lerp(170,180,u5)/255; }
+    else { var u6=Math.min(1,(v-1.2)/0.3); r=lerp(40,100,u6)/255; g=lerp(80,40,u6)/255; b=lerp(180,150,u6)/255; }
+    return new THREE.Color(r, g, b);
+  }
+
+  function ecToColor(v) {
+    function lerp3(r1,g1,b1,r2,g2,b2,t) {
+      t = Math.max(0,Math.min(1,t));
+      return new THREE.Color(
+        (r1+(r2-r1)*t)/255,
+        (g1+(g2-g1)*t)/255,
+        (b1+(b2-b1)*t)/255
+      );
+    }
+    if (v < 150) return new THREE.Color(80/255, 180/255, 255/255);
+    if (v < 210) return lerp3(80,180,255, 120,210,255, (v-150)/60);
+    if (v < 240) return lerp3(120,210,255, 160,230,0, (v-210)/30);
+    if (v < 500) return lerp3(160,230,0, 180,220,0, (v-240)/260);
+    if (v < 1200) return lerp3(100,210,20, 255,210,0, (v-500)/700);
+    return lerp3(255,200,0, 220,20,20, Math.min(1,(v-1200)/300));
+  }
+
+  function applyHeight(geo, data) {
+    var grid = data.grid;
+    var mask = data.mask;
+    var res = data.res;
+    var rows = res + 1;
+    var pos = geo.attributes.position;
+    var isEC = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
+    var maxH = isEC ? 0.25 : 0.35;
+    var colors = [];
+
+    // PlaneBufferGeometry after rotateX(-PI/2):
+    //   vertex index goes row-by-row: row0 = -Z (north), rowLast = +Z (south)
+    //   within row: col0 = -X (west), colLast = +X (east)
+    // Our grid: j=0 → lat_min (south), j=RES → lat_max (north)
+    //           i=0 → lon_min (west),  i=RES → lon_max (east)
+    // So we need to flip j: plane row r corresponds to grid j = (RES - r)
+
+    for (var r = 0; r < rows; r++) {       // plane row (0 = north Z-)
+      var gj = res - r;                     // grid j (flip: north = high lat)
+      for (var c = 0; c < rows; c++) {      // plane col (0 = west X-)
+        var gi = c;                          // grid i (west to east, no flip)
+        var vtxIdx = r * rows + c;           // vertex index in PlaneGeometry
+        var gridIdx = gj * rows + gi;        // index in our data grid
+        var v = grid[gridIdx];
+        var isOutside = mask && !mask[gridIdx];
+        var h;
+        if (isOutside || v < 0) {
+          h = -0.02;
+          colors.push(0.04, 0.04, 0.08);
+        } else {
+          if (isEC) {
+            h = Math.min(1, v / 500) * maxH * _heightMul;
+          } else {
+            h = Math.min(1, v / 1.5) * maxH * _heightMul;
+          }
+          var clr = isEC ? ecToColor(v) : frcToColor(v);
+          colors.push(clr.r, clr.g, clr.b);
+        }
+        pos.setY(vtxIdx, h);
+      }
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geo.attributes.position.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
+
+  function buildTerrain3D() {
+    var wrap = document.getElementById('terrain3d-canvas-wrap');
+    var W = wrap.clientWidth, H = wrap.clientHeight;
+    if (!W || !H) { W = window.innerWidth; H = window.innerHeight - 50; }
+
+    _scene = new THREE.Scene();
+    _scene.background = new THREE.Color(0x080810);
+    _scene.fog = new THREE.FogExp2(0x080810, 0.12);
+
+    _camera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
+    _camera.position.set(0, 2.0, 3.0);
+    _camera.lookAt(0, 0, 0);
+
+    _renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    _renderer.setSize(W, H);
+    _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    wrap.appendChild(_renderer.domElement);
+
+    // Lighting
+    var ambLight = new THREE.AmbientLight(0x506090, 0.7);
+    _scene.add(ambLight);
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(3, 5, 4);
+    _scene.add(dirLight);
+    var dirLight2 = new THREE.DirectionalLight(0x4060cc, 0.25);
+    dirLight2.position.set(-3, 4, -2);
+    _scene.add(dirLight2);
+
+    // ── Geographic bounds (same as contour) ──
+    var LAT0 = 13.45, LAT1 = 14.05, LON0 = 100.25, LON1 = 101.00;
+    var dLat = LAT1 - LAT0;  // 0.60
+    var dLon = LON1 - LON0;  // 0.75
+    // At ~lat 13.75, 1° lon ≈ 107km, 1° lat ≈ 111km
+    var kmLon = dLon * 107;  // ~80 km
+    var kmLat = dLat * 111;  // ~67 km
+    // Plane size proportional to real-world km (scale to fit ~3 units wide)
+    var SCALE = 3.0 / Math.max(kmLon, kmLat);
+    var planeW = kmLon * SCALE; // X (lon)
+    var planeH = kmLat * SCALE; // Z (lat)
+
+    // Sample data
+    var data = sampleGrid();
+    _gridData = data;
+    var res = data.res;
+
+    // Create PlaneGeometry with correct aspect ratio
+    var geo = new THREE.PlaneBufferGeometry(planeW, planeH, res, res);
+    geo.rotateX(-Math.PI / 2);
+    applyHeight(geo, data);
+
+    var mat = new THREE.MeshPhongMaterial({
+      vertexColors: true,
+      wireframe: _wireframe,
+      shininess: 25,
+      side: THREE.DoubleSide,
+      flatShading: false,
+    });
+    _mesh = new THREE.Mesh(geo, mat);
+    _mesh.position.set(0, -0.15, 0);
+    _scene.add(_mesh);
+
+    // Base plate (dark ground to fill gaps)
+    var baseMat = new THREE.MeshBasicMaterial({ color: 0x0c0c18 });
+    var baseGeo = new THREE.PlaneBufferGeometry(planeW * 1.3, planeH * 1.3);
+    baseGeo.rotateX(-Math.PI / 2);
+    var baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.set(0, -0.17, 0);
+    _scene.add(baseMesh);
+
+    // Grid helper
+    var gridHelper = new THREE.GridHelper(Math.max(planeW, planeH) * 1.2, 16, 0x151530, 0x0c0c20);
+    gridHelper.position.y = -0.16;
+    _scene.add(gridHelper);
+
+    // ── Station markers with correct geo-to-3D mapping ──
+    // Helper: clean outlined text sprite (name only, no bg box)
+    function makeTextSprite(text, opts) {
+      opts = opts || {};
+      var dpr = 2;
+      var fontSize = (opts.fontSize || 24) * dpr;
+      var color = opts.color || '#ffffff';
+      var outlineColor = opts.outline || '#000000';
+      var cvs2 = document.createElement('canvas');
+      var ctx2 = cvs2.getContext('2d');
+      ctx2.font = '700 ' + fontSize + 'px Sarabun, sans-serif';
+      var tw = ctx2.measureText(text).width;
+      cvs2.width = tw + 8 * dpr;
+      cvs2.height = fontSize + 8 * dpr;
+      ctx2.font = '700 ' + fontSize + 'px Sarabun, sans-serif';
+      ctx2.textBaseline = 'middle';
+      ctx2.textAlign = 'center';
+      var cx = cvs2.width / 2, cy = cvs2.height / 2;
+      // Outline (stroke text multiple offsets for thick outline)
+      ctx2.strokeStyle = outlineColor;
+      ctx2.lineWidth = 3.5 * dpr;
+      ctx2.lineJoin = 'round';
+      ctx2.strokeText(text, cx, cy);
+      // Fill
+      ctx2.fillStyle = color;
+      ctx2.fillText(text, cx, cy);
+      var tex = new THREE.CanvasTexture(cvs2);
+      tex.minFilter = THREE.LinearFilter;
+      var spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, sizeAttenuation: true });
+      var sp = new THREE.Sprite(spMat);
+      var aspect = cvs2.width / cvs2.height;
+      var spH = opts.scale || 0.05;
+      sp.scale.set(spH * aspect, spH, 1);
+      return sp;
+    }
+
+    var _isEC3 = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
+
+    if (typeof SENSORS !== 'undefined') {
+      for (var si = 0; si < SENSORS.length; si++) {
+        var s = SENSORS[si];
+        var nx = ((s.lon - LON0) / dLon - 0.5) * planeW;
+        var nz = -((s.lat - LAT0) / dLat - 0.5) * planeH;
+        var pv = (typeof getParamVal === 'function') ? getParamVal(s) : (s.frc || 0.5);
+        var maxH2 = _isEC3 ? 0.25 : 0.35;
+        var py2 = _isEC3
+          ? Math.min(1, pv / 500) * maxH2 * _heightMul
+          : Math.min(1, pv / 1.5) * maxH2 * _heightMul;
+        var isPumpPlant = (s.type === 'plant' || s.type === 'pump');
+        var dotSize = isPumpPlant ? 0.018 : 0.007;
+        var dotGeo = new THREE.SphereBufferGeometry(dotSize, 8, 6);
+        var dotColor = isPumpPlant ? 0xff3366 : 0xdde0ff;
+        var dotMat = new THREE.MeshBasicMaterial({ color: dotColor });
+        var dot = new THREE.Mesh(dotGeo, dotMat);
+        var dotY = py2 - 0.15 + dotSize + 0.003;
+        dot.position.set(nx, dotY, nz);
+        _scene.add(dot);
+
+        // Name label — full name, no value
+        var labelName = (s.name || '').trim();
+        if (labelName) {
+          var sprite = makeTextSprite(labelName, isPumpPlant ? {
+            color: '#ffffff', outline: 'rgba(80,0,30,0.9)',
+            scale: 0.055, fontSize: 22
+          } : {
+            color: '#e0e8ff', outline: 'rgba(5,10,30,0.85)',
+            scale: 0.038, fontSize: 18
+          });
+          sprite.position.set(nx, dotY + dotSize + 0.015, nz);
+          _scene.add(sprite);
+        }
+
+        if (isPumpPlant) {
+          var lineGeo = new THREE.BufferGeometry();
+          var lVerts = new Float32Array([nx, -0.16, nz, nx, py2-0.15, nz]);
+          lineGeo.setAttribute('position', new THREE.BufferAttribute(lVerts, 3));
+          var lineMat = new THREE.LineBasicMaterial({ color: 0xff336680, transparent: true, opacity: 0.25 });
+          var line = new THREE.Line(lineGeo, lineMat);
+          _scene.add(line);
+        }
+      }
+    }
+
+    // Hide loading
+    document.getElementById('terrain3d-loading').style.display = 'none';
+    document.getElementById('t3d-rotate-btn').classList.toggle('active', _autoRotate);
+
+    // Mouse/touch controls
+    var cvs = _renderer.domElement;
+    cvs.addEventListener('mousedown', function(e){ _mouseDown = true; _lastMx = e.clientX; _lastMy = e.clientY; });
+    window.addEventListener('mouseup', function(){ _mouseDown = false; });
+    cvs.addEventListener('mousemove', function(e){
+      if (!_mouseDown) return;
+      var dx = e.clientX - _lastMx, dy = e.clientY - _lastMy;
+      _rotY += dx * 0.005;
+      _rotX = Math.max(-1.5, Math.min(-0.1, _rotX - dy * 0.005));
+      _lastMx = e.clientX; _lastMy = e.clientY;
+      _autoRotate = false;
+      document.getElementById('t3d-rotate-btn').classList.remove('active');
+    });
+    cvs.addEventListener('wheel', function(e){
+      e.preventDefault();
+      _dist = Math.max(1.5, Math.min(8, _dist + e.deltaY * 0.003));
+    }, { passive: false });
+    // Touch
+    cvs.addEventListener('touchstart', function(e){
+      if (e.touches.length === 1) { _lastMx = e.touches[0].clientX; _lastMy = e.touches[0].clientY; }
+      if (e.touches.length === 2) {
+        var dx2 = e.touches[0].clientX - e.touches[1].clientX;
+        var dy2 = e.touches[0].clientY - e.touches[1].clientY;
+        _touchDist = Math.sqrt(dx2*dx2 + dy2*dy2);
+      }
+    }, { passive: true });
+    cvs.addEventListener('touchmove', function(e){
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        var dx3 = e.touches[0].clientX - _lastMx, dy3 = e.touches[0].clientY - _lastMy;
+        _rotY += dx3 * 0.005;
+        _rotX = Math.max(-1.5, Math.min(-0.1, _rotX - dy3 * 0.005));
+        _lastMx = e.touches[0].clientX; _lastMy = e.touches[0].clientY;
+        _autoRotate = false;
+        document.getElementById('t3d-rotate-btn').classList.remove('active');
+      }
+      if (e.touches.length === 2) {
+        var dx4 = e.touches[0].clientX - e.touches[1].clientX;
+        var dy4 = e.touches[0].clientY - e.touches[1].clientY;
+        var d2 = Math.sqrt(dx4*dx4 + dy4*dy4);
+        if (_touchDist > 0) { _dist = Math.max(1.5, Math.min(8, _dist - (d2 - _touchDist) * 0.008)); }
+        _touchDist = d2;
+      }
+    }, { passive: false });
+
+    // Handle resize
+    var _resizeTimer3d = null;
+    window.addEventListener('resize', function(){
+      if (!_isOpen || !_renderer) return;
+      clearTimeout(_resizeTimer3d);
+      _resizeTimer3d = setTimeout(function(){
+        var w2 = wrap.clientWidth, h2 = wrap.clientHeight;
+        if (!w2 || !h2) return;
+        _camera.aspect = w2 / h2;
+        _camera.updateProjectionMatrix();
+        _renderer.setSize(w2, h2);
+      }, 200);
+    });
+
+    // Animation loop
+    function animate() {
+      if (!_isOpen) return;
+      _raf3d = requestAnimationFrame(animate);
+      if (_autoRotate) _rotY += 0.003;
+      // Orbit camera
+      _camera.position.x = Math.sin(_rotY) * Math.cos(_rotX) * _dist;
+      _camera.position.y = -Math.sin(_rotX) * _dist;
+      _camera.position.z = Math.cos(_rotY) * Math.cos(_rotX) * _dist;
+      _camera.lookAt(0, 0, 0);
+      _renderer.render(_scene, _camera);
+    }
+    animate();
+  }
+})();
+</script>
+
 <button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.4 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.5 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -9396,6 +10007,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.4 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.5 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
