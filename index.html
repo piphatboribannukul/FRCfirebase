@@ -16,7 +16,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 html{touch-action:manipulation;-ms-touch-action:manipulation;}
-body{font-family:'Sarabun',sans-serif;background:#f5f0f3;color:#1a0a10;height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;padding-top:env(safe-area-inset-top);}
+body{font-family:'Sarabun',sans-serif;background:#f5f0f3;color:#1a0a10;height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
 #disclaimer-bar{
   flex-shrink:0;
   background:linear-gradient(90deg,#2a0618,#3a0a20,#2a0618);
@@ -595,15 +595,14 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 }
 /* iPad/tablet with browser tab bar — เพิ่ม padding ด้านบน */
 @supports (-webkit-touch-callout: none) {
-  body { padding-top: max(env(safe-area-inset-top), 20px); }
-  #header { padding-top: 10px; }
-  /* iOS/iPad: force disclaimer visible */
+  body { padding-top: env(safe-area-inset-top, 0px); }
+  #header { padding-top: max(2px, env(safe-area-inset-top)); }
+  /* iOS: disclaimer visible + พ้น Safari bottom bar */
   #disclaimer-bar {
     display: flex !important;
     visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
     flex-shrink: 0 !important;
+    margin-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
   #disclaimer-bar .ticker-track {
     display: inline-block !important;
@@ -611,11 +610,12 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     animation: ticker-scroll 30s linear infinite !important;
   }
 }
-/* iPad/tablet landscape — header ไม่โดนบัง */
-@media (min-width: 641px) and (orientation: landscape) {
-  @supports (-webkit-touch-callout: none) {
-    body { padding-top: max(env(safe-area-inset-top), 24px) !important; }
-  }
+/* iPad/tablet landscape */
+@media (min-width: 641px) and (max-height: 600px) {
+  #header { padding: 2px 10px !important; min-height: 30px !important; gap: 4px !important; }
+  #v2-badge { display: none !important; }
+  #header-badge { display: none !important; }
+  #disclaimer-bar { display: flex !important; min-height: 22px !important; font-size: 9px !important; }
 }
 
 
