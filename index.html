@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.5</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.6</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1649,7 +1649,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.5</span>
+  <span id="v2-badge">⬡ rev8.6</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1671,8 +1671,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <!-- Flow Direction Button -->
 <button id="flow-btn" onclick="toggleFlow()" title="ทิศทางน้ำ — แสดงการไหลของน้ำจากสถานีสูบจ่าย">💧</button>
 
-<!-- v8.5: 3D Terrain Contour Button -->
-<button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Terrain Contour — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ">🏔</button>
+<!-- v8.6: 3D Map Button -->
+<button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Map — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ">🏔</button>
 
 <!-- AI Insight Panel -->
 <div id="ai-panel">
@@ -1796,7 +1796,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <!-- 3D Terrain (mobile) -->
   <div class="sblock sb-mobile-only" id="sb-3d-mobile" style="display:none;">
     <div class="sb-menu" onclick="toggleSidebar();setTimeout(open3DTerrain,300);">
-      <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🏔 3D Terrain Contour <span class="sb-arrow">▸</span></h3>
+      <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🏔 3D Map <span class="sb-arrow">▸</span></h3>
     </div>
   </div>
   <!-- แจ้งเตือน / รายการสถานี -->
@@ -2117,7 +2117,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.5 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.6 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2169,7 +2169,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.5 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.6 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2184,7 +2184,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.5</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.6</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -4535,8 +4535,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.5 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.5 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.6 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.6 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -9420,7 +9420,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.5 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.6 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -9444,13 +9444,14 @@ function submitFeedback(){
   }
 })();
 </script>
-<!-- ═══ v8.5: 3D Terrain Contour Overlay ═══ -->
+<!-- ═══ v8.6: 3D Map Overlay ═══ -->
 <div id="terrain3d-overlay">
   <div id="terrain3d-header">
     <span style="font-size:18px;">🏔</span>
-    <h3>3D Terrain Contour — <span id="t3d-param-label">FRC (mg/L)</span></h3>
+    <h3>3D Map — <span id="t3d-param-label">FRC (mg/L)</span></h3>
     <button class="t3d-ctrl active" id="t3d-rotate-btn" onclick="t3dToggleRotate()">⟳ Auto-Rotate</button>
     <button class="t3d-ctrl active" id="t3d-wire-btn" onclick="t3dToggleWireframe()">▦ Wireframe</button>
+    <button class="t3d-ctrl" id="t3d-label-btn" onclick="t3dToggleLabels()">Ⓐ ชื่อสถานี</button>
     <button class="t3d-ctrl" id="t3d-height-btn" onclick="t3dCycleHeight()">↕ ×0.6</button>
     <button id="terrain3d-close" onclick="close3DTerrain()">✕ ปิด</button>
   </div>
@@ -9498,6 +9499,13 @@ function submitFeedback(){
   var _touchDist = 0;
   var _isOpen = false;
   var _gridData = null;
+  var _labelsVisible = false;
+  var _labelSprites = [];
+  var _autoRotateTime = 0;
+  // Y rotation limits: ±80° (no back-flip)
+  var _rotYmin = -Math.PI * 0.44, _rotYmax = Math.PI * 0.44;
+  // X rotation limits: always looking down (never from below)
+  var _rotXmin = -1.2, _rotXmax = -0.2;
 
   window.open3DTerrain = function() {
     var ov = document.getElementById('terrain3d-overlay');
@@ -9512,6 +9520,9 @@ function submitFeedback(){
     _wireframe = true;
     document.getElementById('t3d-height-btn').textContent = '↕ ×' + _heightMul.toFixed(1);
     document.getElementById('t3d-wire-btn').classList.add('active');
+    _labelsVisible = false;
+    _autoRotateTime = 0;
+    document.getElementById('t3d-label-btn').classList.remove('active');
     // Legend mode
     var legend = document.getElementById('t3d-legend');
     if (isEC) {
@@ -9570,6 +9581,14 @@ function submitFeedback(){
     _heightMul = _heightSteps[_heightIdx];
     document.getElementById('t3d-height-btn').textContent = '↕ ×' + _heightMul.toFixed(1);
     if (_gridData && _mesh) applyHeight(_mesh.geometry, _gridData);
+  };
+
+  window.t3dToggleLabels = function() {
+    _labelsVisible = !_labelsVisible;
+    document.getElementById('t3d-label-btn').classList.toggle('active', _labelsVisible);
+    for (var i = 0; i < _labelSprites.length; i++) {
+      _labelSprites[i].visible = _labelsVisible;
+    }
   };
 
   // ── Point-in-polygon test (ray casting) ────────────────
@@ -9833,6 +9852,7 @@ function submitFeedback(){
     }
 
     var _isEC3 = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
+    _labelSprites = [];
 
     if (typeof SENSORS !== 'undefined') {
       for (var si = 0; si < SENSORS.length; si++) {
@@ -9865,7 +9885,9 @@ function submitFeedback(){
             scale: 0.038, fontSize: 18
           });
           sprite.position.set(nx, dotY + dotSize + 0.015, nz);
+          sprite.visible = _labelsVisible;
           _scene.add(sprite);
+          _labelSprites.push(sprite);
         }
 
         if (isPumpPlant) {
@@ -9890,8 +9912,8 @@ function submitFeedback(){
     cvs.addEventListener('mousemove', function(e){
       if (!_mouseDown) return;
       var dx = e.clientX - _lastMx, dy = e.clientY - _lastMy;
-      _rotY += dx * 0.005;
-      _rotX = Math.max(-1.5, Math.min(-0.1, _rotX - dy * 0.005));
+      _rotY = Math.max(_rotYmin, Math.min(_rotYmax, _rotY + dx * 0.005));
+      _rotX = Math.max(_rotXmin, Math.min(_rotXmax, _rotX - dy * 0.005));
       _lastMx = e.clientX; _lastMy = e.clientY;
       _autoRotate = false;
       document.getElementById('t3d-rotate-btn').classList.remove('active');
@@ -9913,8 +9935,8 @@ function submitFeedback(){
       e.preventDefault();
       if (e.touches.length === 1) {
         var dx3 = e.touches[0].clientX - _lastMx, dy3 = e.touches[0].clientY - _lastMy;
-        _rotY += dx3 * 0.005;
-        _rotX = Math.max(-1.5, Math.min(-0.1, _rotX - dy3 * 0.005));
+        _rotY = Math.max(_rotYmin, Math.min(_rotYmax, _rotY + dx3 * 0.005));
+        _rotX = Math.max(_rotXmin, Math.min(_rotXmax, _rotX - dy3 * 0.005));
         _lastMx = e.touches[0].clientX; _lastMy = e.touches[0].clientY;
         _autoRotate = false;
         document.getElementById('t3d-rotate-btn').classList.remove('active');
@@ -9946,7 +9968,13 @@ function submitFeedback(){
     function animate() {
       if (!_isOpen) return;
       _raf3d = requestAnimationFrame(animate);
-      if (_autoRotate) _rotY += 0.003;
+      if (_autoRotate) {
+        _autoRotateTime += 0.008;
+        // Oscillate Y within limits (smooth sine wave ±80°)
+        _rotY = Math.sin(_autoRotateTime) * _rotYmax * 0.9;
+        // Gentle X sway (depth tilt) — stays within looking-down range
+        _rotX = -0.5 + Math.sin(_autoRotateTime * 0.37) * 0.15;
+      }
       // Orbit camera
       _camera.position.x = Math.sin(_rotY) * Math.cos(_rotX) * _dist;
       _camera.position.y = -Math.sin(_rotX) * _dist;
@@ -9964,7 +9992,7 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.5 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.6 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -10007,6 +10035,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.5 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.6 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
