@@ -538,17 +538,17 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* ── Popup — เล็กลง ไม่ล้นจอ ── */
   #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .lpop { max-width: 86vw !important; width: 86vw !important; font-size: 9px !important; overflow: hidden !important; box-sizing: border-box !important; }
-  .lpop * { max-width: 100% !important; box-sizing: border-box !important; }
+  .lpop { max-width: calc(100vw - 40px) !important; width: auto !important; font-size: 9px !important; overflow: hidden !important; box-sizing: border-box !important; }
+  .lpop * { max-width: 100% !important; box-sizing: border-box !important; overflow-wrap: break-word !important; }
   .lpop h4 { font-size: 11px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
   .lpop .tv, .lpop .bigval { font-size: 18px !important; }
   .lpop .pr { font-size: 9px !important; gap: 4px !important; margin-bottom: 3px !important; flex-wrap: wrap !important; }
-  .lpop .pv { font-size: 9px !important; word-break: break-all !important; }
-  .lpop canvas { max-width: 100% !important; width: 100% !important; height: 160px !important; }
+  .lpop .pv { font-size: 9px !important; }
+  .lpop canvas, .lpop svg { max-width: 100% !important; width: 100% !important; height: auto !important; }
   .lpop div[style*="display:flex"] { flex-wrap: wrap !important; }
-  .leaflet-popup { max-width: 90vw !important; }
-  .leaflet-popup-content-wrapper { max-width: 88vw !important; max-height: 60vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
-  .leaflet-popup-content { max-width: 84vw !important; width: 84vw !important; overflow: hidden !important; padding: 6px !important; }
+  .leaflet-popup { max-width: calc(100vw - 20px) !important; left: 10px !important; }
+  .leaflet-popup-content-wrapper { max-width: calc(100vw - 30px) !important; max-height: 60vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { max-width: calc(100vw - 50px) !important; width: auto !important; overflow: hidden !important; padding: 6px 8px !important; }
   .leaflet-popup-close-button { font-size: 24px !important; right: 4px !important; top: 4px !important; color: #cc0055 !important; z-index: 10 !important; }
 
   /* ── About button — เล็กลง ── */
@@ -4119,7 +4119,7 @@ function buildMarkers() {
       ${ttHtml}
       ${sourceChart}
       ${decayChart}
-    </div>`,{className:'pk-pop',maxWidth:Math.min(420,window.innerWidth*0.88),autoPan:false,keepInView:false});
+    </div>`,{className:'pk-pop',maxWidth:Math.min(400,window.innerWidth-40),autoPan:true,autoPanPadding:[15,15],keepInView:false});
   }
 }
 buildMarkers();
