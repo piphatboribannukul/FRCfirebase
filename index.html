@@ -602,7 +602,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 /* iPad/tablet with browser tab bar — เพิ่ม padding ด้านบน */
 @supports (-webkit-touch-callout: none) {
   body { padding-top: max(env(safe-area-inset-top), 20px); padding-bottom: 36px !important; }
-  #header { padding-top: 10px; }
+  #header { padding-top: max(14px, env(safe-area-inset-top, 14px)); }
   /* iOS: disclaimer fixed bottom */
   #disclaimer-bar {
     display: flex !important;
@@ -619,6 +619,14 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     display: inline-block !important;
     -webkit-animation: ticker-scroll 30s linear infinite !important;
     animation: ticker-scroll 30s linear infinite !important;
+  }
+}
+/* iPad specific — favorites bar ทับ header */
+@supports (-webkit-touch-callout: none) {
+  @media (min-width: 641px) {
+    /* iPad portrait & landscape — เพิ่ม top padding สำหรับ Safari tab/favorites bar */
+    body { padding-top: max(env(safe-area-inset-top), 44px) !important; }
+    #header { padding-top: max(16px, env(safe-area-inset-top, 16px)) !important; min-height: 52px !important; }
   }
 }
 /* iPad/tablet landscape */
