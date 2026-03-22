@@ -5266,6 +5266,12 @@ async function fetchAndUpdate() {
   redrawContour();
   updateStats();
   renderTab();
+
+  // ── Auto-start flow หลังข้อมูลพร้อม ──
+  if (layers.flow && typeof startFlowAnimation === 'function' && SENSORS.length > 0) {
+    document.getElementById('flow-btn').classList.add('active');
+    startFlowAnimation();
+  }
 }
 
 // ── K Tuner functions ────────────────────────────────────────────────────────
