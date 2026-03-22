@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.1</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.2</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1549,7 +1549,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.1</span>
+  <span id="v2-badge">⬡ rev8.2</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2008,7 +2008,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.1 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.2 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2060,7 +2060,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.1 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.2 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2075,7 +2075,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.1</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.2</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -4426,8 +4426,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.1 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.1 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.2 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.2 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -5827,7 +5827,7 @@ function frcForecastAt(lat, lon, deltaHr) {
 }
 
 // ── ใช้ resolution ต่ำกว่าตอน animate เพื่อไม่ให้ค้าง ──────────────────────
-const FC_RES = 30; // 60×60 แทน 120×120 → เร็วขึ้น 4×
+const FC_RES = 50; // 51×51 grid — ละเอียดขึ้น
 
 function buildOneFrame(fn) {
   // build 1 frame ด้วย resolution ต่ำ
@@ -6024,7 +6024,7 @@ function startForecastPlay() {
   _fcPlaying = true; _fcLastTime = performance.now();
   const btn = document.getElementById('fc-play-btn');
   if (btn) { btn.textContent='⏸'; btn.classList.add('active'); }
-  const fps = _fcMode === 'history' ? 3 : 1;
+  const fps = _fcMode === 'history' ? 1.5 : 0.8;
 
   function tick(now) {
     if (!_fcPlaying) return;
@@ -9209,7 +9209,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.1 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.2 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -9238,7 +9238,7 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.1 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.2 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -9281,6 +9281,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.1 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.2 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
