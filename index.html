@@ -3280,7 +3280,7 @@ function buildMarkers() {
   function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId) {
     if (!ttHours || ttHours <= 0) return '';
     const ec0 = (ecNow != null && ecNow > 0) ? ecNow : ecSource;
-    const W = 420, H = 220, PL = 30, PR = 14, PT = 22, PB = 52;
+    const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
     const cw = W - PL - PR, ch = H - PT - PB;
     const now = new Date();
     const nowMs = now.getTime();
@@ -3425,13 +3425,13 @@ function buildMarkers() {
     const beyondW = xForeEnd - xTTend;
     const beyondZoneEc = '';
 
-    return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;">'
+    return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;overflow:hidden;max-width:100%;">'
       +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
       +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
       +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ (ถึง +'+ttHours+'ชม.)'
       +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
-      +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;">'
+      +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 '+W+' '+H+'">'
       +'<defs><clipPath id="ecclip_'+sensorId+'"><rect x="'+PL+'" y="'+PT+'" width="'+cw+'" height="'+ch+'"/></clipPath></defs>'
       +'<rect x="'+PL+'" y="'+PT+'" width="'+cw+'" height="'+ch+'" fill="'+(document.body.classList.contains('dark')?'rgba(20,20,40,.85)':'#fafbff')+'" rx="3"/>'
       +'<rect x="'+xNow.toFixed(1)+'" y="'+PT+'" width="'+(xTTend-xNow).toFixed(1)+'" height="'+ch+'" fill="'+(document.body.classList.contains('dark')?'rgba(30,80,160,.12)':'rgba(30,80,200,.06)')+'" opacity="0.5"/>'
@@ -3482,7 +3482,7 @@ function buildMarkers() {
   function buildDecayChart(frcSource, sourceName, ttHours, sensorId, frcNow, srcId, sensorName) {
       if (!ttHours || ttHours <= 0) return '';
       const frc0 = (frcNow != null && frcNow > 0) ? frcNow : frcSource;
-      const W = 420, H = 220, PL = 30, PR = 14, PT = 22, PB = 52;
+      const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
       const cw = W - PL - PR, ch = H - PT - PB;
       const k_hr = getStationKhr(sensorId);
 
@@ -3686,7 +3686,7 @@ function buildMarkers() {
         : '';
 
       return `
-<div style="margin-top:8px;border-top:1px solid ${document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#f5d8ec'};padding-top:7px;">
+<div style="margin-top:8px;border-top:1px solid ${document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#f5d8ec'};padding-top:7px;overflow:hidden;max-width:100%;">
   <div style="font-size:9.5px;font-weight:700;color:${document.body.classList.contains('dark')?'#ff88aa':'#aa0044'};letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">
     📈 คาดการณ์ FRC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:${document.body.classList.contains('dark')?'#ff6699':'#cc0055'};text-transform:none;letter-spacing:0;background:${document.body.classList.contains('dark')?'rgba(255,100,150,.1)':'#fff0f5'};border-radius:4px;padding:1px 6px;margin-left:4px;">← ${sourceName}</span>
   </div>
@@ -3695,7 +3695,7 @@ function buildMarkers() {
     ${hasHistory ? `· <span style="color:${document.body.classList.contains('dark')?'#60dd80':'#006020'}">✅ ข้อมูลจริง ${destHist.length} จุด</span>` : `· <span style="color:${document.body.classList.contains('dark')?'#e0c060':'#a06000'}">⏳ รอสะสมข้อมูล</span>`}
     ${srcHistAll.length >= 3 ? `· <span style="color:${document.body.classList.contains('dark')?'#80a0e0':'#4060a0'}">trend ต้นทาง: ${srcSlope>=0?'↑':'↓'}${Math.abs(srcSlope*60).toFixed(2)}/ชม.</span>` : ''}
   </div>
-  <svg width="${W}" height="${H}" style="display:block;overflow:visible;">
+  <svg width="${W}" height="${H}" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 ${W} ${H}">
     <defs>
       <clipPath id="chartclip_${sensorId}">
         <rect x="${PL}" y="${PT}" width="${cw}" height="${ch}"/>
@@ -4107,7 +4107,7 @@ function buildMarkers() {
       html:`<div style="width:${sz}px;height:${sz}px;border-radius:${br};background:${c};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${c}88;cursor:pointer;"></div>`,
       className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
     })}).addTo(sensorGroup)
-    .bindPopup(`<div class="lpop">
+    .bindPopup(`<div class="lpop" style="overflow:hidden;max-width:100%;box-sizing:border-box;">
       <h4 style="color:#111">${s.name}</h4>
       <div class="bigval" style="color:${c}">${paramFormat(pv)} <span style="font-size:14px;color:#555">${paramUnit()}</span></div>
       <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${s.area||'—'}</span></div>
