@@ -237,7 +237,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 #tip .tv{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:#2d3436;letter-spacing:-.3px;}
 #tip .ts{font-size:11px;margin-top:4px;font-weight:700;color:#00b894;}
 #tip .tll{font-size:9px;color:#b0b4c0;margin-top:4px;font-family:'JetBrains Mono',monospace;}
-.lpop h4{font-size:14px;font-weight:700;color:#111;margin-bottom:8px;border-bottom:1.5px solid #f5d8ec;padding-bottom:7px;font-family:'Sarabun',sans-serif;} .lpop{min-width:420px;}
+.lpop h4{font-size:14px;font-weight:700;color:#111;margin-bottom:8px;border-bottom:1.5px solid #f5d8ec;padding-bottom:7px;font-family:'Sarabun',sans-serif;} .lpop{min-width:min(420px,88vw);max-width:min(520px,92vw);}
 .lpop .pr{display:flex;justify-content:space-between;margin-bottom:5px;color:#666;gap:8px;font-family:'Sarabun',sans-serif;font-size:12px;}
 .lpop .pv{color:#111;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;}
 .lpop .bigval{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;margin:6px 0;letter-spacing:-.5px;}
@@ -536,9 +536,26 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #ai-panel { width: 100% !important; padding-top: 52px !important; }
   #ai-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff6688 !important; }
 
-  /* ── Popup (#tip) — ไม่ตกขอบ ── */
-  #tip { max-width: 85vw !important; left: 4px !important; right: auto !important; }
-  .lpop { max-width: 90vw !important; }
+  /* ── Popup (#tip) — ไม่ตกขอบ + อยู่กลาง ── */
+  #tip { max-width: 88vw !important; min-width: 60vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
+  .lpop { max-width: 92vw !important; width: 92vw !important; }
+  .leaflet-popup-content-wrapper { max-width: 90vw !important; }
+  .leaflet-popup-content { max-width: 85vw !important; overflow-x: hidden !important; }
+
+  /* ── About button — เล็กลง ── */
+  #about-btn { width: 28px !important; height: 28px !important; font-size: 13px !important; bottom: 76px !important; right: 6px !important; opacity: 0.85 !important; }
+
+  /* ── Landscape mode ── */
+  @media (orientation: landscape) {
+    #header { padding: 4px 10px !important; min-height: 36px !important; }
+    #header h1 { font-size: 9px !important; }
+    .param-btn { font-size: 9px !important; padding: 2px 6px !important; }
+    #forecast-toggle-float { font-size: 9px !important; padding: 3px 6px !important; }
+    #legend-panel { height: 32px !important; max-height: 32px !important; min-height: 32px !important; bottom: 24px !important; }
+    #disclaimer-bar { min-height: 22px !important; font-size: 9px !important; }
+    #feedback-btn { bottom: 58px !important; font-size: 8px !important; }
+    #about-btn { bottom: 60px !important; }
+  }
 
   /* ── Report panel — ปุ่มปิดชัดเจน ── */
   #rp-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff4477 !important; }
@@ -560,6 +577,19 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 @supports (-webkit-touch-callout: none) {
   body { padding-top: max(env(safe-area-inset-top), 20px); }
   #header { padding-top: 10px; }
+  /* iPad: force disclaimer visible */
+  #disclaimer-bar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+  }
+  #disclaimer-bar .ticker-track {
+    display: inline-block !important;
+    -webkit-animation: ticker-scroll 30s linear infinite !important;
+    animation: ticker-scroll 30s linear infinite !important;
+  }
 }
 
 
@@ -7358,19 +7388,34 @@ function rpTrendDraw(sensor, param, allData, _ids) {
       if(!isFinite(fVal)) fVal = lastActFrc*Math.exp(-k_hr*t);
       futPts.push({ts:nowMs+t*3600000, v:Math.max(0,fVal)});
     }
-  } else if (param==='ec'&&srcSensor&&ttHours>0) {
-    var srcCode3=String(srcSensor.id).replace(/\/|\./g,'-');
-    var fbH2=window._rpFirebaseHist||{};var lcH2=loadHistory();
-    var srcArr2=fbH2[srcCode3]||lcH2[srcCode3]||fbH2[String(srcSensor.id)]||lcH2[String(srcSensor.id)]||[];
-    var srcHist2=srcArr2.filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
-    for(var fi2=0;fi2<actPts.length;fi2++){
-      var srcTs2=actPts[fi2].ts-ttHours*3600000,srcEc=srcSensor.ec||250;
-      for(var j2=0;j2<srcHist2.length;j2++){if(srcHist2[j2].ts<=srcTs2&&srcHist2[j2].ec!=null)srcEc=srcHist2[j2].ec;}
-      forePts.push({ts:actPts[fi2].ts,v:srcEc});
+  } else if (param==='ec') {
+    // EC ใช้ EC_ROOT_SOURCE_MAP → โรงผลิต/อุโมงค์ต้นทาง (เหมือน popup chart)
+    var ecRootInfo = typeof EC_ROOT_SOURCE_MAP!=='undefined' ? (EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]) : null;
+    var ecSrcSensor = null, ecTT = 0;
+    if (ecRootInfo) {
+      var ecRootKey = ecRootInfo.root;
+      ecTT = ecRootInfo.ttRoot || 0;
+      var ecPlantName = typeof EC_SOURCE_MAP!=='undefined' ? EC_SOURCE_MAP[ecRootKey] : null;
+      if (ecPlantName) {
+        ecSrcSensor = SENSORS.find(function(x){return x.name===ecPlantName || (x.name&&x.name.includes(ecPlantName.replace(/\s*\d+$/,'').trim()));});
+      }
     }
-    // forecast อนาคต
-    var lastEc=srcSensor.ec||250;
-    for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ttHours/6*3600000,v:lastEc});}
+    // fallback: ใช้ ROOT_SOURCE_MAP ถ้าไม่มี EC_ROOT_SOURCE_MAP
+    if (!ecSrcSensor && srcSensor && ttHours > 0) { ecSrcSensor = srcSensor; ecTT = ttHours; }
+    
+    if (ecSrcSensor && ecTT > 0) {
+      var ecSrcCode = String(ecSrcSensor.id).replace(/\/|\./g,'-');
+      var _ecHist = getHistCached();
+      var ecSrcHist = (_ecHist[ecSrcCode]||[]).filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
+      for(var fi2=0;fi2<actPts.length;fi2++){
+        var srcTs2=actPts[fi2].ts-ecTT*3600000, srcEc=ecSrcSensor.ec||250;
+        for(var j2=0;j2<ecSrcHist.length;j2++){if(ecSrcHist[j2].ts<=srcTs2&&ecSrcHist[j2].ec!=null)srcEc=ecSrcHist[j2].ec;}
+        forePts.push({ts:actPts[fi2].ts, v:srcEc});
+      }
+      // forecast อนาคต
+      var lastEc=ecSrcSensor.ec||250;
+      for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ecTT/6*3600000,v:lastEc});}
+    }
   }
 
   // Y/X range — include future forecast
@@ -7520,11 +7565,23 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     var mae=errs.reduce(function(a,b){return a+b;},0)/errs.length;
     var pct=Math.round(wb/errs.length*100);
     sh='📊 เปรียบเทียบ <b>'+errs.length+'</b> จุด · MAE: <b>'+(param==='frc'?mae.toFixed(3):Math.round(mae))+'</b> '+(param==='frc'?'mg/L':'μS/cm')+' · อยู่ใน Band: <b>'+pct+'%</b> '+(pct>=70?'<span style="color:'+(isDk?'#4ecca3':'#00b894')+'">✓ ดี</span>':pct>=50?'<span style="color:#e0a000">⚡ พอใช้</span>':'<span style="color:#e84393">⚠ ต้องปรับปรุง</span>');
-    if(srcSensor) sh+=' · source: '+((srcSensor.name||'').substring(0,20))+' (tt='+ttHours+'ชม.)';
-    if(param==='frc'&&srcSensor&&ttHours>0) {
-      var _srcH2 = getHistCached();
-      var _srcPts2 = (_srcH2[srcCode2]||[]).length;
-      sh+=' · <b>K='+k_hr.toFixed(4)+'</b>/ชม. · srcHist:'+_srcPts2+'pts';
+    if(param==='frc') {
+      if(srcSensor) sh+=' · source: '+((srcSensor.name||'').substring(0,25))+' (tt='+ttHours+'ชม.)';
+      if(srcSensor&&ttHours>0) {
+        var _srcH2 = getHistCached();
+        var _srcPts2 = (_srcH2[srcCode2]||[]).length;
+        sh+=' · <b>K='+k_hr.toFixed(4)+'</b>/ชม. · srcHist:'+_srcPts2+'pts';
+      }
+    } else if(param==='ec') {
+      // แสดง EC source ที่ใช้จริง (จาก EC_ROOT_SOURCE_MAP)
+      var _ecRI = typeof EC_ROOT_SOURCE_MAP!=='undefined' ? (EC_ROOT_SOURCE_MAP[(sensor.name||'').trim()]||EC_ROOT_SOURCE_MAP[(sensor.name||'').replace(/\s+/g,' ')]) : null;
+      if(_ecRI) {
+        var _ecPN = typeof EC_SOURCE_MAP!=='undefined' ? EC_SOURCE_MAP[_ecRI.root] : null;
+        var _ecSrc = _ecPN ? SENSORS.find(function(x){return x.name===_ecPN||x.name.includes(_ecPN.replace(/\s*\d+$/,'').trim());}) : null;
+        sh+=' · source: '+(_ecRI.root)+(_ecSrc?' ('+(_ecSrc.name||'').substring(0,20)+')':'')+' (tt='+_ecRI.ttRoot+'ชม.)';
+      } else if(srcSensor) {
+        sh+=' · source: '+((srcSensor.name||'').substring(0,25))+' (tt='+ttHours+'ชม.)';
+      }
     }
   } else {
     sh='📊 ค่าจริง <b>'+actPts.length+'</b> จุด';
@@ -8181,12 +8238,26 @@ function rpBuildCompare(containerId, mode) {
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace;color:${s.frc>=FRC_HI?'#2dd4a0':s.frc>=FRC_MIN?'#f0a030':'#e04060'}">${s.frc.toFixed(2)}</span></div>
         <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${Math.abs(diff/fore)<0.15?'#2dd4a0':Math.abs(diff/fore)<0.3?'#f0a030':'#e04060'}">${diff>=0?'+':''}${diff.toFixed(2)} (${pct}%)</span></div></div>`;
     } else {
-      const srcEc = src.ec||250;
+      // EC: ใช้ EC_ROOT_SOURCE_MAP → โรงผลิต/อุโมงค์ต้นทาง (เหมือน popup chart)
+      const ecRootInfo = typeof EC_ROOT_SOURCE_MAP!=='undefined' ? (EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]) : null;
+      let ecSrc = src, ecLabel = srcLabel, ecTT = tt;
+      if (ecRootInfo) {
+        const ecRootKey = ecRootInfo.root;
+        ecTT = ecRootInfo.ttRoot || tt;
+        ecLabel = ecRootKey;
+        const ecPlantName = typeof EC_SOURCE_MAP!=='undefined' ? EC_SOURCE_MAP[ecRootKey] : null;
+        if (ecPlantName) {
+          const ecPlant = SENSORS.find(x => x.name===ecPlantName || (x.name&&x.name.includes(ecPlantName.replace(/\s*\d+$/,'').trim())));
+          if (ecPlant) ecSrc = ecPlant;
+        }
+      }
+      const srcEc = ecSrc.ec||250;
       const actEc = s.ec||250;
       const diff = actEc - srcEc;
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
-        <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${srcLabel}</span></div>
+        <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecLabel} (${ecSrc.name.length>20?ecSrc.name.substring(0,18)+'…':ecSrc.name})</span></div>
         <div class="cc-r"><span style="color:#706080">EC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
+        <div class="cc-r"><span style="color:#706080">tt</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecTT} ชม.</span></div>
         <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(actEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${Math.abs(diff)<30?'#2dd4a0':'#f0a030'}">${diff>=0?'+':''}${Math.round(diff)}</span></div></div>`;
