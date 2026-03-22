@@ -587,7 +587,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 @supports (-webkit-touch-callout: none) {
   body { padding-top: max(env(safe-area-inset-top), 20px); }
   #header { padding-top: 10px; }
-  /* iPad: force disclaimer visible */
+  /* iOS/iPad: force disclaimer visible */
   #disclaimer-bar {
     display: flex !important;
     visibility: visible !important;
@@ -599,6 +599,12 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     display: inline-block !important;
     -webkit-animation: ticker-scroll 30s linear infinite !important;
     animation: ticker-scroll 30s linear infinite !important;
+  }
+}
+/* iPad/tablet landscape — header ไม่โดนบัง */
+@media (min-width: 641px) and (orientation: landscape) {
+  @supports (-webkit-touch-callout: none) {
+    body { padding-top: max(env(safe-area-inset-top), 24px) !important; }
   }
 }
 
