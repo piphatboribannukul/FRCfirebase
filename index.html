@@ -538,13 +538,18 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* ── Popup — เต็มจอ mobile ── */
   #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .leaflet-popup-content-wrapper { max-width: calc(100vw - 16px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
-  .leaflet-popup-content { max-width: calc(100vw - 36px) !important; overflow: hidden !important; padding: 10px !important; }
-  .leaflet-popup-close-button { font-size: 24px !important; right: 6px !important; top: 6px !important; color: #cc0055 !important; z-index: 10 !important; }
+  .leaflet-popup-content-wrapper { max-width: calc(100vw - 16px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; padding: 4px !important; }
+  .leaflet-popup-content { max-width: calc(100vw - 36px) !important; overflow: hidden !important; padding: 6px 8px !important; margin: 0 !important; }
+  .leaflet-popup-close-button { font-size: 22px !important; right: 4px !important; top: 2px !important; color: #cc0055 !important; z-index: 10 !important; }
   .lpop { font-size: 11px !important; overflow: hidden !important; width: 100% !important; max-width: calc(100vw - 50px) !important; }
-  .lpop h4 { font-size: 13px !important; }
-  .lpop .bigval { font-size: 24px !important; }
+  .lpop h4 { font-size: 12px !important; margin-bottom: 4px !important; padding-bottom: 4px !important; }
+  .lpop .bigval { font-size: 20px !important; margin: 2px 0 !important; }
+  .lpop .pr { margin-bottom: 1px !important; }
   .lpop svg { max-width: 100% !important; height: auto !important; }
+  .lpop div[style*="margin-top:8px"] { margin-top: 4px !important; }
+  .lpop div[style*="margin-top:5px"] { margin-top: 2px !important; }
+  .lpop div[style*="padding-top:7px"] { padding-top: 3px !important; }
+  .lpop div[style*="margin-bottom"] { margin-bottom: 2px !important; }
 
   /* ── About button — เล็กลง ── */
   #about-btn { width: 26px !important; height: 26px !important; font-size: 12px !important; bottom: 76px !important; right: 6px !important; opacity: 0.8 !important; }
