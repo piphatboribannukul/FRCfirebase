@@ -538,11 +538,10 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* ── Popup — เต็มจอ mobile ── */
   #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .leaflet-popup { left: 5px !important; right: 5px !important; max-width: none !important; }
-  .leaflet-popup-content-wrapper { max-width: calc(100vw - 20px) !important; width: calc(100vw - 20px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
-  .leaflet-popup-content { width: calc(100vw - 40px) !important; max-width: none !important; overflow: hidden !important; padding: 10px !important; }
+  .leaflet-popup-content-wrapper { max-width: calc(100vw - 16px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { max-width: calc(100vw - 36px) !important; overflow: hidden !important; padding: 10px !important; }
   .leaflet-popup-close-button { font-size: 24px !important; right: 6px !important; top: 6px !important; color: #cc0055 !important; z-index: 10 !important; }
-  .lpop { font-size: 11px !important; overflow: hidden !important; width: 100% !important; }
+  .lpop { font-size: 11px !important; overflow: hidden !important; width: 100% !important; max-width: calc(100vw - 50px) !important; }
   .lpop h4 { font-size: 13px !important; }
   .lpop .bigval { font-size: 24px !important; }
   .lpop svg { max-width: 100% !important; height: auto !important; }
@@ -4115,7 +4114,7 @@ function buildMarkers() {
       ${ttHtml}
       ${sourceChart}
       ${decayChart}
-    </div>`,{className:'pk-pop',maxWidth:600,minWidth:Math.min(340,window.innerWidth-30),autoPan:true,autoPanPadding:[15,15],keepInView:false});
+    </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPadding:[10,10],keepInView:false});
   }
 }
 buildMarkers();
