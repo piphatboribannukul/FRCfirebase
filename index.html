@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev7.9</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -36,10 +36,10 @@ body{font-family:'Sarabun',sans-serif;background:#f5f0f3;color:#1a0a10;height:10
   position:relative;
   z-index:2000;
 }
-#disclaimer-bar .ticker-track{display:inline-block;animation:ticker-scroll 35s linear infinite;will-change:transform;-webkit-animation:ticker-scroll 35s linear infinite;}
-#disclaimer-bar .ticker-track span{padding:0 80px;font-weight:600;letter-spacing:.2px;}
-@-webkit-keyframes ticker-scroll{0%{-webkit-transform:translate3d(100vw,0,0);transform:translate3d(100vw,0,0);}100%{-webkit-transform:translate3d(-100%,0,0);transform:translate3d(-100%,0,0);}}
-@keyframes ticker-scroll{0%{transform:translate3d(100vw,0,0);}100%{transform:translate3d(-100%,0,0);}}
+#disclaimer-bar .ticker-track{display:inline-block;white-space:nowrap;padding-left:100%;animation:ticker-scroll 30s linear infinite;-webkit-animation:ticker-scroll 30s linear infinite;will-change:transform;}
+#disclaimer-bar .ticker-track span{padding:0 40px;font-weight:600;letter-spacing:.2px;}
+@-webkit-keyframes ticker-scroll{0%{-webkit-transform:translateX(0);transform:translateX(0);}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%);}}
+@keyframes ticker-scroll{0%{transform:translateX(0);}100%{transform:translateX(-100%);}}
 #header{background:#fff;border-bottom:1.5px solid #f0d4e2;padding:8px 18px;padding-top:max(8px, env(safe-area-inset-top));padding-left:max(18px, env(safe-area-inset-left));padding-right:max(18px, env(safe-area-inset-right));display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 1px 6px rgba(180,0,80,.06),0 4px 20px rgba(180,0,80,.03);z-index:1000;position:relative;transition:background .3s,box-shadow .3s;}
 #header h1{font-size:13.5px;font-weight:700;color:#3a0a20;letter-spacing:-.2px;}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#cc0055;box-shadow:0 0 6px #cc005580,0 0 12px #cc005530;animation:pulse 2.5s ease-in-out infinite;flex-shrink:0;}
@@ -1419,7 +1419,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev7.9</span>
+  <span id="v2-badge">⬡ rev8.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1866,7 +1866,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev7.9 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.0 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -1918,7 +1918,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev7.9 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.0 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -1933,7 +1933,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev7.9</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.0</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -1992,7 +1992,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
               <option value="">— เลือกสถานี —</option>
             </select>
             <button id="rp-frc-autofit-btn" onclick="rpTrendAutoFitK()" style="display:none;padding:4px 10px;font-size:10px;font-weight:700;font-family:'Sarabun',sans-serif;background:linear-gradient(135deg,#00b894,#009874);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🎯 Auto-fit K</button>
+            <button onclick="rpAutoFitKAll('frc')" style="padding:4px 10px;font-size:10px;font-weight:700;font-family:'Sarabun',sans-serif;background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🎯 Auto-fit K All</button>
           </div>
+          <div id="rp-frc-fitall-status" style="display:none;font-size:10px;color:#a06080;margin-bottom:8px;padding:8px;background:rgba(204,0,85,.05);border-radius:6px;"></div>
           <div id="rp-frc-trend-chart" style="display:none;">
             <button onclick="var el=document.getElementById('rp-frc-trend-inner');el.style.display=el.style.display==='none'?'':'none';this.textContent=el.style.display==='none'?'▶ หุบกราฟ':'▼ แสดงกราฟ';" style="width:100%;padding:5px;font-size:10px;font-weight:600;font-family:'Sarabun',sans-serif;background:transparent;color:#c080a0;border:1px solid rgba(204,0,85,.15);border-radius:6px;cursor:pointer;margin-bottom:6px;display:none;" id="rp-frc-trend-collapse">▼ แสดงกราฟ</button>
             <div id="rp-frc-trend-inner">
@@ -4276,8 +4278,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev7.9 — EC Mode · Zone Influent Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : M 21 มี.ค.69</span>'
-      : '<span>⚠ rev7.9 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span>';
+      ? '<span>⚠ rev8.0 — EC Mode · Zone Influent Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : M 21 มี.ค.69</span>'
+      : '<span>⚠ rev8.0 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -4518,28 +4520,21 @@ async function fitKFromHistory(result) {
       }
       if (n < 2) continue;
       const k = -(n*sxy - sx*sy) / (n*sxx - sx*sx); // k_per_hour (positive)
-      if (k > 0 && k < 5) { STATION_K[code] = k; fitted++; }
+      // เฉพาะสถานีที่ user ยังไม่ได้ auto-fit เท่านั้น
+      if (k > 0 && k < 5 && STATION_K[code] == null) { STATION_K[code] = k; fitted++; }
     }
 
-    console.log(`[Historical] fit k สำเร็จ ${fitted} สถานี:`, STATION_K);
+    console.log(`[Historical] fit k สำเร็จ ${fitted} สถานี (ข้ามสถานีที่ user fit แล้ว):`, STATION_K);
     if (fitted > 0) {
       const badge = document.getElementById('hist-api-badge');
       if (badge) badge.textContent = `✅ fit k ได้ ${fitted} สถานี`;
-      // บันทึก K ลง localStorage + Firebase
+      // บันทึก K ลง localStorage เท่านั้น (ไม่ overwrite Firebase)
       try {
         var stored = JSON.parse(localStorage.getItem('frc_station_k')||'{}');
-        Object.keys(STATION_K).forEach(function(c){ stored[c] = STATION_K[c]; });
+        Object.keys(STATION_K).forEach(function(c){ if(!stored[c]) stored[c] = STATION_K[c]; });
         localStorage.setItem('frc_station_k', JSON.stringify(stored));
       } catch(e2){}
-      if (window._fbReady && window._fb) {
-        try {
-          Object.keys(STATION_K).forEach(function(c){
-            var r = window._fbRef(window._fb, 'history/_station_k/' + c.replace(/\/|\./g, '-'));
-            window._fbSet(r, { k: STATION_K[c], ts: Date.now() });
-          });
-          console.log('[K Tuner] saved to Firebase:', Object.keys(STATION_K).length);
-        } catch(e3){ console.warn('[K Tuner] FB save error', e3); }
-      }
+      // ไม่ save K Tuner ลง Firebase — เฉพาะ user Auto-fit K เท่านั้นที่ save Firebase
       buildMarkers(); // redraw popup ด้วย k ใหม่
     }
   } catch(e) {
@@ -4933,9 +4928,9 @@ function fitAllK(hist) {
     // ต้องการ sample ≥ 3 จึงเชื่อถือได้ ไม่งั้นรอข้อมูลเพิ่ม
     if (kSamples.length < 3) continue;
 
-    STATION_K[pair.dest] = kMedian;
+    // ไม่ overwrite K ที่ user auto-fit ไว้แล้ว (จาก Firebase)
+    if (STATION_K[pair.dest] == null) { STATION_K[pair.dest] = kMedian; }
     if (!STATION_K[pair.src]) STATION_K[pair.src] = kMedian;
-    else STATION_K[pair.src] = (STATION_K[pair.src] + kMedian) / 2;
     fitted++;
   }
 
@@ -5551,6 +5546,17 @@ function getHistCached() {
   const now = Date.now();
   if (!_histCache || now - _histCacheTs > 10000) { // refresh every 10s
     _histCache = loadHistory();
+    // merge Firebase history ด้วย
+    var fbH = window._rpFirebaseHist || {};
+    Object.keys(fbH).forEach(function(code) {
+      if (!_histCache[code]) _histCache[code] = [];
+      var existing = new Set(_histCache[code].map(function(p){return Math.round(p.ts/60000);}));
+      (fbH[code]||[]).forEach(function(p) {
+        if (p && p.ts && !existing.has(Math.round(p.ts/60000))) {
+          _histCache[code].push(p);
+        }
+      });
+    });
     _histCacheTs = now;
   }
   return _histCache;
@@ -7282,6 +7288,11 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   if (param==='frc'&&srcSensor&&ttHours>0) {
     var k_hr=typeof getStationKhr==='function'?getStationKhr(key):0.05;
     var srcCode2=String(srcSensor.id).replace(/\/|\./g,'-');
+    // debug: ดู source history
+    var _dbgHist = getHistCached();
+    var _dbgSrcPts = (_dbgHist[srcCode2]||[]).length;
+    var _dbgSample = _dbgSrcPts>0 ? (_dbgHist[srcCode2][_dbgSrcPts-1]) : null;
+    console.log('[TrendDraw] key:', key, 'K:', k_hr, 'srcCode:', srcCode2, 'srcHistPts:', _dbgSrcPts, 'srcSample:', _dbgSample?JSON.stringify(_dbgSample).substring(0,80):'none');
     for(var fi=0;fi<actPts.length;fi++){
       // ณ เวลา actPts[fi].ts ค่าคาดการณ์ = source FRC ณ (t - ttHours) × e^(-k × tt)
       var srcTargetTs = actPts[fi].ts - ttHours*3600000;
@@ -7471,6 +7482,11 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     var pct=Math.round(wb/errs.length*100);
     sh='📊 เปรียบเทียบ <b>'+errs.length+'</b> จุด · MAE: <b>'+(param==='frc'?mae.toFixed(3):Math.round(mae))+'</b> '+(param==='frc'?'mg/L':'μS/cm')+' · อยู่ใน Band: <b>'+pct+'%</b> '+(pct>=70?'<span style="color:'+(isDk?'#4ecca3':'#00b894')+'">✓ ดี</span>':pct>=50?'<span style="color:#e0a000">⚡ พอใช้</span>':'<span style="color:#e84393">⚠ ต้องปรับปรุง</span>');
     if(srcSensor) sh+=' · source: '+((srcSensor.name||'').substring(0,20))+' (tt='+ttHours+'ชม.)';
+    if(param==='frc'&&srcSensor&&ttHours>0) {
+      var _srcH2 = getHistCached();
+      var _srcPts2 = (_srcH2[srcCode2]||[]).length;
+      sh+=' · <b>K='+k_hr.toFixed(4)+'</b>/ชม. · srcHist:'+_srcPts2+'pts';
+    }
   } else {
     sh='📊 ค่าจริง <b>'+actPts.length+'</b> จุด';
     if(!srcSensor) sh+=' · <span style="color:'+(isDk?'#e0c060':'#a06000')+'">สถานี source — ไม่มีเส้นคาดการณ์</span>';
@@ -7562,6 +7578,140 @@ async function rpTrendFromReport(param) {
 var _trendCurrentSensor = null, _trendCurrentParam = null, _trendCurrentData = null;
 var _trendKinfoId = 'rp-trend-kinfo';
 
+// ── Auto-fit K All: fit ทุกสถานีที่มี source mapping ──
+async function rpAutoFitKAll(param) {
+  if (param !== 'frc') return;
+  var statusEl = document.getElementById('rp-frc-fitall-status');
+  statusEl.style.display = '';
+  statusEl.innerHTML = '⏳ กำลัง Auto-fit K ทุกสถานี...';
+
+  var nowMs = Date.now();
+  var fbHist = window._rpFirebaseHist || {};
+  var lcHist = loadHistory();
+  var results = [];
+  var total = 0, success = 0, skipped = 0;
+
+  for (var si = 0; si < SENSORS.length; si++) {
+    var s = SENSORS[si];
+    var sName = (s.name || '').trim();
+    var rootInfo = ROOT_SOURCE_MAP[sName] || ROOT_SOURCE_MAP[sName.replace(/\s+/g, ' ')];
+    if (!rootInfo || !rootInfo.root) continue;
+    var srcCode = typeof getSrcCodeFromLabel === 'function' ? getSrcCodeFromLabel(rootInfo.root) : null;
+    var srcSensor = srcCode ? SENSORS.find(function(x) { return x.id && x.id.toString() === srcCode; }) : null;
+    if (!srcSensor) continue;
+    var ttHours = rootInfo.ttRoot || 0;
+    if (ttHours <= 0) continue;
+
+    total++;
+    var key = String(s.id).replace(/\/|\./g, '-');
+    var srcCode2 = String(srcSensor.id).replace(/\/|\./g, '-');
+
+    // load data
+    var code = key;
+    var fb = fbHist[code] || fbHist[String(s.id)] || [];
+    var lc = lcHist[code] || lcHist[String(s.id)] || [];
+    var seen = {};
+    var merged = [].concat(fb).concat(lc).filter(function(p) {
+      if (!p || !p.ts) return false;
+      var k2 = Math.round(p.ts / 60000);
+      if (seen[k2]) return false; seen[k2] = true; return true;
+    });
+
+    var data = merged.filter(function(p) { return p.ts >= nowMs - 24 * 3600000; });
+    if (data.length === 0) data = merged;
+
+    var actPts = [];
+    for (var di = 0; di < data.length; di++) {
+      var v = data[di].frc || data[di].FRC;
+      if (v != null && v > 0 && isFinite(v)) actPts.push({ ts: data[di].ts, v: Number(v) });
+    }
+    if (actPts.length < 5) { skipped++; continue; }
+
+    // Grid search K
+    var bestK = 0.05, bestMAE = Infinity;
+    for (var kTry = 0.001; kTry <= 0.500; kTry += 0.001) {
+      var totalErr = 0, count = 0;
+      for (var j = 0; j < actPts.length; j++) {
+        var srcTs = actPts[j].ts - ttHours * 3600000;
+        var srcFrc = typeof getHistFrcAt === 'function'
+          ? getHistFrcAt(srcCode2, srcTs, srcSensor.frc || 1.5, 0)
+          : (srcSensor.frc || 1.5);
+        var predicted = srcFrc * Math.exp(-kTry * ttHours);
+        if (isFinite(predicted) && predicted > 0) {
+          totalErr += Math.abs(actPts[j].v - predicted);
+          count++;
+        }
+      }
+      if (count > 0) {
+        var mae = totalErr / count;
+        if (mae < bestMAE) { bestMAE = mae; bestK = kTry; }
+      }
+    }
+
+    // Save
+    STATION_K[key] = bestK;
+    results.push({ name: s.name, code: key, k: bestK, mae: bestMAE, pts: actPts.length });
+    success++;
+
+    // update status ทุก 5 สถานี
+    if (success % 5 === 0) {
+      statusEl.innerHTML = '⏳ กำลัง fit... ' + success + '/' + total + ' สถานี';
+    }
+  }
+
+  // Save all to localStorage + Firebase
+  try {
+    var stored = {};
+    results.forEach(function(r) { stored[r.code] = r.k; });
+    Object.assign(stored, JSON.parse(localStorage.getItem('frc_station_k') || '{}'));
+    results.forEach(function(r) { stored[r.code] = r.k; }); // overwrite with new
+    localStorage.setItem('frc_station_k', JSON.stringify(stored));
+  } catch (e) { }
+
+  if (window._fbReady && window._fb) {
+    var saveCount = 0;
+    for (var ri = 0; ri < results.length; ri++) {
+      try {
+        var r2 = window._fbRef(window._fb, 'history/_station_k/' + results[ri].code.replace(/\/|\./g, '-'));
+        window._fbSet(r2, { k: results[ri].k, ts: Date.now() });
+        saveCount++;
+      } catch (e2) { }
+    }
+    console.log('[K All] saved to Firebase:', saveCount, 'stations');
+  }
+
+  // แสดงผล
+  results.sort(function(a, b) { return a.mae - b.mae; });
+  var isDk = document.body.classList.contains('dark');
+  var html = '✅ <b>Auto-fit K เสร็จ ' + success + '/' + total + ' สถานี</b> (ข้าม ' + skipped + ' — ข้อมูลน้อย)<br>';
+  html += '<div style="max-height:200px;overflow-y:auto;margin-top:6px;">';
+  html += '<table style="width:100%;font-size:9px;border-collapse:collapse;">';
+  html += '<tr style="background:' + (isDk ? '#2a0a20' : '#fff0f5') + ';font-weight:700;"><td style="padding:3px 6px;">สถานี</td><td>K</td><td>hl</td><td>MAE</td><td>จุด</td></tr>';
+  for (var i = 0; i < results.length; i++) {
+    var r3 = results[i];
+    var hl = Math.round(0.693 / r3.k);
+    html += '<tr style="border-bottom:1px solid ' + (isDk ? 'rgba(255,255,255,.05)' : '#f0e0f0') + ';"><td style="padding:2px 6px;">' + r3.name.substring(0, 25) + '</td><td style="font-family:JetBrains Mono;font-weight:600;">' + r3.k.toFixed(4) + '</td><td>' + hl + 'h</td><td>' + r3.mae.toFixed(3) + '</td><td>' + r3.pts + '</td></tr>';
+  }
+  html += '</table></div>';
+  statusEl.innerHTML = html;
+
+  // rebuild report compare
+  if (typeof rpBuildCompare === 'function') {
+    rpBuildCompare('rp-frc-compare', 'frc');
+  }
+  buildMarkers();
+  // clear cache เพื่อให้ getHistFrcAt ใช้ K ใหม่
+  _histCache = null; _histCacheTs = 0;
+  // redraw กราฟที่เปิดอยู่
+  var sel = document.getElementById('rp-frc-trend-sel');
+  if (sel && sel.value) {
+    setTimeout(function(){
+      rpTrendFromReport('frc');
+      statusEl.innerHTML += '<br>✅ กราฟ update ด้วย K ใหม่แล้ว';
+    }, 500);
+  }
+}
+
 // ── Auto-fit K: หาค่า K ที่ minimize MAE จาก actual vs forecast ──
 function rpTrendAutoFitK() {
   var sensor = _trendCurrentSensor;
@@ -7606,7 +7756,7 @@ function rpTrendAutoFitK() {
 
   // Grid search K: 0.001 → 0.200 step 0.001
   var bestK = 0.05, bestMAE = Infinity;
-  for (var kTry = 0.001; kTry <= 0.200; kTry += 0.001) {
+  for (var kTry = 0.001; kTry <= 0.500; kTry += 0.001) {
     var totalErr = 0, count = 0;
     for (var j = 0; j < actPts.length; j++) {
       var srcTs = actPts[j].ts - ttHours * 3600000;
@@ -7976,12 +8126,17 @@ function rpBuildCompare(containerId, mode) {
     const srcLabel = rootInfo.root.replace(/^จาก\s*/,'');
     if (mode==='frc') {
       if (!src.frc || !s.frc) return;
-      const fore = src.frc * Math.exp(-k * tt);
+      // ใช้ FRC ของ source ณ เวลา tt ชม. ก่อน (เหมือนกราฟ)
+      const srcCode2 = String(src.id).replace(/\/|\./g,'-');
+      const srcFrcAtTT = typeof getHistFrcAt==='function'
+        ? getHistFrcAt(srcCode2, Date.now() - tt*3600000, src.frc, 0)
+        : src.frc;
+      const fore = srcFrcAtTT * Math.exp(-k * tt);
       const diff = s.frc - fore;
       const pct = fore>0?((diff/fore)*100).toFixed(1):'—';
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
         <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${srcLabel} (${src.name.length>20?src.name.substring(0,18)+'…':src.name})</span></div>
-        <div class="cc-r"><span style="color:#706080">FRC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${src.frc.toFixed(2)}</span></div>
+        <div class="cc-r"><span style="color:#706080">FRC ต้นทาง (ณ -${tt}ชม.)</span><span style="font-family:'JetBrains Mono',monospace">${srcFrcAtTT.toFixed(2)}</span></div>
         <div class="cc-r"><span style="color:#706080">K</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${k.toFixed(4)}/ชม. (hl=${Math.round(0.693/k)}h) · tt=${tt}ชม.</span></div>
         <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${fore.toFixed(2)}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace;color:${s.frc>=FRC_HI?'#2dd4a0':s.frc>=FRC_MIN?'#f0a030':'#e04060'}">${s.frc.toFixed(2)}</span></div>
@@ -8817,13 +8972,13 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev7.9 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.0 — EPANET Chlorine decay model + Zone Influent , Forecast Pair คู่สถานี หาค่า K : M 21 มี.ค.69</span></div></div>
 <button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev7.9 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.0 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -8866,6 +9021,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev7.9 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.0 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
