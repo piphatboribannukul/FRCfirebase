@@ -536,16 +536,16 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #ai-panel { width: 100% !important; padding-top: 52px !important; }
   #ai-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff6688 !important; }
 
-  /* ── Popup — ไม่ล้นจอ ── */
+  /* ── Popup — เต็มจอ mobile ── */
   #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .lpop { max-width: calc(100vw - 40px) !important; font-size: 11px !important; overflow: hidden !important; box-sizing: border-box !important; }
-  .lpop h4 { font-size: 12px !important; }
-  .lpop .bigval { font-size: 22px !important; }
+  .leaflet-popup { left: 5px !important; right: 5px !important; max-width: none !important; }
+  .leaflet-popup-content-wrapper { max-width: calc(100vw - 20px) !important; width: calc(100vw - 20px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { width: calc(100vw - 40px) !important; max-width: none !important; overflow: hidden !important; padding: 10px !important; }
+  .leaflet-popup-close-button { font-size: 24px !important; right: 6px !important; top: 6px !important; color: #cc0055 !important; z-index: 10 !important; }
+  .lpop { font-size: 11px !important; overflow: hidden !important; width: 100% !important; }
+  .lpop h4 { font-size: 13px !important; }
+  .lpop .bigval { font-size: 24px !important; }
   .lpop svg { max-width: 100% !important; height: auto !important; }
-  .leaflet-popup { max-width: calc(100vw - 20px) !important; }
-  .leaflet-popup-content-wrapper { max-width: calc(100vw - 30px) !important; max-height: 65vh !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
-  .leaflet-popup-content { max-width: calc(100vw - 50px) !important; overflow: hidden !important; padding: 8px 10px !important; }
-  .leaflet-popup-close-button { font-size: 24px !important; right: 4px !important; top: 4px !important; color: #cc0055 !important; z-index: 10 !important; }
 
   /* ── About button — เล็กลง ── */
   #about-btn { width: 26px !important; height: 26px !important; font-size: 12px !important; bottom: 76px !important; right: 6px !important; opacity: 0.8 !important; }
@@ -4115,7 +4115,7 @@ function buildMarkers() {
       ${ttHtml}
       ${sourceChart}
       ${decayChart}
-    </div>`,{className:'pk-pop',maxWidth:Math.min(400,window.innerWidth-40),autoPan:true,autoPanPadding:[15,15],keepInView:false});
+    </div>`,{className:'pk-pop',maxWidth:600,minWidth:Math.min(340,window.innerWidth-30),autoPan:true,autoPanPadding:[15,15],keepInView:false});
   }
 }
 buildMarkers();
