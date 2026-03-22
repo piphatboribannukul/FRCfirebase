@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.0</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.1</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -489,7 +489,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #tip { font-size: 11px; min-width: 140px; max-width: 80vw; }
   #tip .tv { font-size: 17px; }
   #src-modal { width: 98vw; max-height: 88vh; }
-  .lpop { min-width: unset; width: 80vw; }
+  .lpop { min-width: unset; width: 88vw; }
 
   /* ── Zone editor panel — full width bottom sheet (mobile) ── */
   #zone-editor-panel { width: 100% !important; max-height: 70vh !important; top: auto !important; bottom: 0 !important; border-radius: 16px 16px 0 0 !important; padding-top: 0 !important; }
@@ -537,13 +537,17 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #ai-close { font-size: 26px !important; padding: 6px 10px !important; color: #ff6688 !important; }
 
   /* ── Popup — เล็กลง ไม่ล้นจอ ── */
-  #tip { max-width: 88vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
-  .lpop { max-width: 90vw !important; width: 90vw !important; font-size: 10px !important; }
-  .lpop h4 { font-size: 12px !important; }
-  .lpop .tv { font-size: 20px !important; }
-  .leaflet-popup-content-wrapper { max-width: 92vw !important; max-height: 65vh !important; overflow-y: auto !important; }
-  .leaflet-popup-content { max-width: 88vw !important; overflow-x: hidden !important; padding: 8px !important; }
-  .leaflet-popup-close-button { font-size: 24px !important; right: 6px !important; top: 6px !important; color: #cc0055 !important; }
+  #tip { max-width: 85vw !important; min-width: 50vw !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
+  .lpop { max-width: 88vw !important; width: 88vw !important; font-size: 9px !important; }
+  .lpop h4 { font-size: 11px !important; }
+  .lpop .tv, .lpop .bigval { font-size: 18px !important; }
+  .lpop .pr { font-size: 9px !important; gap: 4px !important; margin-bottom: 3px !important; }
+  .lpop .pv { font-size: 9px !important; }
+  .lpop canvas { max-width: 100% !important; height: 180px !important; }
+  .leaflet-popup-content-wrapper { max-width: 90vw !important; max-height: 60vh !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { max-width: 86vw !important; overflow-x: hidden !important; padding: 6px !important; width: 86vw !important; }
+  .leaflet-popup-close-button { font-size: 24px !important; right: 4px !important; top: 4px !important; color: #cc0055 !important; }
+  .leaflet-popup { max-width: 92vw !important; }
 
   /* ── About button — เล็กลง ── */
   #about-btn { width: 26px !important; height: 26px !important; font-size: 12px !important; bottom: 76px !important; right: 6px !important; opacity: 0.8 !important; }
@@ -1543,7 +1547,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.0</span>
+  <span id="v2-badge">⬡ rev8.1</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2002,7 +2006,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.1 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2054,7 +2058,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.1 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2069,7 +2073,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.0</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.1</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -4113,7 +4117,7 @@ function buildMarkers() {
       ${ttHtml}
       ${sourceChart}
       ${decayChart}
-    </div>`,{className:'pk-pop',maxWidth:520,autoPan:true,autoPanPadding:[60,60],keepInView:true});
+    </div>`,{className:'pk-pop',maxWidth:Math.min(420,window.innerWidth*0.88),autoPan:false,keepInView:false});
   }
 }
 buildMarkers();
@@ -4178,6 +4182,12 @@ map.on('mousemove',e=>{
   if (_tipThrottled) {
     const pt=map.latLngToContainerPoint(e.latlng);
     tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px';
+    // clamp ไม่ให้ตกขอบ
+    var tipR=tip.getBoundingClientRect();
+    if(tipR.right>window.innerWidth) tip.style.left=Math.max(4,pt.x-tipR.width-8)+'px';
+    if(tipR.bottom>window.innerHeight) tip.style.top=Math.max(4,pt.y-tipR.height-8)+'px';
+    if(tipR.left<0) tip.style.left='4px';
+    if(tipR.top<0) tip.style.top='4px';
     return;
   }
   _tipThrottled = true;
@@ -4414,8 +4424,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.0 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.1 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.1 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -5551,25 +5561,61 @@ function buildSnapFrameAsync(buildFn) {
 }
 
 function buildForecastSnap(foreHr) {
-  // decay FRC ของแต่ละ pump ล่วงหน้า foreHr ชั่วโมง
-  // inject ค่า forecast ชั่วคราวเข้า SENSORS แล้วใช้ window.frcZone (รองรับ Custom Zone)
+  // คำนวณ FRC forecast ของทุกสถานี ณ เวลา +foreHr
   const origFrc = {};
+  const origEc = {};
+  const nowMs = Date.now();
+  
   for (const s of SENSORS) {
     origFrc[String(s.id)] = s.frc;
-    if (_SOURCE_TYPES.has(s.type)) {
-      const frcNow = getParamVal(s) || 0;
-      const k_hr   = getStationKhr(String(s.id)) || 0.062;
-      s.frc = Math.max(0, frcNow * Math.exp(-k_hr * foreHr));
+    origEc[String(s.id)] = s.ec;
+    
+    if (s.type === 'plant') {
+      // โรงผลิต → ค้างที่ค่าปัจจุบัน (flat) เพราะเติมคลอรีนตลอด
+      // s.frc คงเดิม ไม่เปลี่ยน
+    } else if (s.type === 'pump' || s.type === 'monitor') {
+      // Pump/Monitor → Blend จาก source + travel time
+      const sName = (s.name||'').trim();
+      const rootInfo = ROOT_SOURCE_MAP[sName] || ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')];
+      if (rootInfo && rootInfo.root) {
+        const srcCode = typeof getSrcCodeFromLabel==='function' ? getSrcCodeFromLabel(rootInfo.root) : null;
+        const srcSensor = srcCode ? SENSORS.find(x => x.id && x.id.toString()===srcCode) : null;
+        const ttHours = rootInfo.ttRoot || 0;
+        if (srcSensor && ttHours > 0) {
+          const stCode = String(s.id).replace(/\/|\./g,'-');
+          const k_hr = getStationKhr(stCode);
+          const frc0 = origFrc[String(s.id)] || s.frc || 0;
+          
+          // Blend
+          const frac = Math.min(1, foreHr / ttHours);
+          const fOld = frc0 * Math.exp(-k_hr * foreHr);
+          
+          // source FRC ณ เวลาที่น้ำออกจาก source (อนาคต → ค่าล่าสุด flat)
+          const srcTargetTs = nowMs + (foreHr - ttHours) * 3600000;
+          const srcCode2 = String(srcSensor.id).replace(/\/|\./g,'-');
+          const fSrcAtT = typeof getHistFrcAt==='function'
+            ? getHistFrcAt(srcCode2, srcTargetTs, srcSensor.frc||1.0, 0)
+            : (srcSensor.frc||1.0);
+          const fNew = fSrcAtT * Math.exp(-k_hr * ttHours);
+          
+          s.frc = Math.max(0, fOld*(1-frac) + fNew*frac);
+        } else {
+          // ไม่มี source mapping → ค้าง flat
+        }
+      }
+      // ถ้าไม่มี rootInfo → ค้าง flat (ค่าปัจจุบัน)
     }
   }
-  // build frame โดยใช้ window.frcZone ที่รองรับ Custom Zone
+  
   try {
     const _frcFn = window.frcZone || frcZone;
     const arr = buildOneFrame((lat, lon) => _frcFn(lat, lon));
     return arr;
   } finally {
-    // restore ค่าเดิมเสมอ — แม้เกิด error
-    for (const s of SENSORS) s.frc = origFrc[String(s.id)];
+    for (const s of SENSORS) {
+      s.frc = origFrc[String(s.id)];
+      s.ec = origEc[String(s.id)];
+    }
   }
 }
 
@@ -5702,7 +5748,8 @@ function getHistCached() {
 function getHistFrcAt(srcCode, targetTs, fallback, fallbackSlope) {
   const hist = getHistCached();
   const pts = (hist[srcCode] || []).sort((a,b) => a.ts-b.ts);
-  if (!pts.length) return fallback + (fallbackSlope||0)*((targetTs-Date.now())/3600000);
+  if (!pts.length) return fallback;
+  
   let best = null, bestDt = Infinity;
   for (const p of pts) {
     const dt = Math.abs(p.ts - targetTs);
@@ -5710,16 +5757,16 @@ function getHistFrcAt(srcCode, targetTs, fallback, fallbackSlope) {
   }
   // ถ้าอยู่ใน ±2 ชม. ใช้ค่าจริง
   if (best && bestDt < 2*3600000) return best.frc;
-  // extrapolate ด้วย slope 1 ชม.ล่าสุด
-  const recent = pts.filter(p => p.ts >= Date.now()-3600000);
-  let slope = 0;
-  if (recent.length >= 2) {
-    const dt = (recent[recent.length-1].ts - recent[0].ts)/3600000;
-    slope = dt > 0 ? (recent[recent.length-1].frc - recent[0].frc)/dt : 0;
-    slope = Math.max(-0.05, Math.min(0.05, slope));
+  
+  // ถ้า targetTs อยู่ในอนาคต (ไม่มีข้อมูลจริง) → ใช้ค่าล่าสุด flat
+  // สมมติโรงผลิตจ่ายคลอรีนคงที่ที่ระดับปัจจุบัน
+  if (targetTs > Date.now()) {
+    var lastPt = pts[pts.length-1];
+    return lastPt ? lastPt.frc : fallback;
   }
-  const extHr = (targetTs - Date.now())/3600000;
-  return Math.max(0.1, fallback + slope*extHr);
+  
+  // ถ้า targetTs อยู่ในอดีต แต่ไกลกว่า 2 ชม. → ใช้จุดที่ใกล้ที่สุด
+  return best ? best.frc : fallback;
 }
 
 // คำนวณ FRC forecast ของ pump station ณ เวลา +deltaHr
@@ -9160,7 +9207,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.1 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -9189,7 +9236,7 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.0 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.1 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -9232,6 +9279,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.0 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.1 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
