@@ -1524,16 +1524,17 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
 @keyframes t3dSpin{to{transform:rotate(360deg);}}
 @media(max-width:640px){
   #terrain3d-btn{top:100px;left:8px;width:34px;height:34px;font-size:13px;}
-  #terrain3d-header{padding:8px 12px;gap:8px;}
-  #terrain3d-header h3{font-size:12px;}
-  .t3d-ctrl{font-size:10px;padding:3px 8px;}
-  #t3d-legend{right:6px;padding:8px 10px;min-width:70px;}
-  #t3d-legend-grad{min-height:100px;width:12px;}
-  #t3d-legend-title{font-size:9px;}
-  #t3d-legend-ticks{font-size:8px;}
-  #t3d-legend-labels div{font-size:8px;}
-  #t3d-legend-labels span{width:8px;height:8px;}
-  #t3d-legend-note{font-size:8px;}
+  #terrain3d-header{padding:8px 10px;gap:5px;flex-wrap:wrap;}
+  #terrain3d-header h3{font-size:11px;flex-basis:100%;order:-1;}
+  .t3d-ctrl{font-size:9px;padding:2px 6px;}
+  #terrain3d-close{position:absolute;top:8px;right:8px;z-index:5;font-size:12px;padding:4px 12px;}
+  #t3d-legend{right:4px;padding:6px 8px;min-width:60px;top:40%;transform:translateY(-50%);}
+  #t3d-legend-grad{min-height:80px;width:10px;}
+  #t3d-legend-title{font-size:8px;}
+  #t3d-legend-ticks{font-size:7px;}
+  #t3d-legend-labels div{font-size:7px;}
+  #t3d-legend-labels span{width:7px;height:7px;}
+  #t3d-legend-note{font-size:7px;}
 }
 
 </style>
@@ -9448,7 +9449,7 @@ function submitFeedback(){
 <div id="terrain3d-overlay">
   <div id="terrain3d-header">
     <span style="font-size:18px;">🏔</span>
-    <h3>3D Map — <span id="t3d-param-label">FRC (mg/L)</span></h3>
+    <h3 id="t3d-title">3D FRC Concentration Map</h3>
     <button class="t3d-ctrl active" id="t3d-rotate-btn" onclick="t3dToggleRotate()">⟳ Auto-Rotate</button>
     <button class="t3d-ctrl active" id="t3d-wire-btn" onclick="t3dToggleWireframe()">▦ Wireframe</button>
     <button class="t3d-ctrl" id="t3d-label-btn" onclick="t3dToggleLabels()">Ⓐ ชื่อสถานี</button>
@@ -9513,7 +9514,7 @@ function submitFeedback(){
     _isOpen = true;
     document.getElementById('terrain3d-btn').classList.add('active');
     var isEC = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
-    document.getElementById('t3d-param-label').textContent = isEC ? 'EC (μS/cm)' : 'FRC (mg/L)';
+    document.getElementById('t3d-title').textContent = isEC ? '3D Conductivity Concentration Map' : '3D FRC Concentration Map';
     // EC default ×1.0, FRC default ×0.6
     if (isEC) { _heightIdx = 2; _heightMul = 1.0; }
     else      { _heightIdx = 1; _heightMul = 0.6; }
@@ -9752,6 +9753,9 @@ function submitFeedback(){
 
     _camera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
     _camera.position.set(0, 2.0, 3.0);
+    // Mobile: zoom out more so full area visible
+    if (W <= 640) _dist = 4.2;
+    else _dist = 3.2;
     _camera.lookAt(0, 0, 0);
 
     _renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
