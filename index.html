@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.6</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.9</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1510,6 +1510,10 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
 #t3d-legend-labels div{display:flex;align-items:center;gap:6px;font-size:10px;color:#a0b8e0;margin-bottom:3px;}
 #t3d-legend-labels span{width:10px;height:10px;border-radius:3px;flex-shrink:0;display:inline-block;box-shadow:0 0 4px rgba(0,0,0,.3);}
 #t3d-legend-note{font-size:9px;color:#5070a0;border-top:1px solid rgba(60,100,200,.15);padding-top:6px;line-height:1.6;}
+#t3d-legend-symbols{border-top:1px solid rgba(60,100,200,.15);padding-top:8px;margin-top:6px;}
+.t3d-sym-title{font-size:10px;font-weight:700;color:#70a0cc;margin-bottom:6px;letter-spacing:.3px;}
+.t3d-sym-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:10px;color:#a0b8e0;}
+.t3d-sym-row svg{flex-shrink:0;filter:drop-shadow(0 0 2px rgba(0,200,255,.3));}
 /* EC legend override (JS toggles class) */
 #t3d-legend.ec-mode #t3d-legend-grad{
   background:linear-gradient(to bottom,#dc1414 0%,#ffd200 28%,#a0e600 52%,#78d2ff 80%,#50b4ff 100%) !important;
@@ -1535,6 +1539,173 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
   #t3d-legend-labels div{font-size:7px;}
   #t3d-legend-labels span{width:7px;height:7px;}
   #t3d-legend-note{font-size:7px;}
+  .t3d-sym-title{font-size:8px;}
+  .t3d-sym-row{font-size:7px;gap:4px;margin-bottom:3px;}
+  .t3d-sym-row svg{width:18px;height:14px;}
+}
+
+/* ═══════════════════════════════════════
+   🔍 MAP SEARCH BAR — rev8.9
+   ═══════════════════════════════════════ */
+#map-search-wrap {
+  position: absolute;
+  top: 10px;
+  left: 58px; /* เว้นให้ ham-btn */
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: min(320px, calc(100vw - 130px));
+  font-family: 'Sarabun', sans-serif;
+}
+#map-search-input {
+  flex: 1;
+  height: 36px;
+  border: 1.5px solid rgba(240,200,220,0.85);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  font-family: 'Sarabun', sans-serif;
+  background: rgba(255,255,255,0.97);
+  color: #1a0a10;
+  outline: none;
+  box-shadow: 0 2px 10px rgba(180,0,80,.10);
+  transition: border-color .2s, box-shadow .2s;
+  min-width: 0;
+}
+#map-search-input::placeholder { color: #c090b0; font-size: 11.5px; }
+#map-search-input:focus {
+  border-color: #cc0055;
+  box-shadow: 0 0 0 3px rgba(204,0,85,.10), 0 2px 10px rgba(180,0,80,.12);
+}
+#map-search-btn {
+  height: 36px;
+  min-width: 36px;
+  border: 1.5px solid rgba(240,200,220,0.85);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(135deg,#cc0055,#aa0044);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 10px;
+  transition: all .2s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 2px 10px rgba(180,0,80,.10);
+  flex-shrink: 0;
+}
+#map-search-btn:hover { background: linear-gradient(135deg,#e8006a,#cc0055); transform: scale(1.04); }
+#map-search-btn:active { transform: scale(0.97); }
+#map-search-clear {
+  position: absolute;
+  right: 42px;
+  top: 50%; transform: translateY(-50%);
+  background: none; border: none;
+  color: #c080a0; font-size: 14px; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  transition: color .15s, background .15s;
+  z-index: 2;
+  padding: 0;
+}
+#map-search-clear:hover { color: #cc0055; background: rgba(204,0,85,.08); }
+#map-search-clear.visible { display: flex; }
+
+/* Dropdown results */
+#map-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.98);
+  border: 1.5px solid #f0d0e0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(180,0,80,.13), 0 2px 6px rgba(0,0,0,.05);
+  overflow: hidden;
+  display: none;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 1100;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+#map-search-dropdown.open { display: block; }
+.msd-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 13px;
+  cursor: pointer;
+  border-bottom: 1px solid #faeef4;
+  transition: background .12s;
+  font-size: 12px; color: #1a0a10;
+}
+.msd-item:last-child { border-bottom: none; }
+.msd-item:hover { background: #fff0f5; }
+.msd-item:active { background: #ffe0ee; }
+.msd-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.msd-main { font-weight: 600; color: #1a0a10; font-size: 12px; line-height: 1.4; }
+.msd-sub  { font-size: 10px; color: #b080a0; margin-top: 1px; line-height: 1.4; }
+.msd-latlon { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #a06080; }
+.msd-item.msd-latlng { background: #fff8fa; }
+.msd-item.msd-latlng:hover { background: #ffe8f2; }
+.msd-spinner {
+  padding: 12px 14px;
+  font-size: 11px; color: #c080a0;
+  display: flex; align-items: center; gap: 8px;
+}
+.msd-spinner::before {
+  content: '';
+  width: 14px; height: 14px;
+  border: 2px solid #f0d0e0;
+  border-top-color: #cc0055;
+  border-radius: 50%;
+  animation: msd-spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes msd-spin { to { transform: rotate(360deg); } }
+.msd-empty { padding: 12px 14px; font-size: 11px; color: #c080a0; }
+
+/* Search flyto marker */
+.msd-flyto-popup .leaflet-popup-content-wrapper {
+  background: #fff; border: 1.5px solid #f0c0d8;
+  border-radius: 10px; padding: 0;
+  box-shadow: 0 6px 24px rgba(180,0,80,.16);
+}
+.msd-flyto-popup .leaflet-popup-tip { background: #fff; }
+
+/* Dark mode */
+body.dark #map-search-input {
+  background: rgba(16,16,32,.92) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: #e8e8ff !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,.3) !important;
+}
+body.dark #map-search-input::placeholder { color: #6060a0 !important; }
+body.dark #map-search-input:focus { border-color: var(--neon-pink) !important; box-shadow: 0 0 0 3px rgba(233,69,96,.12) !important; }
+body.dark #map-search-btn { background: linear-gradient(135deg,#e94560,#cc0055) !important; border-color: rgba(233,69,96,.3) !important; }
+body.dark #map-search-clear { color: #8080cc !important; }
+body.dark #map-search-clear:hover { color: var(--neon-pink) !important; }
+body.dark #map-search-dropdown {
+  background: rgba(12,12,28,.97) !important;
+  border-color: rgba(255,255,255,.10) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
+}
+body.dark .msd-item { color: #d0d0e8 !important; border-color: rgba(255,255,255,.04) !important; }
+body.dark .msd-item:hover { background: rgba(233,69,96,.08) !important; }
+body.dark .msd-main { color: #e0e0ff !important; }
+body.dark .msd-sub { color: #8080aa !important; }
+body.dark .msd-empty, body.dark .msd-spinner { color: #6060a0 !important; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  #map-search-wrap {
+    top: 8px;
+    left: 54px;
+    width: calc(100vw - 110px);
+  }
+  #map-search-input { height: 34px; font-size: 11.5px; padding: 0 10px; }
+  #map-search-btn { height: 34px; min-width: 34px; font-size: 14px; padding: 0 8px; }
+  #map-search-clear { right: 40px; }
+  #map-search-dropdown { max-height: 200px; }
 }
 
 </style>
@@ -1650,7 +1821,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.6</span>
+  <span id="v2-badge">⬡ rev8.9</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1660,6 +1831,20 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <button id="ham-btn" onclick="toggleSidebar()" title="เมนู">
   <span></span><span></span><span></span>
 </button>
+
+<!-- ═══ Map Search Bar — rev8.9 ═══ -->
+<div id="map-search-wrap">
+  <input id="map-search-input" type="text"
+    placeholder="🔍 ค้นหาสถานที่ หรือ lat, lon…"
+    autocomplete="off" autocorrect="off" spellcheck="false"
+    oninput="onMapSearchInput(this.value)"
+    onkeydown="onMapSearchKey(event)"
+  />
+  <button id="map-search-clear" title="ล้าง" onclick="clearMapSearch()">✕</button>
+  <button id="map-search-btn" title="ค้นหา" onclick="doMapSearch()">🔍</button>
+  <div id="map-search-dropdown"></div>
+</div>
+
 <!-- Zone Influence Editor Button — ซ่อน ย้ายเข้า hamburger แล้ว -->
 <button id="zone-editor-btn" onclick="toggleZoneEditor()" title="Zone Influence Editor" style="display:none !important;">🗺</button>
 
@@ -2118,7 +2303,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.6 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.9 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2170,7 +2355,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.6 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.9 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2185,7 +2370,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.6</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.9</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -2769,6 +2954,7 @@ function idw(lat, lon) {
 
 // ── MAP ───────────────────────────────────────────────────────
 const map=L.map('map',{center:[13.81,100.58],zoom:10,zoomControl:false,attributionControl:false,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120,markerZoomAnimation:true});
+window.map = map; // expose for search bar & other external scripts
 map.fitBounds([[13.45, 100.25],[14.10, 100.97]], {paddingTopLeft: [0, 0], paddingBottomRight: [0, 0]});
 L.control.zoom({position:'topright'}).addTo(map);
 // Tile layers: ลอง CartoDB ก่อน fallback เป็น OSM ถ้าโหลดไม่ได้
@@ -4536,8 +4722,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.6 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.6 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.9 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.9 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -9421,7 +9607,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.6 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.9 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -9482,6 +9668,47 @@ function submitFeedback(){
     <div id="t3d-legend-note">
       🖱 ลาก=หมุน · Scroll=ซูม<br>
       📱 1นิ้ว=หมุน · 2นิ้ว=ซูม
+    </div>
+    <div id="t3d-legend-symbols">
+      <div class="t3d-sym-title">สัญลักษณ์</div>
+      <div class="t3d-sym-row">
+        <svg width="22" height="18" viewBox="0 0 22 18">
+          <rect x="1" y="4" width="12" height="8" rx="1" fill="none" stroke="#00ddff" stroke-width="1" opacity="0.7"/>
+          <rect x="13" y="6" width="6" height="6" rx="0.5" fill="none" stroke="#aa55ff" stroke-width="0.8" opacity="0.6"/>
+          <line x1="4" y1="2" x2="4" y2="4" stroke="#00ddff" stroke-width="1" opacity="0.8"/>
+          <line x1="8" y1="1" x2="8" y2="4" stroke="#00ddff" stroke-width="1" opacity="0.8"/>
+          <circle cx="16" cy="14" r="2.5" fill="none" stroke="#00ddff" stroke-width="0.7" opacity="0.6"/>
+        </svg>
+        <span>โรงผลิตน้ำ</span>
+      </div>
+      <div class="t3d-sym-row">
+        <svg width="22" height="18" viewBox="0 0 22 18">
+          <rect x="3" y="2" width="5" height="12" rx="2" fill="none" stroke="#00ddff" stroke-width="1" opacity="0.6"/>
+          <circle cx="5.5" cy="2" r="2.5" fill="none" stroke="#00ddff" stroke-width="0.7" opacity="0.5"/>
+          <line x1="3" y1="14" x2="2" y2="17" stroke="#00ddff" stroke-width="0.7" opacity="0.5"/>
+          <line x1="8" y1="14" x2="9" y2="17" stroke="#00ddff" stroke-width="0.7" opacity="0.5"/>
+          <rect x="12" y="5" width="8" height="7" rx="0.5" fill="none" stroke="#00ddff" stroke-width="0.8" opacity="0.5"/>
+          <rect x="13" y="6.5" width="2" height="1.5" fill="#44ddff" opacity="0.5"/>
+          <rect x="16" y="6.5" width="2" height="1.5" fill="#44ddff" opacity="0.5"/>
+          <rect x="13" y="9" width="2" height="1.5" fill="#44ddff" opacity="0.5"/>
+          <rect x="16" y="9" width="2" height="1.5" fill="#44ddff" opacity="0.5"/>
+        </svg>
+        <span>สถานีสูบจ่าย</span>
+      </div>
+      <div class="t3d-sym-row">
+        <svg width="22" height="18" viewBox="0 0 22 18">
+          <rect x="5" y="5" width="8" height="10" rx="1" fill="none" stroke="#00ddff" stroke-width="0.8" opacity="0.5"/>
+          <rect x="7" y="6.5" width="4" height="3" fill="#22bbff" opacity="0.4"/>
+          <circle cx="9" cy="14" r="1" fill="#00ff88" opacity="0.7"/>
+          <circle cx="11" cy="14" r="1" fill="#00ccff" opacity="0.7"/>
+          <line x1="3" y1="16" x2="3" y2="3" stroke="#2266cc" stroke-width="1.2" opacity="0.7"/>
+          <line x1="15" y1="16" x2="15" y2="3" stroke="#2266cc" stroke-width="1.2" opacity="0.7"/>
+          <rect x="1" y="2" width="16" height="1.5" rx="0.5" fill="none" stroke="#224466" stroke-width="0.8" opacity="0.6"/>
+          <line x1="4" y1="2.5" x2="8" y2="2.5" stroke="#3388cc" stroke-width="0.3" opacity="0.4"/>
+          <line x1="10" y1="2.5" x2="14" y2="2.5" stroke="#3388cc" stroke-width="0.3" opacity="0.4"/>
+        </svg>
+        <span>จุดตรวจคุณภาพน้ำ</span>
+      </div>
     </div>
   </div>
 </div>
@@ -9748,8 +9975,8 @@ function submitFeedback(){
     if (!W || !H) { W = window.innerWidth; H = window.innerHeight - 50; }
 
     _scene = new THREE.Scene();
-    _scene.background = new THREE.Color(0x080810);
-    _scene.fog = new THREE.FogExp2(0x080810, 0.12);
+    _scene.background = new THREE.Color(0x030810);
+    _scene.fog = new THREE.FogExp2(0x030810, 0.1);
 
     _camera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
     _camera.position.set(0, 2.0, 3.0);
@@ -9763,15 +9990,19 @@ function submitFeedback(){
     _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     wrap.appendChild(_renderer.domElement);
 
-    // Lighting
-    var ambLight = new THREE.AmbientLight(0x506090, 0.7);
+    // Lighting — Digital Twin holographic
+    var ambLight = new THREE.AmbientLight(0x1a2a40, 0.4);
     _scene.add(ambLight);
-    var dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    var dirLight = new THREE.DirectionalLight(0x66aadd, 0.6);
     dirLight.position.set(3, 5, 4);
     _scene.add(dirLight);
-    var dirLight2 = new THREE.DirectionalLight(0x4060cc, 0.25);
+    var dirLight2 = new THREE.DirectionalLight(0x5533aa, 0.3);
     dirLight2.position.set(-3, 4, -2);
     _scene.add(dirLight2);
+    // Cyan glow from below
+    var ptLight = new THREE.PointLight(0x00ccff, 0.35, 8);
+    ptLight.position.set(0, -0.5, 0);
+    _scene.add(ptLight);
 
     // ── Geographic bounds (same as contour) ──
     var LAT0 = 13.45, LAT1 = 14.05, LON0 = 100.25, LON1 = 101.00;
@@ -9806,16 +10037,16 @@ function submitFeedback(){
     _mesh.position.set(0, -0.15, 0);
     _scene.add(_mesh);
 
-    // Base plate (dark ground to fill gaps)
-    var baseMat = new THREE.MeshBasicMaterial({ color: 0x0c0c18 });
+    // Base plate (holographic ground)
+    var baseMat = new THREE.MeshBasicMaterial({ color: 0x061020, transparent: true, opacity: 0.9 });
     var baseGeo = new THREE.PlaneBufferGeometry(planeW * 1.3, planeH * 1.3);
     baseGeo.rotateX(-Math.PI / 2);
     var baseMesh = new THREE.Mesh(baseGeo, baseMat);
     baseMesh.position.set(0, -0.17, 0);
     _scene.add(baseMesh);
 
-    // Grid helper
-    var gridHelper = new THREE.GridHelper(Math.max(planeW, planeH) * 1.2, 16, 0x151530, 0x0c0c20);
+    // Grid helper — subtle holographic grid
+    var gridHelper = new THREE.GridHelper(Math.max(planeW, planeH) * 1.2, 20, 0x0a2040, 0x061530);
     gridHelper.position.y = -0.16;
     _scene.add(gridHelper);
 
@@ -9858,6 +10089,414 @@ function submitFeedback(){
     var _isEC3 = (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec');
     _labelSprites = [];
 
+    // ── Digital Twin holographic materials ──
+    var _dtGlassCyan = new THREE.MeshPhongMaterial({
+      color: 0x00ddff, emissive: 0x003344, transparent: true, opacity: 0.25,
+      shininess: 120, specular: 0x00aaff, side: THREE.DoubleSide, depthWrite: false
+    });
+    var _dtGlassMagenta = new THREE.MeshPhongMaterial({
+      color: 0xcc44ff, emissive: 0x220033, transparent: true, opacity: 0.2,
+      shininess: 100, specular: 0x8844ff, side: THREE.DoubleSide, depthWrite: false
+    });
+    var _dtEdgeCyan = new THREE.LineBasicMaterial({ color: 0x00eeff, transparent: true, opacity: 0.7 });
+    var _dtEdgeMagenta = new THREE.LineBasicMaterial({ color: 0xaa55ff, transparent: true, opacity: 0.6 });
+    var _dtSolidCyan = new THREE.MeshPhongMaterial({
+      color: 0x00ccee, emissive: 0x004455, shininess: 80, specular: 0x0088cc
+    });
+    var _dtSolidPink = new THREE.MeshPhongMaterial({
+      color: 0xff44aa, emissive: 0x330022, shininess: 60
+    });
+    var _dtGlowCyan = new THREE.MeshBasicMaterial({
+      color: 0x00ffff, transparent: true, opacity: 0.15, depthWrite: false
+    });
+
+    function addEdges(mesh, mat, parent) {
+      var eg = new THREE.EdgesGeometry(mesh.geometry);
+      var ln = new THREE.LineSegments(eg, mat);
+      ln.position.copy(mesh.position);
+      ln.rotation.copy(mesh.rotation);
+      ln.scale.copy(mesh.scale);
+      parent.add(ln);
+    }
+
+    // ── Water Treatment Plant (Digital Twin) ──
+    // Based on real WTP layout: sedimentation basins (round), 
+    // clear water tanks (tall cylinders), filter basins (rect), pump house
+    function buildFactory(h) {
+      var g = new THREE.Group();
+      var s = h;
+
+      // ── Ground platform ──
+      var platGeo = new THREE.BoxBufferGeometry(s*2.2, s*0.025, s*1.8);
+      var platMat = new THREE.MeshPhongMaterial({ color: 0x1a3040, emissive: 0x061520, shininess: 20 });
+      var plat = new THREE.Mesh(platGeo, platMat);
+      plat.position.y = s*0.01;
+      g.add(plat); addEdges(plat, _dtEdgeCyan, g);
+
+      // ── Sedimentation basins (4 round tanks, blue water) ──
+      var sedMat = new THREE.MeshPhongMaterial({
+        color: 0x0088bb, emissive: 0x003344, transparent: true, opacity: 0.5,
+        shininess: 100, specular: 0x00aaff, side: THREE.DoubleSide
+      });
+      var sedWall = new THREE.MeshPhongMaterial({
+        color: 0x556666, emissive: 0x112222, shininess: 40
+      });
+      for (var si2 = 0; si2 < 4; si2++) {
+        var sx2 = -s*0.55 + (si2 % 2) * s*0.55;
+        var sz2 = -s*0.45 + Math.floor(si2 / 2) * s*0.55;
+        // Outer wall (torus-like cylinder shell)
+        var wallGeo = new THREE.CylinderBufferGeometry(s*0.22, s*0.22, s*0.12, 20);
+        var wall = new THREE.Mesh(wallGeo, sedWall);
+        wall.position.set(sx2, s*0.085, sz2);
+        g.add(wall); addEdges(wall, _dtEdgeCyan, g);
+        // Water surface
+        var waterGeo = new THREE.CylinderBufferGeometry(s*0.2, s*0.2, s*0.02, 20);
+        var water = new THREE.Mesh(waterGeo, sedMat);
+        water.position.set(sx2, s*0.13, sz2);
+        g.add(water);
+        // Center scraper pivot
+        var pivGeo = new THREE.CylinderBufferGeometry(s*0.01, s*0.01, s*0.15, 6);
+        var piv = new THREE.Mesh(pivGeo, _dtSolidCyan);
+        piv.position.set(sx2, s*0.1, sz2);
+        g.add(piv);
+        // Scraper arm
+        var armGeo = new THREE.BoxBufferGeometry(s*0.18, s*0.008, s*0.01);
+        var arm = new THREE.Mesh(armGeo, _dtSolidCyan);
+        arm.position.set(sx2 + s*0.05, s*0.15, sz2);
+        arm.rotation.y = si2 * 0.7;
+        g.add(arm);
+      }
+
+      // ── Clear water storage tanks (2 tall cylinders, right side) ──
+      var tankMat = new THREE.MeshPhongMaterial({
+        color: 0x88ccdd, emissive: 0x1a3a44, transparent: true, opacity: 0.4,
+        shininess: 120, specular: 0x66bbcc, side: THREE.DoubleSide
+      });
+      var tankRoof = new THREE.MeshPhongMaterial({
+        color: 0x99ddee, emissive: 0x224455, shininess: 60
+      });
+      for (var ti = 0; ti < 2; ti++) {
+        var tx2 = s*0.65;
+        var tz2 = -s*0.3 + ti * s*0.5;
+        // Tank body
+        var tbGeo = new THREE.CylinderBufferGeometry(s*0.18, s*0.18, s*0.6, 16);
+        var tb = new THREE.Mesh(tbGeo, tankMat);
+        tb.position.set(tx2, s*0.33, tz2);
+        g.add(tb); addEdges(tb, _dtEdgeCyan, g);
+        // Tank dome roof
+        var tdGeo = new THREE.SphereBufferGeometry(s*0.18, 16, 8, 0, Math.PI*2, 0, Math.PI*0.35);
+        var td = new THREE.Mesh(tdGeo, tankRoof);
+        td.position.set(tx2, s*0.63, tz2);
+        g.add(td); addEdges(td, _dtEdgeCyan, g);
+        // Ring bands
+        for (var ri2 = 0; ri2 < 3; ri2++) {
+          var rrGeo = new THREE.TorusBufferGeometry(s*0.185, s*0.005, 6, 20);
+          var rrMat = new THREE.MeshBasicMaterial({ color: 0x00ddff, transparent: true, opacity: 0.5, depthWrite: false });
+          var rr = new THREE.Mesh(rrGeo, rrMat);
+          rr.position.set(tx2, s*0.15 + ri2*s*0.18, tz2);
+          rr.rotation.x = Math.PI/2;
+          g.add(rr);
+        }
+      }
+
+      // ── Filter basins (3 rectangular, center) ──
+      var filtMat = new THREE.MeshPhongMaterial({
+        color: 0x336666, emissive: 0x112233, transparent: true, opacity: 0.45,
+        shininess: 60, side: THREE.DoubleSide
+      });
+      var filtWater = new THREE.MeshPhongMaterial({
+        color: 0x00aacc, emissive: 0x004466, transparent: true, opacity: 0.5, shininess: 100
+      });
+      for (var fi = 0; fi < 3; fi++) {
+        var fx = s*0.15;
+        var fz = -s*0.5 + fi * s*0.35;
+        // Basin walls
+        var fbGeo = new THREE.BoxBufferGeometry(s*0.3, s*0.1, s*0.25);
+        var fb = new THREE.Mesh(fbGeo, filtMat);
+        fb.position.set(fx, s*0.075, fz);
+        g.add(fb); addEdges(fb, _dtEdgeCyan, g);
+        // Water top
+        var fwGeo = new THREE.BoxBufferGeometry(s*0.28, s*0.015, s*0.23);
+        var fw = new THREE.Mesh(fwGeo, filtWater);
+        fw.position.set(fx, s*0.12, fz);
+        g.add(fw);
+      }
+
+      // ── Pump/chemical building ──
+      var bldGeo = new THREE.BoxBufferGeometry(s*0.4, s*0.3, s*0.35);
+      var bld = new THREE.Mesh(bldGeo, _dtGlassCyan);
+      bld.position.set(-s*0.7, s*0.175, s*0.5);
+      g.add(bld); addEdges(bld, _dtEdgeCyan, g);
+      // Roof
+      var rfGeo = new THREE.BoxBufferGeometry(s*0.44, s*0.02, s*0.39);
+      var rfMat = new THREE.MeshPhongMaterial({ color: 0x1a4050, emissive: 0x0a2030 });
+      var rf = new THREE.Mesh(rfGeo, rfMat);
+      rf.position.set(-s*0.7, s*0.34, s*0.5);
+      g.add(rf); addEdges(rf, _dtEdgeCyan, g);
+      // Windows (glowing strips)
+      var winMat2 = new THREE.MeshBasicMaterial({ color: 0x44ddff, transparent: true, opacity: 0.6 });
+      for (var wi = 0; wi < 3; wi++) {
+        var wwGeo = new THREE.BoxBufferGeometry(s*0.08, s*0.1, s*0.005);
+        var ww = new THREE.Mesh(wwGeo, winMat2);
+        ww.position.set(-s*0.82 + wi*s*0.1, s*0.2, s*0.5 + s*0.177);
+        g.add(ww);
+      }
+
+      // ── Pipes connecting tanks (horizontal cylinders) ──
+      var pipeMat = _dtSolidCyan;
+      var pipeGeo = new THREE.CylinderBufferGeometry(s*0.012, s*0.012, s*0.5, 6);
+      var pipe1 = new THREE.Mesh(pipeGeo, pipeMat);
+      pipe1.rotation.z = Math.PI/2;
+      pipe1.position.set(s*0.0, s*0.06, -s*0.2);
+      g.add(pipe1);
+      var pipe2 = new THREE.Mesh(pipeGeo.clone(), pipeMat);
+      pipe2.rotation.z = Math.PI/2;
+      pipe2.position.set(s*0.0, s*0.06, s*0.2);
+      g.add(pipe2);
+
+      // ── Holographic glow beam ──
+      var beamGeo = new THREE.CylinderBufferGeometry(s*0.01, s*0.2, s*1.5, 8);
+      var beam = new THREE.Mesh(beamGeo, _dtGlowCyan);
+      beam.position.y = s*0.75;
+      g.add(beam);
+
+      return g;
+    }
+
+    // ── Pump Station (Digital Twin) ──
+    // Based on reference: dark cylinder tank + steel frame, blue storage tank, office building
+    function buildPumpStation(h) {
+      var g = new THREE.Group();
+      var s = h;
+
+      // ── Ground platform ──
+      var platGeo = new THREE.BoxBufferGeometry(s*1.6, s*0.02, s*0.9);
+      var platMat = new THREE.MeshPhongMaterial({ color: 0x1a3040, emissive: 0x061520, shininess: 20 });
+      var plat = new THREE.Mesh(platGeo, platMat);
+      plat.position.y = s*0.01;
+      g.add(plat); addEdges(plat, _dtEdgeCyan, g);
+
+      // ── Dark cylindrical tank (left) with steel lattice frame ──
+      var dkTankGeo = new THREE.CylinderBufferGeometry(s*0.18, s*0.18, s*0.55, 16);
+      var dkTankMat = new THREE.MeshPhongMaterial({
+        color: 0x2a3a4a, emissive: 0x0a1520, transparent: true, opacity: 0.6,
+        shininess: 60, specular: 0x334455, side: THREE.DoubleSide
+      });
+      var dkTank = new THREE.Mesh(dkTankGeo, dkTankMat);
+      dkTank.position.set(-s*0.5, s*0.3, 0);
+      g.add(dkTank); addEdges(dkTank, _dtEdgeCyan, g);
+      // Tank top cap
+      var capGeo = new THREE.CylinderBufferGeometry(s*0.19, s*0.19, s*0.02, 16);
+      var capMat = new THREE.MeshPhongMaterial({ color: 0x3a4a5a, emissive: 0x101820 });
+      var cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(-s*0.5, s*0.58, 0);
+      g.add(cap);
+      // Steel lattice frame (X-braces around tank)
+      var frameMat = new THREE.LineBasicMaterial({ color: 0x00ccdd, transparent: true, opacity: 0.6 });
+      for (var fi2 = 0; fi2 < 4; fi2++) {
+        var fa = (fi2/4)*Math.PI*2;
+        var fx1 = -s*0.5 + Math.cos(fa)*s*0.2;
+        var fz1 = Math.sin(fa)*s*0.2;
+        var fx2 = -s*0.5 + Math.cos(fa + Math.PI/4)*s*0.2;
+        var fz2 = Math.sin(fa + Math.PI/4)*s*0.2;
+        // Vertical strut
+        var strGeo = new THREE.BufferGeometry();
+        strGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+          fx1, s*0.03, fz1, fx1, s*0.57, fz1
+        ], 3));
+        g.add(new THREE.Line(strGeo, frameMat));
+        // X-brace
+        var xGeo = new THREE.BufferGeometry();
+        xGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+          fx1, s*0.1, fz1, fx2, s*0.5, fz2,
+        ], 3));
+        g.add(new THREE.Line(xGeo, frameMat));
+        var x2Geo = new THREE.BufferGeometry();
+        x2Geo.setAttribute('position', new THREE.Float32BufferAttribute([
+          fx2, s*0.1, fz2, fx1, s*0.5, fz1,
+        ], 3));
+        g.add(new THREE.Line(x2Geo, frameMat));
+      }
+
+      // ── Blue storage tank (center, tall cylinder with dome) ──
+      var blTankGeo = new THREE.CylinderBufferGeometry(s*0.15, s*0.15, s*0.5, 16);
+      var blTankMat = new THREE.MeshPhongMaterial({
+        color: 0x4499cc, emissive: 0x1a3344, transparent: true, opacity: 0.45,
+        shininess: 100, specular: 0x44aacc, side: THREE.DoubleSide
+      });
+      var blTank = new THREE.Mesh(blTankGeo, blTankMat);
+      blTank.position.set(-s*0.1, s*0.28, 0);
+      g.add(blTank); addEdges(blTank, _dtEdgeCyan, g);
+      // Dome top
+      var dmGeo2 = new THREE.SphereBufferGeometry(s*0.15, 16, 8, 0, Math.PI*2, 0, Math.PI*0.4);
+      var dmMat2 = new THREE.MeshPhongMaterial({
+        color: 0x55aadd, emissive: 0x224455, shininess: 80
+      });
+      var dm2 = new THREE.Mesh(dmGeo2, dmMat2);
+      dm2.position.set(-s*0.1, s*0.53, 0);
+      g.add(dm2); addEdges(dm2, _dtEdgeCyan, g);
+      // Holographic rings on blue tank
+      for (var hri = 0; hri < 2; hri++) {
+        var hrGeo = new THREE.TorusBufferGeometry(s*0.16, s*0.004, 6, 20);
+        var hrMat = new THREE.MeshBasicMaterial({ color: 0x00eeff, transparent: true, opacity: 0.45, depthWrite: false });
+        var hr = new THREE.Mesh(hrGeo, hrMat);
+        hr.position.set(-s*0.1, s*0.15 + hri*s*0.2, 0);
+        hr.rotation.x = Math.PI/2;
+        g.add(hr);
+      }
+
+      // ── Office / pump building (right, box with grid windows) ──
+      var offGeo = new THREE.BoxBufferGeometry(s*0.55, s*0.3, s*0.45);
+      var offMat = new THREE.MeshPhongMaterial({
+        color: 0x8899aa, emissive: 0x1a2233, transparent: true, opacity: 0.35,
+        shininess: 60, side: THREE.DoubleSide
+      });
+      var off = new THREE.Mesh(offGeo, offMat);
+      off.position.set(s*0.4, s*0.17, 0);
+      g.add(off); addEdges(off, _dtEdgeCyan, g);
+      // Flat roof
+      var roofGeo2 = new THREE.BoxBufferGeometry(s*0.58, s*0.015, s*0.48);
+      var roofMat2 = new THREE.MeshPhongMaterial({ color: 0x2a3a4a, emissive: 0x0a1520 });
+      var roof2 = new THREE.Mesh(roofGeo2, roofMat2);
+      roof2.position.set(s*0.4, s*0.33, 0);
+      g.add(roof2); addEdges(roof2, _dtEdgeCyan, g);
+      // Grid windows (front face — 4 cols × 3 rows)
+      var winGlow = new THREE.MeshBasicMaterial({ color: 0x44ddff, transparent: true, opacity: 0.55 });
+      for (var wr = 0; wr < 3; wr++) {
+        for (var wc = 0; wc < 4; wc++) {
+          var wGeo = new THREE.BoxBufferGeometry(s*0.08, s*0.06, s*0.005);
+          var wMesh = new THREE.Mesh(wGeo, winGlow);
+          wMesh.position.set(
+            s*0.22 + wc*s*0.1,
+            s*0.08 + wr*s*0.08,
+            s*0.228
+          );
+          g.add(wMesh);
+        }
+      }
+
+      // ── Connecting pipe from tanks to building ──
+      var pipeGeo2 = new THREE.CylinderBufferGeometry(s*0.012, s*0.012, s*0.4, 6);
+      var pipe = new THREE.Mesh(pipeGeo2, _dtSolidCyan);
+      pipe.rotation.z = Math.PI/2;
+      pipe.position.set(s*0.05, s*0.12, 0);
+      g.add(pipe);
+
+      // ── Glow beam ──
+      var bmGeo = new THREE.CylinderBufferGeometry(s*0.008, s*0.12, s*0.9, 8);
+      var bm = new THREE.Mesh(bmGeo, _dtGlowCyan);
+      bm.position.y = s*0.5;
+      g.add(bm);
+
+      return g;
+    }
+
+    // ── Monitor Station (Digital Twin) ──
+    // MWA Water Quality Monitoring Kiosk: stainless cabinet + solar canopy + poles + base
+    function buildMonitorPin(h) {
+      var g = new THREE.Group();
+      var s = h;
+
+      // ── Concrete base ──
+      var baseGeo = new THREE.BoxBufferGeometry(s*0.5, s*0.06, s*0.35);
+      var baseMat = new THREE.MeshPhongMaterial({ color: 0x556060, emissive: 0x1a2222, shininess: 20 });
+      var base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.y = s*0.03;
+      g.add(base); addEdges(base, _dtEdgeCyan, g);
+
+      // ── Stainless steel cabinet (main body) ──
+      var cabGeo = new THREE.BoxBufferGeometry(s*0.28, s*0.45, s*0.18);
+      var cabMat = new THREE.MeshPhongMaterial({
+        color: 0x99aabb, emissive: 0x1a2530, transparent: true, opacity: 0.55,
+        shininess: 120, specular: 0x88aacc, side: THREE.DoubleSide
+      });
+      var cab = new THREE.Mesh(cabGeo, cabMat);
+      cab.position.set(0, s*0.285, 0);
+      g.add(cab); addEdges(cab, _dtEdgeCyan, g);
+
+      // Front panel glow (screen / display area)
+      var panelGeo = new THREE.BoxBufferGeometry(s*0.22, s*0.2, s*0.005);
+      var panelMat = new THREE.MeshBasicMaterial({ color: 0x22bbff, transparent: true, opacity: 0.5 });
+      var panel = new THREE.Mesh(panelGeo, panelMat);
+      panel.position.set(0, s*0.35, s*0.093);
+      g.add(panel);
+
+      // Data indicator lights (3 small dots)
+      var dotMat1 = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+      var dotMat2 = new THREE.MeshBasicMaterial({ color: 0x00ccff });
+      var dotMat3 = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+      var dotGeo2 = new THREE.SphereBufferGeometry(s*0.012, 6, 4);
+      var d1 = new THREE.Mesh(dotGeo2, dotMat1);
+      d1.position.set(-s*0.06, s*0.47, s*0.093);
+      g.add(d1);
+      var d2 = new THREE.Mesh(dotGeo2.clone(), dotMat2);
+      d2.position.set(0, s*0.47, s*0.093);
+      g.add(d2);
+      var d3 = new THREE.Mesh(dotGeo2.clone(), dotMat3);
+      d3.position.set(s*0.06, s*0.47, s*0.093);
+      g.add(d3);
+
+      // ── Support poles (2 vertical blue poles) ──
+      var poleMat2 = new THREE.MeshPhongMaterial({
+        color: 0x2266cc, emissive: 0x0a1a44, shininess: 80, specular: 0x3388dd
+      });
+      var poleGeo2 = new THREE.CylinderBufferGeometry(s*0.02, s*0.02, s*0.75, 8);
+      var poleL = new THREE.Mesh(poleGeo2, poleMat2);
+      poleL.position.set(-s*0.2, s*0.4, 0);
+      g.add(poleL); addEdges(poleL, _dtEdgeCyan, g);
+      var poleR = new THREE.Mesh(poleGeo2.clone(), poleMat2);
+      poleR.position.set(s*0.2, s*0.4, 0);
+      g.add(poleR); addEdges(poleR, _dtEdgeCyan, g);
+
+      // ── Solar panel canopy (flat tilted panel on top) ──
+      var solarGeo = new THREE.BoxBufferGeometry(s*0.55, s*0.015, s*0.35);
+      var solarMat = new THREE.MeshPhongMaterial({
+        color: 0x224466, emissive: 0x0a1a33, transparent: true, opacity: 0.6,
+        shininess: 100, specular: 0x3366aa, side: THREE.DoubleSide
+      });
+      var solar = new THREE.Mesh(solarGeo, solarMat);
+      solar.position.set(0, s*0.78, 0);
+      solar.rotation.z = -0.05; // slight tilt
+      g.add(solar); addEdges(solar, _dtEdgeCyan, g);
+
+      // Solar panel grid lines
+      var gridMat = new THREE.LineBasicMaterial({ color: 0x3388cc, transparent: true, opacity: 0.4 });
+      for (var gi = 0; gi < 4; gi++) {
+        var gLineGeo = new THREE.BufferGeometry();
+        var gx = -s*0.22 + gi * s*0.15;
+        gLineGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+          gx, s*0.79, -s*0.16, gx, s*0.79, s*0.16
+        ], 3));
+        g.add(new THREE.Line(gLineGeo, gridMat));
+      }
+      for (var gj = 0; gj < 3; gj++) {
+        var gLineGeo2 = new THREE.BufferGeometry();
+        var gz = -s*0.12 + gj * s*0.12;
+        gLineGeo2.setAttribute('position', new THREE.Float32BufferAttribute([
+          -s*0.26, s*0.79, gz, s*0.26, s*0.79, gz
+        ], 3));
+        g.add(new THREE.Line(gLineGeo2, gridMat));
+      }
+
+      // ── Water pipe (horizontal, blue, at base) ──
+      var wpGeo = new THREE.CylinderBufferGeometry(s*0.015, s*0.015, s*0.3, 6);
+      var wpMat = new THREE.MeshPhongMaterial({ color: 0x2288cc, emissive: 0x0a2244 });
+      var wp = new THREE.Mesh(wpGeo, wpMat);
+      wp.rotation.z = Math.PI/2;
+      wp.position.set(-s*0.3, s*0.08, s*0.05);
+      g.add(wp);
+
+      // ── Holographic data ring ──
+      var haloGeo2 = new THREE.TorusBufferGeometry(s*0.2, s*0.004, 6, 20);
+      var haloMat2 = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+      var halo2 = new THREE.Mesh(haloGeo2, haloMat2);
+      halo2.position.y = s*0.85;
+      halo2.rotation.x = Math.PI/2;
+      g.add(halo2);
+
+      return g;
+    }
+
     if (typeof SENSORS !== 'undefined') {
       for (var si = 0; si < SENSORS.length; si++) {
         var s = SENSORS[si];
@@ -9869,38 +10508,35 @@ function submitFeedback(){
           ? Math.min(1, pv / 500) * maxH2 * _heightMul
           : Math.min(1, pv / 1.5) * maxH2 * _heightMul;
         var isPumpPlant = (s.type === 'plant' || s.type === 'pump');
-        var dotSize = isPumpPlant ? 0.018 : 0.007;
-        var dotGeo = new THREE.SphereBufferGeometry(dotSize, 8, 6);
-        var dotColor = isPumpPlant ? 0xff3366 : 0xdde0ff;
-        var dotMat = new THREE.MeshBasicMaterial({ color: dotColor });
-        var dot = new THREE.Mesh(dotGeo, dotMat);
-        var dotY = py2 - 0.15 + dotSize + 0.003;
-        dot.position.set(nx, dotY, nz);
-        _scene.add(dot);
+        var dotY = py2 - 0.15;
 
-        // Name label — full name, no value
+        // Digital Twin building
+        var building;
+        if (s.type === 'plant') {
+          building = buildFactory(0.08);
+        } else if (s.type === 'pump') {
+          building = buildPumpStation(0.065);
+        } else {
+          building = buildMonitorPin(0.05);
+        }
+        building.position.set(nx, dotY, nz);
+        _scene.add(building);
+
+        // Name label
         var labelName = (s.name || '').trim();
         if (labelName) {
+          var labelH = s.type === 'plant' ? 0.12 : (s.type === 'pump' ? 0.08 : 0.055);
           var sprite = makeTextSprite(labelName, isPumpPlant ? {
-            color: '#ffffff', outline: 'rgba(80,0,30,0.9)',
+            color: '#88ffff', outline: 'rgba(0,20,40,0.9)',
             scale: 0.055, fontSize: 22
           } : {
-            color: '#e0e8ff', outline: 'rgba(5,10,30,0.85)',
+            color: '#aaeeff', outline: 'rgba(0,10,30,0.85)',
             scale: 0.038, fontSize: 18
           });
-          sprite.position.set(nx, dotY + dotSize + 0.015, nz);
+          sprite.position.set(nx, dotY + labelH + 0.015, nz);
           sprite.visible = _labelsVisible;
           _scene.add(sprite);
           _labelSprites.push(sprite);
-        }
-
-        if (isPumpPlant) {
-          var lineGeo = new THREE.BufferGeometry();
-          var lVerts = new Float32Array([nx, -0.16, nz, nx, py2-0.15, nz]);
-          lineGeo.setAttribute('position', new THREE.BufferAttribute(lVerts, 3));
-          var lineMat = new THREE.LineBasicMaterial({ color: 0xff336680, transparent: true, opacity: 0.25 });
-          var line = new THREE.Line(lineGeo, lineMat);
-          _scene.add(line);
         }
       }
     }
@@ -9991,12 +10627,324 @@ function submitFeedback(){
 })();
 </script>
 
+<!-- ═══ Map Search Bar Logic — rev8.9 ═══ -->
+<script>
+(function(){
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _searchTimer   = null;
+  let _flyMarker     = null;
+  let _activeIdx     = -1;
+  let _results       = [];      // [{type,label,sub,lat,lon}]
+  let _lastQuery     = '';
+
+  const inp  = () => document.getElementById('map-search-input');
+  const drop = () => document.getElementById('map-search-dropdown');
+  const clr  = () => document.getElementById('map-search-clear');
+
+  // ── Lat/Lon parser — รับหลายรูปแบบ ────────────────────────────────────────
+  // รองรับ: "13.75, 100.52"  "13.75 100.52"  "13°45'N 100°31'E"  "13.75N 100.52E"
+  function parseLatLon(q) {
+    q = q.trim();
+    // pattern: สองตัวเลข คั่นด้วย comma/space/tab
+    const m1 = q.match(/^([+-]?\d+(?:\.\d+)?)[°\s,]+([+-]?\d+(?:\.\d+)?)°?\s*$/);
+    if (m1) {
+      const a = parseFloat(m1[1]), b = parseFloat(m1[2]);
+      if (!isNaN(a) && !isNaN(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180)
+        return { lat: a, lon: b };
+    }
+    // pattern: DMS "13°45'30\"N 100°31'20\"E"
+    const m2 = q.match(/(\d+)[°d]\s*(\d+)['\u2019m]\s*([\d.]+)["\u201ds]?\s*([NS])\s+(\d+)[°d]\s*(\d+)['\u2019m]\s*([\d.]+)["\u201ds]?\s*([EW])/i);
+    if (m2) {
+      let lat = +m2[1] + +m2[2]/60 + +m2[3]/3600;
+      if (m2[4].toUpperCase()==='S') lat = -lat;
+      let lon = +m2[5] + +m2[6]/60 + +m2[7]/3600;
+      if (m2[8].toUpperCase()==='W') lon = -lon;
+      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) return { lat, lon };
+    }
+    // pattern: "13.75N 100.52E"
+    const m3 = q.match(/^([\d.]+)\s*([NS])[,\s]+([\d.]+)\s*([EW])$/i);
+    if (m3) {
+      let lat = parseFloat(m3[1]); if (m3[2].toUpperCase()==='S') lat=-lat;
+      let lon = parseFloat(m3[3]); if (m3[4].toUpperCase()==='W') lon=-lon;
+      if (lat>=-90&&lat<=90&&lon>=-180&&lon<=180) return {lat,lon};
+    }
+    return null;
+  }
+
+  // ── Get map (อาจยังไม่พร้อมตอน script โหลด) ──────────────────────────────
+  function getMap() { return window.map || null; }
+
+  // ── Search Stations ในข้อมูลของ app ────────────────────────────────────────
+  function searchStations(q) {
+    // SENSORS เป็น let ใน outer script — ดึงมาตรงๆ ได้เลย (same page)
+    let src = [];
+    try {
+      if (typeof SENSORS !== 'undefined' && SENSORS && SENSORS.length) src = SENSORS;
+      else if (typeof SENSORS_FALLBACK !== 'undefined' && SENSORS_FALLBACK) src = SENSORS_FALLBACK;
+    } catch(e) { src = []; }
+    if (!src.length) return [];
+    const ql = q.toLowerCase();
+    return src
+      .filter(s => {
+        const name = (s.name || s.label || String(s.id||'') || '').toLowerCase();
+        return name.includes(ql) && s.lat != null && s.lon != null;
+      })
+      .slice(0, 5)
+      .map(s => ({
+        type: 'station',
+        label: s.name || s.label || String(s.id),
+        sub: `สถานี · ${(s.frc != null ? (+s.frc).toFixed(3)+' mg/L' : '')} ${(s.ec != null ? '⚡'+s.ec : '')}`.trim(),
+        lat: +s.lat, lon: +s.lon,
+        id: s.id
+      }));
+  }
+
+  // ── Nominatim geocoding ─────────────────────────────────────────────────────
+  async function nominatimSearch(q) {
+    // ไม่ lock countrycodes=th เพื่อให้หาชื่อภาษาอังกฤษ/ต่างประเทศได้ด้วย
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&accept-language=th,en`;
+    try {
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      return data.map(d => ({
+        type: 'place',
+        label: d.display_name.split(',').slice(0,2).join(',').trim(),
+        sub: d.display_name.split(',').slice(2,4).join(',').trim() || d.type,
+        lat: parseFloat(d.lat),
+        lon: parseFloat(d.lon),
+        osm_type: d.osm_type,
+        category: d.category
+      }));
+    } catch(e) {
+      // fallback: ไม่แสดง error
+      return [];
+    }
+  }
+
+  // ── Show dropdown ───────────────────────────────────────────────────────────
+  function showDropdown(items, loading) {
+    _results = items;
+    _activeIdx = -1;
+    const d = drop();
+    if (loading) {
+      d.innerHTML = '<div class="msd-spinner">กำลังค้นหา…</div>';
+      d.classList.add('open');
+      return;
+    }
+    if (!items.length) {
+      d.innerHTML = '<div class="msd-empty">ไม่พบสถานที่ — ลองพิมพ์ lat, lon</div>';
+      d.classList.add('open');
+      return;
+    }
+    d.innerHTML = items.map((it, i) => {
+      const icon = it.type === 'latlng' ? '📍' : it.type === 'station' ? '🌸' : '🗺️';
+      return `<div class="msd-item${it.type==='latlng'?' msd-latlng':''}" 
+        onmousedown="event.preventDefault()" 
+        onclick="window._mapSearchSelect(${i})" 
+        onmouseover="window._mapSearchHover(${i})">
+        <span class="msd-icon">${icon}</span>
+        <div>
+          <div class="msd-main">${escapeHtml(it.label)}</div>
+          ${it.sub ? `<div class="${it.type==='latlng'?'msd-latlon':'msd-sub'}">${escapeHtml(it.sub)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    d.classList.add('open');
+  }
+
+  function hideDropdown() {
+    drop().classList.remove('open');
+    _activeIdx = -1;
+  }
+
+  function escapeHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── FlyTo ──────────────────────────────────────────────────────────────────
+  function flyTo(lat, lon, label, zoom) {
+    const m = getMap();
+    if (!m) {
+      // map ยังไม่พร้อม — รอ 300ms แล้วลองใหม่
+      setTimeout(() => flyTo(lat, lon, label, zoom), 300);
+      return;
+    }
+    zoom = zoom || 15;
+    m.flyTo([lat, lon], zoom, { animate: true, duration: 1.1 });
+    // ลบ marker เก่า
+    if (_flyMarker) { try { m.removeLayer(_flyMarker); } catch(e){} }
+    // สร้าง custom pin marker
+    const ic = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#cc0055;color:#fff;
+        border:2.5px solid #fff;border-radius:50% 50% 50% 0;
+        width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+        font-size:14px;transform:rotate(-45deg);
+        box-shadow:0 3px 12px rgba(204,0,85,.45),0 0 0 2px rgba(204,0,85,.18);
+      "><span style="transform:rotate(45deg)">📍</span></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28]
+    });
+    _flyMarker = L.marker([lat, lon], { icon: ic, zIndexOffset: 5000 });
+    _flyMarker.addTo(m);
+    // Popup
+    const popHtml = `<div style="font-family:'Sarabun',sans-serif;padding:4px 2px;min-width:160px;">
+      <div style="font-weight:700;font-size:12px;color:#cc0055;margin-bottom:3px;">${escapeHtml(label)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a06080;">
+        ${lat.toFixed(6)}, ${lon.toFixed(6)}
+      </div>
+      <button onclick="(function(){var m=window.map;var mk=window._msdFlyMarker;if(m&&mk){m.removeLayer(mk);window._msdFlyMarker=null;}})()" 
+        style="margin-top:5px;font-size:10px;color:#cc0055;background:none;border:none;cursor:pointer;padding:0;font-family:'Sarabun',sans-serif;">
+        ✕ ลบหมุด
+      </button>
+    </div>`;
+    _flyMarker.bindPopup(popHtml, { className: 'msd-flyto-popup', closeButton: false });
+    setTimeout(() => { try { _flyMarker.openPopup(); } catch(e){} }, 600);
+    window._msdFlyMarker = _flyMarker;
+  }
+
+  // ── Select item ────────────────────────────────────────────────────────────
+  window._mapSearchSelect = function(i) {
+    const it = _results[i];
+    if (!it) return;
+    inp().value = it.label;
+    clr().classList.add('visible');
+    hideDropdown();
+    const zoom = it.type === 'station' ? 16 : it.type === 'latlng' ? 15 : 14;
+    flyTo(it.lat, it.lon, it.label, zoom);
+  };
+
+  window._mapSearchHover = function(i) {
+    _activeIdx = i;
+    Array.from(drop().querySelectorAll('.msd-item')).forEach((el, j) => {
+      el.style.background = j === i ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '';
+    });
+  };
+
+  // ── Input handler ──────────────────────────────────────────────────────────
+  window.onMapSearchInput = function(val) {
+    clr().classList.toggle('visible', val.length > 0);
+    _lastQuery = val;
+    clearTimeout(_searchTimer);
+
+    if (!val.trim()) { hideDropdown(); return; }
+
+    // 1. ลอง parse lat/lon ก่อน
+    const ll = parseLatLon(val);
+    const localItems = [];
+    if (ll) {
+      localItems.push({
+        type: 'latlng',
+        label: `📍 ${ll.lat.toFixed(6)}, ${ll.lon.toFixed(6)}`,
+        sub: `lat ${ll.lat.toFixed(6)}  lon ${ll.lon.toFixed(6)}`,
+        lat: ll.lat, lon: ll.lon
+      });
+    }
+
+    // 2. ค้นหาสถานีในข้อมูล app
+    const stItems = searchStations(val);
+    const combined = [...localItems, ...stItems];
+    if (combined.length) showDropdown(combined, false);
+    else showDropdown([], true);
+
+    // 3. เรียก Nominatim หลัง debounce 500ms
+    _searchTimer = setTimeout(async () => {
+      if (val !== _lastQuery) return;
+      showDropdown(combined, true);
+      const places = await nominatimSearch(val);
+      if (val !== _lastQuery) return;
+      const merged = [...localItems, ...stItems, ...places];
+      showDropdown(merged.slice(0, 8), false);
+    }, 500);
+  };
+
+  // ── Key handler ────────────────────────────────────────────────────────────
+  window.onMapSearchKey = function(e) {
+    const d = drop();
+    const items = d.querySelectorAll('.msd-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      _activeIdx = Math.min(_activeIdx + 1, items.length - 1);
+      items.forEach((el,j) => el.style.background = j===_activeIdx ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      _activeIdx = Math.max(_activeIdx - 1, -1);
+      items.forEach((el,j) => el.style.background = j===_activeIdx ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '');
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (_activeIdx >= 0 && _results[_activeIdx]) {
+        window._mapSearchSelect(_activeIdx);
+      } else {
+        doMapSearch();
+      }
+    } else if (e.key === 'Escape') {
+      hideDropdown();
+      inp().blur();
+    }
+  };
+
+  // ── Explicit search button ─────────────────────────────────────────────────
+  window.doMapSearch = async function() {
+    const val = inp().value.trim();
+    if (!val) return;
+    // lat/lon ตรง
+    const ll = parseLatLon(val);
+    if (ll) {
+      hideDropdown();
+      flyTo(ll.lat, ll.lon, `${ll.lat.toFixed(6)}, ${ll.lon.toFixed(6)}`, 15);
+      return;
+    }
+    // Nominatim
+    showDropdown([], true);
+    const places = await nominatimSearch(val);
+    if (places.length) {
+      const stItems = searchStations(val);
+      showDropdown([...stItems, ...places].slice(0, 8), false);
+    } else {
+      showDropdown([], false);
+    }
+  };
+
+  // ── Clear ──────────────────────────────────────────────────────────────────
+  window.clearMapSearch = function() {
+    inp().value = '';
+    clr().classList.remove('visible');
+    hideDropdown();
+    inp().focus();
+    const m = getMap();
+    if (_flyMarker && m) {
+      try { m.removeLayer(_flyMarker); } catch(e){}
+      _flyMarker = null;
+    }
+  };
+
+  // ── Close dropdown when clicking outside ──────────────────────────────────
+  document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('map-search-wrap');
+    if (wrap && !wrap.contains(e.target)) hideDropdown();
+  });
+
+  // ── Prevent map interaction bleeding into search ───────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    const wrap = document.getElementById('map-search-wrap');
+    if (!wrap) return;
+    ['click','dblclick','mousedown','touchstart','wheel','pointerdown']
+      .forEach(ev => wrap.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
+  });
+
+})();
+</script>
+
 <button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.6 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.9 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -10039,6 +10987,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.6 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.9 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
