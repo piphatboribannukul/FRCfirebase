@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.91</title>
+<title>M sandbox : Real-Time Chlorine Contour rev8.71 ARMode</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -346,6 +346,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #ai-insight-btn { display: none !important; }
   #flow-btn { display: none !important; }
   #terrain3d-btn { display: none !important; }
+  /* AR button stays visible on mobile — it's designed for mobile use */
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -1451,6 +1452,124 @@ body.dark .leaflet-control-attribution a{color:var(--neon-blue) !important;}
 .note-tbl td:first-child { font-weight:600; color:#aa0044; white-space:nowrap; width:38%; }
 .note-tbl.ec td:first-child { color:#1040a0; }
 /* ═══════════════════════════════════════
+   V8.71 — AR MODE
+   ═══════════════════════════════════════ */
+#ar-btn{
+  position:absolute;top:194px;left:10px;z-index:1100;
+  background:linear-gradient(135deg,#00695c,#00897b);border:1.5px solid #26a69a;border-radius:10px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 2px 12px rgba(0,105,92,.3);
+  font-size:17px;transition:all .25s cubic-bezier(.4,0,.2,1);color:#fff;
+}
+#ar-btn:hover{background:linear-gradient(135deg,#00897b,#26a69a);box-shadow:0 4px 20px rgba(0,137,123,.35);transform:translateY(-1px);}
+#ar-btn.active{background:#26a69a;color:#fff;border-color:#80cbc4;box-shadow:0 0 24px rgba(38,166,154,.5);}
+#ar-btn .ar-pulse{
+  position:absolute;inset:-3px;border-radius:11px;border:2px solid #26a69a;
+  animation:ar-ring 2s ease-out infinite;opacity:0;pointer-events:none;
+}
+@keyframes ar-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0;}}
+body.dark #ar-btn{
+  background:rgba(16,16,32,.65);border-color:rgba(38,166,154,.4);
+  color:#80cbc4;box-shadow:0 2px 12px rgba(0,0,0,.4);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+body.dark #ar-btn:hover{background:rgba(0,105,92,.2);color:#a5d6d2;}
+body.dark #ar-btn.active{background:#00897b;color:#fff;box-shadow:0 0 20px rgba(38,166,154,.5);}
+
+/* AR Overlay fullscreen */
+#ar-overlay{
+  display:none;position:fixed;inset:0;z-index:99999;background:#000;
+  flex-direction:column;overflow:hidden;
+}
+#ar-overlay.open{display:flex;}
+#ar-overlay video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#ar-overlay canvas#ar-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+#ar-hud{
+  position:absolute;top:0;left:0;right:0;
+  padding:max(env(safe-area-inset-top,12px),12px) 16px 10px;
+  background:linear-gradient(180deg,rgba(0,0,0,.7) 0%,transparent 100%);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;z-index:2;
+}
+#ar-hud-left{display:flex;align-items:center;gap:8px;}
+#ar-close-btn{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:10px;
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;cursor:pointer;backdrop-filter:blur(8px);transition:all .2s;
+}
+#ar-close-btn:hover{background:rgba(255,255,255,.25);}
+#ar-gps-status{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:#80cbc4;
+  background:rgba(0,0,0,.5);border:1px solid rgba(38,166,154,.4);border-radius:6px;
+  padding:3px 8px;backdrop-filter:blur(8px);
+}
+#ar-mode-label{
+  font-family:'Sarabun',sans-serif;font-size:12px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#00897b,#26a69a);border-radius:6px;
+  padding:3px 10px;letter-spacing:.3px;
+}
+#ar-param-toggle{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:6px;
+  padding:3px 10px;font-size:11px;font-weight:600;color:#fff;cursor:pointer;
+  font-family:'Sarabun',sans-serif;backdrop-filter:blur(8px);transition:all .2s;
+}
+#ar-param-toggle:hover{background:rgba(255,255,255,.2);}
+#ar-bottom-hud{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:12px 16px max(env(safe-area-inset-bottom,16px),16px);
+  background:linear-gradient(0deg,rgba(0,0,0,.75) 0%,transparent 100%);
+  z-index:2;
+}
+#ar-nearest-card{
+  background:rgba(0,0,0,.6);border:1.5px solid rgba(38,166,154,.5);border-radius:14px;
+  padding:14px 18px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  max-width:400px;margin:0 auto;
+}
+#ar-nearest-card .ar-stn-name{
+  font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+#ar-nearest-card .ar-stn-name .ar-dot{
+  width:8px;height:8px;border-radius:50%;animation:pulse 2s ease-in-out infinite;flex-shrink:0;
+}
+#ar-nearest-card .ar-vals{display:flex;gap:16px;margin-bottom:6px;}
+#ar-nearest-card .ar-val-block{flex:1;}
+#ar-nearest-card .ar-val-label{font-size:9px;color:#80cbc4;text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+#ar-nearest-card .ar-val-num{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#fff;letter-spacing:-.5px;}
+#ar-nearest-card .ar-val-unit{font-size:10px;color:#a0a0a0;margin-left:2px;}
+#ar-nearest-card .ar-dist{font-size:11px;color:#a0a0a0;font-family:'JetBrains Mono',monospace;}
+#ar-nearest-card .ar-bearing-text{font-size:11px;color:#80cbc4;margin-left:8px;}
+#ar-crosshair{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:48px;height:48px;border:2px solid rgba(38,166,154,.4);border-radius:50%;
+  z-index:2;pointer-events:none;
+}
+#ar-crosshair::before,#ar-crosshair::after{
+  content:'';position:absolute;background:rgba(38,166,154,.4);
+}
+#ar-crosshair::before{width:1px;height:14px;top:50%;left:50%;transform:translate(-50%,-50%);}
+#ar-crosshair::after{width:14px;height:1px;top:50%;left:50%;transform:translate(-50%,-50%);}
+
+/* AR floating station tags */
+.ar-tag{
+  position:absolute;pointer-events:none;z-index:3;
+  display:flex;flex-direction:column;align-items:center;
+  transform:translate(-50%,-100%);transition:opacity .3s,transform .15s;
+}
+.ar-tag-bubble{
+  background:rgba(0,0,0,.7);border:1.5px solid rgba(38,166,154,.6);border-radius:10px;
+  padding:6px 10px;backdrop-filter:blur(12px);text-align:center;white-space:nowrap;
+}
+.ar-tag-name{font-size:9px;color:#80cbc4;font-weight:600;letter-spacing:.3px;}
+.ar-tag-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#fff;}
+.ar-tag-dist{font-size:8px;color:#a0a0a0;font-family:'JetBrains Mono',monospace;}
+.ar-tag-line{width:1px;height:20px;background:linear-gradient(180deg,rgba(38,166,154,.6),transparent);}
+.ar-tag-dot{width:6px;height:6px;border-radius:50%;background:#26a69a;box-shadow:0 0 8px rgba(38,166,154,.6);}
+
+@media (max-width: 640px) {
+  #ar-btn{top:194px;left:8px;width:40px;height:40px;}
+}
+
+/* ═══════════════════════════════════════
    V8.5 — 3D TERRAIN CONTOUR
    ═══════════════════════════════════════ */
 #terrain3d-btn{
@@ -1542,172 +1661,6 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
   .t3d-sym-title{font-size:8px;}
   .t3d-sym-row{font-size:7px;gap:4px;margin-bottom:3px;}
   .t3d-sym-row svg{width:18px;height:14px;}
-}
-
-/* ═══════════════════════════════════════
-   🔍 MAP SEARCH BAR — rev8.91
-   ═══════════════════════════════════════ */
-#map-search-wrap {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1050;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  width: min(380px, calc(100vw - 100px));
-  font-family: 'Sarabun', sans-serif;
-}
-#map-search-input {
-  flex: 1;
-  height: 36px;
-  border: 1.5px solid rgba(240,200,220,0.85);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  padding: 0 12px;
-  font-size: 12.5px;
-  font-family: 'Sarabun', sans-serif;
-  background: rgba(255,255,255,0.97);
-  color: #1a0a10;
-  outline: none;
-  box-shadow: 0 2px 10px rgba(180,0,80,.10);
-  transition: border-color .2s, box-shadow .2s;
-  min-width: 0;
-}
-#map-search-input::placeholder { color: #c090b0; font-size: 11.5px; }
-#map-search-input:focus {
-  border-color: #cc0055;
-  box-shadow: 0 0 0 3px rgba(204,0,85,.10), 0 2px 10px rgba(180,0,80,.12);
-}
-#map-search-btn {
-  height: 36px;
-  min-width: 36px;
-  border: 1.5px solid rgba(240,200,220,0.85);
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-  background: linear-gradient(135deg,#cc0055,#aa0044);
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  padding: 0 10px;
-  transition: all .2s cubic-bezier(.4,0,.2,1);
-  box-shadow: 0 2px 10px rgba(180,0,80,.10);
-  flex-shrink: 0;
-}
-#map-search-btn:hover { background: linear-gradient(135deg,#e8006a,#cc0055); transform: scale(1.04); }
-#map-search-btn:active { transform: scale(0.97); }
-#map-search-clear {
-  position: absolute;
-  right: 42px;
-  top: 50%; transform: translateY(-50%);
-  background: none; border: none;
-  color: #c080a0; font-size: 14px; cursor: pointer;
-  display: none; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 50%;
-  transition: color .15s, background .15s;
-  z-index: 2;
-  padding: 0;
-}
-#map-search-clear:hover { color: #cc0055; background: rgba(204,0,85,.08); }
-#map-search-clear.visible { display: flex; }
-
-/* Dropdown results */
-#map-search-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background: rgba(255,255,255,0.98);
-  border: 1.5px solid #f0d0e0;
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(180,0,80,.13), 0 2px 6px rgba(0,0,0,.05);
-  overflow: hidden;
-  display: none;
-  max-height: 260px;
-  overflow-y: auto;
-  z-index: 1100;
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-}
-#map-search-dropdown.open { display: block; }
-.msd-item {
-  display: flex; align-items: flex-start; gap: 9px;
-  padding: 9px 13px;
-  cursor: pointer;
-  border-bottom: 1px solid #faeef4;
-  transition: background .12s;
-  font-size: 12px; color: #1a0a10;
-}
-.msd-item:last-child { border-bottom: none; }
-.msd-item:hover { background: #fff0f5; }
-.msd-item:active { background: #ffe0ee; }
-.msd-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-.msd-main { font-weight: 600; color: #1a0a10; font-size: 12px; line-height: 1.4; }
-.msd-sub  { font-size: 10px; color: #b080a0; margin-top: 1px; line-height: 1.4; }
-.msd-latlon { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #a06080; }
-.msd-item.msd-latlng { background: #fff8fa; }
-.msd-item.msd-latlng:hover { background: #ffe8f2; }
-.msd-spinner {
-  padding: 12px 14px;
-  font-size: 11px; color: #c080a0;
-  display: flex; align-items: center; gap: 8px;
-}
-.msd-spinner::before {
-  content: '';
-  width: 14px; height: 14px;
-  border: 2px solid #f0d0e0;
-  border-top-color: #cc0055;
-  border-radius: 50%;
-  animation: msd-spin .7s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes msd-spin { to { transform: rotate(360deg); } }
-.msd-empty { padding: 12px 14px; font-size: 11px; color: #c080a0; }
-
-/* Search flyto marker */
-.msd-flyto-popup .leaflet-popup-content-wrapper {
-  background: #fff; border: 1.5px solid #f0c0d8;
-  border-radius: 10px; padding: 0;
-  box-shadow: 0 6px 24px rgba(180,0,80,.16);
-}
-.msd-flyto-popup .leaflet-popup-tip { background: #fff; }
-
-/* Dark mode */
-body.dark #map-search-input {
-  background: rgba(16,16,32,.92) !important;
-  border-color: rgba(255,255,255,.12) !important;
-  color: #e8e8ff !important;
-  box-shadow: 0 2px 10px rgba(0,0,0,.3) !important;
-}
-body.dark #map-search-input::placeholder { color: #6060a0 !important; }
-body.dark #map-search-input:focus { border-color: var(--neon-pink) !important; box-shadow: 0 0 0 3px rgba(233,69,96,.12) !important; }
-body.dark #map-search-btn { background: linear-gradient(135deg,#e94560,#cc0055) !important; border-color: rgba(233,69,96,.3) !important; }
-body.dark #map-search-clear { color: #8080cc !important; }
-body.dark #map-search-clear:hover { color: var(--neon-pink) !important; }
-body.dark #map-search-dropdown {
-  background: rgba(12,12,28,.97) !important;
-  border-color: rgba(255,255,255,.10) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
-}
-body.dark .msd-item { color: #d0d0e8 !important; border-color: rgba(255,255,255,.04) !important; }
-body.dark .msd-item:hover { background: rgba(233,69,96,.08) !important; }
-body.dark .msd-main { color: #e0e0ff !important; }
-body.dark .msd-sub { color: #8080aa !important; }
-body.dark .msd-empty, body.dark .msd-spinner { color: #6060a0 !important; }
-
-/* Mobile */
-@media (max-width: 640px) {
-  #map-search-wrap {
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100vw - 100px);
-  }
-  #map-search-input { height: 34px; font-size: 11.5px; padding: 0 10px; }
-  #map-search-btn { height: 34px; min-width: 34px; font-size: 14px; padding: 0 8px; }
-  #map-search-clear { right: 40px; }
-  #map-search-dropdown { max-height: 200px; }
 }
 
 </style>
@@ -1823,7 +1776,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.91</span>
+  <span id="v2-badge">⬡ rev8.71</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1833,20 +1786,6 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <button id="ham-btn" onclick="toggleSidebar()" title="เมนู">
   <span></span><span></span><span></span>
 </button>
-
-<!-- ═══ Map Search Bar — rev8.91 ═══ -->
-<div id="map-search-wrap">
-  <input id="map-search-input" type="text"
-    placeholder="🔍 ค้นหาสถานที่ หรือ lat, lon…"
-    autocomplete="off" autocorrect="off" spellcheck="false"
-    oninput="onMapSearchInput(this.value)"
-    onkeydown="onMapSearchKey(event)"
-  />
-  <button id="map-search-clear" title="ล้าง" onclick="clearMapSearch()">✕</button>
-  <button id="map-search-btn" title="ค้นหา" onclick="doMapSearch()">🔍</button>
-  <div id="map-search-dropdown"></div>
-</div>
-
 <!-- Zone Influence Editor Button — ซ่อน ย้ายเข้า hamburger แล้ว -->
 <button id="zone-editor-btn" onclick="toggleZoneEditor()" title="Zone Influence Editor" style="display:none !important;">🗺</button>
 
@@ -1861,6 +1800,45 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
 <!-- v8.6: 3D Map Button -->
 <button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Map — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ">🏔</button>
+
+<button id="ar-btn" onclick="toggleARMode()" title="AR Mode — ส่องกล้องดูค่า FRC/EC ณ ตำแหน่งจริง">
+📸
+<div class="ar-pulse"></div>
+</button>
+
+<!-- AR Overlay -->
+<div id="ar-overlay">
+  <video id="ar-video" autoplay playsinline muted></video>
+  <canvas id="ar-canvas"></canvas>
+  <div id="ar-crosshair"></div>
+  <div id="ar-hud">
+    <div id="ar-hud-left">
+      <div id="ar-close-btn" onclick="closeARMode()">✕</div>
+      <div id="ar-mode-label">AR MODE</div>
+      <div id="ar-gps-status">📡 กำลังหา GPS...</div>
+    </div>
+    <button id="ar-param-toggle" onclick="arToggleParam()">FRC</button>
+  </div>
+  <div id="ar-bottom-hud">
+    <div id="ar-nearest-card">
+      <div class="ar-stn-name"><span class="ar-dot" style="background:#26a69a;box-shadow:0 0 6px #26a69a80;"></span><span id="ar-stn-name-text">กำลังค้นหาสถานี...</span></div>
+      <div class="ar-vals">
+        <div class="ar-val-block">
+          <div class="ar-val-label" id="ar-val-label-1">FRC</div>
+          <div><span class="ar-val-num" id="ar-val-1">--</span><span class="ar-val-unit" id="ar-unit-1">mg/L</span></div>
+        </div>
+        <div class="ar-val-block">
+          <div class="ar-val-label" id="ar-val-label-2">EC</div>
+          <div><span class="ar-val-num" id="ar-val-2">--</span><span class="ar-val-unit" id="ar-unit-2">µS/cm</span></div>
+        </div>
+      </div>
+      <div>
+        <span class="ar-dist" id="ar-dist-text">ระยะห่าง: --</span>
+        <span class="ar-bearing-text" id="ar-bearing-text">ทิศ: --</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- AI Insight Panel -->
 <div id="ai-panel">
@@ -2305,7 +2283,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.91 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.71 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2357,7 +2335,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.91 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.71 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2372,7 +2350,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.91</h2>
+      <h2>📊 <span>Daily Report</span> — rev8.71</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -2956,7 +2934,6 @@ function idw(lat, lon) {
 
 // ── MAP ───────────────────────────────────────────────────────
 const map=L.map('map',{center:[13.81,100.58],zoom:10,zoomControl:false,attributionControl:false,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120,markerZoomAnimation:true});
-window.map = map; // expose for search bar & other external scripts
 map.fitBounds([[13.45, 100.25],[14.10, 100.97]], {paddingTopLeft: [0, 0], paddingBottomRight: [0, 0]});
 L.control.zoom({position:'topright'}).addTo(map);
 // Tile layers: ลอง CartoDB ก่อน fallback เป็น OSM ถ้าโหลดไม่ได้
@@ -4560,7 +4537,7 @@ function _syncFloatingBtns() {
   var anyOpen = (sb && sb.classList.contains('open')) ||
                 (ai && ai.classList.contains('open')) ||
                 (ze && ze.classList.contains('open'));
-  var btns = ['zone-editor-btn','ai-insight-btn','flow-btn','terrain3d-btn'];
+  var btns = ['zone-editor-btn','ai-insight-btn','flow-btn'];
   for (var i=0;i<btns.length;i++) {
     var b = document.getElementById(btns[i]);
     if (b) b.style.display = anyOpen ? 'none' : '';
@@ -4724,8 +4701,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.91 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
-      : '<span>⚠ rev8.91 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
+      ? '<span>⚠ rev8.71 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 22 มี.ค.69)</span>'
+      : '<span>⚠ rev8.71 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -9609,7 +9586,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.91 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.71 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 22 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -10629,324 +10606,351 @@ function submitFeedback(){
 })();
 </script>
 
-<!-- ═══ Map Search Bar Logic — rev8.91 ═══ -->
+<button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
+
+<!-- ═══════════════════════════════════════
+     AR MODE — v8.71
+     ═══════════════════════════════════════ -->
 <script>
 (function(){
   'use strict';
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  let _searchTimer   = null;
-  let _flyMarker     = null;
-  let _activeIdx     = -1;
-  let _results       = [];      // [{type,label,sub,lat,lon}]
-  let _lastQuery     = '';
+  /* ── State ── */
+  var _arOpen = false;
+  var _arStream = null;
+  var _arWatchId = null;
+  var _arUserLat = null, _arUserLon = null, _arAccuracy = null;
+  var _arHeading = null;
+  var _arParam = 'frc'; // frc or ec
+  var _arAnimId = null;
+  var _arCanvas = null, _arCtx = null;
+  var _arNearestStations = [];
 
-  const inp  = () => document.getElementById('map-search-input');
-  const drop = () => document.getElementById('map-search-dropdown');
-  const clr  = () => document.getElementById('map-search-clear');
-
-  // ── Lat/Lon parser — รับหลายรูปแบบ ────────────────────────────────────────
-  // รองรับ: "13.75, 100.52"  "13.75 100.52"  "13°45'N 100°31'E"  "13.75N 100.52E"
-  function parseLatLon(q) {
-    q = q.trim();
-    // pattern: สองตัวเลข คั่นด้วย comma/space/tab
-    const m1 = q.match(/^([+-]?\d+(?:\.\d+)?)[°\s,]+([+-]?\d+(?:\.\d+)?)°?\s*$/);
-    if (m1) {
-      const a = parseFloat(m1[1]), b = parseFloat(m1[2]);
-      if (!isNaN(a) && !isNaN(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180)
-        return { lat: a, lon: b };
-    }
-    // pattern: DMS "13°45'30\"N 100°31'20\"E"
-    const m2 = q.match(/(\d+)[°d]\s*(\d+)['\u2019m]\s*([\d.]+)["\u201ds]?\s*([NS])\s+(\d+)[°d]\s*(\d+)['\u2019m]\s*([\d.]+)["\u201ds]?\s*([EW])/i);
-    if (m2) {
-      let lat = +m2[1] + +m2[2]/60 + +m2[3]/3600;
-      if (m2[4].toUpperCase()==='S') lat = -lat;
-      let lon = +m2[5] + +m2[6]/60 + +m2[7]/3600;
-      if (m2[8].toUpperCase()==='W') lon = -lon;
-      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) return { lat, lon };
-    }
-    // pattern: "13.75N 100.52E"
-    const m3 = q.match(/^([\d.]+)\s*([NS])[,\s]+([\d.]+)\s*([EW])$/i);
-    if (m3) {
-      let lat = parseFloat(m3[1]); if (m3[2].toUpperCase()==='S') lat=-lat;
-      let lon = parseFloat(m3[3]); if (m3[4].toUpperCase()==='W') lon=-lon;
-      if (lat>=-90&&lat<=90&&lon>=-180&&lon<=180) return {lat,lon};
-    }
-    return null;
+  /* ── Haversine distance (m) ── */
+  function haversine(lat1,lon1,lat2,lon2){
+    var R=6371e3, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+      Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+      Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   }
 
-  // ── Get map (อาจยังไม่พร้อมตอน script โหลด) ──────────────────────────────
-  function getMap() { return window.map || null; }
-
-  // ── Search Stations ในข้อมูลของ app ────────────────────────────────────────
-  function searchStations(q) {
-    // SENSORS เป็น let ใน outer script — ดึงมาตรงๆ ได้เลย (same page)
-    let src = [];
-    try {
-      if (typeof SENSORS !== 'undefined' && SENSORS && SENSORS.length) src = SENSORS;
-      else if (typeof SENSORS_FALLBACK !== 'undefined' && SENSORS_FALLBACK) src = SENSORS_FALLBACK;
-    } catch(e) { src = []; }
-    if (!src.length) return [];
-    const ql = q.toLowerCase();
-    return src
-      .filter(s => {
-        const name = (s.name || s.label || String(s.id||'') || '').toLowerCase();
-        return name.includes(ql) && s.lat != null && s.lon != null;
-      })
-      .slice(0, 5)
-      .map(s => ({
-        type: 'station',
-        label: s.name || s.label || String(s.id),
-        sub: `สถานี · ${(s.frc != null ? (+s.frc).toFixed(3)+' mg/L' : '')} ${(s.ec != null ? '⚡'+s.ec : '')}`.trim(),
-        lat: +s.lat, lon: +s.lon,
-        id: s.id
-      }));
+  /* ── Bearing from user to station (degrees) ── */
+  function bearing(lat1,lon1,lat2,lon2){
+    var dLon=(lon2-lon1)*Math.PI/180;
+    var y=Math.sin(dLon)*Math.cos(lat2*Math.PI/180);
+    var x=Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180)-
+      Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos(dLon);
+    var brng=Math.atan2(y,x)*180/Math.PI;
+    return (brng+360)%360;
   }
 
-  // ── Nominatim geocoding ─────────────────────────────────────────────────────
-  async function nominatimSearch(q) {
-    // ไม่ lock countrycodes=th เพื่อให้หาชื่อภาษาอังกฤษ/ต่างประเทศได้ด้วย
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&accept-language=th,en`;
-    try {
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const data = await res.json();
-      return data.map(d => ({
-        type: 'place',
-        label: d.display_name.split(',').slice(0,2).join(',').trim(),
-        sub: d.display_name.split(',').slice(2,4).join(',').trim() || d.type,
-        lat: parseFloat(d.lat),
-        lon: parseFloat(d.lon),
-        osm_type: d.osm_type,
-        category: d.category
-      }));
-    } catch(e) {
-      // fallback: ไม่แสดง error
-      return [];
-    }
+  /* ── Compass direction text ── */
+  function compassDir(deg){
+    var dirs=['N','NE','E','SE','S','SW','W','NW'];
+    return dirs[Math.round(deg/45)%8];
   }
 
-  // ── Show dropdown ───────────────────────────────────────────────────────────
-  function showDropdown(items, loading) {
-    _results = items;
-    _activeIdx = -1;
-    const d = drop();
-    if (loading) {
-      d.innerHTML = '<div class="msd-spinner">กำลังค้นหา…</div>';
-      d.classList.add('open');
-      return;
-    }
-    if (!items.length) {
-      d.innerHTML = '<div class="msd-empty">ไม่พบสถานที่ — ลองพิมพ์ lat, lon</div>';
-      d.classList.add('open');
-      return;
-    }
-    d.innerHTML = items.map((it, i) => {
-      const icon = it.type === 'latlng' ? '📍' : it.type === 'station' ? '🌸' : '🗺️';
-      return `<div class="msd-item${it.type==='latlng'?' msd-latlng':''}" 
-        onmousedown="event.preventDefault()" 
-        onclick="window._mapSearchSelect(${i})" 
-        onmouseover="window._mapSearchHover(${i})">
-        <span class="msd-icon">${icon}</span>
-        <div>
-          <div class="msd-main">${escapeHtml(it.label)}</div>
-          ${it.sub ? `<div class="${it.type==='latlng'?'msd-latlon':'msd-sub'}">${escapeHtml(it.sub)}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    d.classList.add('open');
+  /* ── FRC color ── */
+  function frcColor(v){
+    if(v>=1.5) return '#642896';
+    if(v>=1.2) return '#2850b4';
+    if(v>=0.8) return '#32beaa';
+    if(v>=0.5) return '#78c850';
+    if(v>=0.2) return '#f0aa14';
+    return '#be1e14';
   }
 
-  function hideDropdown() {
-    drop().classList.remove('open');
-    _activeIdx = -1;
+  function ecColor(v){
+    if(v>=600) return '#be1e14';
+    if(v>=500) return '#f0aa14';
+    if(v>=400) return '#78c850';
+    if(v>=300) return '#32beaa';
+    if(v>=200) return '#2850b4';
+    return '#642896';
   }
 
-  function escapeHtml(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  // ── FlyTo ──────────────────────────────────────────────────────────────────
-  function flyTo(lat, lon, label, zoom) {
-    const m = getMap();
-    if (!m) {
-      // map ยังไม่พร้อม — รอ 300ms แล้วลองใหม่
-      setTimeout(() => flyTo(lat, lon, label, zoom), 300);
-      return;
-    }
-    zoom = zoom || 15;
-    m.flyTo([lat, lon], zoom, { animate: true, duration: 1.1 });
-    // ลบ marker เก่า
-    if (_flyMarker) { try { m.removeLayer(_flyMarker); } catch(e){} }
-    // สร้าง custom pin marker
-    const ic = L.divIcon({
-      className: '',
-      html: `<div style="
-        background:#cc0055;color:#fff;
-        border:2.5px solid #fff;border-radius:50% 50% 50% 0;
-        width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-        font-size:14px;transform:rotate(-45deg);
-        box-shadow:0 3px 12px rgba(204,0,85,.45),0 0 0 2px rgba(204,0,85,.18);
-      "><span style="transform:rotate(45deg)">📍</span></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 28]
-    });
-    _flyMarker = L.marker([lat, lon], { icon: ic, zIndexOffset: 5000 });
-    _flyMarker.addTo(m);
-    // Popup
-    const popHtml = `<div style="font-family:'Sarabun',sans-serif;padding:4px 2px;min-width:160px;">
-      <div style="font-weight:700;font-size:12px;color:#cc0055;margin-bottom:3px;">${escapeHtml(label)}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a06080;">
-        ${lat.toFixed(6)}, ${lon.toFixed(6)}
-      </div>
-      <button onclick="(function(){var m=window.map;var mk=window._msdFlyMarker;if(m&&mk){m.removeLayer(mk);window._msdFlyMarker=null;}})()" 
-        style="margin-top:5px;font-size:10px;color:#cc0055;background:none;border:none;cursor:pointer;padding:0;font-family:'Sarabun',sans-serif;">
-        ✕ ลบหมุด
-      </button>
-    </div>`;
-    _flyMarker.bindPopup(popHtml, { className: 'msd-flyto-popup', closeButton: false });
-    setTimeout(() => { try { _flyMarker.openPopup(); } catch(e){} }, 600);
-    window._msdFlyMarker = _flyMarker;
-  }
-
-  // ── Select item ────────────────────────────────────────────────────────────
-  window._mapSearchSelect = function(i) {
-    const it = _results[i];
-    if (!it) return;
-    inp().value = it.label;
-    clr().classList.add('visible');
-    hideDropdown();
-    const zoom = it.type === 'station' ? 16 : it.type === 'latlng' ? 15 : 14;
-    flyTo(it.lat, it.lon, it.label, zoom);
-  };
-
-  window._mapSearchHover = function(i) {
-    _activeIdx = i;
-    Array.from(drop().querySelectorAll('.msd-item')).forEach((el, j) => {
-      el.style.background = j === i ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '';
-    });
-  };
-
-  // ── Input handler ──────────────────────────────────────────────────────────
-  window.onMapSearchInput = function(val) {
-    clr().classList.toggle('visible', val.length > 0);
-    _lastQuery = val;
-    clearTimeout(_searchTimer);
-
-    if (!val.trim()) { hideDropdown(); return; }
-
-    // 1. ลอง parse lat/lon ก่อน
-    const ll = parseLatLon(val);
-    const localItems = [];
-    if (ll) {
-      localItems.push({
-        type: 'latlng',
-        label: `📍 ${ll.lat.toFixed(6)}, ${ll.lon.toFixed(6)}`,
-        sub: `lat ${ll.lat.toFixed(6)}  lon ${ll.lon.toFixed(6)}`,
-        lat: ll.lat, lon: ll.lon
+  /* ── Get nearest stations from SENSORS ── */
+  function findNearestStations(){
+    if(_arUserLat===null||_arUserLon===null) return [];
+    var list = [];
+    var sensors = (typeof SENSORS!=='undefined'&&SENSORS.length>0)?SENSORS:
+      (typeof SENSORS_FALLBACK!=='undefined'?SENSORS_FALLBACK:[]);
+    for(var i=0;i<sensors.length;i++){
+      var s=sensors[i];
+      if(!s.lat||!s.lon) continue;
+      var d=haversine(_arUserLat,_arUserLon,s.lat,s.lon);
+      var b=bearing(_arUserLat,_arUserLon,s.lat,s.lon);
+      list.push({
+        id:s.id,name:s.name,lat:s.lat,lon:s.lon,
+        frc:s.frc||0,ec:s.ec||0,type:s.type||'monitor',
+        dist:d,bearing:b
       });
     }
+    list.sort(function(a,b){return a.dist-b.dist;});
+    return list.slice(0,10);
+  }
 
-    // 2. ค้นหาสถานีในข้อมูล app
-    const stItems = searchStations(val);
-    const combined = [...localItems, ...stItems];
-    if (combined.length) showDropdown(combined, false);
-    else showDropdown([], true);
+  /* ── Format distance ── */
+  function fmtDist(m){
+    if(m<1000) return Math.round(m)+' m';
+    return (m/1000).toFixed(1)+' km';
+  }
 
-    // 3. เรียก Nominatim หลัง debounce 500ms
-    _searchTimer = setTimeout(async () => {
-      if (val !== _lastQuery) return;
-      showDropdown(combined, true);
-      const places = await nominatimSearch(val);
-      if (val !== _lastQuery) return;
-      const merged = [...localItems, ...stItems, ...places];
-      showDropdown(merged.slice(0, 8), false);
-    }, 500);
-  };
-
-  // ── Key handler ────────────────────────────────────────────────────────────
-  window.onMapSearchKey = function(e) {
-    const d = drop();
-    const items = d.querySelectorAll('.msd-item');
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      _activeIdx = Math.min(_activeIdx + 1, items.length - 1);
-      items.forEach((el,j) => el.style.background = j===_activeIdx ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '');
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      _activeIdx = Math.max(_activeIdx - 1, -1);
-      items.forEach((el,j) => el.style.background = j===_activeIdx ? (document.body.classList.contains('dark') ? 'rgba(233,69,96,.12)' : '#fff0f5') : '');
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (_activeIdx >= 0 && _results[_activeIdx]) {
-        window._mapSearchSelect(_activeIdx);
-      } else {
-        doMapSearch();
-      }
-    } else if (e.key === 'Escape') {
-      hideDropdown();
-      inp().blur();
-    }
-  };
-
-  // ── Explicit search button ─────────────────────────────────────────────────
-  window.doMapSearch = async function() {
-    const val = inp().value.trim();
-    if (!val) return;
-    // lat/lon ตรง
-    const ll = parseLatLon(val);
-    if (ll) {
-      hideDropdown();
-      flyTo(ll.lat, ll.lon, `${ll.lat.toFixed(6)}, ${ll.lon.toFixed(6)}`, 15);
+  /* ── Update bottom card ── */
+  function updateNearestCard(){
+    _arNearestStations = findNearestStations();
+    if(_arNearestStations.length===0){
+      document.getElementById('ar-stn-name-text').textContent='ไม่พบสถานี';
+      document.getElementById('ar-val-1').textContent='--';
+      document.getElementById('ar-val-2').textContent='--';
+      document.getElementById('ar-dist-text').textContent='ระยะห่าง: --';
+      document.getElementById('ar-bearing-text').textContent='ทิศ: --';
       return;
     }
-    // Nominatim
-    showDropdown([], true);
-    const places = await nominatimSearch(val);
-    if (places.length) {
-      const stItems = searchStations(val);
-      showDropdown([...stItems, ...places].slice(0, 8), false);
+    var n=_arNearestStations[0];
+    document.getElementById('ar-stn-name-text').textContent=n.name;
+    document.getElementById('ar-val-1').textContent=(n.frc||0).toFixed(2);
+    document.getElementById('ar-val-2').textContent=Math.round(n.ec||0);
+    document.getElementById('ar-dist-text').textContent='📍 '+fmtDist(n.dist);
+    document.getElementById('ar-bearing-text').textContent='🧭 '+compassDir(n.bearing)+' ('+Math.round(n.bearing)+'°)';
+
+    // Color dot
+    var dotEl=document.querySelector('#ar-nearest-card .ar-dot');
+    if(dotEl){
+      var c=_arParam==='frc'?frcColor(n.frc):ecColor(n.ec);
+      dotEl.style.background=c;
+      dotEl.style.boxShadow='0 0 6px '+c+'80';
+    }
+  }
+
+  /* ── Draw AR overlay on canvas ── */
+  function drawAROverlay(){
+    if(!_arOpen) return;
+    _arAnimId = requestAnimationFrame(drawAROverlay);
+    if(!_arCanvas) return;
+
+    var W=_arCanvas.width=_arCanvas.offsetWidth*2;
+    var H=_arCanvas.height=_arCanvas.offsetHeight*2;
+    _arCtx.clearRect(0,0,W,H);
+
+    if(_arNearestStations.length===0||_arHeading===null) return;
+
+    var fov=60; // camera horizontal FOV approx
+    var cx=W/2, cy=H*0.4;
+
+    for(var i=0;i<_arNearestStations.length;i++){
+      var s=_arNearestStations[i];
+      // angle difference from heading
+      var diff=s.bearing-_arHeading;
+      if(diff>180) diff-=360;
+      if(diff<-180) diff+=360;
+
+      // Only show if within FOV
+      if(Math.abs(diff)>fov) continue;
+
+      var x=cx+(diff/fov)*W*0.5;
+      // Y offset based on distance (closer = lower)
+      var yOff=Math.min(200, 20000/Math.max(s.dist,100));
+      var y=cy-yOff;
+
+      // Scale based on distance
+      var scale=Math.max(0.5, Math.min(1.5, 2000/Math.max(s.dist,200)));
+
+      var val=_arParam==='frc'?s.frc:s.ec;
+      var color=_arParam==='frc'?frcColor(s.frc):ecColor(s.ec);
+      var unit=_arParam==='frc'?'mg/L':'µS/cm';
+      var valText=_arParam==='frc'?(val||0).toFixed(2):Math.round(val||0);
+
+      // Draw connecting line
+      _arCtx.beginPath();
+      _arCtx.moveTo(x,y+30*scale);
+      _arCtx.lineTo(x,y+60*scale);
+      _arCtx.strokeStyle='rgba(38,166,154,0.4)';
+      _arCtx.lineWidth=1*scale;
+      _arCtx.stroke();
+
+      // Draw dot at bottom
+      _arCtx.beginPath();
+      _arCtx.arc(x,y+64*scale,4*scale,0,Math.PI*2);
+      _arCtx.fillStyle=color;
+      _arCtx.fill();
+      _arCtx.shadowBlur=8*scale;
+      _arCtx.shadowColor=color;
+      _arCtx.fill();
+      _arCtx.shadowBlur=0;
+
+      // Draw bubble background
+      var bw=140*scale, bh=52*scale, br=8*scale;
+      var bx=x-bw/2, by=y-bh/2;
+      _arCtx.beginPath();
+      _arCtx.roundRect(bx,by,bw,bh,br);
+      _arCtx.fillStyle='rgba(0,0,0,0.7)';
+      _arCtx.fill();
+      _arCtx.strokeStyle=color+'99';
+      _arCtx.lineWidth=1.5*scale;
+      _arCtx.stroke();
+
+      // Station name
+      _arCtx.font=(9*scale)+'px Sarabun,sans-serif';
+      _arCtx.fillStyle='#80cbc4';
+      _arCtx.textAlign='center';
+      var shortName=s.name.length>18?s.name.substring(0,16)+'…':s.name;
+      _arCtx.fillText(shortName,x,by+14*scale);
+
+      // Value
+      _arCtx.font='bold '+(18*scale)+'px JetBrains Mono,monospace';
+      _arCtx.fillStyle='#fff';
+      _arCtx.fillText(valText,x,by+34*scale);
+
+      // Distance
+      _arCtx.font=(8*scale)+'px JetBrains Mono,monospace';
+      _arCtx.fillStyle='#a0a0a0';
+      _arCtx.fillText(fmtDist(s.dist),x,by+46*scale);
+    }
+
+    // Draw compass indicator at top
+    _arCtx.save();
+    _arCtx.font='bold 24px JetBrains Mono,monospace';
+    _arCtx.fillStyle='rgba(38,166,154,0.8)';
+    _arCtx.textAlign='center';
+    var headingText = Math.round(_arHeading||0)+'° '+compassDir(_arHeading||0);
+    _arCtx.fillText(headingText,cx,80);
+    _arCtx.restore();
+  }
+
+  /* ── Toggle AR param ── */
+  window.arToggleParam = function(){
+    _arParam = _arParam==='frc'?'ec':'frc';
+    var btn=document.getElementById('ar-param-toggle');
+    btn.textContent=_arParam.toUpperCase();
+    btn.style.background=_arParam==='frc'?'rgba(204,0,85,.3)':'rgba(16,64,160,.3)';
+    btn.style.borderColor=_arParam==='frc'?'rgba(204,0,85,.5)':'rgba(16,64,160,.5)';
+    document.getElementById('ar-val-label-1').textContent=_arParam==='frc'?'FRC':'EC';
+    document.getElementById('ar-unit-1').textContent=_arParam==='frc'?'mg/L':'µS/cm';
+    updateNearestCard();
+  };
+
+  /* ── Open AR Mode ── */
+  window.toggleARMode = function(){
+    if(_arOpen){ closeARMode(); return; }
+    _arOpen=true;
+    var overlay=document.getElementById('ar-overlay');
+    overlay.classList.add('open');
+    document.getElementById('ar-btn').classList.add('active');
+
+    // Start camera
+    var video=document.getElementById('ar-video');
+    var constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}};
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream){
+      _arStream=stream;
+      video.srcObject=stream;
+      video.play();
+    }).catch(function(err){
+      console.warn('Camera error:',err);
+      document.getElementById('ar-gps-status').textContent='⚠ ไม่สามารถเปิดกล้อง: '+err.message;
+      // Still allow GPS overlay without camera
+      video.style.display='none';
+      overlay.style.background='linear-gradient(135deg,#0a1a1a,#001a0a)';
+    });
+
+    // Start GPS
+    if(navigator.geolocation){
+      document.getElementById('ar-gps-status').textContent='📡 กำลังหา GPS...';
+      _arWatchId=navigator.geolocation.watchPosition(
+        function(pos){
+          _arUserLat=pos.coords.latitude;
+          _arUserLon=pos.coords.longitude;
+          _arAccuracy=pos.coords.accuracy;
+          document.getElementById('ar-gps-status').textContent=
+            '📡 GPS ±'+Math.round(_arAccuracy)+'m';
+          updateNearestCard();
+        },
+        function(err){
+          document.getElementById('ar-gps-status').textContent='⚠ GPS Error: '+err.message;
+        },
+        {enableHighAccuracy:true,timeout:15000,maximumAge:3000}
+      );
     } else {
-      showDropdown([], false);
+      document.getElementById('ar-gps-status').textContent='⚠ GPS ไม่รองรับ';
     }
+
+    // Start device orientation for compass
+    function startOrientation(){
+      window.addEventListener('deviceorientationabsolute',onOrientation,true);
+      window.addEventListener('deviceorientation',onOrientationFallback,true);
+    }
+
+    function onOrientation(e){
+      if(e.absolute&&typeof e.alpha==='number'){
+        _arHeading=(360-e.alpha)%360;
+        // Remove fallback listener once absolute works
+        window.removeEventListener('deviceorientation',onOrientationFallback,true);
+      }
+    }
+    function onOrientationFallback(e){
+      if(typeof e.webkitCompassHeading==='number'){
+        _arHeading=e.webkitCompassHeading;
+      } else if(typeof e.alpha==='number'){
+        _arHeading=(360-e.alpha)%360;
+      }
+    }
+
+    // iOS 13+ requires permission
+    if(typeof DeviceOrientationEvent!=='undefined'&&
+       typeof DeviceOrientationEvent.requestPermission==='function'){
+      DeviceOrientationEvent.requestPermission().then(function(state){
+        if(state==='granted') startOrientation();
+        else document.getElementById('ar-gps-status').textContent+=' | ⚠ เข็มทิศถูกปฏิเสธ';
+      }).catch(function(){
+        startOrientation(); // try anyway
+      });
+    } else {
+      startOrientation();
+    }
+
+    // Start canvas drawing
+    _arCanvas=document.getElementById('ar-canvas');
+    _arCtx=_arCanvas.getContext('2d');
+    drawAROverlay();
   };
 
-  // ── Clear ──────────────────────────────────────────────────────────────────
-  window.clearMapSearch = function() {
-    inp().value = '';
-    clr().classList.remove('visible');
-    hideDropdown();
-    inp().focus();
-    const m = getMap();
-    if (_flyMarker && m) {
-      try { m.removeLayer(_flyMarker); } catch(e){}
-      _flyMarker = null;
+  /* ── Close AR Mode ── */
+  window.closeARMode = function(){
+    _arOpen=false;
+    document.getElementById('ar-overlay').classList.remove('open');
+    document.getElementById('ar-btn').classList.remove('active');
+
+    // Stop camera
+    if(_arStream){
+      _arStream.getTracks().forEach(function(t){t.stop();});
+      _arStream=null;
     }
+    var video=document.getElementById('ar-video');
+    video.srcObject=null;
+    video.style.display='';
+
+    // Stop GPS
+    if(_arWatchId!==null){
+      navigator.geolocation.clearWatch(_arWatchId);
+      _arWatchId=null;
+    }
+
+    // Stop orientation
+    window.removeEventListener('deviceorientationabsolute',function(){},true);
+    window.removeEventListener('deviceorientation',function(){},true);
+
+    // Stop animation
+    if(_arAnimId){cancelAnimationFrame(_arAnimId);_arAnimId=null;}
   };
-
-  // ── Close dropdown when clicking outside ──────────────────────────────────
-  document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('map-search-wrap');
-    if (wrap && !wrap.contains(e.target)) hideDropdown();
-  });
-
-  // ── Prevent map interaction bleeding into search ───────────────────────────
-  document.addEventListener('DOMContentLoaded', function() {
-    const wrap = document.getElementById('map-search-wrap');
-    if (!wrap) return;
-    ['click','dblclick','mousedown','touchstart','wheel','pointerdown']
-      .forEach(ev => wrap.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
-  });
 
 })();
 </script>
-
-<button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.91 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.71 ARMode — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -10989,6 +10993,19 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.91 · M sandbox · Water Quality Division · March 2026</div>
+<h3 style="color:#00897b;font-size:15px;margin:16px 0 6px;">📸 AR Mode (v8.71)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+เปิดกล้องมือถือ ส่องท่อน้ำ/สถานี → ระบบดึง GPS หาตำแหน่ง → overlay ค่า FRC/EC ของสถานีใกล้เคียงบนภาพกล้อง
+</p>
+<table style="width:100%;font-size:11px;border-collapse:collapse;margin:8px 0;"><tr style="background:#00897b;color:#fff;font-weight:700;"><th style="padding:6px 8px;text-align:left;">คุณสมบัติ</th><th style="padding:6px 8px;text-align:left;">รายละเอียด</th></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">Camera</td><td style="padding:5px 8px;color:#111;">getUserMedia — ใช้กล้องหลัง (environment)</td></tr>
+<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">GPS</td><td style="padding:5px 8px;color:#111;">watchPosition — High Accuracy, update ทุก 3 วินาที</td></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">Compass</td><td style="padding:5px 8px;color:#111;">DeviceOrientation API — หมุนมือถือแล้ว tag สถานีเลื่อนตามทิศ</td></tr>
+<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">Overlay</td><td style="padding:5px 8px;color:#111;">Canvas 2D — แสดงชื่อ, ค่า, ระยะห่าง, สี ตามเกณฑ์ FRC/EC</td></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">สลับ Param</td><td style="padding:5px 8px;color:#111;">กดปุ่ม FRC/EC สลับการแสดงผลได้</td></tr>
+</table>
+<p style="font-size:10px;color:#888;margin-top:4px;">⚠ ต้องใช้ HTTPS และอนุญาต Camera + Location | รองรับ iOS 13+, Android Chrome</p>
+
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.71 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
