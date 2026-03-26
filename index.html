@@ -366,18 +366,18 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   /* ── Legend — ลอยทับแผนที่ด้านขวา แสดงครบเสมอ ── */
   #legend-panel {
     position: fixed !important;
-    right: 0 !important; top: auto !important; bottom: 60px !important; left: auto !important;
+    right: 0 !important; top: auto !important; bottom: 100px !important; left: auto !important;
     width: auto !important;
-    max-width: 130px !important;
+    max-width: 105px !important;
     height: auto !important;
-    max-height: calc(100vh - 150px) !important;
+    max-height: calc(100vh - 160px) !important;
     min-height: auto !important;
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 0 !important;
     border-left: none !important;
     border-top: none !important;
-    padding: 6px 6px 8px !important;
+    padding: 4px 4px 6px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     z-index: 800 !important;
@@ -386,14 +386,14 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     -webkit-backdrop-filter: blur(8px) !important;
     box-shadow: -2px 0 16px rgba(0,0,0,.3) !important;
     box-sizing: border-box !important;
-    border-radius: 10px 0 0 10px !important;
+    border-radius: 8px 0 0 8px !important;
     pointer-events: auto !important;
   }
   /* ไม่ใช้ collapsed/expanded บน mobile — แสดงตลอด */
   #legend-panel.lg-collapsed {
     width: auto !important;
-    max-width: 130px !important;
-    padding: 6px 6px 8px !important;
+    max-width: 105px !important;
+    padding: 4px 4px 6px !important;
     align-items: flex-start !important;
     overflow-y: auto !important;
   }
@@ -408,43 +408,43 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   /* Title */
   #legend-panel h4,
   #legend-panel #lg-title {
-    font-size: 9px !important;
+    font-size: 8px !important;
     font-weight: 700 !important;
     color: #ffccdd !important;
-    margin: 0 0 2px !important;
+    margin: 0 0 1px !important;
     text-align: left !important;
     white-space: nowrap !important;
     display: block !important;
   }
   #legend-panel .lg-sub {
     display: block !important;
-    font-size: 8px !important;
+    font-size: 7px !important;
     color: #cc99aa !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 2px !important;
   }
   /* Gradient bar + ticks */
   #legend-panel .lg-grad-wrap {
     display: flex !important;
     flex-direction: row !important;
     align-items: stretch !important;
-    gap: 3px !important;
-    margin-bottom: 4px !important;
+    gap: 2px !important;
+    margin-bottom: 3px !important;
   }
   #legend-panel .lg-grad-bar {
-    width: 12px !important;
-    min-width: 12px !important;
-    height: 120px !important;
-    min-height: 120px !important;
-    border-radius: 3px !important;
+    width: 10px !important;
+    min-width: 10px !important;
+    height: 90px !important;
+    min-height: 90px !important;
+    border-radius: 2px !important;
   }
   #legend-panel .lg-ticks {
-    height: 120px !important;
+    height: 90px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
   }
   #legend-panel .lg-ticks span {
-    font-size: 8px !important;
+    font-size: 7px !important;
     color: #e0c0d0 !important;
     line-height: 1 !important;
     font-family: 'JetBrains Mono', monospace !important;
@@ -452,27 +452,28 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   /* Divider */
   #legend-panel .lg-div {
     display: block !important;
-    border-top: 1px solid rgba(255,255,255,0.15) !important;
-    margin: 4px 0 !important;
+    border-top: 1px solid rgba(255,255,255,0.12) !important;
+    margin: 2px 0 !important;
   }
   /* Legend items (สีกลม + คำอธิบาย) */
   #legend-panel .lg-item,
   #legend-panel #lg-items .lg-item {
     display: flex !important;
-    align-items: center !important;
-    gap: 4px !important;
-    margin-bottom: 3px !important;
+    align-items: flex-start !important;
+    gap: 3px !important;
+    margin-bottom: 2px !important;
   }
   #legend-panel .lg-swatch {
-    width: 8px !important;
-    height: 8px !important;
+    width: 7px !important;
+    height: 7px !important;
     border-radius: 2px !important;
     flex-shrink: 0 !important;
+    margin-top: 2px !important;
   }
   #legend-panel .lg-item span {
-    font-size: 7.5px !important;
+    font-size: 6.5px !important;
     color: #d0c0d0 !important;
-    line-height: 1.3 !important;
+    line-height: 1.25 !important;
   }
   #legend-panel #lg-items {
     display: block !important;
@@ -482,11 +483,11 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #legend-panel #lg-thresh-lines .lg-dline {
     display: flex !important;
     align-items: center !important;
-    gap: 4px !important;
-    margin-bottom: 2px !important;
+    gap: 3px !important;
+    margin-bottom: 1px !important;
   }
   #legend-panel .lg-dline span {
-    font-size: 7.5px !important;
+    font-size: 6.5px !important;
     color: #d0c0d0 !important;
   }
   #legend-panel #lg-thresh-lines {
@@ -2298,7 +2299,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <div class="lg-item"><div class="lg-swatch" style="background:#32beaa;"></div><span>0.5–0.8<br>เขียวฟ้า · ดี</span></div>
       <div class="lg-item"><div class="lg-swatch" style="background:#78c850;"></div><span>0.3–0.5<br>เขียว · ผ่าน</span></div>
       <div class="lg-item"><div class="lg-swatch" style="background:#f0aa14;"></div><span>0.2–0.3<br>ส้ม · เฝ้าระวัง</span></div>
-      <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง · ต่ำกว่ามาตรฐาน ⚠</span></div>
+      <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง
+ต่ำกว่ามาตรฐาน ⚠</span></div>
     </div>
     <div class="lg-div"></div>
     <div id="lg-thresh-lines">
@@ -4869,7 +4871,8 @@ function updateLegendPanel() {
        <div class="lg-item"><div class="lg-swatch" style="background:#32beaa;"></div><span>0.5–0.8<br>เขียวฟ้า · ดี</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#78c850;"></div><span>0.3–0.5<br>เขียว · ผ่าน</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#f0aa14;"></div><span>0.2–0.3<br>ส้ม · เฝ้าระวัง</span></div>
-       <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง · ต่ำกว่ามาตรฐาน ⚠</span></div>`;
+       <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง
+ต่ำกว่ามาตรฐาน ⚠</span></div>`;
   document.getElementById('lg-line1-label').textContent = isEC ? '210 μS/cm' : '0.2 mg/L';
   document.getElementById('lg-line1-label').style.color  = isEC ? '#1e78dc' : '#b40000';
   document.getElementById('lg-line2-label').textContent = isEC ? '300 μS/cm' : '1.0 mg/L';
@@ -11274,7 +11277,7 @@ function submitFeedback(){
     _flyMarker._msdLon = lon;
     if (!window._msdPins) window._msdPins = [];
     window._msdPins.push(_flyMarker);
-    _flyMarker.bindPopup(popHtml, { className: 'msd-flyto-popup pk-pop', closeButton: false, maxWidth: 360, autoPan: false });
+    _flyMarker.bindPopup(popHtml, { className: 'msd-flyto-popup pk-pop', closeButton: false, maxWidth: 360, autoPan: true, autoPanPaddingTopLeft: [10, 80], autoPanPaddingBottomRight: [10, 40] });
     // เปิด popup หลัง flyTo animation เสร็จ
     setTimeout(() => { try { _flyMarker.openPopup(); } catch(e){} }, 700);
     window._msdFlyMarker = _flyMarker;
