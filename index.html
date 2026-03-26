@@ -4595,8 +4595,8 @@ function _ensureTipEls() {
     _tipLabelEl = document.getElementById('tip-label');
   }
 }
-map.on('popupopen',  () => { _popupOpen = true;  _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='0.08'; });
-map.on('popupclose', () => { _popupOpen = false; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='1'; });
+map.on('popupopen',  () => { _popupOpen = true;  _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='0.08'; if(window.innerWidth<=640){var lp=document.getElementById('legend-panel');if(lp)lp.style.display='none';} });
+map.on('popupclose', () => { _popupOpen = false; var fc=document.getElementById('flow-canvas'); if(fc) fc.style.opacity='1'; if(window.innerWidth<=640){var lp=document.getElementById('legend-panel');if(lp)lp.style.display='';} });
 map.on('mousemove',e=>{
   _ensureTipEls();
   const tip=_tipEl;
