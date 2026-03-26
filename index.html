@@ -5849,7 +5849,7 @@ buildIdwCache();                           // pre-compute cache ด้วย fal
 fetchAndUpdate();                          // โหลดครั้งแรก
 setInterval(fetchAndUpdate, POLL_INTERVAL); // poll ทุก 15 นาที
 
-// ── URL Parameter Handler — flyTo + pin สำหรับ LINE Bot ──────────────────
+// ── URL Parameter Handler — flyTo + popup คุณภาพน้ำ สำหรับ LINE Bot ──────
 (function handleUrlParams() {
   var params = new URLSearchParams(window.location.search);
   var flytoParam = params.get('flyto');
@@ -5863,44 +5863,56 @@ setInterval(fetchAndUpdate, POLL_INTERVAL); // poll ทุก 15 นาที
       var lon = parts[1];
       var zoom = parts[2] || 15;
 
+      // รอให้ map + data + search module โหลดเสร็จ
       setTimeout(function() {
-        map.flyTo([lat, lon], zoom, { duration: 1.5 });
+        // ใช้ search input + trigger เพื่อให้ได้ popup คุณภาพน้ำเหมือน search บนแผนที่
+        var searchInput = document.getElementById('map-search-input');
+        if (searchInput) {
+          searchInput.value = lat.toFixed(5) + ', ' + lon.toFixed(5);
+          // dispatch input event เพื่อ trigger clear button
+          searchInput.dispatchEvent(new Event('input'));
+          setTimeout(function() {
+            var searchBtn = document.getElementById('map-search-btn');
+            if (searchBtn) searchBtn.click();
 
-        if (pinParam) {
-          var pinParts = pinParam.split(',').map(Number);
-          if (pinParts.length >= 2 && !isNaN(pinParts[0]) && !isNaN(pinParts[1])) {
-            var pinIcon = L.divIcon({
-              className: 'url-pin-marker',
-              html: '<div style="width:24px;height:24px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(204,0,85,0.5),0 0 0 4px rgba(204,0,85,0.2);"></div>',
-              iconSize: [24, 24],
-              iconAnchor: [12, 12]
-            });
-            L.marker([pinParts[0], pinParts[1]], { icon: pinIcon })
-              .addTo(map)
-              .bindPopup('<div style="font-size:13px;font-weight:600;color:#3a0a20;">📍 ตำแหน่งที่เลือก</div><div style="font-size:11px;color:#666;">' + pinParts[0].toFixed(5) + ', ' + pinParts[1].toFixed(5) + '</div>')
-              .openPopup();
-          }
+            // ปักหมุด pin เพิ่มเติม (ถ้ามี)
+            if (pinParam) {
+              setTimeout(function() {
+                var pinParts = pinParam.split(',').map(Number);
+                if (pinParts.length >= 2 && !isNaN(pinParts[0]) && !isNaN(pinParts[1])) {
+                  var pinIcon = L.divIcon({
+                    className: 'url-pin-marker',
+                    html: '<div style="width:20px;height:20px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(204,0,85,0.5),0 0 0 4px rgba(204,0,85,0.15);"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                  });
+                  L.marker([pinParts[0], pinParts[1]], { icon: pinIcon, zIndexOffset: 8000 }).addTo(map);
+                }
+              }, 1000);
+            }
+          }, 800);
+        } else {
+          // fallback ถ้าไม่มี search input
+          map.flyTo([lat, lon], zoom, { duration: 1.5 });
         }
 
+        // ถ้ามี station → ค้นหาสถานีแล้ว flyTo พร้อม popup
         if (stationParam) {
           setTimeout(function() {
             var targetSensor = SENSORS.find(function(s) {
               return String(s.id).toUpperCase() === stationParam.toUpperCase();
             });
-            if (targetSensor) {
-              map.flyTo([targetSensor.lat, targetSensor.lon], 15, { duration: 1 });
-              map.eachLayer(function(layer) {
-                if (layer.getLatLng) {
-                  var latlng = layer.getLatLng();
-                  if (Math.abs(latlng.lat - targetSensor.lat) < 0.001 && Math.abs(latlng.lng - targetSensor.lon) < 0.001) {
-                    layer.openPopup();
-                  }
-                }
-              });
+            if (targetSensor && searchInput) {
+              searchInput.value = targetSensor.lat.toFixed(5) + ', ' + targetSensor.lon.toFixed(5);
+              searchInput.dispatchEvent(new Event('input'));
+              setTimeout(function() {
+                var searchBtn = document.getElementById('map-search-btn');
+                if (searchBtn) searchBtn.click();
+              }, 500);
             }
-          }, 2000);
+          }, 1500);
         }
-      }, 2500);
+      }, 3000);
     }
   }
 })();
