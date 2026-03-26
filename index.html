@@ -132,8 +132,10 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   overflow:hidden !important;
   align-items:center;
 }
-#legend-panel.lg-collapsed > *:not(#lg-toggle-btn) {
-  display:none !important;
+@media (min-width: 641px) {
+  #legend-panel.lg-collapsed > *:not(#lg-toggle-btn) {
+    display:none !important;
+  }
 }
 #legend-panel.lg-collapsed #lg-toggle-btn {
   writing-mode:vertical-rl;
@@ -1829,8 +1831,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     const btn   = document.getElementById('lg-toggle-btn');
     if (!panel || !btn) return;
     if (window.innerWidth <= 640) {
-      panel.classList.add('lg-collapsed');
-      btn.textContent = '▶';
+      // mobile: ไม่ collapse — แสดง legend ครบเสมอ
+      panel.classList.remove('lg-collapsed');
+      panel.classList.remove('lg-expanded');
     } else {
       panel.classList.remove('lg-collapsed');
       btn.textContent = '◀';
