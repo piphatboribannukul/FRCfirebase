@@ -4496,6 +4496,23 @@ function buildMarkers() {
          </div>
          <div class="pr"><span style="font-size:9.5px;color:#888">${tt.tt_label}</span><span></span></div>`
       : '';
+    // Fallback: หาพื้นที่รับน้ำ/สาขาจาก MWA_POLYS ถ้า sensor data ไม่มี
+    let _area = s.area || '';
+    let _branch = s.branch || '';
+    if (!_area || !_branch) {
+      try {
+        for (var pi = 0; pi < MWA_POLYS.length; pi++) {
+          if (MWA_POLYS[pi].name && pointInPoly(s.lat, s.lon, MWA_POLYS[pi].coords)) {
+            if (!_area) _area = MWA_POLYS[pi].name;
+            if (!_branch) _branch = 'สาขา' + MWA_POLYS[pi].name;
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+    if (!_area) _area = '—';
+    if (!_branch) _branch = '—';
+
     L.marker([s.lat,s.lon],{icon:L.divIcon({
       html:`<div style="width:${sz}px;height:${sz}px;border-radius:${br};background:${c};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${c}88;cursor:pointer;"></div>`,
       className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
@@ -4503,8 +4520,8 @@ function buildMarkers() {
     .bindPopup(`<div class="lpop">
       <h4 style="color:#111">${s.name}</h4>
       <div class="bigval" style="color:${c}">${paramFormat(pv)} <span style="font-size:14px;color:#555">${paramUnit()}</span></div>
-      <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${s.area||'—'}</span></div>
-      <div class="pr"><span>สาขา</span><span class="pv" style="color:#111">${s.branch||'—'}</span></div>
+      <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${_area}</span></div>
+      <div class="pr"><span>สาขา</span><span class="pv" style="color:#111">${_branch}</span></div>
       <div class="pr"><span>พิกัด</span><span class="pv" style="color:#111">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</span></div>
       <div class="pr"><span>ประเภท</span><span class="pv" style="color:#111">${s.type==='plant'?'โรงงานผลิต':s.type==='pump'?'สถานีสูบ':'จุดตรวจวัด'}</span></div>
       <div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:${c}">${paramStatus(pv)}</span></div>
@@ -11051,17 +11068,48 @@ function submitFeedback(){
       const _ecFb = (typeof EC_FALLBACK !== 'undefined') ? EC_FALLBACK : {};
       const _degKm = (typeof DEG_TO_KM !== 'undefined') ? DEG_TO_KM : 111.0;
 
-      // --- Find nearest source station ---
+      // --- Find nearest source station (ใช้ zone influence เหมือน frcZone) ---
       const sources = _sensors.filter(function(s) {
         return _srcTypes.has(s.type) && !_exclIds.has(String(s.id)) && !_exclNames.has((s.name||'').trim());
       });
       let nearest = null, minD = Infinity, nearestDist = 0;
-      for (var si = 0; si < sources.length; si++) {
-        var s = sources[si];
-        var aLat = s.lat, aLon = s.lon;
-        try { var anch = (typeof getAnchorLatLon !== 'undefined') ? getAnchorLatLon(s) : s; aLat = anch.lat; aLon = anch.lon; } catch(e2){}
-        var d = (aLat - lat) * (aLat - lat) + (aLon - lon) * (aLon - lon);
-        if (d < minD) { minD = d; nearest = s; nearestDist = Math.sqrt(d) * _degKm; }
+
+      // 1. เช็ค CUSTOM_ZONES ก่อน
+      try {
+        var czones = Object.entries(window.CUSTOM_ZONES || {});
+        for (var ci = 0; ci < czones.length; ci++) {
+          var cz = czones[ci];
+          var czSid = cz[0], czData = cz[1];
+          if (czData && czData.coords && pointInPoly(lat, lon, czData.coords)) {
+            var czSrc = sources.find(function(s){ return String(s.id) === czSid; });
+            if (czSrc) { nearest = czSrc; break; }
+          }
+        }
+      } catch(e3){}
+
+      // 2. เช็ค MDIS zone
+      if (!nearest) {
+        try {
+          if (typeof _inMdisZone === 'function' && _inMdisZone(lat, lon)) {
+            nearest = sources.find(function(s) {
+              return (s.name||'').trim() === 'สถานีสูบจ่ายน้ำมหาสวัสดิ์' || s.id === 'SP12';
+            });
+          }
+        } catch(e4){}
+      }
+
+      // 3. fallback: nearest by anchor distance
+      if (!nearest) {
+        for (var si = 0; si < sources.length; si++) {
+          var s = sources[si];
+          var aLat = s.lat, aLon = s.lon;
+          try { var anch = (typeof getAnchorLatLon !== 'undefined') ? getAnchorLatLon(s) : s; aLat = anch.lat; aLon = anch.lon; } catch(e2){}
+          var d = (aLat - lat) * (aLat - lat) + (aLon - lon) * (aLon - lon);
+          if (d < minD) { minD = d; nearest = s; }
+        }
+      }
+      if (nearest) {
+        nearestDist = Math.sqrt((nearest.lat - lat) * (nearest.lat - lat) + (nearest.lon - lon) * (nearest.lon - lon)) * _degKm;
       }
 
       // --- FRC value ---
