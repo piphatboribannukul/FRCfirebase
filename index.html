@@ -361,148 +361,131 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   }
   body.fc-open #disclaimer-bar { display: none !important; }
 
-  /* ── Legend — collapsed bar ที่ล่าง ── */
+  /* ── Legend — แสดงแถบแนวตั้งด้านขวาเหมือน desktop ── */
   #legend-panel {
     position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    top: auto !important;
-    width: 100% !important;
-    height: 56px !important;
-    max-height: 56px !important;
-    min-height: 56px !important;
+    right: 0 !important; top: 50px !important; bottom: auto !important; left: auto !important;
+    width: 48px !important;
+    height: auto !important;
+    max-height: calc(100vh - 60px) !important;
+    min-height: auto !important;
     flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 2px !important;
-    border-left: none !important;
-    border-top: 1.5px solid #f0d0e0 !important;
-    padding: 4px 12px 6px !important;
-    overflow: hidden !important;
-    transition: max-height .3s cubic-bezier(.4,0,.2,1), height .3s !important;
+    align-items: center !important;
+    gap: 0 !important;
+    border-left: 1px solid #f0d0e0 !important;
+    border-top: none !important;
+    padding: 6px 4px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     z-index: 1500 !important;
-    background: #fff !important;
-    box-shadow: 0 -2px 12px rgba(180,0,80,.10) !important;
+    background: rgba(255,255,255,0.95) !important;
+    box-shadow: -2px 0 12px rgba(180,0,80,.08) !important;
     box-sizing: border-box !important;
+    transition: width .3s !important;
   }
-  /* ---- CRITICAL: override desktop lg-collapsed on mobile ---- */
+  /* collapsed: แคบลงแสดงแค่ gradient bar */
   #legend-panel.lg-collapsed {
-    width: 100% !important;
-    height: 56px !important;
-    max-height: 56px !important;
-    padding: 4px 12px 6px !important;
-    align-items: stretch !important;
-    flex-direction: column !important;
+    width: 48px !important;
+    padding: 6px 4px !important;
+    align-items: center !important;
     overflow: hidden !important;
   }
-  #legend-panel.lg-collapsed > *:not(#lg-toggle-btn) {
-    display: block !important;
+  #legend-panel.lg-collapsed > *:not(#lg-toggle-btn):not(.lg-grad-wrap):not(h4) {
+    display: none !important;
   }
+  #legend-panel.lg-collapsed h4 { display: none !important; }
+  #legend-panel.lg-collapsed .lg-grad-wrap { display: flex !important; }
   #legend-panel.lg-collapsed #lg-toggle-btn {
     writing-mode: horizontal-tb !important;
     transform: none !important;
-    width: auto !important;
-    height: auto !important;
+    width: 36px !important;
+    height: 24px !important;
+    font-size: 10px !important;
+    margin-bottom: 4px !important;
   }
-  /* ซ่อน children ทั้งหมดใน collapsed ยกเว้น title + mini-bar + mini-labels + toggle */
-  #legend-panel > *:not(h4):not(#lg-title):not(#lg-toggle-btn):not(.lg-mini-bar):not(.lg-mini-labels) {
-    display: none !important;
-  }
-  /* force show สิ่งที่ต้องการใน collapsed */
-  #legend-panel h4,
-  #legend-panel #lg-title,
-  #legend-panel .lg-mini-bar,
-  #legend-panel .lg-mini-labels,
-  #legend-panel #lg-toggle-btn {
+  /* gradient bar แนวตั้ง */
+  #legend-panel .lg-grad-wrap {
     display: flex !important;
-  }
-  #legend-panel .lg-mini-bar {
-    display: block !important;
-  }
-  #legend-panel.lg-expanded {
-    height: auto !important;
-    max-height: 50vh !important;
-    min-height: 44px !important;
-    overflow-y: auto !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: stretch !important;
-    padding: 10px 14px !important;
-    gap: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    position: fixed !important;
-    z-index: 1500 !important;
+    gap: 2px !important;
   }
-  #legend-panel h4 {
-    font-size: 12px;
-    font-weight: 700;
-    margin: 0;
-    flex: 1;
-    white-space: nowrap;
+  #legend-panel .lg-grad-bar {
+    width: 14px !important;
+    height: 150px !important;
+    min-height: 150px !important;
+    border-radius: 4px !important;
   }
+  #legend-panel .lg-ticks {
+    height: 150px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    font-size: 7px !important;
+  }
+  #legend-panel .lg-ticks span {
+    font-size: 7px !important;
+    line-height: 1 !important;
+  }
+  /* ซ่อน mini-bar/labels บน mobile (ใช้ vertical bar แทน) */
+  #legend-panel .lg-mini-bar { display: none !important; }
+  #legend-panel .lg-mini-labels { display: none !important; }
+  /* ซ่อนรายละเอียดที่ไม่จำเป็น */
   #legend-panel .lg-sub,
-  #legend-panel .lg-grad-wrap,
   #legend-panel .lg-div,
   #legend-panel .lg-items,
   #legend-panel .lg-thresh-lines,
+  #legend-panel #lg-items,
+  #legend-panel #lg-thresh-lines,
   #legend-panel #note-panel-frc,
   #legend-panel #note-panel-ec,
   #legend-panel button:not(#lg-toggle-btn) { display: none !important; }
-  #legend-panel #lg-items { display: none !important; }
-  #legend-panel #lg-thresh-lines { display: none !important; }
-
-  /* collapsed: แสดง gradient bar แนวนอนแทน */
-  #legend-panel .lg-mini-bar {
-    height: 14px;
-    width: 100%;
-    border-radius: 7px;
-    background: linear-gradient(90deg,#be1e14,#f0aa14,#78c850,#32beaa,#2850b4,#642896);
-    flex-shrink: 0;
-    order: 1;
+  /* expanded: กว้างขึ้นแสดงทั้งหมด */
+  #legend-panel.lg-expanded {
+    width: 140px !important;
+    padding: 8px 8px !important;
+    align-items: stretch !important;
   }
-  /* แสดง label ตัวเลขใต้ bar บน mobile */
-  #legend-panel .lg-mini-labels {
-    display: flex !important;
-    justify-content: space-between;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: #a080a0;
-    order: 2;
-    padding: 0 2px;
-  }
-  /* title row */
-  #legend-panel h4 {
-    order: 0;
-    display: flex !important;
-    align-items: center;
-    gap: 6px;
-  }
-  #legend-panel.lg-expanded .lg-mini-bar { display: none !important; }
-  #legend-panel.lg-expanded .lg-mini-labels { display: none !important; }
-  /* show all children when expanded — ยกเว้น note panels (JS จัดการ) */
+  #legend-panel.lg-expanded h4 { display: block !important; font-size: 11px !important; }
+  #legend-panel.lg-expanded .lg-sub { display: block !important; font-size: 10px !important; }
+  #legend-panel.lg-expanded .lg-div { display: block !important; }
+  #legend-panel.lg-expanded .lg-items,
+  #legend-panel.lg-expanded #lg-items { display: block !important; }
+  #legend-panel.lg-expanded .lg-items span,
+  #legend-panel.lg-expanded #lg-items span { font-size: 9px !important; }
+  #legend-panel.lg-expanded .lg-thresh-lines,
+  #legend-panel.lg-expanded #lg-thresh-lines { display: block !important; }
+  #legend-panel.lg-expanded .lg-thresh-lines span { font-size: 9px !important; }
   #legend-panel.lg-expanded > *:not(#note-panel-frc):not(#note-panel-ec) { display: block !important; }
-  #legend-panel.lg-expanded > h4,
-  #legend-panel.lg-expanded > #lg-title { display: block !important; }
   #legend-panel.lg-expanded > #lg-toggle-btn { display: flex !important; }
   #legend-panel.lg-expanded button { display: flex !important; }
-
+  #legend-panel.lg-expanded .lg-mini-bar { display: none !important; }
+  #legend-panel.lg-expanded .lg-mini-labels { display: none !important; }
+  #legend-panel h4 {
+    font-size: 10px;
+    font-weight: 700;
+    margin: 0 0 2px;
+    text-align: center;
+    white-space: nowrap;
+  }
   /* toggle btn */
   #lg-toggle-btn {
     display: flex !important;
     align-items: center; justify-content: center;
-    width: 28px; height: 28px;
+    width: 36px; height: 24px;
     background: #fff0f5;
     border: 1px solid #f0c0d8;
-    border-radius: 50%;
-    font-size: 11px;
+    border-radius: 12px;
+    font-size: 10px;
     color: #cc0055;
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    margin-left: 4px;
+    margin-bottom: 4px;
   }
 
-  /* ── Map wrap — เว้นล่างให้ legend bar ── */
-  #map-wrap { padding-bottom: 56px !important; overflow: hidden; }
+  /* ── Map wrap — ไม่ต้อง padding ล่างแล้ว ── */
+  #map-wrap { padding-bottom: 0 !important; overflow: hidden; }
 
   /* ── Sidebar ── */
   #sidebar { width: 100% !important; }
