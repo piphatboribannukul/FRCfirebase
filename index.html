@@ -367,9 +367,9 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     bottom: 0 !important; left: 0 !important; right: 0 !important;
     top: auto !important;
     width: 100% !important;
-    height: 52px !important;
-    max-height: 52px !important;
-    min-height: 52px !important;
+    height: 56px !important;
+    max-height: 56px !important;
+    min-height: 56px !important;
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 2px !important;
@@ -383,9 +383,39 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     box-shadow: 0 -2px 12px rgba(180,0,80,.10) !important;
     box-sizing: border-box !important;
   }
-  /* ซ่อน children ทั้งหมดใน collapsed */
+  /* ---- CRITICAL: override desktop lg-collapsed on mobile ---- */
+  #legend-panel.lg-collapsed {
+    width: 100% !important;
+    height: 56px !important;
+    max-height: 56px !important;
+    padding: 4px 12px 6px !important;
+    align-items: stretch !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  #legend-panel.lg-collapsed > *:not(#lg-toggle-btn) {
+    display: block !important;
+  }
+  #legend-panel.lg-collapsed #lg-toggle-btn {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  /* ซ่อน children ทั้งหมดใน collapsed ยกเว้น title + mini-bar + mini-labels + toggle */
   #legend-panel > *:not(h4):not(#lg-title):not(#lg-toggle-btn):not(.lg-mini-bar):not(.lg-mini-labels) {
     display: none !important;
+  }
+  /* force show สิ่งที่ต้องการใน collapsed */
+  #legend-panel h4,
+  #legend-panel #lg-title,
+  #legend-panel .lg-mini-bar,
+  #legend-panel .lg-mini-labels,
+  #legend-panel #lg-toggle-btn {
+    display: flex !important;
+  }
+  #legend-panel .lg-mini-bar {
+    display: block !important;
   }
   #legend-panel.lg-expanded {
     height: auto !important;
@@ -416,7 +446,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #legend-panel .lg-thresh-lines,
   #legend-panel #note-panel-frc,
   #legend-panel #note-panel-ec,
-  #legend-panel button { display: none !important; }
+  #legend-panel button:not(#lg-toggle-btn) { display: none !important; }
   #legend-panel #lg-items { display: none !important; }
   #legend-panel #lg-thresh-lines { display: none !important; }
 
@@ -472,7 +502,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   }
 
   /* ── Map wrap — เว้นล่างให้ legend bar ── */
-  #map-wrap { padding-bottom: 40px !important; overflow: hidden; }
+  #map-wrap { padding-bottom: 56px !important; overflow: hidden; }
 
   /* ── Sidebar ── */
   #sidebar { width: 100% !important; }
