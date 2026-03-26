@@ -113,6 +113,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 .tab-btn.inactive:hover{color:#cc0055;background:#fff0f5;}
 #map-wrap{flex:1;position:relative;overflow:hidden;display:flex;}
 #map{flex:1;position:relative;}
+.lg-mini-labels{display:none;}
 #legend-panel{
   width:175px;flex-shrink:0;
   background:#fff;
@@ -366,15 +367,15 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     bottom: 0 !important; left: 0 !important; right: 0 !important;
     top: auto !important;
     width: 100% !important;
-    height: 44px !important;
-    max-height: 44px !important;
-    min-height: 44px !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
+    height: 52px !important;
+    max-height: 52px !important;
+    min-height: 52px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 2px !important;
     border-left: none !important;
     border-top: 1.5px solid #f0d0e0 !important;
-    padding: 0 12px !important;
+    padding: 4px 12px 6px !important;
     overflow: hidden !important;
     transition: max-height .3s cubic-bezier(.4,0,.2,1), height .3s !important;
     z-index: 1500 !important;
@@ -383,7 +384,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     box-sizing: border-box !important;
   }
   /* ซ่อน children ทั้งหมดใน collapsed */
-  #legend-panel > *:not(h4):not(#lg-title):not(#lg-toggle-btn):not(.lg-mini-bar) {
+  #legend-panel > *:not(h4):not(#lg-title):not(#lg-toggle-btn):not(.lg-mini-bar):not(.lg-mini-labels) {
     display: none !important;
   }
   #legend-panel.lg-expanded {
@@ -421,13 +422,32 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 
   /* collapsed: แสดง gradient bar แนวนอนแทน */
   #legend-panel .lg-mini-bar {
-    height: 10px;
-    flex: 1;
-    border-radius: 5px;
+    height: 14px;
+    width: 100%;
+    border-radius: 7px;
     background: linear-gradient(90deg,#be1e14,#f0aa14,#78c850,#32beaa,#2850b4,#642896);
     flex-shrink: 0;
+    order: 1;
+  }
+  /* แสดง label ตัวเลขใต้ bar บน mobile */
+  #legend-panel .lg-mini-labels {
+    display: flex !important;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #a080a0;
+    order: 2;
+    padding: 0 2px;
+  }
+  /* title row */
+  #legend-panel h4 {
+    order: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
   }
   #legend-panel.lg-expanded .lg-mini-bar { display: none !important; }
+  #legend-panel.lg-expanded .lg-mini-labels { display: none !important; }
   /* show all children when expanded — ยกเว้น note panels (JS จัดการ) */
   #legend-panel.lg-expanded > *:not(#note-panel-frc):not(#note-panel-ec) { display: block !important; }
   #legend-panel.lg-expanded > h4,
@@ -2226,6 +2246,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <div id="legend-panel">
     <h4 id="lg-title" style="flex:1;">มาตราส่วนสี</h4>
     <div class="lg-mini-bar" id="lg-mini-bar"></div>
+    <div class="lg-mini-labels"><span>&lt;0.2</span><span>0.3</span><span>0.5</span><span>0.8</span><span>1.0</span><span>&gt;1.2</span></div>
     <button id="lg-toggle-btn" onclick="toggleLegend()" title="หุบ/ขยาย">◀</button>
     <div class="lg-sub" id="lg-unit">(mg/L)</div>
     <div class="lg-grad-wrap">
@@ -4699,33 +4720,47 @@ function goToMyLocation() {
     var lon = pos.coords.longitude;
     var acc = pos.coords.accuracy;
 
+    // ลบ marker/circle เก่า
     if (_gpsMarker) { map.removeLayer(_gpsMarker); _gpsMarker = null; }
     if (_gpsCircle) { map.removeLayer(_gpsCircle); _gpsCircle = null; }
 
+    // วงกลมแสดงความแม่นยำ
     _gpsCircle = L.circle([lat, lon], {
       radius: Math.min(acc, 500),
       color: '#cc0055', fillColor: '#cc0055', fillOpacity: 0.08,
       weight: 1, opacity: 0.3
     }).addTo(map);
 
-    var gpsIcon = L.divIcon({
-      className: 'gps-loc-marker',
-      html: '<div style="width:18px;height:18px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(204,0,85,0.25),0 2px 6px rgba(0,0,0,0.3);"></div>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
-    });
-    _gpsMarker = L.marker([lat, lon], { icon: gpsIcon, zIndexOffset: 9999 })
-      .addTo(map)
-      .bindPopup('<div style="font-size:13px;font-weight:600;color:#cc0055;">📍 ตำแหน่งของฉัน</div><div style="font-size:10px;color:#999;">±' + Math.round(acc) + ' m</div>');
+    // ใช้ search bar เพื่อให้ได้ popup คุณภาพน้ำเหมือน search
+    var searchInput = document.getElementById('map-search-input');
+    if (searchInput) {
+      searchInput.value = lat.toFixed(5) + ', ' + lon.toFixed(5);
+      searchInput.dispatchEvent(new Event('input'));
+      setTimeout(function() {
+        var searchBtn = document.getElementById('map-search-btn');
+        if (searchBtn) searchBtn.click();
 
-    map.flyTo([lat, lon], 15, { duration: 1.2 });
-    _gpsMarker.openPopup();
+        // เพิ่ม GPS marker เฉพาะ (จุดสีชมพู) หลัง search pin
+        setTimeout(function() {
+          var gpsIcon = L.divIcon({
+            className: 'gps-loc-marker',
+            html: '<div style="width:16px;height:16px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(204,0,85,0.25),0 2px 6px rgba(0,0,0,0.3);"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+          });
+          _gpsMarker = L.marker([lat, lon], { icon: gpsIcon, zIndexOffset: 9999 }).addTo(map);
+        }, 800);
+      }, 500);
+    } else {
+      // fallback ถ้าไม่มี search bar
+      map.flyTo([lat, lon], 15, { duration: 1.2 });
+    }
+
     btn.innerHTML = '📍';
     setTimeout(function(){ btn.classList.remove('tracking'); }, 2000);
   }
 
   function onError(err) {
-    // ถ้า high accuracy ล้มเหลว → ลอง low accuracy
     if (err.code !== 1) {
       navigator.geolocation.getCurrentPosition(
         onSuccess,
@@ -4743,7 +4778,6 @@ function goToMyLocation() {
     }
   }
 
-  // ลอง high accuracy ก่อน
   navigator.geolocation.getCurrentPosition(onSuccess, onError,
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
   );
