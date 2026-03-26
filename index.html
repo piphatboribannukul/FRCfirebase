@@ -820,6 +820,23 @@ body.dark #flow-btn.active{background:#1a4a90;color:#fff;box-shadow:0 0 20px rgb
 /* ═══════════════════════════════════════
    🌙 DARK MODE
    ═══════════════════════════════════════ */
+#gps-btn{
+  height:36px;min-width:36px;
+  border:1.5px solid rgba(240,200,220,0.85);border-left:none;
+  border-radius:0 10px 10px 0;
+  background:rgba(255,255,255,0.97);color:#cc0055;
+  font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 10px;flex-shrink:0;
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 2px 10px rgba(180,0,80,.10);
+}
+#gps-btn:hover{background:#fff0f5;color:#e8006a;}
+#gps-btn:active{transform:scale(0.97);}
+#gps-btn.tracking{background:#cc0055;color:#fff;border-color:#cc0055;}
+body.dark #gps-btn{background:rgba(30,30,50,0.95);border-color:rgba(100,100,140,0.3);color:#e94960;}
+body.dark #gps-btn:hover{background:rgba(50,50,70,0.95);}
+body.dark #gps-btn.tracking{background:#cc0055;color:#fff;}
 #dark-toggle{
   background:none;border:1px solid #f0c0d8;border-radius:8px;
   padding:3px 8px;font-size:14px;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);
@@ -1585,7 +1602,7 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
   min-width: 36px;
   border: 1.5px solid rgba(240,200,220,0.85);
   border-left: none;
-  border-radius: 0 10px 10px 0;
+  border-radius: 0;
   background: linear-gradient(135deg,#cc0055,#aa0044);
   color: #fff;
   font-size: 15px;
@@ -1844,6 +1861,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   />
   <button id="map-search-clear" title="ล้าง" onclick="clearMapSearch()">✕</button>
   <button id="map-search-btn" title="ค้นหา" onclick="doMapSearch()">🔍</button>
+  <button id="gps-btn" onclick="goToMyLocation()" title="ตำแหน่งปัจจุบัน">📍</button>
   <div id="map-search-dropdown"></div>
 </div>
 
@@ -4664,6 +4682,73 @@ function renderTab() {
 }
 function flyTo(lat,lon){map.flyTo([lat,lon],13,{duration:1});}
 
+// ── GPS: ไปยังตำแหน่งปัจจุบัน ──
+var _gpsMarker = null;
+var _gpsCircle = null;
+function goToMyLocation() {
+  var btn = document.getElementById('gps-btn');
+  if (!navigator.geolocation) {
+    alert('เบราว์เซอร์ไม่รองรับ GPS');
+    return;
+  }
+  btn.classList.add('tracking');
+  btn.innerHTML = '⏳';
+
+  function onSuccess(pos) {
+    var lat = pos.coords.latitude;
+    var lon = pos.coords.longitude;
+    var acc = pos.coords.accuracy;
+
+    if (_gpsMarker) { map.removeLayer(_gpsMarker); _gpsMarker = null; }
+    if (_gpsCircle) { map.removeLayer(_gpsCircle); _gpsCircle = null; }
+
+    _gpsCircle = L.circle([lat, lon], {
+      radius: Math.min(acc, 500),
+      color: '#cc0055', fillColor: '#cc0055', fillOpacity: 0.08,
+      weight: 1, opacity: 0.3
+    }).addTo(map);
+
+    var gpsIcon = L.divIcon({
+      className: 'gps-loc-marker',
+      html: '<div style="width:18px;height:18px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(204,0,85,0.25),0 2px 6px rgba(0,0,0,0.3);"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    _gpsMarker = L.marker([lat, lon], { icon: gpsIcon, zIndexOffset: 9999 })
+      .addTo(map)
+      .bindPopup('<div style="font-size:13px;font-weight:600;color:#cc0055;">📍 ตำแหน่งของฉัน</div><div style="font-size:10px;color:#999;">±' + Math.round(acc) + ' m</div>');
+
+    map.flyTo([lat, lon], 15, { duration: 1.2 });
+    _gpsMarker.openPopup();
+    btn.innerHTML = '📍';
+    setTimeout(function(){ btn.classList.remove('tracking'); }, 2000);
+  }
+
+  function onError(err) {
+    // ถ้า high accuracy ล้มเหลว → ลอง low accuracy
+    if (err.code !== 1) {
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        function() {
+          btn.innerHTML = '📍';
+          btn.classList.remove('tracking');
+          alert('ไม่สามารถระบุตำแหน่งได้\nกรุณาเปิด Location/GPS ในการตั้งค่ามือถือ');
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      );
+    } else {
+      btn.innerHTML = '📍';
+      btn.classList.remove('tracking');
+      alert('กรุณาอนุญาตการเข้าถึงตำแหน่ง\n\nวิธีเปิด:\n• iPhone: Settings → Safari → Location → Allow\n• Android: กดอนุญาตที่ popup');
+    }
+  }
+
+  // ลอง high accuracy ก่อน
+  navigator.geolocation.getCurrentPosition(onSuccess, onError,
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+  );
+}
+
 // ── updateStats: อัปเดต sidebar stats ────────────────────────────────────
 function updateStats() {
   var _el = function(id) { return document.getElementById(id); };
@@ -5763,6 +5848,62 @@ function showExportMsg(msg, color) {
 buildIdwCache();                           // pre-compute cache ด้วย fallback sensors
 fetchAndUpdate();                          // โหลดครั้งแรก
 setInterval(fetchAndUpdate, POLL_INTERVAL); // poll ทุก 15 นาที
+
+// ── URL Parameter Handler — flyTo + pin สำหรับ LINE Bot ──────────────────
+(function handleUrlParams() {
+  var params = new URLSearchParams(window.location.search);
+  var flytoParam = params.get('flyto');
+  var pinParam = params.get('pin');
+  var stationParam = params.get('station');
+
+  if (flytoParam) {
+    var parts = flytoParam.split(',').map(Number);
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      var lat = parts[0];
+      var lon = parts[1];
+      var zoom = parts[2] || 15;
+
+      setTimeout(function() {
+        map.flyTo([lat, lon], zoom, { duration: 1.5 });
+
+        if (pinParam) {
+          var pinParts = pinParam.split(',').map(Number);
+          if (pinParts.length >= 2 && !isNaN(pinParts[0]) && !isNaN(pinParts[1])) {
+            var pinIcon = L.divIcon({
+              className: 'url-pin-marker',
+              html: '<div style="width:24px;height:24px;background:#cc0055;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(204,0,85,0.5),0 0 0 4px rgba(204,0,85,0.2);"></div>',
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            });
+            L.marker([pinParts[0], pinParts[1]], { icon: pinIcon })
+              .addTo(map)
+              .bindPopup('<div style="font-size:13px;font-weight:600;color:#3a0a20;">📍 ตำแหน่งที่เลือก</div><div style="font-size:11px;color:#666;">' + pinParts[0].toFixed(5) + ', ' + pinParts[1].toFixed(5) + '</div>')
+              .openPopup();
+          }
+        }
+
+        if (stationParam) {
+          setTimeout(function() {
+            var targetSensor = SENSORS.find(function(s) {
+              return String(s.id).toUpperCase() === stationParam.toUpperCase();
+            });
+            if (targetSensor) {
+              map.flyTo([targetSensor.lat, targetSensor.lon], 15, { duration: 1 });
+              map.eachLayer(function(layer) {
+                if (layer.getLatLng) {
+                  var latlng = layer.getLatLng();
+                  if (Math.abs(latlng.lat - targetSensor.lat) < 0.001 && Math.abs(latlng.lng - targetSensor.lon) < 0.001) {
+                    layer.openPopup();
+                  }
+                }
+              });
+            }
+          }, 2000);
+        }
+      }, 2500);
+    }
+  }
+})();
 
 // ── Auto-start flow เมื่อแผนที่พร้อม ──
 setTimeout(function() {
@@ -8818,21 +8959,18 @@ function toggleDarkMode() {
   // Rebuild markers so popup charts get correct dark/light colors
   buildMarkers();
 }
-// Auto-restore dark mode from localStorage (default: dark)
+// Auto-restore dark mode from localStorage (default: light)
 (function() {
   try {
     const stored = localStorage.getItem('mwa_dark_mode');
-    // Default to dark mode if no preference stored
-    if (stored !== '0') {
+    // Default to light mode if no preference stored
+    if (stored === '1') {
       document.body.classList.add('dark');
       const btn = document.getElementById('dark-toggle');
       if (btn) btn.textContent = '☀️';
     }
   } catch(e) {
-    // fallback: default dark
-    document.body.classList.add('dark');
-    const btn = document.getElementById('dark-toggle');
-    if (btn) btn.textContent = '☀️';
+    // fallback: default light — ไม่ต้องทำอะไร
   }
 })();
 
@@ -10876,15 +11014,123 @@ function submitFeedback(){
         wqHtml += '</div>';
       }
 
-      // 🏭 Source station + travel time
+      // 🏭 Source station + travel time + โซนสาขา
       if (nearest) {
+        // หาโซนสาขาประปา
+        let zoneName = '';
+        try {
+          const _mwp = (typeof MWA_POLYS !== 'undefined') ? MWA_POLYS : [];
+          const _pip = (typeof pointInPoly !== 'undefined') ? pointInPoly : null;
+          if (_pip && _mwp.length) {
+            for (var zi = 0; zi < _mwp.length; zi++) {
+              if (_mwp[zi].name && _pip(lat, lon, _mwp[zi].coords)) { zoneName = _mwp[zi].name; break; }
+            }
+          }
+        } catch(e){}
+
         wqHtml += '<div style="margin-top:8px;padding-top:7px;border-top:1.5px solid rgba(200,100,150,0.3);">';
         wqHtml += '<div style="font-size:9px;color:#e8a0c0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">🏭 สถานีต้นทาง</div>';
-        wqHtml += '<div style="font-size:11.5px;font-weight:600;color:#ffccdd;">' + escapeHtml(nearest.name || String(nearest.id)) + '</div>';
+        wqHtml += '<div style="font-size:11.5px;font-weight:600;color:#ffccdd;cursor:pointer;" onclick="(function(){var m=window.map;if(m)m.flyTo(['+nearest.lat+','+nearest.lon+'],15,{duration:0.6});})()">' + escapeHtml(nearest.name || String(nearest.id)) + ' ↗</div>';
         wqHtml += '<div style="display:flex;gap:10px;margin-top:3px;font-size:10px;color:#c0a0b0;font-family:\'JetBrains Mono\',monospace;">';
         wqHtml += '<span>📏 ' + nearestDist.toFixed(1) + ' km</span>';
         if (ttHours != null) wqHtml += '<span>⏱ ~' + (ttHours < 1 ? Math.round(ttHours*60) + ' นาที' : ttHours.toFixed(1) + ' ชม.') + '</span>';
-        wqHtml += '</div></div>';
+        wqHtml += '</div>';
+        if (zoneName) wqHtml += '<div style="margin-top:3px;font-size:10px;color:#90d0ff;">🗺️ สาขา ' + escapeHtml(zoneName) + '</div>';
+        wqHtml += '</div>';
+      }
+
+      // 📊 Sparkline FRC 24 ชม. (nearest source station)
+      if (nearest) {
+        try {
+          const _loadHist = (typeof loadHistory !== 'undefined') ? loadHistory : null;
+          if (_loadHist) {
+            const hist = _loadHist();
+            const sKey = String(nearest.id);
+            const pts = (hist[sKey] || []).filter(function(p) { return p.ts >= Date.now() - 24*3600000 && p.frc != null; });
+            if (pts.length >= 3) {
+              pts.sort(function(a,b){ return a.ts - b.ts; });
+              var fMin = Infinity, fMax = -Infinity;
+              for (var pi = 0; pi < pts.length; pi++) { if(pts[pi].frc < fMin) fMin = pts[pi].frc; if(pts[pi].frc > fMax) fMax = pts[pi].frc; }
+              // ขยาย range เล็กน้อยให้กราฟไม่ชิดขอบ
+              var fPad = (fMax - fMin) * 0.1 || 0.05;
+              fMin = Math.max(0, fMin - fPad);
+              fMax = fMax + fPad;
+              var fRange = fMax - fMin || 0.1;
+
+              // Chart dimensions with axis margins
+              var mL = 32, mR = 6, mT = 4, mB = 18; // margins: left, right, top, bottom
+              var totalW = 220, totalH = 70;
+              var cW = totalW - mL - mR; // chart area width
+              var cH = totalH - mT - mB; // chart area height
+
+              // Time range
+              var tMin = pts[0].ts, tMax = pts[pts.length - 1].ts;
+              var tRange = tMax - tMin || 1;
+
+              // Build path
+              var sparkPts = '';
+              for (var pi = 0; pi < pts.length; pi++) {
+                var sx = mL + ((pts[pi].ts - tMin) / tRange) * cW;
+                var sy = mT + cH - ((pts[pi].frc - fMin) / fRange) * cH;
+                sparkPts += (pi === 0 ? 'M' : 'L') + sx.toFixed(1) + ',' + sy.toFixed(1);
+              }
+
+              var lastPt = pts[pts.length - 1];
+              var ageMin = Math.round((Date.now() - lastPt.ts) / 60000);
+              var ageText = ageMin < 60 ? ageMin + ' นาทีที่แล้ว' : Math.round(ageMin/60) + ' ชม. ที่แล้ว';
+              var ageColor = ageMin > 60 ? '#ff6666' : '#80e0a0';
+
+              wqHtml += '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(200,100,150,0.2);">';
+              wqHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+              wqHtml += '<span style="font-size:9px;color:#c080a0;font-weight:700;text-transform:uppercase;letter-spacing:1px;">📊 FRC ต้นทาง 24 ชม. (mg/L)</span>';
+              wqHtml += '<span style="font-size:9px;color:'+ageColor+';font-family:\'JetBrains Mono\',monospace;">🕐 '+ageText+'</span>';
+              wqHtml += '</div>';
+
+              wqHtml += '<svg width="'+totalW+'" height="'+totalH+'" style="display:block;font-family:\'JetBrains Mono\',monospace;">';
+
+              // Y-axis gridlines + labels (3 ticks)
+              var yTicks = [fMin, (fMin+fMax)/2, fMax];
+              for (var yi = 0; yi < yTicks.length; yi++) {
+                var yy = mT + cH - ((yTicks[yi] - fMin) / fRange) * cH;
+                // gridline
+                wqHtml += '<line x1="'+mL+'" y1="'+yy.toFixed(1)+'" x2="'+(mL+cW)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(180,120,150,0.15)" stroke-width="0.5" stroke-dasharray="3,2"/>';
+                // label
+                wqHtml += '<text x="'+(mL-3)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="#c0a0b0" font-size="8">'+yTicks[yi].toFixed(2)+'</text>';
+              }
+
+              // X-axis labels (first, middle, last timestamps)
+              var xTimes = [pts[0], pts[Math.floor(pts.length/2)], pts[pts.length-1]];
+              for (var xi = 0; xi < xTimes.length; xi++) {
+                var xp = mL + ((xTimes[xi].ts - tMin) / tRange) * cW;
+                var tDate = new Date(xTimes[xi].ts);
+                var tLabel = ('0'+tDate.getHours()).slice(-2) + ':' + ('0'+tDate.getMinutes()).slice(-2);
+                var anchor = xi === 0 ? 'start' : xi === xTimes.length-1 ? 'end' : 'middle';
+                wqHtml += '<text x="'+xp.toFixed(1)+'" y="'+(totalH-2)+'" text-anchor="'+anchor+'" fill="#c0a0b0" font-size="8">'+tLabel+'</text>';
+              }
+
+              // Axis lines
+              wqHtml += '<line x1="'+mL+'" y1="'+mT+'" x2="'+mL+'" y2="'+(mT+cH)+'" stroke="rgba(180,120,150,0.3)" stroke-width="0.5"/>';
+              wqHtml += '<line x1="'+mL+'" y1="'+(mT+cH)+'" x2="'+(mL+cW)+'" y2="'+(mT+cH)+'" stroke="rgba(180,120,150,0.3)" stroke-width="0.5"/>';
+
+              // FRC threshold line at 0.2
+              if (fMin < 0.2 && fMax > 0.2) {
+                var thY = mT + cH - ((0.2 - fMin) / fRange) * cH;
+                wqHtml += '<line x1="'+mL+'" y1="'+thY.toFixed(1)+'" x2="'+(mL+cW)+'" y2="'+thY.toFixed(1)+'" stroke="#e04040" stroke-width="0.8" stroke-dasharray="4,3" opacity="0.7"/>';
+                wqHtml += '<text x="'+(mL+cW+2)+'" y="'+(thY+3).toFixed(1)+'" fill="#e04040" font-size="7">0.2</text>';
+              }
+
+              // Data line
+              wqHtml += '<path d="'+sparkPts+'" fill="none" stroke="#cc0055" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+
+              // Last point dot
+              var lastX = mL + ((lastPt.ts - tMin) / tRange) * cW;
+              var lastY = mT + cH - ((lastPt.frc - fMin) / fRange) * cH;
+              wqHtml += '<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3" fill="#cc0055" stroke="#fff" stroke-width="1"/>';
+
+              wqHtml += '</svg></div>';
+            }
+          }
+        } catch(e){}
       }
 
       // 🌸 FRC section
