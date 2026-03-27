@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev8.10</title>
+<title>M sandbox : Real-Time Chlorine Contour rev9.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1615,7 +1615,7 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
 }
 
 /* ═══════════════════════════════════════
-   🔍 MAP SEARCH BAR — rev8.10
+   🔍 MAP SEARCH BAR — rev9.0
    ═══════════════════════════════════════ */
 #map-search-wrap {
   position: absolute;
@@ -1894,7 +1894,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev8.10</span>
+  <span id="v2-badge">⬡ rev9.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1905,7 +1905,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <span></span><span></span><span></span>
 </button>
 
-<!-- ═══ Map Search Bar — rev8.10 ═══ -->
+<!-- ═══ Map Search Bar — rev9.0 ═══ -->
 <div id="map-search-wrap">
   <input id="map-search-input" type="text"
     placeholder="🔍 ค้นหาสถานที่ หรือ lat, lon…"
@@ -2379,7 +2379,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev8.10 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev9.0 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2431,7 +2431,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev8.10 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev9.0 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2446,7 +2446,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev8.10</h2>
+      <h2>📊 <span>Daily Report</span> — rev9.0</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -2458,6 +2458,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <button class="rp-tab active" onclick="rpTab('frc')">🌸 FRC</button>
         <button class="rp-tab" onclick="rpTab('ec')">⚡ EC</button>
         <button class="rp-tab" onclick="rpTab('feedback')">💬 ข้อเสนอแนะ</button>
+        <button class="rp-tab" onclick="rpTab('stats')">📊 สถิติ</button>
       </div>
       <div id="rp-trend" style="display:none;">
         <div class="rp-section">📊 กราฟเปรียบเทียบผลคาดการณ์</div>
@@ -2490,6 +2491,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
           <div id="rp-fb-err" style="color:#cc0055;font-size:11px;margin-top:6px;display:none;">❌ User หรือ Password ไม่ถูกต้อง</div>
         </div>
         <div id="rp-fb-list" style="display:none;"></div>
+      </div>
+      <!-- v9.0: Stats tab -->
+      <div id="rp-stats" style="display:none;">
+        <div class="rp-section">📊 สถิติผู้เข้าชมเว็บไซต์</div>
+        <div id="rp-stats-content" style="padding:10px;">
+          <div style="text-align:center;color:#a06080;font-size:12px;">⏳ กำลังโหลด...</div>
+        </div>
       </div>
       <div id="rp-frc">
         <div class="rp-section">สรุป FRC ประจำวัน</div>
@@ -4932,8 +4940,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev8.10 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 26 มี.ค.69)</span>'
-      : '<span>⚠ rev8.10 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 26 มี.ค.69)</span>';
+      ? '<span>⚠ rev9.0 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 27 มี.ค.69)</span>'
+      : '<span>⚠ rev9.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 27 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -7957,12 +7965,14 @@ function closeReport() {
   _rpCharts = {};
 }
 function rpTab(mode) {
-  document.querySelectorAll('.rp-tab').forEach((b,i) => b.classList.toggle('active', (mode==='frc'&&i===0)||(mode==='ec'&&i===1)||(mode==='feedback'&&i===2)));
+  document.querySelectorAll('.rp-tab').forEach((b,i) => b.classList.toggle('active', (mode==='frc'&&i===0)||(mode==='ec'&&i===1)||(mode==='feedback'&&i===2)||(mode==='stats'&&i===3)));
   document.getElementById('rp-frc').style.display = mode==='frc'?'':'none';
   document.getElementById('rp-ec').style.display = mode==='ec'?'':'none';
   var trendEl = document.getElementById('rp-trend');
   if (trendEl) trendEl.style.display = 'none';
   document.getElementById('rp-feedback').style.display = mode==='feedback'?'':'none';
+  document.getElementById('rp-stats').style.display = mode==='stats'?'':'none';
+  if (mode==='stats' && typeof _loadRpStats === 'function') _loadRpStats();
 }
 // ── Trend: เปรียบเทียบค่าจริง vs คาดการณ์ ย้อนหลัง 24 ชม. ──
 var _trendInited = false;
@@ -9893,7 +9903,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev8.10 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 26 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev9.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 27 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -10913,7 +10923,7 @@ function submitFeedback(){
 })();
 </script>
 
-<!-- ═══ Map Search Bar Logic — rev8.10 ═══ -->
+<!-- ═══ Map Search Bar Logic — rev9.0 ═══ -->
 <script>
 (function(){
   'use strict';
@@ -11496,12 +11506,88 @@ function submitFeedback(){
 })();
 </script>
 
+<!-- v9.0: Record/Analytics/Feedback System -->
+<script>
+(function(){
+  var _fbDb = typeof db !== 'undefined' ? db : null;
+  var _fbRef2 = typeof ref !== 'undefined' ? ref : null;
+  var _fbPush2 = typeof push !== 'undefined' ? push : null;
+  var _fbGet2 = typeof get !== 'undefined' ? get : null;
+  var _fbSet2 = typeof fbSet !== 'undefined' ? fbSet : null;
+
+  // ── Page View Tracker ──
+  try {
+    var now = new Date();
+    var dateKey = now.toISOString().slice(0, 10);
+    var pvData = { ts: Date.now(), date: dateKey, ua: navigator.userAgent.substring(0, 100), w: screen.width, h: screen.height };
+    if (_fbDb && _fbRef2 && _fbPush2) {
+      _fbPush2(_fbRef2(_fbDb, 'analytics/views'), pvData);
+      _fbGet2(_fbRef2(_fbDb, 'analytics/daily/' + dateKey)).then(function(snap) {
+        var cur = (snap && snap.exists()) ? snap.val() : 0;
+        _fbSet2(_fbRef2(_fbDb, 'analytics/daily/' + dateKey), cur + 1);
+      }).catch(function(){});
+      _fbGet2(_fbRef2(_fbDb, 'analytics/total')).then(function(snap) {
+        var cur = (snap && snap.exists()) ? snap.val() : 0;
+        _fbSet2(_fbRef2(_fbDb, 'analytics/total'), cur + 1);
+      }).catch(function(){});
+    }
+  } catch(e) { console.log('[Analytics]', e.message); }
+
+  // ── Load Stats (exposed as _loadRpStats for report panel) ──
+  window._loadRpStats = _loadStats;
+  async function _loadStats() {
+    var el = document.getElementById('rp-stats-content');
+    if (!el || !_fbDb) { if(el) el.innerHTML = '❌ Firebase ไม่พร้อม'; return; }
+    el.innerHTML = '⏳ กำลังโหลด...';
+    try {
+      var now = new Date();
+      var todayKey = now.toISOString().slice(0, 10);
+      var monthPrefix = now.toISOString().slice(0, 7);
+      var totalSnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/total'));
+      var total = (totalSnap && totalSnap.exists()) ? totalSnap.val() : 0;
+      var todaySnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/daily/' + todayKey));
+      var today = (todaySnap && todaySnap.exists()) ? todaySnap.val() : 0;
+      var dailySnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/daily'));
+      var month = 0, dailyData = [];
+      if (dailySnap && dailySnap.exists()) {
+        dailySnap.forEach(function(child) {
+          var k = child.key, v = child.val() || 0;
+          if (k.startsWith(monthPrefix)) month += v;
+          dailyData.push({ date: k, count: v });
+        });
+      }
+      dailyData.sort(function(a,b) { return b.date.localeCompare(a.date); });
+      var isDk = document.body.classList.contains('dark');
+      var tc = isDk ? '#e0e0ff' : '#1a1a2e';
+      var sc = isDk ? '#a0a0c0' : '#999';
+      var html = '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+      html += '<div style="flex:1;background:'+(isDk?'#2a1a3e':'#f8f4f6')+';border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#cc0055;">'+today+'</div><div style="font-size:10px;color:'+sc+';">วันนี้</div></div>';
+      html += '<div style="flex:1;background:'+(isDk?'#2a1a3e':'#f8f4f6')+';border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#4488ff;">'+month+'</div><div style="font-size:10px;color:'+sc+';">เดือนนี้</div></div>';
+      html += '<div style="flex:1;background:'+(isDk?'#2a1a3e':'#f8f4f6')+';border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#00C853;">'+total+'</div><div style="font-size:10px;color:'+sc+';">ทั้งหมด</div></div>';
+      html += '</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:'+tc+';margin-bottom:6px;">📅 รายวัน (7 วันล่าสุด)</div>';
+      html += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+      html += '<tr style="color:'+sc+';"><td style="padding:4px;">วันที่</td><td style="padding:4px;text-align:right;">จำนวน</td></tr>';
+      for (var i = 0; i < Math.min(7, dailyData.length); i++) {
+        var d = dailyData[i];
+        html += '<tr style="border-top:1px solid '+(isDk?'#333':'#f0e0f0')+';"><td style="padding:4px;color:'+tc+';">'+d.date+'</td><td style="padding:4px;text-align:right;font-weight:700;color:#cc0055;">'+d.count+'</td></tr>';
+      }
+      html += '</table>';
+      el.innerHTML = html;
+    } catch(e) { el.innerHTML = '❌ ' + e.message; }
+  }
+
+  // ── Login ── (ใช้ rpFbLogin ใน report panel แทน)
+  var FB_USERS = { '00102430': '09122531' };
+})();
+</script>
+
 <button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev8.10 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev9.0 — March 2026 · M sandbox</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -11544,6 +11630,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev8.10 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev9.0 · M sandbox · Water Quality Division · March 2026</div>
 </div></div>
 </body></html>
