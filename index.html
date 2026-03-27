@@ -11509,45 +11509,54 @@ function submitFeedback(){
 <!-- v9.0: Record/Analytics/Feedback System -->
 <script>
 (function(){
-  var _fbDb = typeof db !== 'undefined' ? db : null;
-  var _fbRef2 = typeof ref !== 'undefined' ? ref : null;
-  var _fbPush2 = typeof push !== 'undefined' ? push : null;
-  var _fbGet2 = typeof get !== 'undefined' ? get : null;
-  var _fbSet2 = typeof fbSet !== 'undefined' ? fbSet : null;
+  function _fb() { return window._fb; }
+  function _ref(path) { return window._fbRef(window._fb, path); }
+  function _get(r) { return window._fbGet(r); }
+  function _set(r, v) { return window._fbSet(r, v); }
+  function _push(r, v) { return window._fbPush(r, v); }
+  function _ready() { return window._fbReady && window._fb; }
 
   // ── Page View Tracker ──
-  try {
-    var now = new Date();
-    var dateKey = now.toISOString().slice(0, 10);
-    var pvData = { ts: Date.now(), date: dateKey, ua: navigator.userAgent.substring(0, 100), w: screen.width, h: screen.height };
-    if (_fbDb && _fbRef2 && _fbPush2) {
-      _fbPush2(_fbRef2(_fbDb, 'analytics/views'), pvData);
-      _fbGet2(_fbRef2(_fbDb, 'analytics/daily/' + dateKey)).then(function(snap) {
+  function trackView() {
+    if (!_ready()) { setTimeout(trackView, 2000); return; }
+    try {
+      var now = new Date();
+      var dateKey = now.toISOString().slice(0, 10);
+      var pvData = { ts: Date.now(), date: dateKey, ua: navigator.userAgent.substring(0, 100), w: screen.width, h: screen.height };
+      _push(_ref('analytics/views'), pvData);
+      _get(_ref('analytics/daily/' + dateKey)).then(function(snap) {
         var cur = (snap && snap.exists()) ? snap.val() : 0;
-        _fbSet2(_fbRef2(_fbDb, 'analytics/daily/' + dateKey), cur + 1);
+        _set(_ref('analytics/daily/' + dateKey), cur + 1);
       }).catch(function(){});
-      _fbGet2(_fbRef2(_fbDb, 'analytics/total')).then(function(snap) {
+      _get(_ref('analytics/total')).then(function(snap) {
         var cur = (snap && snap.exists()) ? snap.val() : 0;
-        _fbSet2(_fbRef2(_fbDb, 'analytics/total'), cur + 1);
+        _set(_ref('analytics/total'), cur + 1);
       }).catch(function(){});
-    }
-  } catch(e) { console.log('[Analytics]', e.message); }
+    } catch(e) { console.log('[Analytics]', e.message); }
+  }
+  // รอ Firebase พร้อมก่อน
+  if (_ready()) trackView(); else setTimeout(trackView, 3000);
 
   // ── Load Stats (exposed as _loadRpStats for report panel) ──
   window._loadRpStats = _loadStats;
   async function _loadStats() {
     var el = document.getElementById('rp-stats-content');
-    if (!el || !_fbDb) { if(el) el.innerHTML = '❌ Firebase ไม่พร้อม'; return; }
+    if (!el) return;
+    if (!_ready()) {
+      el.innerHTML = '⏳ กำลังรอ Firebase...';
+      setTimeout(function() { _loadStats(); }, 2000);
+      return;
+    }
     el.innerHTML = '⏳ กำลังโหลด...';
     try {
       var now = new Date();
       var todayKey = now.toISOString().slice(0, 10);
       var monthPrefix = now.toISOString().slice(0, 7);
-      var totalSnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/total'));
+      var totalSnap = await _get(_ref('analytics/total'));
       var total = (totalSnap && totalSnap.exists()) ? totalSnap.val() : 0;
-      var todaySnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/daily/' + todayKey));
+      var todaySnap = await _get(_ref('analytics/daily/' + todayKey));
       var today = (todaySnap && todaySnap.exists()) ? todaySnap.val() : 0;
-      var dailySnap = await _fbGet2(_fbRef2(_fbDb, 'analytics/daily'));
+      var dailySnap = await _get(_ref('analytics/daily'));
       var month = 0, dailyData = [];
       if (dailySnap && dailySnap.exists()) {
         dailySnap.forEach(function(child) {
