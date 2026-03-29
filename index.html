@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>M sandbox : Real-Time Chlorine Contour rev9.0</title>
+<title>M sandbox : Real-Time Chlorine Contour rev11.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1615,7 +1615,7 @@ body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
 }
 
 /* ═══════════════════════════════════════
-   🔍 MAP SEARCH BAR — rev9.0
+   🔍 MAP SEARCH BAR — rev11.0
    ═══════════════════════════════════════ */
 #map-search-wrap {
   position: absolute;
@@ -1848,15 +1848,30 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   window.addEventListener('resize', function(){ setMobile(); initLegend(); });
 })();
 </script>
-  <!-- Firebase SDK -->
+  <!-- ═══════════════════════════════════════════════════════════
+       Firebase SDK — rev11.0 Security Upgrade
+       A. Firebase Security Rules (ตั้งใน Firebase Console)
+       B. Firebase Authentication (แทน hardcoded login)
+       C. App Check + Domain Restriction
+       ═══════════════════════════════════════════════════════════ -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getDatabase, ref, set, get, onValue, push, query, orderByKey, limitToLast }
       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-    window._fbReady = false;
-    window._fb = null; // db instance
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { initializeAppCheck, ReCaptchaEnterpriseProvider }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js';
 
-    // ── Firebase Config — แก้ตรงนี้ ──
+    window._fbReady = false;
+    window._fb = null;
+    window._fbAuth = null;
+    window._fbUser = null;
+
+    // ── Firebase Config ──
+    // หมายเหตุ: API key ใน client-side Firebase เป็น public identifier (ไม่ใช่ secret)
+    // ความปลอดภัยอยู่ที่ Security Rules + Auth + App Check + Domain Restriction
+    // ดู: https://firebase.google.com/docs/projects/api-keys
     const firebaseConfig = {
       apiKey:            "AIzaSyC0iyNwGCOIh-kbp6xDfijWBWKiE4iI_Lk",
       authDomain:        "frc-contour.firebaseapp.com",
@@ -1868,7 +1883,26 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     };
 
     const app = initializeApp(firebaseConfig);
-    const db  = getDatabase(app);
+
+    // ── C. App Check — ป้องกัน abuse จากแอปปลอม ──
+    // เปิดใช้งานเมื่อตั้งค่า reCAPTCHA Enterprise ใน Google Cloud Console แล้ว
+    // ขั้นตอน: 1. เปิด reCAPTCHA Enterprise API ใน GCP
+    //          2. สร้าง site key แบบ "Score-based" (invisible)
+    //          3. ใส่ site key ด้านล่าง
+    //          4. เปิด App Check enforcement ใน Firebase Console
+    const RECAPTCHA_SITE_KEY = '6Ld9pJwsAAAAAItyisV1yWOV9OCZ_9qktus0adIX';
+    if (RECAPTCHA_SITE_KEY) {
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
+          isTokenAutoRefreshEnabled: true
+        });
+        console.log('[AppCheck] initialized');
+      } catch(e) { console.warn('[AppCheck] init error:', e.message); }
+    }
+
+    // ── Database ──
+    const db = getDatabase(app);
     window._fb = db;
     window._fbSet  = set;
     window._fbGet  = get;
@@ -1878,11 +1912,175 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     window._fbOrderByKey = orderByKey;
     window._fbLimitToLast = limitToLast;
     window._fbPush = push;
+
+    // ── B. Firebase Authentication ──
+    const auth = getAuth(app);
+    window._fbAuth = auth;
+    window._fbSignIn = signInWithEmailAndPassword;
+    window._fbSignOut = signOut;
+
+    // ติดตามสถานะ login
+    onAuthStateChanged(auth, (user) => {
+      window._fbUser = user;
+      window.dispatchEvent(new CustomEvent('auth-changed', { detail: { user } }));
+      if (user) {
+        console.log('[Auth] signed in:', user.email);
+      } else {
+        console.log('[Auth] signed out');
+      }
+    });
+
     window._fbReady = true;
-    console.log('[Firebase] SDK ready');
+    console.log('[Firebase] SDK ready (rev11.0 — Auth + AppCheck)');
 
     // notify app ที่รอ Firebase
     window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       A. Firebase Security Rules — คัดลอกไปวางใน Firebase Console
+       ═══════════════════════════════════════════════════════════
+       เข้า Firebase Console → Realtime Database → Rules → วาง JSON ด้านล่าง:
+
+       {
+         "rules": {
+           // ── Public read — ข้อมูลสถานีและ forecast ดูได้ทุกคน ──
+           "live": {
+             ".read": true,
+             ".write": "auth != null",
+             "$sensorId": {
+               ".validate": "newData.hasChildren(['frc','ts']) && newData.child('ts').isNumber()"
+             }
+           },
+           "forecast": {
+             ".read": true,
+             ".write": "auth != null",
+             ".validate": "newData.hasChildren(['data','ts'])"
+           },
+
+           // ── History — อ่านได้ทุกคน, เขียนต้อง login ──
+           "history": {
+             ".read": true,
+             "$stationCode": {
+               ".write": "auth != null",
+               "$timestamp": {
+                 ".validate": "newData.hasChildren(['ts']) && newData.child('ts').isNumber()"
+               }
+             },
+             "_station_k_default": {
+               ".write": "auth != null"
+             },
+             "_feedbacks": {
+               ".read": "auth != null",
+               ".write": true,
+               "$fbId": {
+                 ".validate": "newData.hasChildren(['name','msg','time']) && newData.child('name').isString() && newData.child('msg').isString() && newData.child('msg').val().length < 2000"
+               }
+             }
+           },
+
+           // ── Analytics — เขียนได้ทุกคน (page views), อ่านต้อง login ──
+           "analytics": {
+             "views": {
+               ".read": "auth != null",
+               ".write": true,
+               "$viewId": {
+                 ".validate": "newData.hasChildren(['ts','date']) && newData.child('ts').isNumber()"
+               }
+             },
+             "daily": {
+               ".read": true,
+               ".write": true,
+               "$date": {
+                 ".validate": "$date.matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.isNumber()"
+               }
+             },
+             "total": {
+               ".read": true,
+               ".write": true,
+               ".validate": "newData.isNumber()"
+             }
+           },
+
+           // ── ปิดทุกอย่างที่เหลือ ──
+           "$other": {
+             ".read": false,
+             ".write": false
+           }
+         }
+       }
+
+       หลังวาง Rules → กดปุ่ม "Publish"
+
+       ═══════════════════════════════════════════════════════════
+       C. Domain Restriction — ตั้งค่าใน Google Cloud Console
+       ═══════════════════════════════════════════════════════════
+       1. เข้า https://console.cloud.google.com/apis/credentials
+       2. เลือก project "frc-contour"
+       3. คลิกที่ API key (Browser key)
+       4. ตั้ง "Application restrictions" → "HTTP referrers"
+       5. เพิ่ม domain ที่อนุญาต เช่น:
+          - *.github.io/*
+          - *.firebaseapp.com/*
+          - localhost/*  (สำหรับ dev)
+       6. กด "Save"
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+    // ═══ B. Firebase Auth Helper Functions (rev11.0) ═══
+    // แทนที่ hardcoded login ด้วย Firebase Authentication
+
+    /**
+     * สร้าง admin user ครั้งแรก:
+     * 1. เข้า Firebase Console → Authentication → Sign-in method
+     * 2. เปิด "Email/Password" provider
+     * 3. ไปที่ tab "Users" → กด "Add user"
+     * 4. ใส่ email (เช่น admin@frc-contour.app) + password
+     * 5. user จะ login ด้วย email/password นี้แทน hardcoded credentials
+     */
+
+    // Login ด้วย Firebase Auth
+    window.fbAuthLogin = async function(email, password) {
+      if (!window._fbAuth) {
+        return { success: false, error: 'Firebase Auth ยังไม่พร้อม' };
+      }
+      try {
+        const cred = await window._fbSignIn(window._fbAuth, email, password);
+        window._fbUser = cred.user;
+        console.log('[Auth] login success:', cred.user.email);
+        return { success: true, user: cred.user };
+      } catch(e) {
+        console.warn('[Auth] login failed:', e.code, e.message);
+        let msg = 'เข้าสู่ระบบไม่สำเร็จ';
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+          msg = 'Email หรือ Password ไม่ถูกต้อง';
+        } else if (e.code === 'auth/too-many-requests') {
+          msg = 'ลองผิดหลายครั้งเกินไป กรุณารอสักครู่';
+        } else if (e.code === 'auth/invalid-email') {
+          msg = 'รูปแบบ Email ไม่ถูกต้อง';
+        }
+        return { success: false, error: msg };
+      }
+    };
+
+    // Logout
+    window.fbAuthLogout = async function() {
+      if (!window._fbAuth) return;
+      try {
+        await window._fbSignOut(window._fbAuth);
+        window._fbUser = null;
+        console.log('[Auth] logged out');
+      } catch(e) { console.warn('[Auth] logout error:', e.message); }
+    };
+
+    // เช็คว่า login อยู่หรือยัง
+    window.fbIsLoggedIn = function() {
+      return !!(window._fbUser);
+    };
+
+    // ดึง email ของ user ปัจจุบัน
+    window.fbCurrentUser = function() {
+      return window._fbUser ? { email: window._fbUser.email, uid: window._fbUser.uid } : null;
+    };
   </script>
 </head>
 <body>
@@ -1894,7 +2092,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev9.0</span>
+  <span id="v2-badge">⬡ rev11.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -1905,7 +2103,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <span></span><span></span><span></span>
 </button>
 
-<!-- ═══ Map Search Bar — rev9.0 ═══ -->
+<!-- ═══ Map Search Bar — rev11.0 ═══ -->
 <div id="map-search-wrap">
   <input id="map-search-input" type="text"
     placeholder="🔍 ค้นหาสถานที่ หรือ lat, lon…"
@@ -2379,7 +2577,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev9.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev11.0 · Mar 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2416,8 +2614,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <table class="note-tbl ec">
         <tr><th colspan="2">เกณฑ์ EC</th></tr>
         <tr><td>&lt; 150</td><td>ดีมาก</td></tr>
-        <tr><td>150–210</td><td>ดี</td></tr>
-        <tr><td>211–500</td><td>ผ่านมาตรฐาน</td></tr>
+        <tr><td>150–200</td><td>ดี</td></tr>
+        <tr><td>200–500</td><td>ผ่านมาตรฐาน</td></tr>
         <tr><td>501–1200</td><td>เฝ้าระวัง</td></tr>
         <tr><td>&gt; 1200</td><td>สูงกว่ามาตรฐาน (WHO)</td></tr>
       </table>
@@ -2431,7 +2629,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev9.0 · Mar 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev11.0 · Mar 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2446,7 +2644,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <div id="report-overlay">
   <div id="report-panel">
     <div class="rp-header">
-      <h2>📊 <span>Daily Report</span> — rev9.0</h2>
+      <h2>📊 <span>Daily Report</span> — rev11.0</h2>
       <div class="rp-meta">
         <span class="rp-badge" id="rp-date">—</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#a090b8;" id="rp-info">กำลังโหลด...</span>
@@ -2484,15 +2682,16 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
       <div id="rp-feedback" style="display:none;">
         <div id="rp-fb-auth" style="text-align:center;padding:20px;">
-          <div style="font-size:11px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;">🔒 กรุณาเข้าสู่ระบบ</div>
-          <input id="rp-fb-user" type="text" placeholder="User" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:6px;outline:none;display:block;margin-left:auto;margin-right:auto;">
-          <input id="rp-fb-pass" type="password" placeholder="Password" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:8px;outline:none;display:block;margin-left:auto;margin-right:auto;">
+          <div style="font-size:11px;font-weight:600;color:#a06080;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;">🔒 เข้าสู่ระบบ (Firebase Auth)</div>
+          <input id="rp-fb-user" type="email" placeholder="Email" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:6px;outline:none;display:block;margin-left:auto;margin-right:auto;" autocomplete="email">
+          <input id="rp-fb-pass" type="password" placeholder="Password" style="width:200px;padding:7px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;margin-bottom:8px;outline:none;display:block;margin-left:auto;margin-right:auto;" autocomplete="current-password">
           <button onclick="rpFbLogin()" style="width:200px;padding:8px;background:linear-gradient(135deg,#4a1040,#7a2060);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">เข้าสู่ระบบ</button>
-          <div id="rp-fb-err" style="color:#cc0055;font-size:11px;margin-top:6px;display:none;">❌ User หรือ Password ไม่ถูกต้อง</div>
+          <div id="rp-fb-err" style="color:#cc0055;font-size:11px;margin-top:6px;display:none;"></div>
+          <div style="margin-top:8px;font-size:9px;color:#c0a0b0;">ใช้ email/password ที่ตั้งไว้ใน Firebase Console</div>
         </div>
         <div id="rp-fb-list" style="display:none;"></div>
       </div>
-      <!-- v9.0: Stats tab -->
+      <!-- v10.0: Stats tab -->
       <div id="rp-stats" style="display:none;">
         <div class="rp-section">📊 สถิติผู้เข้าชมเว็บไซต์</div>
         <div id="rp-stats-content" style="padding:10px;">
@@ -2602,7 +2801,7 @@ let PARAM_MODE = 'frc';
 // EC config (ความนำไฟฟ้า)
 const EC_CONFIG = {
   unit: 'μS/cm',
-  lo: 210,   // ต่ำกว่าปกติ
+  lo: 200,   // ต่ำกว่าปกติ
   hi: 600,   // เกินมาตรฐาน (WHO drinking water guideline)
   max: 1000, // ค่าสูงสุด scale
   label: 'EC (ความนำไฟฟ้า)',
@@ -2775,21 +2974,21 @@ function getParamVal(s) {
 function ecColor(v, alpha=1) {
   const a = alpha;
   if (v >= EC_CONFIG.hi)   return `rgba(180,40,0,${a})`;    // ≥600 เกินมาตรฐาน
-  if (v >= EC_CONFIG.lo)   return `rgba(20,100,180,${a})`;  // 210–600 ปกติ
-  if (v >= 100)            return `rgba(40,160,220,${a})`;  // 100–210 ต่ำ
+  if (v >= EC_CONFIG.lo)   return `rgba(20,100,180,${a})`;  // 200–600 ปกติ
+  if (v >= 100)            return `rgba(40,160,220,${a})`;  // 100–200 ต่ำ
   return `rgba(180,230,255,${a})`;                           // <100 ต่ำมาก
 }
 
 function ecStatus(v) {
   if (v > 1200)           return `สูงกว่ามาตรฐาน ⚠ (>1200)`;
   if (v > 500)            return `เฝ้าระวัง (501–1200)`;
-  if (v > 210)            return `ผ่านมาตรฐาน (211–500)`;
-  if (v >= 150)           return `ดี (150–210)`;
+  if (v > 200)            return `ผ่านมาตรฐาน (200–500)`;
+  if (v >= 150)           return `ดี (150–200)`;
   return 'ดีมาก (<150)';
 }
 
 function ecColorContour(v, alpha=0.72) {
-  // ฟ้า(<150) → ฟ้าอ่อน(150-210) → เขียว(211-500) → เหลือง(501-1200) → แดง(>1200)
+  // ฟ้า(<150) → ฟ้าอ่อน(150-200) → เขียว(200-500) → เหลือง(501-1200) → แดง(>1200)
   const a = alpha;
   function lerp(r1,g1,b1,r2,g2,b2,t) {
     t = Math.max(0, Math.min(1, t));
@@ -2799,13 +2998,13 @@ function ecColorContour(v, alpha=0.72) {
   if (v < 150) {
     // ฟ้าสด
     [r,g,b] = [80, 180, 255];
-  } else if (v < 210) {
+  } else if (v < 200) {
     // ฟ้าสด → ฟ้าอ่อนสด
-    const t = (v - 150) / 60;
+    const t = (v - 150) / 50;
     [r,g,b] = lerp(80,180,255, 120,210,255, t);
   } else if (v < 240) {
     // ฟ้าอ่อนสด → เหลืองเขียวสด
-    const t = (v - 210) / 30;
+    const t = (v - 200) / 30;
     [r,g,b] = lerp(120,210,255, 160,230,0, t);
   } else if (v < 500) {
     // เหลืองเขียวสด → เหลืองเขียว
@@ -2847,8 +3046,8 @@ function ecColorContourRGBA(v, a) {
   }
   let r,g,b;
   if (v < 150) { [r,g,b] = [80, 180, 255]; }
-  else if (v < 210) { const t = (v-150)/60; [r,g,b] = _lerp3(80,180,255, 120,210,255, t); }
-  else if (v < 240) { const t = (v-210)/30; [r,g,b] = _lerp3(120,210,255, 160,230,0, t); }
+  else if (v < 200) { const t = (v-150)/50; [r,g,b] = _lerp3(80,180,255, 120,210,255, t); }
+  else if (v < 240) { const t = (v-200)/30; [r,g,b] = _lerp3(120,210,255, 160,230,0, t); }
   else if (v < 500) { const t = (v-240)/260; [r,g,b] = _lerp3(160,230,0, 180,220,0, t); }
   else if (v < 1200) { const t = (v-500)/700; [r,g,b] = _lerp3(100,210,20, 255,210,0, t); }
   else { const t = Math.min(1, (v-1200)/300); [r,g,b] = _lerp3(255,200,0, 220,20,20, t); }
@@ -3281,9 +3480,9 @@ function _drawOnCanvas() {
         isMajor   = level % 100 === 0;
         is_lo     = level === EC_CONFIG.lo;  // 300
         is_hi     = level === EC_CONFIG.hi;  // 600
-        const is_210   = level === 210;
+        const is_200   = level === 200;
         const is_pivot = level === 250;
-        isLabeled = is_lo || (is_hi && _gvMax >= EC_CONFIG.hi - 25) || is_210 || is_pivot;
+        isLabeled = is_lo || (is_hi && _gvMax >= EC_CONFIG.hi - 25) || is_200 || is_pivot;
       } else {
         isMajor   = Math.round(level*10)%5===0;
         is_lo     = Math.abs(level-0.2)<0.005;
@@ -3296,9 +3495,9 @@ function _drawOnCanvas() {
       ctx.beginPath();
       if(is_lo)         {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(200,80,0,0.95)':'rgba(180,0,0,0.90)';ctx.lineWidth=1.2;ctx.setLineDash([6,4]);}
       else if(is_hi)    {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(140,20,0,0.95)':'rgba(0,120,220,0.85)'; ctx.lineWidth=0.8;ctx.setLineDash([6,4]);}
-      else if(PARAM_MODE==='ec' && level===210) {ctx.strokeStyle='rgba(60,60,60,0.75)';ctx.lineWidth=1.8;ctx.setLineDash([10,5]);}
+      else if(PARAM_MODE==='ec' && level===200) {ctx.strokeStyle='rgba(60,60,60,0.75)';ctx.lineWidth=1.8;ctx.setLineDash([10,5]);}
       else if(PARAM_MODE==='ec' && level===250) {ctx.strokeStyle='rgba(80,80,80,0.70)';ctx.lineWidth=1.8;ctx.setLineDash([12,5]);}
-      else if(PARAM_MODE==='ec' && level===200) {ctx.strokeStyle='rgba(0,160,140,0.80)';ctx.lineWidth=1.5;ctx.setLineDash([8,4]);}
+      // removed duplicate level===200 teal line
       else if(isMajor)  {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(100,100,100,0.30)':'rgba(180,0,70,0.50)';ctx.lineWidth=1.0;ctx.setLineDash([]);}
       else              {ctx.strokeStyle=PARAM_MODE==='ec'?'rgba(120,120,120,0.12)':'rgba(210,60,120,0.25)';ctx.lineWidth=0.5;ctx.setLineDash([]);}
 
@@ -4898,13 +5097,13 @@ function updateLegendPanel() {
     ? 'linear-gradient(to bottom, #c81414 0%, #f0d220 30%, #7eff60 55%, #c0e8ff 80%, #8cd2ff 100%)'
     : 'linear-gradient(to bottom, #642896 0%, #2850b4 20%, #32beaa 40%, #78c850 55%, #f0aa14 75%, #be1e14 100%)';
   document.getElementById('lg-ticks').innerHTML = isEC
-    ? '<span>≥1200</span><span>500</span><span>210</span><span>150</span>'
+    ? '<span>≥1200</span><span>500</span><span>200</span><span>150</span>'
     : '<span>≥1.2</span><span>0.8</span><span>0.5</span><span>0.3</span><span>0.2</span><span>&lt;0.2</span>';
   document.getElementById('lg-items').innerHTML = isEC
     ? `<div class="lg-item"><div class="lg-swatch" style="background:#c81414;"></div><span>&gt;1200<br>สูงกว่ามาตรฐาน</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#f0d220;border:1px solid #ccc;"></div><span>501–1200<br>เฝ้าระวัง</span></div>
-       <div class="lg-item"><div class="lg-swatch" style="background:#aaff20;border:1px solid #aaa;"></div><span>211–500<br>ผ่านมาตรฐาน</span></div>
-       <div class="lg-item"><div class="lg-swatch" style="background:#d8f0ff;border:1px solid #aad;"></div><span>150–210<br>ดี</span></div>
+       <div class="lg-item"><div class="lg-swatch" style="background:#aaff20;border:1px solid #aaa;"></div><span>200–500<br>ผ่านมาตรฐาน</span></div>
+       <div class="lg-item"><div class="lg-swatch" style="background:#d8f0ff;border:1px solid #aad;"></div><span>150–200<br>ดี</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#c8e8ff;border:1px solid #aad;"></div><span>&lt;150<br>ดีมาก</span></div>`
     : `<div class="lg-item"><div class="lg-swatch" style="background:#642896;"></div><span>≥1.2<br>ม่วง · สูงมาก</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#2850b4;"></div><span>0.8–1.2<br>น้ำเงิน · ดีมาก</span></div>
@@ -4913,7 +5112,7 @@ function updateLegendPanel() {
        <div class="lg-item"><div class="lg-swatch" style="background:#f0aa14;"></div><span>0.2–0.3<br>ส้ม · เฝ้าระวัง</span></div>
        <div class="lg-item"><div class="lg-swatch" style="background:#be1e14;"></div><span>&lt;0.2<br>แดง
 ต่ำกว่ามาตรฐาน ⚠</span></div>`;
-  document.getElementById('lg-line1-label').textContent = isEC ? '210 μS/cm' : '0.2 mg/L';
+  document.getElementById('lg-line1-label').textContent = isEC ? '200 μS/cm' : '0.2 mg/L';
   document.getElementById('lg-line1-label').style.color  = isEC ? '#1e78dc' : '#b40000';
   document.getElementById('lg-line2-label').textContent = isEC ? '300 μS/cm' : '1.0 mg/L';
   document.getElementById('lg-line2-label').style.color  = isEC ? '#c81414' : '#0088dd';
@@ -4940,8 +5139,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev9.0 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 27 มี.ค.69)</span>'
-      : '<span>⚠ rev9.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 27 มี.ค.69)</span>';
+      ? '<span>⚠ rev11.0 — EC Mode · Zone Influence Model คาดการณ์จาก Source โรงงาน → ปลายทาง (ไม่มีการสลายตัว) : Firebase + github (M 29 มี.ค.69)</span>'
+      : '<span>⚠ rev11.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 29 มี.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -7973,6 +8172,12 @@ function rpTab(mode) {
   document.getElementById('rp-feedback').style.display = mode==='feedback'?'':'none';
   document.getElementById('rp-stats').style.display = mode==='stats'?'':'none';
   if (mode==='stats' && typeof _loadRpStats === 'function') _loadRpStats();
+  // rev11.0: auto-check auth state เมื่อเปิด feedback tab
+  if (mode==='feedback' && window.fbIsLoggedIn && window.fbIsLoggedIn()) {
+    document.getElementById('rp-fb-auth').style.display='none';
+    document.getElementById('rp-fb-list').style.display='';
+    rpRenderFeedbacks();
+  }
 }
 // ── Trend: เปรียบเทียบค่าจริง vs คาดการณ์ ย้อนหลัง 24 ชม. ──
 var _trendInited = false;
@@ -8742,15 +8947,30 @@ function rpTrendApplyK(stationCode, newK) {
   }, 300);
 }
 
-function rpFbLogin(){
-  var u=document.getElementById('rp-fb-user').value.trim();
-  var p=document.getElementById('rp-fb-pass').value.trim();
-  if(u==='00102430'&&p==='09122531'){
+async function rpFbLogin(){
+  var email=document.getElementById('rp-fb-user').value.trim();
+  var pass=document.getElementById('rp-fb-pass').value.trim();
+  var errEl=document.getElementById('rp-fb-err');
+  if(!email||!pass){
+    errEl.textContent='กรุณากรอก Email และ Password';
+    errEl.style.display='block';
+    return;
+  }
+  // แสดงสถานะกำลังเข้าสู่ระบบ
+  errEl.textContent='⏳ กำลังเข้าสู่ระบบ...';
+  errEl.style.display='block';
+  errEl.style.color='#4488ff';
+  
+  var result = await window.fbAuthLogin(email, pass);
+  if(result.success){
+    errEl.style.display='none';
     document.getElementById('rp-fb-auth').style.display='none';
     document.getElementById('rp-fb-list').style.display='';
     rpRenderFeedbacks();
   } else {
-    document.getElementById('rp-fb-err').style.display='block';
+    errEl.textContent='❌ ' + result.error;
+    errEl.style.color='#cc0055';
+    errEl.style.display='block';
   }
 }
 function rpRenderFeedbacks(){
@@ -8891,7 +9111,7 @@ async function buildReport() {
     `<div class="rp-stat"><div class="sl">ค่าเฉลี่ย</div><div class="sv rv-info">${Math.round(ea)}</div><div class="ss">μS/cm</div></div>` +
     `<div class="rp-stat"><div class="sl">ต่ำสุด</div><div class="sv rv-good">${Math.round(emn)}</div><div class="ss">μS/cm</div></div>` +
     `<div class="rp-stat"><div class="sl">สูงสุด</div><div class="sv ${emx>EC_HI?'rv-bad':'rv-warn'}">${Math.round(emx)}</div><div class="ss">μS/cm</div></div>` +
-    `<div class="rp-stat"><div class="sl">ดี (<210)</div><div class="sv rv-good">${eg}</div><div class="ss">สถานี</div></div>` +
+    `<div class="rp-stat"><div class="sl">ดี (<200)</div><div class="sv rv-good">${eg}</div><div class="ss">สถานี</div></div>` +
     `<div class="rp-stat"><div class="sl">ปกติ</div><div class="sv rv-warn">${en}</div><div class="ss">สถานี</div></div>` +
     `<div class="rp-stat"><div class="sl">เกิน</div><div class="sv rv-bad">${eb}</div><div class="ss">> 600</div></div>`;
 
@@ -9903,7 +10123,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev9.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : ข้อมูลถูกบันทึกลง Firebase (serverless database) และเรียกใช้งานผ่าน github (M 27 มี.ค.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev11.0 — EPANET Chlorine decay model + Zone Influence , Forecast จาก Pair คู่สถานี หาค่า K : 🔒 Firebase Auth + Security Rules + App Check (M 29 มี.ค.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -10923,7 +11143,7 @@ function submitFeedback(){
 })();
 </script>
 
-<!-- ═══ Map Search Bar Logic — rev9.0 ═══ -->
+<!-- ═══ Map Search Bar Logic — rev11.0 ═══ -->
 <script>
 (function(){
   'use strict';
@@ -11506,7 +11726,7 @@ function submitFeedback(){
 })();
 </script>
 
-<!-- v9.0: Record/Analytics/Feedback System -->
+<!-- v10.0: Record/Analytics/Feedback System -->
 <script>
 (function(){
   function _fb() { return window._fb; }
@@ -11586,8 +11806,8 @@ function submitFeedback(){
     } catch(e) { el.innerHTML = '❌ ' + e.message; }
   }
 
-  // ── Login ── (ใช้ rpFbLogin ใน report panel แทน)
-  var FB_USERS = { '00102430': '09122531' };
+  // ── Login ── (rev11.0: ย้ายไปใช้ Firebase Auth แล้ว — ดู rpFbLogin)
+  // hardcoded credentials ถูกลบออกเพื่อความปลอดภัย
 })();
 </script>
 
@@ -11596,7 +11816,14 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev9.0 — March 2026 · M sandbox</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev11.0 — March 2026 · M sandbox · 🔒 Security Upgrade</p>
+
+<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 rev11.0 — Security Upgrade</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. Firebase Security Rules</b> — จำกัดการอ่าน/เขียนตาม path, validate ข้อมูลก่อนบันทึก, ปิด path admin ให้ authenticated only<br>
+<b>B. Firebase Authentication</b> — ย้ายระบบ login จาก hardcoded credentials ไปใช้ Firebase Auth (email/password)<br>
+<b>C. App Check + Domain Restriction</b> — ป้องกัน abuse จากแอปปลอม + จำกัด API key เฉพาะ domain ที่อนุญาต
+</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
@@ -11639,6 +11866,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev9.0 · M sandbox · Water Quality Division · March 2026</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev11.0 · M sandbox · Water Quality Division · March 2026 · 🔒 Security Upgrade</div>
 </div></div>
 </body></html>
