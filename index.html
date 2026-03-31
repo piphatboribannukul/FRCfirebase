@@ -2002,6 +2002,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
              }
            },
 
+           // ── Zone Influence — อ่าน/เขียนต้อง login ──
+           "zones": {
+             ".read": true,
+             ".write": "auth != null"
+           },
+
            // ── ปิดทุกอย่างที่เหลือ ──
            "$other": {
              ".read": false,
@@ -7297,13 +7303,55 @@ function initZoneEditor() {
     }
   });
 
-  // โหลด default zones อัตโนมัติ
-  _loadZonesData(DEFAULT_ZONES);
+  // ── โหลด zones: Firebase → localStorage → DEFAULT_ZONES ──
+  async function _loadSavedZones() {
+    // 1. ลอง Firebase ก่อน
+    if (window._fbReady && window._fb) {
+      try {
+        const snap = await window._fbGet(window._fbRef(window._fb, 'zones/custom'));
+        if (snap && snap.exists()) {
+          const fbData = snap.val();
+          const count = Object.keys(fbData).length;
+          if (count > 0) {
+            _loadZonesData(fbData, true);
+            console.log(`[Zone] ✅ loaded ${count} zones from Firebase`);
+            populateStationList();
+            renderZoneList();
+            return;
+          }
+        }
+      } catch(e) {
+        console.warn('[Zone] Firebase load error:', e.message);
+      }
+    }
+
+    // 2. ลอง localStorage
+    try {
+      const saved = localStorage.getItem('mwa_custom_zones');
+      if (saved) {
+        const lsData = JSON.parse(saved);
+        const count = Object.keys(lsData).length;
+        if (count > 0) {
+          _loadZonesData(lsData, true);
+          console.log(`[Zone] ✅ loaded ${count} zones from localStorage`);
+          populateStationList();
+          renderZoneList();
+          return;
+        }
+      }
+    } catch(e) {}
+
+    // 3. Fallback: DEFAULT_ZONES
+    _loadZonesData(DEFAULT_ZONES);
+    console.log('[Zone] loaded DEFAULT_ZONES (no saved data found)');
+  }
+
+  _loadSavedZones();
 
   populateStationList();
   renderZoneList();
 
-  // Rebuild cache หลังโหลด DEFAULT_ZONES เพื่อให้ contour ใช้ zone ที่ถูกต้อง
+  // Rebuild cache หลังโหลด zones เพื่อให้ contour ใช้ zone ที่ถูกต้อง
   buildIdwCache();
   redrawContour();
 }
@@ -7407,7 +7455,34 @@ function selectStation(s) {
   // Flash station on map
   map.panTo([s.lat, s.lon], {animate:true, duration:0.5});
   showZepMsg(`เลือก: ${s.name}`, '#1a5020', '#f0fff0', '#80c080');
-  showZoneForStation(String(s.id)); // แสดง zone ของสถานีที่เลือก
+
+  // ── แสดง zone ของสถานีที่เลือก (ทึบ) + zone ข้างเคียง (จาง) ──
+  hideAllZoneLayers();
+  // ลบ reference layers เก่า
+  if (_zoneLayerGroup) {
+    _zoneLayerGroup.eachLayer(l => {
+      if (l._isEditRef) _zoneLayerGroup.removeLayer(l);
+    });
+  }
+
+  // แสดง zone ของตัวเอง (ทึบ)
+  showZoneForStation(sid);
+
+  // แสดง zone ข้างเคียง (จาง) เพื่อให้เห็นบริบท
+  for (const [adjSid, adjZone] of Object.entries(window.CUSTOM_ZONES)) {
+    if (adjSid === sid) continue;
+    const adjCoords = adjZone.coords || adjZone;
+    const adjColor = adjZone.color || '#999';
+    if (!adjCoords || !adjCoords.length) continue;
+
+    const adjPoly = L.polygon(adjCoords, {
+      color: adjColor, weight: 1, dashArray: '4,4',
+      opacity: 0.35, fillColor: adjColor, fillOpacity: 0.05,
+      interactive: false
+    }).addTo(_zoneLayerGroup);
+    adjPoly._zoneStationId = sid + '_adj';
+    adjPoly._isEditRef = true;
+  }
 }
 
 // ── Start draw ────────────────────────────────────────────────────────
@@ -7607,11 +7682,83 @@ function editZone() {
   if (!_zepSelectedStation) return;
   const sid = String(_zepSelectedStation.id);
   if (!window.CUSTOM_ZONES[sid]) return;
-  // Remove current and re-draw
+
+  // ── 1. แสดง zone เดิมเป็นพื้นทึบ (reference) ──
+  const oldZone = window.CUSTOM_ZONES[sid];
+  const oldCoords = oldZone.coords || oldZone;
+  const oldColor = oldZone.color || getPumpColor(sid);
+
+  // ลบ layer เดิมก่อน แล้ววาดใหม่แบบ reference (ทึบ + dash)
   removeZoneLayerForStation(sid);
+
+  const refPoly = L.polygon(oldCoords, {
+    color: oldColor,
+    weight: 2.5,
+    dashArray: '8,6',
+    opacity: 0.9,
+    fillColor: oldColor,
+    fillOpacity: 0.25,
+    interactive: false
+  }).addTo(_zoneLayerGroup);
+  refPoly._zoneStationId = sid + '_ref';
+  refPoly._isEditRef = true;
+
+  // Label กลาง polygon เดิม
+  const center = refPoly.getBounds().getCenter();
+  const refLabel = L.marker(center, {
+    icon: L.divIcon({
+      html: `<div style="background:rgba(255,255,255,.9);color:${oldColor};font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1.5px solid ${oldColor};box-shadow:0 2px 6px rgba(0,0,0,.15);white-space:nowrap;font-family:'Sarabun',sans-serif;">✏️ พื้นที่เดิม</div>`,
+      className: '', iconAnchor: [40, 10]
+    }), interactive: false
+  }).addTo(_zoneLayerGroup);
+  refLabel._zoneStationId = sid + '_ref';
+  refLabel._isEditRef = true;
+
+  // ── 2. แสดง zone ข้างเคียง (สจ. อื่นที่มี zone แล้ว) ──
+  for (const [adjSid, adjZone] of Object.entries(window.CUSTOM_ZONES)) {
+    if (adjSid === sid) continue;
+    const adjCoords = adjZone.coords || adjZone;
+    const adjColor = adjZone.color || getPumpColor(adjSid);
+    if (!adjCoords || !adjCoords.length) continue;
+
+    const adjPoly = L.polygon(adjCoords, {
+      color: adjColor,
+      weight: 1.5,
+      dashArray: '4,4',
+      opacity: 0.5,
+      fillColor: adjColor,
+      fillOpacity: 0.08,
+      interactive: false
+    }).addTo(_zoneLayerGroup);
+    adjPoly._zoneStationId = sid + '_adj';
+    adjPoly._isEditRef = true;
+
+    // Label ชื่อ สจ. ข้างเคียง
+    const adjCenter = adjPoly.getBounds().getCenter();
+    // หาชื่อสถานี
+    const adjStation = SENSORS.find(s => String(s.id) === adjSid);
+    const adjName = adjStation
+      ? (adjStation.name || adjSid).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('สถานีสูบส่งน้ำ','สจส.').replace('โรงงานผลิตน้ำ','รง.')
+      : adjSid;
+    const adjLabel = L.marker(adjCenter, {
+      icon: L.divIcon({
+        html: `<div style="background:rgba(255,255,255,.7);color:${adjColor};font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;border:1px solid ${adjColor}80;white-space:nowrap;font-family:'Sarabun',sans-serif;">${adjName}</div>`,
+        className: '', iconAnchor: [30, 8]
+      }), interactive: false
+    }).addTo(_zoneLayerGroup);
+    adjLabel._zoneStationId = sid + '_adj';
+    adjLabel._isEditRef = true;
+  }
+
+  // ── 3. ลบ zone data เดิมแล้วเริ่มวาดใหม่ ──
   delete window.CUSTOM_ZONES[sid];
   updateUI();
   startDraw('polygon');
+
+  showZepMsg(
+    '✏️ แก้ไขโซน — พื้นที่เดิมแสดงเป็นเส้นประ\nzone ข้างเคียงแสดงเป็นเส้นจาง',
+    '#1a4080', '#f0f6ff', '#c0d8f8'
+  );
 }
 
 // ── Clear current zone ────────────────────────────────────────────────
@@ -7668,6 +7815,12 @@ function cleanupDraw() {
   });
   _drawMarkers = [];
   _drawCoords  = [];
+  // ── ลบ reference layers จาก editZone (พื้นที่เดิม + ข้างเคียง) ──
+  if (_zoneLayerGroup) {
+    _zoneLayerGroup.eachLayer(l => {
+      if (l._isEditRef) _zoneLayerGroup.removeLayer(l);
+    });
+  }
 }
 
 // ── Render zone list ──────────────────────────────────────────────────
@@ -7735,14 +7888,40 @@ function deleteZone(sid) {
 function applyZonesToContour() {
   const count = Object.keys(window.CUSTOM_ZONES).length;
   const btn = document.querySelector('.zep-apply-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Rebuilding...'; }
-  setTimeout(() => {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving & Rebuilding...'; }
+  setTimeout(async () => {
     buildIdwCache();
     redrawContour();
+
+    // ── บันทึกลง Firebase เพื่อให้ persist หลัง refresh ──
+    let saveOk = false;
+    if (window._fbReady && window._fb) {
+      try {
+        const data = {};
+        Object.entries(window.CUSTOM_ZONES).forEach(([sid, z]) => {
+          data[sid] = { coords: z.coords, type: z.type, radiusM: z.radiusM || null, center: z.center || null, color: z.color || null };
+        });
+        await window._fbSet(window._fbRef(window._fb, 'zones/custom'), data);
+        saveOk = true;
+        console.log(`[Zone] ✅ saved ${count} zones to Firebase`);
+      } catch(e) {
+        console.error('[Zone] Firebase save error:', e.message);
+      }
+    }
+
+    // ── บันทึกลง localStorage เป็น backup ──
+    try {
+      const data = {};
+      Object.entries(window.CUSTOM_ZONES).forEach(([sid, z]) => {
+        data[sid] = { coords: z.coords, type: z.type, radiusM: z.radiusM || null, center: z.center || null, color: z.color || null };
+      });
+      localStorage.setItem('mwa_custom_zones', JSON.stringify(data));
+    } catch(e) {}
+
     if (btn) { btn.disabled = false; btn.textContent = '🔄 Apply & Rebuild Contour'; }
     showZepMsg(
       count > 0
-        ? `✅ Apply แล้ว — ใช้ ${count} custom zone`
+        ? `✅ Apply + ${saveOk ? 'บันทึก Firebase' : 'บันทึก localStorage'} แล้ว — ${count} zone`
         : '✅ Rebuild แล้ว (ใช้ค่า default)',
       '#1a5020', '#f0fff0', '#80c080'
     );
