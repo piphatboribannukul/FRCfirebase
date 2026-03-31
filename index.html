@@ -2002,10 +2002,10 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
              }
            },
 
-           // ── Zone Influence — อ่าน/เขียนต้อง login ──
+           // ── Zone Influence — อ่าน/เขียนได้ทุกคน (ข้อมูลส่วนกลางของทีม) ──
            "zones": {
              ".read": true,
-             ".write": "auth != null"
+             ".write": true
            },
 
            // ── ปิดทุกอย่างที่เหลือ ──
@@ -7303,9 +7303,27 @@ function initZoneEditor() {
     }
   });
 
-  // ── โหลด zones: Firebase → localStorage → DEFAULT_ZONES ──
-  async function _loadSavedZones() {
-    // 1. ลอง Firebase ก่อน
+  // ── โหลด zones: DEFAULT_ZONES ก่อน (baseline) → Firebase/localStorage override ทีหลัง ──
+
+  // Step 1: โหลด DEFAULT_ZONES ทันทีเป็น baseline
+  _loadZonesData(DEFAULT_ZONES);
+  populateStationList();
+  renderZoneList();
+  buildIdwCache();
+  redrawContour();
+
+  // Step 2: พยายามโหลดจาก Firebase/localStorage มาทับ (async)
+  async function _loadSavedZonesOverride() {
+    // รอ Firebase พร้อม (สูงสุด 10 วินาที)
+    if (!window._fbReady) {
+      await new Promise(resolve => {
+        const handler = () => resolve();
+        window.addEventListener('firebase-ready', handler, { once: true });
+        setTimeout(() => { window.removeEventListener('firebase-ready', handler); resolve(); }, 10000);
+      });
+    }
+
+    // 1. ลอง Firebase
     if (window._fbReady && window._fb) {
       try {
         const snap = await window._fbGet(window._fbRef(window._fb, 'zones/custom'));
@@ -7314,9 +7332,11 @@ function initZoneEditor() {
           const count = Object.keys(fbData).length;
           if (count > 0) {
             _loadZonesData(fbData, true);
-            console.log(`[Zone] ✅ loaded ${count} zones from Firebase`);
             populateStationList();
             renderZoneList();
+            buildIdwCache();
+            redrawContour();
+            console.log(`[Zone] ✅ loaded ${count} zones from Firebase (override default)`);
             return;
           }
         }
@@ -7333,27 +7353,20 @@ function initZoneEditor() {
         const count = Object.keys(lsData).length;
         if (count > 0) {
           _loadZonesData(lsData, true);
-          console.log(`[Zone] ✅ loaded ${count} zones from localStorage`);
           populateStationList();
           renderZoneList();
+          buildIdwCache();
+          redrawContour();
+          console.log(`[Zone] ✅ loaded ${count} zones from localStorage (override default)`);
           return;
         }
       }
     } catch(e) {}
 
-    // 3. Fallback: DEFAULT_ZONES
-    _loadZonesData(DEFAULT_ZONES);
-    console.log('[Zone] loaded DEFAULT_ZONES (no saved data found)');
+    console.log('[Zone] ไม่พบ saved zones — ใช้ DEFAULT_ZONES');
   }
 
-  _loadSavedZones();
-
-  populateStationList();
-  renderZoneList();
-
-  // Rebuild cache หลังโหลด zones เพื่อให้ contour ใช้ zone ที่ถูกต้อง
-  buildIdwCache();
-  redrawContour();
+  _loadSavedZonesOverride();
 }
 
 // ── Toggle panel ──────────────────────────────────────────────────────
@@ -7906,6 +7919,7 @@ function applyZonesToContour() {
         console.log(`[Zone] ✅ saved ${count} zones to Firebase`);
       } catch(e) {
         console.error('[Zone] Firebase save error:', e.message);
+        showZepMsg('⚠ Firebase save ล้มเหลว: ' + e.message + '\nบันทึกลง localStorage แทน', '#804000', '#fffaf0', '#e0c060');
       }
     }
 
