@@ -2257,7 +2257,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🔗 VC Valve Config <span class="sb-arrow">▸</span></h3>
     <div class="sb-body" style="display:none;">
       <div style="font-size:10px;color:#6c3483;margin-bottom:8px;line-height:1.5;">
-        Valve Chamber — ค่า simulate จาก EPANET<br>
+        Valve Chamber — ค่า FRC<sub>sim</sub> จาก EPANET (ไม่ใช่ค่าวัดจริง)<br>
         0% = วาล์วปิด (แสดงจุดเฉยๆ ไม่มีอิทธิพล)
       </div>
       <div id="vc-config-list" style="max-height:320px;overflow-y:auto;"></div>
@@ -2907,9 +2907,10 @@ function isVcActive(vc) {
   return vc.valvePct != null && vc.valvePct > 0;
 }
 
-/** คำนวณ FRC ที่ VC จาก source (EPANET first-order decay)
- *  valve% ไม่มีผลต่อความเข้มข้น FRC — แค่บอกว่าเปิด/ปิด
- *  0% = ปิด (ไม่มีน้ำไหล → FRC=0), >0% = เปิด (FRC decay ปกติ) */
+/** คำนวณ FRC(sim) ที่ VC จาก source (EPANET first-order decay)
+ *  ⚠ ค่านี้เป็น simulated value จาก EPANET — ไม่ใช่ค่าวัดจริง
+ *  valve% ไม่มีผลต่อความเข้มข้น — แค่บอกว่าเปิด/ปิด
+ *  0% = ปิด (ไม่มีน้ำไหล → FRC=0), >0% = เปิด (decay ปกติ) */
 function getVcFrc(vcId) {
   const vc = VC_STATIONS.find(v => v.id === vcId);
   if (!vc || !isVcActive(vc)) return 0; // 0% หรือ null → ไม่มี FRC
@@ -2921,7 +2922,7 @@ function getVcFrc(vcId) {
   const dKm = Math.sqrt((src.lat - vc.lat)**2 + (src.lon - vc.lon)**2) * 111.32;
   // Travel time (hr) = distance / velocity (สมมติ 1.5 km/hr ในท่อหลัก)
   const ttHr = dKm / 1.5;
-  // FRC(vc) = FRC(source) × e^(-K × tt)  — ไม่คูณ valve% (ความเข้มข้นเท่าเดิม)
+  // FRC_sim(vc) = FRC(source) × e^(-K × tt)  — ค่า simulate ไม่ใช่ค่าวัดจริง
   return Math.max(0, src.frc * Math.exp(-pair.K * ttHr));
 }
 
@@ -4870,7 +4871,8 @@ function buildMarkers() {
       <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${_area}</span></div>
       <div class="pr"><span>สาขา</span><span class="pv" style="color:#111">${_branch}</span></div>
       <div class="pr"><span>พิกัด</span><span class="pv" style="color:#111">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</span></div>
-      <div class="pr"><span>ประเภท</span><span class="pv" style="color:#111">${s.type==='plant'?'โรงงานผลิต':s.type==='pump'?'สถานีสูบ':'จุดตรวจวัด'}</span></div>
+      <div class="pr"><span>ประเภท</span><span class="pv" style="color:#111">${s.type==='plant'?'โรงงานผลิต':s.type==='pump'?'สถานีสูบ':s.type==='vc'?'🔗 Valve Chamber (sim)':'จุดตรวจวัด'}</span></div>
+      ${s.type==='vc'?'<div class="pr"><span>ข้อมูล</span><span class="pv" style="color:#6c3483">ค่า simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)</span></div>':''}
       <div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:${c}">${paramStatus(pv)}</span></div>
       ${ecRow}
       ${ttHtml}
@@ -4980,7 +4982,9 @@ map.on('mousemove',e=>{
   _tipStEl.style.setProperty('color', isSnapped ? (_isDark?'#ff6699':'#cc0055') : (isAlert ? alertColor : normalStColor), 'important');
   _tipLlEl.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
   _tipLabelEl.textContent=isSnapped
-    ? (PARAM_MODE==='ec'?'ค่า EC จริง (API)':'ค่า FRC จริง (API)')
+    ? (snapSensor && snapSensor.type === 'vc'
+      ? (PARAM_MODE==='ec'?'ค่า EC sim (EPANET)':'ค่า FRC sim (EPANET)')
+      : (PARAM_MODE==='ec'?'ค่า EC จริง (API)':'ค่า FRC จริง (API)'))
     : (PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated');
   const pt=map.latLngToContainerPoint(e.latlng);
   tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px'; tip.style.display='block';
@@ -6908,7 +6912,7 @@ function buildSnapFrame(snap) {
         if (!pointInPolygon(lat, lon, zone.coords)) continue;
         const vc = VC_STATIONS.find(v => v.id === sid);
         if (!vc || !isVcActive(vc)) continue;
-        // FRC ที่ VC (คำนวณจาก source→VC decay × valve%)
+        // FRC(sim) ที่ VC — ค่า simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)
         const vcFrc = (typeof getVcFrc === 'function') ? getVcFrc(sid) : vc.frc;
         if (vcFrc <= 0) continue;
         // Decay ต่อจาก VC ไปยังจุดนี้
@@ -12180,7 +12184,7 @@ function submitFeedback(){
         h += '<span style="font-size:8px;color:#888;width:30px;">K</span>';
         h += '<input type="number" step="0.001" min="0" max="0.5" value="'+pair.K+'" data-vc="'+vc.id+'" data-f="K" style="flex:1;font-size:10px;padding:2px 5px;border:1px solid #d0b0f0;border-radius:3px;font-family:JetBrains Mono,monospace;" onchange="window._vcCfg(this)">';
         h += '</div>';
-        h += '<div style="font-size:9px;color:#6c3483;font-family:JetBrains Mono,monospace;">FRC = <b>'+vcFrc+'</b> mg/L</div>';
+        h += '<div style="font-size:9px;color:#6c3483;font-family:JetBrains Mono,monospace;">FRC<sub>sim</sub> = <b>'+vcFrc+'</b> mg/L <span style="color:#999;font-size:7px;">(EPANET)</span></div>';
       }
       h += '</div>';
     }
@@ -12239,7 +12243,7 @@ function submitFeedback(){
 <p style="font-size:12px;line-height:1.7;color:#111;">
 <b>A. Valve Chamber (VC)</b> — 14 จุดควบคุมวาล์ว ค่า FRC simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)<br>
 <b>B. Valve %</b> — % การเปิดวาล์ว (0% = ปิด ไม่มีอิทธิพล, >0% = active มีผลต่อ contour)<br>
-<b>C. Source→VC Decay</b> — FRC@VC = FRC(source) × e<sup>(-K×TT)</sup> · valve% แค่บอกเปิด/ปิด (ไม่มีผลต่อความเข้มข้น)<br>
+<b>C. Source→VC Decay</b> — FRC<sub>sim</sub>@VC = FRC(source) × e<sup>(-K×TT)</sup> · ค่า simulate ไม่ใช่ค่าวัดจริง · valve% แค่บอกเปิด/ปิด<br>
 <b>D. VC Zone Contour</b> — วาดขอบเขต VC ใน Zone Editor → contour คำนวณ decay จาก VC ออก
 </p>
 
