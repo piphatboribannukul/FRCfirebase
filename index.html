@@ -7696,6 +7696,14 @@ function populateStationList() {
   const pumps = SENSORS.filter(s =>
     PUMP_TYPES.has(s.type) && !EXCLUDE_TR_MTR.has(s.name?.trim())
   );
+  // rev14.0: เพิ่ม VC_STATIONS ใน Zone Editor (VC แยกจาก SENSORS)
+  if (typeof VC_STATIONS !== 'undefined') {
+    for (const vc of VC_STATIONS) {
+      if (!pumps.find(p => String(p.id) === vc.id)) {
+        pumps.push(vc);
+      }
+    }
+  }
   list.innerHTML = '';
   pumps.forEach(s => {
     const sid = String(s.id);
