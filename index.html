@@ -346,12 +346,16 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     font-size: 12px;
   }
   #zone-editor-btn { display: none !important; }
-  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 244px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 178px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
   #ai-insight-btn .ai-pulse { display: none !important; }
   #flow-btn { display: none !important; }
-  /* rev16.0: mobile 3D + Cl₂ + AI เรียงแนวตั้งมุมซ้าย ใต้ hamburger */
-  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 168px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
-  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 206px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  /* rev16.0: mobile 3D + Cl₂ + AI ติด hamburger มุมซ้าย */
+  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 102px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 140px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  /* ซ่อนเมื่อ sidebar เปิด */
+  body.sb-open #terrain3d-btn,
+  body.sb-open #whatif-btn,
+  body.sb-open #ai-insight-btn { display: none !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -5251,6 +5255,7 @@ function toggleSidebar(){
   const ov=document.getElementById('sidebar-overlay');
   const open=sb.classList.toggle('open');
   ov.classList.toggle('open',open);
+  document.body.classList.toggle('sb-open',open); // rev16.0
   _syncFloatingBtns();
 }
 
