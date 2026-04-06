@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev14.0</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev16.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -346,9 +346,12 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     font-size: 12px;
   }
   #zone-editor-btn { display: none !important; }
-  #ai-insight-btn { display: none !important; }
+  #ai-insight-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 84px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #ai-insight-btn .ai-pulse { display: none !important; }
   #flow-btn { display: none !important; }
-  #terrain3d-btn { display: none !important; }
+  /* rev16.0: mobile แสดง 3D + What-If + AI เป็นปุ่มเล็กข้างนอก */
+  #terrain3d-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 8px !important; width: 32px !important; height: 32px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #whatif-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 46px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -1528,12 +1531,24 @@ body.dark .leaflet-control-attribution a{color:var(--neon-blue) !important;}
   background:linear-gradient(135deg,#1a2a4a,#0a1830);border:1.5px solid #2060b0;border-radius:10px;
   width:38px;height:38px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;box-shadow:0 2px 12px rgba(20,60,160,.25);
-  font-size:15px;transition:all .25s cubic-bezier(.4,0,.2,1);color:#60a0ff;
+  font-size:12px;font-weight:800;letter-spacing:-0.5px;transition:all .25s cubic-bezier(.4,0,.2,1);color:#60a0ff;font-family:'JetBrains Mono',monospace;
 }
+#whatif-btn{
+  position:absolute;top:194px;left:10px;z-index:1100;
+  background:linear-gradient(135deg,#0a2a1a,#083018);border:1.5px solid #1D9E75;border-radius:10px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 2px 12px rgba(29,158,117,.25);
+  font-size:15px;transition:all .25s cubic-bezier(.4,0,.2,1);color:#5DCAA5;
+}
+#whatif-btn:hover{background:linear-gradient(135deg,#083018,#0f4028);box-shadow:0 4px 20px rgba(29,158,117,.3);transform:translateY(-1px);}
+#whatif-btn.active{background:#1D9E75;color:#fff;border-color:#5DCAA5;box-shadow:0 0 24px rgba(29,158,117,.5);}
+body.dark #whatif-btn{background:rgba(16,32,24,.65);border-color:rgba(29,158,117,.4);box-shadow:0 2px 12px rgba(0,0,0,.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+body.dark #whatif-btn:hover{background:rgba(29,158,117,.15);color:#9FE1CB;}
 #terrain3d-btn:hover{background:linear-gradient(135deg,#0a1830,#0f3460);box-shadow:0 4px 20px rgba(40,100,220,.3);transform:translateY(-1px);}
 #terrain3d-btn.active{background:#2060b0;color:#fff;border-color:#60a0ff;box-shadow:0 0 24px rgba(40,100,220,.5);}
 body.dark #terrain3d-btn{background:rgba(16,16,32,.65);border-color:rgba(40,100,220,.4);box-shadow:0 2px 12px rgba(0,0,0,.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
 body.dark #terrain3d-btn:hover{background:rgba(40,100,220,.15);color:#80c0ff;}
+body.dark #whatif-panel{background:var(--glass-bg-deep);border-color:rgba(29,158,117,.4);}
 #terrain3d-overlay{
   display:none;position:fixed;inset:0;z-index:99999;
   background:#0a0a1a;
@@ -1781,12 +1796,18 @@ body.dark .msd-empty, body.dark .msd-spinner { color: #6060a0 !important; }
 }
 
 
-/* rev14.0: VC Marker */
+/* rev16.0: VC Marker */
 .vc-icon{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:8px;color:#fff;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;}
 .vc-icon:hover{transform:scale(1.2);}
 .vc-icon.active{background:#6c3483;}
 .vc-icon.closed{background:#999;opacity:.7;}
 .vc-icon.nodata{background:#c0a030;opacity:.8;}
+/* rev16.0: What-If buttons */
+.wif-btn{padding:4px 10px;border:1.5px solid #b5d4f4;border-radius:5px;background:#e6f1fb;color:#0C447C;font-size:10px;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;transition:all .15s;}
+.wif-btn:hover{background:#378ADD;color:#fff;border-color:#378ADD;}
+.wif-btn.active{background:#185FA5;color:#fff;border-color:#185FA5;}
+.wif-reset{background:#f1efe8;color:#5f5e5a;border-color:#d3d1c7;}
+.wif-reset:hover{background:#888;color:#fff;}
 </style>
 <script>
 if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-init');
@@ -2105,7 +2126,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev14.0</span>
+  <span id="v2-badge">⬡ rev16.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2143,7 +2164,48 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <button id="flow-btn" onclick="toggleFlow()" title="ทิศทางน้ำ — แสดงการไหลของน้ำจากสถานีสูบจ่าย">💧</button>
 
 <!-- v8.6: 3D Map Button -->
-<button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Map — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ">🏔</button>
+<button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Map — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ" style="font-size:11px;font-weight:800;letter-spacing:-0.5px;">3D</button>
+
+<!-- rev16.0: What-If Button (PC/iPad) -->
+<button id="whatif-btn" onclick="toggleWhatIfPanel()" title="What-If — จำลองการปรับคลอรีน">🧪</button>
+
+<!-- rev16.0: What-If Floating Panel -->
+<div id="whatif-panel" style="display:none;position:absolute;top:52px;left:56px;width:280px;max-height:80vh;background:#fff;border:1.5px solid #1D9E75;border-radius:14px;box-shadow:0 8px 32px rgba(29,158,117,.15);z-index:1200;overflow:hidden;font-family:'Sarabun',sans-serif;">
+  <div style="background:linear-gradient(135deg,#0F6E56,#1D9E75);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="color:#fff;font-size:13px;font-weight:700;">🧪 What-If จ่ายคลอรีน</span>
+    <button onclick="toggleWhatIfPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
+  </div>
+  <div style="padding:12px;overflow-y:auto;max-height:calc(80vh - 50px);">
+    <div style="font-size:10px;color:#0F6E56;margin-bottom:8px;line-height:1.5;">
+      จำลองการปรับคลอรีนที่สถานีสูบจ่าย<br>ดูผลกระทบต่อ contour + สถานี monitor
+    </div>
+    <div style="margin-bottom:6px;">
+      <label style="font-size:10px;color:#888;">เลือกสถานีสูบจ่าย</label>
+      <select id="wif-station2" style="width:100%;padding:5px 8px;border:1.5px solid #9FE1CB;border-radius:6px;font-size:11px;font-family:'Sarabun',sans-serif;margin-top:3px;" onchange="wifSelectStation2()"></select>
+    </div>
+    <div style="margin-bottom:6px;">
+      <label style="font-size:10px;color:#888;">ปรับ FRC (mg/L)</label>
+      <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;" id="wif-buttons2">
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(-0.2)">-0.2</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(-0.1)">-0.1</button>
+        <button class="wif-btn wif-btn2 wif-reset" onclick="wifAdjust2(0)">Reset</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(+0.1)">+0.1</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(+0.2)">+0.2</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(+0.3)">+0.3</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(+0.4)">+0.4</button>
+        <button class="wif-btn wif-btn2" onclick="wifAdjust2(+0.5)">+0.5</button>
+      </div>
+    </div>
+    <div id="wif-info2" style="font-size:10px;color:#444;margin:6px 0;min-height:20px;"></div>
+    <div id="wif-impact2" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
+    <button class="ep-apply" onclick="wifApply()" style="margin-top:6px;width:100%;background:#0F6E56;color:#fff;border-color:#085041;">
+      🧪 จำลอง Contour
+    </button>
+    <button class="ep-apply" onclick="wifReset()" style="margin-top:4px;width:100%;background:#888;color:#fff;border-color:#666;">
+      ↩ คืนค่าเดิม
+    </button>
+  </div>
+</div>
 
 <!-- AI Insight Panel -->
 <div id="ai-panel">
@@ -2252,7 +2314,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <div class="sblock sb-menu" onclick="toggleSidebar();setTimeout(toggleZoneEditor,300);">
     <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">Zone Influence Editor <span class="sb-arrow">▸</span></h3>
   </div>
-  <!-- rev14.0: VC Config -->
+  <!-- rev16.0: VC Config -->
   <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
     <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🔗 VC Valve Config <span class="sb-arrow">▸</span></h3>
     <div class="sb-body" style="display:none;">
@@ -2263,6 +2325,40 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <div id="vc-config-list" style="max-height:320px;overflow-y:auto;"></div>
       <button class="ep-apply" onclick="applyVcConfig()" style="margin-top:8px;width:100%;background:#6c3483;color:#fff;border-color:#8e44ad;">
         ✅ Apply & Rebuild
+      </button>
+    </div>
+  </div>
+  <!-- rev16.0: What-If Chlorine Dosing -->
+  <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🧪 What-If จ่ายคลอรีน <span class="sb-arrow">▸</span></h3>
+    <div class="sb-body" style="display:none;">
+      <div style="font-size:10px;color:#185FA5;margin-bottom:8px;line-height:1.5;">
+        จำลองการปรับคลอรีนที่สถานีสูบจ่าย<br>ดูผลกระทบต่อ contour + สถานี monitor
+      </div>
+      <div style="margin-bottom:6px;">
+        <label style="font-size:10px;color:#888;">เลือกสถานีสูบจ่าย</label>
+        <select id="wif-station" style="width:100%;padding:5px 8px;border:1.5px solid #b5d4f4;border-radius:6px;font-size:11px;font-family:'Sarabun',sans-serif;margin-top:3px;" onchange="wifSelectStation()"></select>
+      </div>
+      <div style="margin-bottom:6px;">
+        <label style="font-size:10px;color:#888;">ปรับ FRC (mg/L)</label>
+        <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;" id="wif-buttons">
+          <button class="wif-btn" onclick="wifAdjust(-0.2)">-0.2</button>
+          <button class="wif-btn" onclick="wifAdjust(-0.1)">-0.1</button>
+          <button class="wif-btn wif-reset" onclick="wifAdjust(0)">Reset</button>
+          <button class="wif-btn" onclick="wifAdjust(+0.1)">+0.1</button>
+          <button class="wif-btn" onclick="wifAdjust(+0.2)">+0.2</button>
+          <button class="wif-btn" onclick="wifAdjust(+0.3)">+0.3</button>
+          <button class="wif-btn" onclick="wifAdjust(+0.4)">+0.4</button>
+          <button class="wif-btn" onclick="wifAdjust(+0.5)">+0.5</button>
+        </div>
+      </div>
+      <div id="wif-info" style="font-size:10px;color:#444;margin:6px 0;min-height:20px;"></div>
+      <div id="wif-impact" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
+      <button class="ep-apply" onclick="wifApply()" style="margin-top:6px;width:100%;background:#185FA5;color:#fff;border-color:#0C447C;">
+        🧪 จำลอง Contour
+      </button>
+      <button class="ep-apply" onclick="wifReset()" style="margin-top:4px;width:100%;background:#888;color:#fff;border-color:#666;">
+        ↩ คืนค่าเดิม
       </button>
     </div>
   </div>
@@ -2617,7 +2713,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev14.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev16.0 · Apr 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2669,7 +2765,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev14.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev16.0 · Apr 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -2872,7 +2968,7 @@ let SENSORS = [];
 const SENSORS_FALLBACK = [{"id":"SP01","name":"สถานีสูบส่งน้ำบางเขน 1 (TR1)","area":"","branch":"","lat":13.87858,"lon":100.55298,"frc":1.8,"type":"pump"},{"id":"SP02","name":"สถานีสูบส่งน้ำบางเขน 2 (TR2)","area":"","branch":"","lat":13.878268,"lon":100.5544,"frc":1.8,"type":"pump"},{"id":"SP03","name":"สถานีสูบส่งน้ำบางเขน 3 (TR3)","area":"","branch":"","lat":13.877851,"lon":100.55593,"frc":2.0,"type":"pump"},{"id":"SP04","name":"สถานีสูบจ่ายน้ำบางเขน 1 (Dis1)","area":"","branch":"","lat":13.877877,"lon":100.55349,"frc":1.6,"type":"pump"},{"id":"SP05","name":"สถานีสูบจ่ายน้ำบางเขน 2 (Dis2)","area":"","branch":"","lat":13.877606,"lon":100.554955,"frc":1.5,"type":"pump"},{"id":"SP06","name":"โรงงานผลิตน้ำธนบุรี","area":"","branch":"","lat":13.759008,"lon":100.47099,"frc":1.2,"type":"plant"},{"id":"SP07","name":"โรงงานผลิตน้ำสามเสน 1","area":"","branch":"","lat":13.773751,"lon":100.5303,"frc":0.9,"type":"plant"},{"id":"SP08","name":"โรงงานผลิตน้ำสามเสน 2","area":"","branch":"","lat":13.774175,"lon":100.53128,"frc":0.8,"type":"plant"},{"id":"SP09","name":"โรงงานผลิตน้ำสามเสน 3","area":"","branch":"","lat":13.775821,"lon":100.52958,"frc":1.1,"type":"plant"},{"id":"SP10","name":"โรงงานผลิตน้ำสามเสน 4","area":"","branch":"","lat":13.77449,"lon":100.52874,"frc":0.9,"type":"plant"},{"id":"SP11","name":"สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)","area":"","branch":"","lat":13.809139,"lon":100.40854,"frc":1.4,"type":"pump"},{"id":"SP12","name":"สถานีสูบจ่ายน้ำมหาสวัสดิ์","area":"","branch":"","lat":13.807434,"lon":100.409775,"frc":1.2,"type":"pump"},{"id":"SW01","name":"สถานีสูบจ่ายน้ำลุมพินี","area":"TR1","branch":"","lat":13.734649,"lon":100.53785,"frc":1.1,"type":"pump"},{"id":"SW02","name":"สถานีสูบจ่ายน้ำลาดพร้าว","area":"TR2","branch":"","lat":13.766959,"lon":100.59763,"frc":1.2,"type":"pump"},{"id":"SW03","name":"สถานีสูบจ่ายน้ำคลองเตย","area":"TR2","branch":"","lat":13.715186,"lon":100.58102,"frc":1.1,"type":"pump"},{"id":"SW04","name":"สถานีสูบจ่ายน้ำสำโรง","area":"TR1","branch":"","lat":13.662468,"lon":100.59082,"frc":1.0,"type":"pump"},{"id":"SW05","name":"สถานีสูบจ่ายน้ำมีนบุรี","area":"TR3","branch":"","lat":13.826229,"lon":100.74055,"frc":1.1,"type":"pump"},{"id":"SW06","name":"สถานีสูบจ่ายน้ำลาดกระบัง","area":"TR3","branch":"","lat":13.724753,"lon":100.741005,"frc":1.1,"type":"pump"},{"id":"SW07","name":"สถานีสูบจ่ายน้ำบางพลี","area":"TR3","branch":"","lat":13.598997,"lon":100.713974,"frc":1.2,"type":"pump"},{"id":"SW08","name":"สถานีสูบจ่ายน้ำราษฎร์บูรณะ","area":"MTR","branch":"","lat":13.675917,"lon":100.467606,"frc":1.0,"type":"pump"},{"id":"SW09","name":"สถานีสูบจ่ายน้ำเพชรเกษม","area":"MTR","branch":"","lat":13.72472,"lon":100.40649,"frc":1.01,"type":"pump"},{"id":"SW10","name":"สถานีสูบจ่ายน้ำท่าพระ","area":"MTR","branch":"","lat":13.731417,"lon":100.47622,"frc":1.07,"type":"pump"},{"id":23,"name":"สำนักงานประปาสาขานนทบุรี","area":"Dis 1","branch":"สำนักงานประปาสาขานนทบุรี","lat":13.87789,"lon":100.514037,"frc":0.5,"type":"monitor"},{"id":24,"name":"สำนักงานประปาสาขาทุ่งมหาเมฆ","area":"สจ.ลุมพินี","branch":"สำนักงานประปาสาขาทุ่งมหาเมฆ","lat":13.71571,"lon":100.539415,"frc":0.6,"type":"monitor"},{"id":25,"name":"สำนักงานประปาสาขาสุขุมวิท","area":"สจ.คลองเตย","branch":"สำนักงานประปาสาขาสุขุมวิท","lat":13.708,"lon":100.599412,"frc":0.7,"type":"monitor"},{"id":26,"name":"สำนักงานประปาสาขาสมุทรปราการ","area":"สจ.สำโรง","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.604564,"lon":100.598424,"frc":0.6,"type":"monitor"},{"id":27,"name":"สำนักงานประปาสาขามีนบุรี","area":"สจ.มีนบุรี","branch":"สำนักงานประปาสาขามีนบุรี","lat":13.814991,"lon":100.74118,"frc":0.8,"type":"monitor"},{"id":28,"name":"สำนักงานประปาสาขาบางบัวทอง","area":"สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขาบางบัวทอง","lat":13.911923,"lon":100.424523,"frc":0.7,"type":"monitor"},{"id":29,"name":"โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี","area":"Dis 1 + สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขาบางบัวทอง","lat":13.926307,"lon":100.480931,"frc":0.7,"type":"monitor"},{"id":30,"name":"โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก","area":"Dis 1","branch":"สำนักงานประปาสาขานนทบุรี","lat":13.931563,"lon":100.532203,"frc":0.8,"type":"monitor"},{"id":31,"name":"กองพันทหารสื่อสาร","area":"Dis 1","branch":"สำนักงานประปาสาขาประชาชื่น","lat":13.93261,"lon":100.58014,"frc":0.6,"type":"monitor"},{"id":32,"name":"โรงพยาบาลภูมิพลอดุลยเดช","area":"Dis 2","branch":"สำนักงานประปาสาขาบางเขน","lat":13.909108,"lon":100.616983,"frc":0.5,"type":"monitor"},{"id":"SW11","name":"สถานีสูบจ่ายน้ำพหลโยธิน","area":"Dis 2","branch":"สำนักงานประปาสาขาพญาไท","lat":13.787854,"lon":100.55427,"frc":0.9,"type":"pump"},{"id":34,"name":"โรงพยาบาลซีจีเอช สายไหม","area":"Dis 2","branch":"สำนักงานประปาสาขาบางเขน","lat":13.924336,"lon":100.684037,"frc":0.5,"type":"monitor"},{"id":35,"name":"พระราชวังดุสิต สวนจิตรลดา","area":"รง.สามเสน 3","branch":"สำนักงานประปาสาขาแม้นศรี","lat":13.772542,"lon":100.520972,"frc":0.9,"type":"monitor"},{"id":36,"name":"โรงพยาบาลศิริราช","area":"รง.ธนบุรี","branch":"สำนักงานประปาสาขาบางกอกน้อย","lat":13.759399,"lon":100.484423,"frc":0.8,"type":"monitor"},{"id":37,"name":"บริษัท โอสถสภา จำกัด (มหาชน)","area":"สจ.ลาดพร้าว","branch":"สำนักงานประปาสาขาสุขุมวิท","lat":13.760925,"lon":100.631088,"frc":0.9,"type":"monitor"},{"id":38,"name":"สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ","area":"สจ.ลาดพร้าว","branch":"สำนักงานประปาสาขาลาดพร้าว","lat":13.80942,"lon":100.615716,"frc":0.7,"type":"monitor"},{"id":39,"name":"ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ (ท้องฟ้าจำลอง)","area":"สจ.คลองเตย","branch":"สำนักงานประปาสาขาสุขุมวิท","lat":13.720083,"lon":100.582425,"frc":0.8,"type":"monitor"},{"id":40,"name":"บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)","area":"สจ.สำโรง","branch":"สำนักงานประปาสาขาพระโขนง","lat":13.655181,"lon":100.645761,"frc":0.5,"type":"monitor"},{"id":41,"name":"โรงเรียนหาดอมราอักษรลักษณ์วิทยา","area":"สจ.สำโรง","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.560314,"lon":100.590053,"frc":0.4,"type":"monitor"},{"id":42,"name":"บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)","area":"สจ.สำโรง","branch":"สำนักงานประปาสาขาสุขสวัสดิ์","lat":13.604611,"lon":100.555855,"frc":0.5,"type":"monitor"},{"id":43,"name":"โรงไฟฟ้าพระนครใต้","area":"สจ.สำโรง","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.620921,"lon":100.561644,"frc":0.5,"type":"monitor"},{"id":44,"name":"บริษัท มหาจักรออโตพาร์ท จำกัด","area":"สจ.มีนบุรี","branch":"สำนักงานประปาสาขามีนบุรี","lat":13.83018,"lon":100.849967,"frc":0.3,"type":"monitor"},{"id":45,"name":"นิคมอุตสาหกรรมบางชัน","area":"สจ.มีนบุรี","branch":"สำนักงานประปาสาขามีนบุรี","lat":13.801554,"lon":100.705106,"frc":0.8,"type":"monitor"},{"id":46,"name":"ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์","area":"สจ.มีนบุรี","branch":"สำนักงานประปาสาขามีนบุรี","lat":13.828346,"lon":100.720017,"frc":0.89,"type":"monitor"},{"id":47,"name":"นิคมอุตสาหกรรมลาดกระบัง","area":"สจ.ลาดกระบัง","branch":"สำนักงานประปาสาขาสุวรรณภูมิ","lat":13.758024,"lon":100.79126,"frc":0.67,"type":"monitor"},{"id":48,"name":"บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)","area":"สจ.ลาดกระบัง","branch":"สำนักงานประปาสาขาสุวรรณภูมิ","lat":13.713374,"lon":100.76257,"frc":0.7,"type":"monitor"},{"id":49,"name":"มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)","area":"สจ.บางพลี","branch":"สำนักงานประปาสาขาสุวรรณภูมิ","lat":13.612905,"lon":100.756515,"frc":0.4,"type":"monitor"},{"id":50,"name":"นิคมอุตสาหกรรมบางพลี","area":"สจ.บางพลี","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.565099,"lon":100.791495,"frc":0.5,"type":"monitor"},{"id":51,"name":"สถานีตำรวจภูธรคลองด่าน","area":"สจ.บางพลี","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.502919,"lon":100.836085,"frc":0.1,"type":"monitor"},{"id":52,"name":"นิคมอุตสาหกรรมบางปู","area":"สจ.บางพลี","branch":"สำนักงานประปาสาขาสมุทรปราการ","lat":13.541545,"lon":100.66235,"frc":0.4,"type":"monitor"},{"id":53,"name":"ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)","area":"สจ.ท่าพระ","branch":"สำนักงานประปาสาขาภาษีเจริญ","lat":13.711507,"lon":100.426571,"frc":0.7,"type":"monitor"},{"id":54,"name":"ศูนย์กีฬาเฉลิมพระเกียรติ","area":"สจ.ราษฎร์บูรณะ","branch":"สำนักงานประปาสาขาสุขสวัสดิ์","lat":13.648373,"lon":100.49335,"frc":0.8,"type":"monitor"},{"id":55,"name":"ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)","area":"สจ.ราษฎร์บูรณะ","branch":"สำนักงานประปาสาขาตากสิน","lat":13.574889,"lon":100.438535,"frc":0.7,"type":"monitor"},{"id":56,"name":"มหาวิทยาลัยเอเชียอาคเนย์","area":"สจ.เพชรเกษม","branch":"สำนักงานประปาสาขาภาษีเจริญ","lat":13.706699,"lon":100.355239,"frc":0.8,"type":"monitor"},{"id":57,"name":"เรือนจำพิเศษธนบุรี","area":"สจ.เพชรเกษม","branch":"สำนักงานประปาสาขาภาษีเจริญ","lat":13.645822,"lon":100.385196,"frc":0.6,"type":"monitor"},{"id":58,"name":"โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี","area":"สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขามหาสวัสดิ์","lat":13.806157,"lon":100.478711,"frc":0.7,"type":"monitor"},{"id":59,"name":"โรงเรียนราชวินิต นนทบุรี","area":"สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขามหาสวัสดิ์","lat":13.839914,"lon":100.348271,"frc":0.8,"type":"monitor"},{"id":60,"name":"สถานีตำรวจภูธรไทรน้อย","area":"สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขาบางบัวทอง","lat":13.98311,"lon":100.323411,"frc":0.5,"type":"monitor"},{"id":61,"name":"โรงเรียนตั้งพิรุฬห์ธรรม","area":"สูบจ่ายมหาสวัสดิ์","branch":"สำนักงานประปาสาขาบางกอกน้อย","lat":13.780158,"lon":100.344283,"frc":0.4,"type":"monitor"}];
 
 // ══════════════════════════════════════════════════════════════════════
-// rev14.0: Valve Chamber (VC) — จุดควบคุมวาล์วในระบบท่อ
+// rev16.0: Valve Chamber (VC) — จุดควบคุมวาล์วในระบบท่อ
 // ──────────────────────────────────────────────────────────────────────
 // VC ไม่ใช่ค่าวัดจริง — เป็นค่า simulate จาก EPANET ที่คำนวณมาจากสถานีต้นทาง (สูบส่ง)
 // valvePct = % การเปิดวาล์ว (0% = ปิด/ติดเฉยๆ ไม่มีอิทธิพล)
@@ -2949,7 +3045,7 @@ function updateVcFrc() {
   }
 }
 
-// ── rev14.0: VC ไม่ merge เข้า SENSORS / SENSORS_FALLBACK ──
+// ── rev16.0: VC ไม่ merge เข้า SENSORS / SENSORS_FALLBACK ──
 // VC เป็นค่า sim ใช้แค่ใน contour calculation เท่านั้น
 // ไม่ปนกับ สรุปคลอรีน / report / alert / LINE bot (61 สถานีเดิม)
 
@@ -3261,7 +3357,7 @@ const _FRC_ZONE_EXCL_NAMES = new Set([
 ]);
 const _SOURCE_TYPES = new Set(['pump', 'plant']);
 
-// rev14.0: point-in-polygon helper (ใช้ใน frcZone/idwZone — ก่อน pointInPolygon ถูก define ที่บรรทัดถัดไป)
+// rev16.0: point-in-polygon helper (ใช้ใน frcZone/idwZone — ก่อน pointInPolygon ถูก define ที่บรรทัดถัดไป)
 function _pip(lat, lon, coords) {
   let inside = false;
   for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
@@ -3273,7 +3369,7 @@ function _pip(lat, lon, coords) {
 }
 
 function idwZone(lat, lon) {
-  // rev14.0: เช็ค VC Zone ก่อน (EC mode — EC ไม่สลายตัว ใช้ค่า source)
+  // rev16.0: เช็ค VC Zone ก่อน (EC mode — EC ไม่สลายตัว ใช้ค่า source)
   if (typeof VC_STATIONS !== 'undefined') {
     for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
       if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
@@ -3324,29 +3420,40 @@ function _inMdisZone(la, lo) {
   return inside;
 }
 
-function frcZone(lat, lon) {
-  // rev14.0: เช็ค VC Zone ก่อน — VC เปิดยึดพื้นที่ polygon
-  if (typeof VC_STATIONS !== 'undefined') {
-    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
-      if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
-      if (!_pip(lat, lon, zone.coords)) continue;
-      const vc = VC_STATIONS.find(v => v.id === sid);
-      if (!vc || !isVcActive(vc)) continue; // VC ปิด → ไม่มีผล
-      const vcFrc = (typeof getVcFrc === 'function') ? getVcFrc(sid) : vc.frc;
-      if (vcFrc <= 0) continue;
-      const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
-      const pair = (typeof VC_PAIR !== 'undefined') ? VC_PAIR[sid] : null;
-      const kLocal = pair ? pair.K : 0.05;
-      const tLocal = dKm / 1.5;
-      return Math.max(0, vcFrc * Math.exp(-kLocal * tLocal));
-    }
-  }
+// rev16.0: pre-cache sources list (ไม่ filter ใหม่ทุก call)
+let _frcZoneSources = null;
+let _frcZoneSourcesKey = '';
 
-  const sources = SENSORS.filter(s =>
+function _ensureFrcSources() {
+  const key = SENSORS.length + '_' + SENSORS.map(s=>s.id).join();
+  if (_frcZoneSourcesKey === key && _frcZoneSources) return _frcZoneSources;
+  _frcZoneSourcesKey = key;
+  _frcZoneSources = SENSORS.filter(s =>
     _SOURCE_TYPES.has(s.type) &&
     !_FRC_ZONE_EXCL_IDS.has(String(s.id)) &&
     !_FRC_ZONE_EXCL_NAMES.has(s.name?.trim())
   );
+  return _frcZoneSources;
+}
+
+function frcZone(lat, lon) {
+  // rev16.0: VC zone check (bbox reject) — ใช้ cached data
+  if (typeof VC_STATIONS !== 'undefined' && window.CUSTOM_ZONES) {
+    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+      if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+      if (!_pip(lat, lon, zone.coords)) continue;
+      const vc = VC_STATIONS.find(v => v.id === sid);
+      if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+      const vcFrc = vc.frc || 0;
+      if (vcFrc <= 0) continue;
+      const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
+      const pair = VC_PAIR ? VC_PAIR[sid] : null;
+      const kLocal = pair ? pair.K : 0.05;
+      return Math.max(0, vcFrc * Math.exp(-kLocal * (dKm / 1.5)));
+    }
+  }
+
+  const sources = _ensureFrcSources();
   if (sources.length === 0) return idwDirect(lat, lon, 2);
 
   let nearest = null, minDist = Infinity;
@@ -3374,8 +3481,9 @@ function buildIdwCache() {
   const dlat = (CACHE_LAT1 - CACHE_LAT0) / CACHE_RES;
   const dlon = (CACHE_LON1 - CACHE_LON0) / CACHE_RES;
 
-  // ใช้ window.frcZone / window.idwZone เพื่อให้ Custom Zone override ทำงานได้เสมอ
-  if (typeof updateVcFrc === 'function') updateVcFrc(); // rev14.0
+  // rev16.0: invalidate caches + pre-compute VC FRC
+  _zoneCacheKey = ''; _frcZoneSourcesKey = '';
+  if (typeof updateVcFrc === 'function') updateVcFrc();
   const _frc = window.frcZone || frcZone;
   const _idw = window.idwZone || idwZone;
 
@@ -4907,7 +5015,7 @@ function buildMarkers() {
     if (!_area) _area = '—';
     if (!_branch) _branch = '—';
 
-    // rev14.0: VC marker — แยก icon + popup ตามสถานะเปิด/ปิด
+    // rev16.0: VC marker — แยก icon + popup ตามสถานะเปิด/ปิด
     const _isVc = s.type === 'vc';
     const _vcActive = _isVc && (typeof isVcActive === 'function') && isVcActive(s);
     const _vcClosed = _isVc && !_vcActive;
@@ -4948,7 +5056,7 @@ function buildMarkers() {
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
   }
 
-  // rev14.0: วาด VC markers แยกจาก SENSORS (VC ไม่อยู่ใน SENSORS)
+  // rev16.0: วาด VC markers แยกจาก SENSORS (VC ไม่อยู่ใน SENSORS)
   if (typeof VC_STATIONS !== 'undefined' && layers.sensors) {
     if (typeof updateVcFrc === 'function') updateVcFrc();
     for (const vc of VC_STATIONS) {
@@ -5064,7 +5172,7 @@ map.on('mousemove',e=>{
     const d = (s.lat - _lat)**2 + (s.lon - _lon)**2;
     if (d < snapDist) { snapDist = d; snapSensor = s; }
   }
-  // rev14.0: เช็ค VC_STATIONS แยก (VC ไม่อยู่ใน SENSORS)
+  // rev16.0: เช็ค VC_STATIONS แยก (VC ไม่อยู่ใน SENSORS)
   if (typeof VC_STATIONS !== 'undefined') {
     for (const vc of VC_STATIONS) {
       const d = (vc.lat - _lat)**2 + (vc.lon - _lon)**2;
@@ -5135,7 +5243,7 @@ function _syncFloatingBtns() {
   var anyOpen = (sb && sb.classList.contains('open')) ||
                 (ai && ai.classList.contains('open')) ||
                 (ze && ze.classList.contains('open'));
-  var btns = ['zone-editor-btn','ai-insight-btn','flow-btn','terrain3d-btn'];
+  var btns = ['zone-editor-btn','ai-insight-btn','flow-btn','terrain3d-btn','whatif-btn'];
   for (var i=0;i<btns.length;i++) {
     var b = document.getElementById(btns[i]);
     if (b) b.style.display = anyOpen ? 'none' : '';
@@ -6985,7 +7093,7 @@ function buildSnapFrameEc(snapEc) {
     });
 
   function ecZoneSnap(lat, lon) {
-    // rev14.0: VC zone มีลำดับสูงสุด — ถ้าทับซ้อนกับ zone อื่น VC ชนะ
+    // rev16.0: VC zone มีลำดับสูงสุด — ถ้าทับซ้อนกับ zone อื่น VC ชนะ
     if (typeof VC_STATIONS !== 'undefined') {
       for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
         if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
@@ -7031,7 +7139,7 @@ function buildSnapFrame(snap) {
     });
 
   function frcZoneSnap(lat, lon) {
-    // rev14.0: VC Zone — ถ้า VC เปิด (>0%) ยึดพื้นที่ / ถ้า VC ปิด (0%) ไม่มีผล ปล่อย fallback
+    // rev16.0: VC Zone — ถ้า VC เปิด (>0%) ยึดพื้นที่ / ถ้า VC ปิด (0%) ไม่มีผล ปล่อย fallback
     if (typeof VC_STATIONS !== 'undefined') {
       for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
         if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
@@ -7273,7 +7381,7 @@ function startLoadFc() {
       tasks.push({ ts, build:()=>buildOneFrame(function(lat,lon){
         var sources = _fcSrc;
         if(!sources.length) return 0;
-        // rev14.0: VC zone มีลำดับสูงสุด — ทับซ้อนกับ zone อื่น VC ชนะ
+        // rev16.0: VC zone มีลำดับสูงสุด — ทับซ้อนกับ zone อื่น VC ชนะ
         if(typeof VC_STATIONS!=='undefined'){
           var vczones=Object.entries(window.CUSTOM_ZONES||{});
           for(var vi=0;vi<vczones.length;vi++){
@@ -7696,7 +7804,7 @@ function populateStationList() {
   const pumps = SENSORS.filter(s =>
     PUMP_TYPES.has(s.type) && !EXCLUDE_TR_MTR.has(s.name?.trim())
   );
-  // rev14.0: เพิ่ม VC_STATIONS ใน Zone Editor (VC แยกจาก SENSORS)
+  // rev16.0: เพิ่ม VC_STATIONS ใน Zone Editor (VC แยกจาก SENSORS)
   if (typeof VC_STATIONS !== 'undefined') {
     for (const vc of VC_STATIONS) {
       if (!pumps.find(p => String(p.id) === vc.id)) {
@@ -8324,63 +8432,116 @@ function showZepMsg(text, color, bg, border) {
 // OVERRIDE frcZone() to respect CUSTOM_ZONES
 // Point-in-polygon check: if point falls in a custom zone → use that station
 // ═══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// rev16.0: Performance-optimized zone overrides
+// Pre-cache VC data + bounding box reject → ลด O(n×m) เหลือ O(1) per pixel
+// ══════════════════════════════════════════════════════════════════════
+let _zoneCache = null;
+let _zoneCacheKey = '';
+
+function _rebuildZoneCache() {
+  const key = JSON.stringify(Object.keys(window.CUSTOM_ZONES || {})) + '_' + (typeof VC_STATIONS !== 'undefined' ? VC_STATIONS.map(v=>v.id+v.valvePct).join() : '');
+  if (_zoneCacheKey === key && _zoneCache) return _zoneCache;
+  _zoneCacheKey = key;
+
+  const vcZones = [];
+  const stZones = [];
+  const vcMap = {};
+  const sensorMap = {};
+
+  // Build VC lookup
+  if (typeof VC_STATIONS !== 'undefined') {
+    for (const vc of VC_STATIONS) vcMap[vc.id] = vc;
+  }
+  // Build sensor lookup
+  for (const s of SENSORS) sensorMap[String(s.id)] = s;
+
+  // Pre-compute VC FRC values
+  const vcFrcCache = {};
+  if (typeof VC_STATIONS !== 'undefined') {
+    for (const vc of VC_STATIONS) {
+      vcFrcCache[vc.id] = (typeof getVcFrc === 'function') ? getVcFrc(vc.id) : (vc.frc || 0);
+    }
+  }
+
+  // Split zones into VC + station, pre-compute bounding boxes
+  for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
+    if (!zone.coords || zone.coords.length < 3) continue;
+    // Bounding box
+    let minLat=90, maxLat=-90, minLon=180, maxLon=-180;
+    for (const [la,lo] of zone.coords) {
+      if (la < minLat) minLat = la; if (la > maxLat) maxLat = la;
+      if (lo < minLon) minLon = lo; if (lo > maxLon) maxLon = lo;
+    }
+    const entry = { sid, coords: zone.coords, minLat, maxLat, minLon, maxLon };
+
+    if (sid.startsWith('VC')) {
+      const vc = vcMap[sid];
+      if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+      const frc = vcFrcCache[sid] || 0;
+      if (frc <= 0) continue;
+      const pair = (typeof VC_PAIR !== 'undefined') ? VC_PAIR[sid] : null;
+      entry.vc = vc;
+      entry.vcFrc = frc;
+      entry.K = pair ? pair.K : 0.05;
+      vcZones.push(entry);
+    } else {
+      entry.sensor = sensorMap[sid] || null;
+      stZones.push(entry);
+    }
+  }
+
+  _zoneCache = { vcZones, stZones, vcMap, sensorMap, vcFrcCache };
+  return _zoneCache;
+}
+
 const _origFrcZone = frcZone;
 window.frcZone = function frcZone(lat, lon) {
-  // rev14.0: VC zone check ก่อน — VC เปิดยึดพื้นที่
-  if (typeof VC_STATIONS !== 'undefined') {
-    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
-      if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
-      if (!pointInPolygon(lat, lon, zone.coords)) continue;
-      const vc = VC_STATIONS.find(v => v.id === sid);
-      if (!vc || !isVcActive(vc)) continue; // VC ปิด → ไม่มีผล
-      const vcFrc = (typeof getVcFrc === 'function') ? getVcFrc(sid) : vc.frc;
-      if (vcFrc <= 0) continue;
-      const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2) * 111.0;
-      const pair = (typeof VC_PAIR !== 'undefined') ? VC_PAIR[sid] : null;
-      const kLocal = pair ? pair.K : 0.05;
-      const tLocal = dKm / 1.5;
-      return Math.max(0, vcFrc * Math.exp(-kLocal * tLocal));
+  const c = _rebuildZoneCache();
+
+  // VC zones (pre-filtered, bbox reject)
+  for (let i = 0; i < c.vcZones.length; i++) {
+    const z = c.vcZones[i];
+    if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
+    if (!pointInPolygon(lat, lon, z.coords)) continue;
+    const dKm = Math.sqrt((z.vc.lat-lat)**2+(z.vc.lon-lon)**2) * 111.0;
+    return Math.max(0, z.vcFrc * Math.exp(-z.K * (dKm / 1.5)));
+  }
+
+  // Station zones (bbox reject)
+  for (let i = 0; i < c.stZones.length; i++) {
+    const z = c.stZones[i];
+    if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
+    if (!pointInPolygon(lat, lon, z.coords)) continue;
+    if (z.sensor) {
+      const dKm = Math.sqrt((z.sensor.lat-lat)**2+(z.sensor.lon-lon)**2) * 111.0;
+      return z.sensor.frc * epanetDecay(dKm, z.sensor);
     }
   }
-  // Custom zones สถานีสูบจ่ายปกติ (ข้าม VC)
-  for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
-    if (!zone.coords || zone.coords.length < 3) continue;
-    if (sid.startsWith('VC')) continue;
-    if (pointInPolygon(lat, lon, zone.coords)) {
-      const s = SENSORS.find(x => String(x.id) === sid);
-      if (s) {
-        const dKm = Math.sqrt(((s.lat - lat)**2 + (s.lon - lon)**2)) * 111.0;
-        return s.frc * epanetDecay(dKm, s);
-      }
-    }
-  }
-  // Fallback to original (nearest-neighbor)
+
   return _origFrcZone(lat, lon);
 };
 
-// Same override for idwZone (EC mode)
+// Same for idwZone (EC mode)
 const _origIdwZone = idwZone;
 window.idwZone = function idwZone(lat, lon) {
-  // rev14.0: VC zone (EC ไม่สลายตัว → ใช้ค่า source)
-  if (typeof VC_STATIONS !== 'undefined') {
-    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
-      if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
-      if (!pointInPolygon(lat, lon, zone.coords)) continue;
-      const vc = VC_STATIONS.find(v => v.id === sid);
-      if (!vc || !isVcActive(vc)) continue;
-      const src = SENSORS.find(x => String(x.id) === vc.sourceId);
-      if (src) return getParamVal(src);
-    }
+  const c = _rebuildZoneCache();
+
+  for (let i = 0; i < c.vcZones.length; i++) {
+    const z = c.vcZones[i];
+    if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
+    if (!pointInPolygon(lat, lon, z.coords)) continue;
+    const src = c.sensorMap[z.vc.sourceId];
+    if (src) return getParamVal(src);
   }
-  // Custom zones สถานีปกติ (ข้าม VC)
-  for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
-    if (!zone.coords || zone.coords.length < 3) continue;
-    if (sid.startsWith('VC')) continue;
-    if (pointInPolygon(lat, lon, zone.coords)) {
-      const s = SENSORS.find(x => String(x.id) === sid);
-      if (s) return getParamVal(s);
-    }
+
+  for (let i = 0; i < c.stZones.length; i++) {
+    const z = c.stZones[i];
+    if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
+    if (!pointInPolygon(lat, lon, z.coords)) continue;
+    if (z.sensor) return getParamVal(z.sensor);
   }
+
   return _origIdwZone(lat, lon);
 };
 
@@ -10638,7 +10799,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev14.0 — EPANET Chlorine decay model + Zone Influence + อิทธิพล VC (Sim จาก EPANET, ไม่ใช่ค่าวัดจริง) , Forecast จาก Pair คู่สถานี หาค่า K : 🔒 Firebase Auth + Security Rules + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev16.0 — EPANET Chlorine decay model + Zone Influence + อิทธิพล VC (Sim จาก EPANET, ไม่ใช่ค่าวัดจริง) + 🧪 What-If Dosing , Forecast จาก Pair คู่สถานี หาค่า K : 🔒 Firebase Auth + Security Rules + App Check (Enforced)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -12327,7 +12488,223 @@ function submitFeedback(){
 </script>
 
 
-<!-- rev14.0: VC Valve Config JS -->
+<!-- rev16.0: What-If Chlorine Dosing JS -->
+<script>
+(function(){
+  let _wifStation = null;
+  let _wifDelta = 0;
+  let _wifOrigFrc = {};
+  let _wifActive = false;
+
+  // Toggle What-If floating panel
+  window.toggleWhatIfPanel = function() {
+    const panel = document.getElementById('whatif-panel');
+    const btn = document.getElementById('whatif-btn');
+    if (!panel) return;
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', open);
+    if (open) wifPopulate2();
+  };
+
+  // Populate dropdown — ทั้ง sidebar + panel
+  function wifPopulate() {
+    _populateSelect('wif-station');
+    _populateSelect('wif-station2');
+  }
+  function wifPopulate2() { _populateSelect('wif-station2'); }
+
+  function _populateSelect(selId) {
+    const sel = document.getElementById(selId);
+    if (!sel || typeof SENSORS === 'undefined') return;
+    const EXCL = new Set(['SP01','SP02','SP03','SP11','1','2','3','11']);
+    const pumps = SENSORS.filter(s =>
+      (s.type === 'pump' || s.type === 'plant') && !EXCL.has(String(s.id))
+    );
+    sel.innerHTML = '<option value="">-- เลือกสถานี --</option>';
+    pumps.forEach(s => {
+      const name = s.name?.replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.');
+      const frc = _wifActive && _wifOrigFrc[String(s.id)] != null ? _wifOrigFrc[String(s.id)] : s.frc;
+      sel.innerHTML += '<option value="'+s.id+'">'+name+' (FRC '+(frc||0).toFixed(2)+')</option>';
+    });
+    if (_wifStation) sel.value = String(_wifStation.id);
+  }
+
+  // Select station — sidebar version
+  window.wifSelectStation = function() {
+    const sid = document.getElementById('wif-station')?.value;
+    _wifStation = SENSORS.find(s => String(s.id) === sid) || null;
+    _wifDelta = 0;
+    document.querySelectorAll('.wif-btn:not(.wif-btn2)').forEach(b => b.classList.remove('active'));
+    _syncSelect('wif-station2');
+    wifUpdateInfo('wif-info', 'wif-impact');
+    wifUpdateInfo('wif-info2', 'wif-impact2');
+  };
+
+  // Select station — panel version
+  window.wifSelectStation2 = function() {
+    const sid = document.getElementById('wif-station2')?.value;
+    _wifStation = SENSORS.find(s => String(s.id) === sid) || null;
+    _wifDelta = 0;
+    document.querySelectorAll('.wif-btn2').forEach(b => b.classList.remove('active'));
+    _syncSelect('wif-station');
+    wifUpdateInfo('wif-info', 'wif-impact');
+    wifUpdateInfo('wif-info2', 'wif-impact2');
+  };
+
+  function _syncSelect(targetId) {
+    const sel = document.getElementById(targetId);
+    if (sel && _wifStation) sel.value = String(_wifStation.id);
+  }
+
+  // Adjust — sidebar
+  window.wifAdjust = function(delta) {
+    _wifDelta = delta;
+    document.querySelectorAll('.wif-btn:not(.wif-btn2)').forEach(b => b.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    wifUpdateInfo('wif-info', 'wif-impact');
+    wifUpdateInfo('wif-info2', 'wif-impact2');
+  };
+
+  // Adjust — panel
+  window.wifAdjust2 = function(delta) {
+    _wifDelta = delta;
+    document.querySelectorAll('.wif-btn2').forEach(b => b.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    wifUpdateInfo('wif-info', 'wif-impact');
+    wifUpdateInfo('wif-info2', 'wif-impact2');
+  };
+
+  function wifUpdateInfo(infoId, impactId) {
+    const info = document.getElementById(infoId);
+    const impact = document.getElementById(impactId);
+    if (!info) return;
+
+    if (!_wifStation) {
+      info.innerHTML = '<span style="color:#999;">เลือกสถานีก่อน</span>';
+      if (impact) impact.innerHTML = '';
+      return;
+    }
+
+    const origFrc = _wifActive && _wifOrigFrc[String(_wifStation.id)] != null
+      ? _wifOrigFrc[String(_wifStation.id)] : _wifStation.frc || 0;
+    const newFrc = Math.max(0, origFrc + _wifDelta);
+    const sign = _wifDelta >= 0 ? '+' : '';
+    const color = _wifDelta > 0 ? '#0F6E56' : _wifDelta < 0 ? '#A32D2D' : '#888';
+
+    info.innerHTML = '<div style="background:#E1F5EE;border-radius:6px;padding:6px 8px;margin:4px 0;">' +
+      '<div style="font-size:11px;font-weight:600;color:#085041;">' + _wifStation.name?.replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.') + '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:'+color+';margin-top:2px;">' +
+      origFrc.toFixed(2) + ' → ' + newFrc.toFixed(2) + ' mg/L (' + sign + _wifDelta.toFixed(1) + ')</div></div>';
+
+    if (impact) {
+      const monitors = SENSORS.filter(s => s.type === 'monitor');
+      const sid = String(_wifStation.id);
+      let h = '<div style="font-size:9px;color:#888;margin:4px 0;">ผลกระทบต่อ Monitor (Zone Influence):</div>';
+      h += '<table style="width:100%;border-collapse:collapse;font-size:10px;">';
+      h += '<tr style="background:#f5f5f5;"><th style="padding:3px 4px;text-align:left;">สถานี</th><th style="padding:3px;text-align:right;">เดิม</th><th style="padding:3px;text-align:right;">ใหม่</th><th style="padding:3px;text-align:right;">ต่าง</th></tr>';
+
+      // หา monitor ที่อยู่ใน zone ของสถานีที่เลือก
+      // 1. เช็ค CUSTOM_ZONES ก่อน
+      // 2. ถ้าไม่มี zone → ใช้ nearest-neighbor
+      let count = 0;
+      for (const m of monitors) {
+        let inZone = false;
+
+        // เช็คว่า monitor อยู่ใน CUSTOM_ZONES ของสถานีนี้ไหม
+        if (typeof pointInPolygon === 'function' && window.CUSTOM_ZONES && window.CUSTOM_ZONES[sid]) {
+          const zone = window.CUSTOM_ZONES[sid];
+          if (zone.coords && zone.coords.length >= 3) {
+            inZone = pointInPolygon(m.lat, m.lon, zone.coords);
+          }
+        }
+
+        // ถ้าไม่มี CUSTOM_ZONE → เช็คว่าสถานีนี้เป็น nearest source ของ monitor หรือไม่
+        if (!inZone) {
+          const _SRC = new Set(['pump','plant']);
+          const _EXCL_IDS = new Set(['SP01','SP02','SP03','SP11','1','2','3','11']);
+          const srcs = SENSORS.filter(x => _SRC.has(x.type) && !_EXCL_IDS.has(String(x.id)));
+          let nearestSid = null, minD = Infinity;
+          for (const x of srcs) {
+            const d = (x.lat - m.lat)**2 + (x.lon - m.lon)**2;
+            if (d < minD) { minD = d; nearestSid = String(x.id); }
+          }
+          // เช็คว่า monitor อยู่ใน CUSTOM_ZONE ของสถานีอื่นไหม (ถ้าอยู่ → ไม่ใช่ nearest)
+          let foundOtherZone = false;
+          if (typeof pointInPolygon === 'function' && window.CUSTOM_ZONES) {
+            for (const [zSid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+              if (zSid === sid || !zone.coords || zone.coords.length < 3) continue;
+              if (pointInPolygon(m.lat, m.lon, zone.coords)) { foundOtherZone = true; break; }
+            }
+          }
+          if (!foundOtherZone && nearestSid === sid) inZone = true;
+        }
+
+        if (!inZone) continue;
+
+        // คำนวณ decay จากสถานีที่เลือก → monitor
+        const dKm = Math.sqrt((m.lat - _wifStation.lat)**2 + (m.lon - _wifStation.lon)**2) * 111.0;
+        const kb = 0.80, kw = 0.10, D = 0.20, v = 0.45;
+        const K_total = (kb + kw * (4/D)) / 86400;
+        const t = (dKm * 1000) / v;
+        const decay = Math.exp(-K_total * t);
+        const origAtM = origFrc * decay;
+        const newAtM = newFrc * decay;
+        const diff = newAtM - origAtM;
+        const dc = diff > 0.01 ? '#0F6E56' : diff < -0.01 ? '#A32D2D' : '#888';
+        const ds = diff >= 0 ? '+' : '';
+        const mName = m.name?.length > 18 ? m.name.substring(0, 18) + '…' : m.name;
+        h += '<tr style="border-bottom:1px solid #eee;"><td style="padding:2px 4px;">'+mName+'</td><td style="padding:2px;text-align:right;font-family:monospace;">'+origAtM.toFixed(3)+'</td><td style="padding:2px;text-align:right;font-family:monospace;color:'+dc+';">'+newAtM.toFixed(3)+'</td><td style="padding:2px;text-align:right;font-family:monospace;color:'+dc+';font-weight:600;">'+ds+diff.toFixed(3)+'</td></tr>';
+        count++;
+      }
+      h += '</table>';
+      if (count === 0) h += '<div style="color:#999;font-size:9px;">ไม่มี monitor ใน zone ของสถานีนี้</div>';
+      impact.innerHTML = h;
+    }
+  }
+
+  window.wifApply = function() {
+    if (!_wifStation) { alert('เลือกสถานีก่อน'); return; }
+    if (!_wifActive) {
+      _wifOrigFrc = {};
+      SENSORS.forEach(s => { _wifOrigFrc[String(s.id)] = s.frc; });
+    }
+    _wifActive = true;
+    const origFrc = _wifOrigFrc[String(_wifStation.id)] || _wifStation.frc;
+    _wifStation.frc = Math.max(0, origFrc + _wifDelta);
+    if (typeof updateVcFrc === 'function') updateVcFrc();
+    if (typeof buildIdwCache === 'function') buildIdwCache();
+    if (typeof redrawContour === 'function') redrawContour();
+    if (typeof buildMarkers === 'function') buildMarkers();
+    console.log('[What-If] Applied: ' + _wifStation.name + ' FRC → ' + _wifStation.frc.toFixed(3));
+  };
+
+  window.wifReset = function() {
+    if (!_wifActive || !_wifOrigFrc) return;
+    SENSORS.forEach(s => {
+      const orig = _wifOrigFrc[String(s.id)];
+      if (orig != null) s.frc = orig;
+    });
+    _wifActive = false; _wifOrigFrc = {}; _wifDelta = 0; _wifStation = null;
+    document.querySelectorAll('.wif-btn').forEach(b => b.classList.remove('active'));
+    ['wif-station','wif-station2'].forEach(id => { const s = document.getElementById(id); if (s) s.value = ''; });
+    ['wif-info','wif-info2'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<span style="color:#27ae60;font-weight:600;">✓ คืนค่าเดิมแล้ว</span>'; });
+    ['wif-impact','wif-impact2'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
+    if (typeof updateVcFrc === 'function') updateVcFrc();
+    if (typeof buildIdwCache === 'function') buildIdwCache();
+    if (typeof redrawContour === 'function') redrawContour();
+    if (typeof buildMarkers === 'function') buildMarkers();
+    wifPopulate();
+    console.log('[What-If] Reset');
+  };
+
+  const _do = () => setTimeout(wifPopulate, 1500);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _do);
+  else _do();
+})();
+</script>
+
+<!-- rev16.0: VC Valve Config JS -->
 <script>
 (function(){
   function _srcName(id) {
@@ -12417,7 +12794,21 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev14.0 — April 2026 · M sandbox · 🔒 Security Upgrade</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">rev16.0 — April 2026 · M sandbox · 🔒 Security Upgrade</p>
+
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 rev16.0 — What-If Chlorine Dosing</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. What-If Simulation</b> — จำลองการปรับคลอรีนที่สถานีสูบจ่าย ดูผลกระทบต่อ contour + monitor<br>
+<b>B. ปรับ FRC ±0.1 ถึง ±0.5</b> — เห็นผลทันทีว่า monitor รอบๆ เปลี่ยนแค่ไหน<br>
+<b>C. Reset</b> — คืนค่าเดิมทุกสถานี
+</p>
+
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 rev16.0 — What-If + Performance</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. What-If Dosing</b> — จำลองปรับคลอรีน ± ที่สถานีสูบจ่าย ดูผลต่อ contour + monitor (Zone Influence)<br>
+<b>B. Performance</b> — Pre-cache zone data + bbox reject → buildIdwCache เร็วขึ้น 3-5x<br>
+<b>C. Mobile UI</b> — ปุ่ม 3D / What-If / AI ออกมาด้านนอก ไม่ต้องเปิด sidebar
+</p>
 
 <h3 style="color:#6c3483;font-size:15px;margin:16px 0 6px;">🔗 rev14.0 — VC Zone Contour</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
@@ -12427,7 +12818,7 @@ function submitFeedback(){
 <b>D. VC Zone Contour</b> — วาดขอบเขต VC ใน Zone Editor → contour คำนวณ decay จาก VC ออก
 </p>
 
-<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 rev14.0 — VC Zone Contour</h3>
+<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 rev16.0 — VC Zone Contour</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
 <b>A. Firebase Security Rules</b> — จำกัดการอ่าน/เขียนตาม path, validate ข้อมูลก่อนบันทึก, ปิด path admin ให้ authenticated only<br>
 <b>B. Firebase Authentication</b> — ย้ายระบบ login จาก hardcoded credentials ไปใช้ Firebase Auth (email/password)<br>
@@ -12475,6 +12866,6 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev14.0 · M sandbox · Water Quality Division · March 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev16.0 · M sandbox · Water Quality Division · March 2026 · 🔒 Security Upgrade</div>
 </div></div>
 </body></html>
