@@ -3384,11 +3384,8 @@ function idwZone(lat, lon) {
       if (!_pip(lat, lon, zone.coords)) continue;
       const vc = VC_STATIONS.find(v => v.id === sid);
       if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
-      // หา source แล้วใช้ EC ตรงๆ
       const src = SENSORS.find(x => String(x.id) === vc.sourceId);
-      if (src && src.ec != null) return src.ec;
-      // ถ้า source ไม่มี ec → nearest pump/plant ที่มี ec
-      break;
+      if (src) return getParamVal(src);
     }
   }
 
@@ -8544,7 +8541,7 @@ window.idwZone = function idwZone(lat, lon) {
     if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
     if (!pointInPolygon(lat, lon, z.coords)) continue;
     const src = c.sensorMap[z.vc.sourceId];
-    if (src && src.ec != null) return src.ec;
+    if (src) return getParamVal(src);
   }
 
   for (let i = 0; i < c.stZones.length; i++) {
