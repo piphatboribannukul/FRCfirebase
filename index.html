@@ -346,12 +346,12 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     font-size: 12px;
   }
   #zone-editor-btn { display: none !important; }
-  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 84px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 96px !important; right: 8px !important; left: auto !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
   #ai-insight-btn .ai-pulse { display: none !important; }
   #flow-btn { display: none !important; }
-  /* rev16.0: mobile แสดง 3D + What-If + AI ด้านบน */
-  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 8px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
-  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 46px !important; width: 32px !important; height: 32px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  /* rev16.0: mobile 3D + Cl₂ + AI มุมขวาบน */
+  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 96px !important; right: 84px !important; left: auto !important; width: 32px !important; height: 32px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 96px !important; right: 46px !important; left: auto !important; width: 32px !important; height: 32px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -3377,15 +3377,18 @@ function _pip(lat, lon, coords) {
 }
 
 function idwZone(lat, lon) {
-  // rev16.0: เช็ค VC Zone ก่อน (EC mode — EC ไม่สลายตัว ใช้ค่า source)
+  // rev16.0: VC zone — ใช้ค่า EC จาก source ตรงๆ (ไม่มีการสลายตัว)
   if (typeof VC_STATIONS !== 'undefined') {
     for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
       if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
       if (!_pip(lat, lon, zone.coords)) continue;
       const vc = VC_STATIONS.find(v => v.id === sid);
-      if (!vc || !isVcActive(vc)) continue;
+      if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+      // หา source แล้วใช้ EC ตรงๆ
       const src = SENSORS.find(x => String(x.id) === vc.sourceId);
-      if (src) return getParamVal(src);
+      if (src && src.ec != null) return src.ec;
+      // ถ้า source ไม่มี ec → nearest pump/plant ที่มี ec
+      break;
     }
   }
 
@@ -7101,16 +7104,16 @@ function buildSnapFrameEc(snapEc) {
     });
 
   function ecZoneSnap(lat, lon) {
-    // rev16.0: VC zone มีลำดับสูงสุด — ถ้าทับซ้อนกับ zone อื่น VC ชนะ
+    // rev16.0: VC zone — ใช้ค่า EC จาก source ตรงๆ (ไม่มีการสลายตัว)
     if (typeof VC_STATIONS !== 'undefined') {
       for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
         if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
         if (!pointInPolygon(lat, lon, zone.coords)) continue;
         const vc = VC_STATIONS.find(v => v.id === sid);
-        if (!vc || !isVcActive(vc)) continue; // VC ปิด → ไม่มีผล
-        // EC ที่ VC = EC ของ source (EC ไม่สลายตัว)
+        if (!vc || !isVcActive(vc)) continue;
+        // EC จาก source ตรงๆ — ไม่ decay
         const src = sources.find(x => String(x.id) === vc.sourceId);
-        if (src) return src._snapEc;
+        if (src && src._snapEc != null) return src._snapEc;
       }
     }
     // zone สถานีปกติ (ข้าม VC)
@@ -8535,12 +8538,13 @@ const _origIdwZone = idwZone;
 window.idwZone = function idwZone(lat, lon) {
   const c = _rebuildZoneCache();
 
+  // VC zone — ใช้ค่า EC จาก source ตรงๆ (ไม่มีการสลายตัว)
   for (let i = 0; i < c.vcZones.length; i++) {
     const z = c.vcZones[i];
     if (lat < z.minLat || lat > z.maxLat || lon < z.minLon || lon > z.maxLon) continue;
     if (!pointInPolygon(lat, lon, z.coords)) continue;
     const src = c.sensorMap[z.vc.sourceId];
-    if (src) return getParamVal(src);
+    if (src && src.ec != null) return src.ec;
   }
 
   for (let i = 0; i < c.stZones.length; i++) {
