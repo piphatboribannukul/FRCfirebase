@@ -346,12 +346,12 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
     font-size: 12px;
   }
   #zone-editor-btn { display: none !important; }
-  #ai-insight-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 84px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 84px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
   #ai-insight-btn .ai-pulse { display: none !important; }
   #flow-btn { display: none !important; }
-  /* rev16.0: mobile แสดง 3D + What-If + AI เป็นปุ่มเล็กข้างนอก */
-  #terrain3d-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 8px !important; width: 32px !important; height: 32px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
-  #whatif-btn { display: flex !important; position: fixed !important; top: auto !important; bottom: 38px !important; left: 46px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  /* rev16.0: mobile แสดง 3D + What-If + AI ด้านบน */
+  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 8px !important; width: 32px !important; height: 32px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 58px !important; left: 46px !important; width: 32px !important; height: 32px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -2167,12 +2167,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 <button id="terrain3d-btn" onclick="open3DTerrain()" title="3D Map — แสดงค่าคลอรีนเป็นภูมิประเทศ 3 มิติ" style="font-size:11px;font-weight:800;letter-spacing:-0.5px;">3D</button>
 
 <!-- rev16.0: What-If Button (PC/iPad) -->
-<button id="whatif-btn" onclick="toggleWhatIfPanel()" title="What-If — จำลองการปรับคลอรีน">🧪</button>
+<button id="whatif-btn" onclick="toggleWhatIfPanel()" title="What-If — จำลองการปรับคลอรีน" style="font-size:11px;font-weight:800;font-family:monospace;letter-spacing:-1px;">Cl₂</button>
 
 <!-- rev16.0: What-If Floating Panel -->
 <div id="whatif-panel" style="display:none;position:absolute;top:52px;left:56px;width:280px;max-height:80vh;background:#fff;border:1.5px solid #1D9E75;border-radius:14px;box-shadow:0 8px 32px rgba(29,158,117,.15);z-index:1200;overflow:hidden;font-family:'Sarabun',sans-serif;">
   <div style="background:linear-gradient(135deg,#0F6E56,#1D9E75);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-    <span style="color:#fff;font-size:13px;font-weight:700;">🧪 What-If จ่ายคลอรีน</span>
+    <span style="color:#fff;font-size:13px;font-weight:700;">Cl₂ What-If จ่ายคลอรีน</span>
     <button onclick="toggleWhatIfPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
   </div>
   <div style="padding:12px;overflow-y:auto;max-height:calc(80vh - 50px);">
@@ -2199,7 +2199,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div id="wif-info2" style="font-size:10px;color:#444;margin:6px 0;min-height:20px;"></div>
     <div id="wif-impact2" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
     <button class="ep-apply" onclick="wifApply()" style="margin-top:6px;width:100%;background:#0F6E56;color:#fff;border-color:#085041;">
-      🧪 จำลอง Contour
+      Cl₂ จำลอง Contour
     </button>
     <button class="ep-apply" onclick="wifReset()" style="margin-top:4px;width:100%;background:#888;color:#fff;border-color:#666;">
       ↩ คืนค่าเดิม
@@ -2330,7 +2330,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   </div>
   <!-- rev16.0: What-If Chlorine Dosing -->
   <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
-    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🧪 What-If จ่ายคลอรีน <span class="sb-arrow">▸</span></h3>
+    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">Cl₂ What-If จ่ายคลอรีน <span class="sb-arrow">▸</span></h3>
     <div class="sb-body" style="display:none;">
       <div style="font-size:10px;color:#185FA5;margin-bottom:8px;line-height:1.5;">
         จำลองการปรับคลอรีนที่สถานีสูบจ่าย<br>ดูผลกระทบต่อ contour + สถานี monitor
@@ -2355,7 +2355,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <div id="wif-info" style="font-size:10px;color:#444;margin:6px 0;min-height:20px;"></div>
       <div id="wif-impact" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
       <button class="ep-apply" onclick="wifApply()" style="margin-top:6px;width:100%;background:#185FA5;color:#fff;border-color:#0C447C;">
-        🧪 จำลอง Contour
+        Cl₂ จำลอง Contour
       </button>
       <button class="ep-apply" onclick="wifReset()" style="margin-top:4px;width:100%;background:#888;color:#fff;border-color:#666;">
         ↩ คืนค่าเดิม
@@ -2657,6 +2657,14 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="lg-item" id="lg-sym-monitor">
       <svg width="13" height="13"><circle id="lg-monitor-circle" cx="6.5" cy="6.5" r="5.5" fill="#e05080" stroke="#fff" stroke-width="1.5"/></svg>
       <span>จุดตรวจวัด</span>
+    </div>
+    <div class="lg-item" id="lg-sym-vc-active">
+      <svg width="13" height="13"><rect x="1" y="1" width="11" height="11" rx="3" fill="#6c3483" stroke="#cc88ff" stroke-width="1"/></svg>
+      <span>VC เปิด (sim)</span>
+    </div>
+    <div class="lg-item" id="lg-sym-vc-closed">
+      <svg width="13" height="13"><rect x="1" y="1" width="11" height="11" rx="3" fill="#999" stroke="#ccc" stroke-width="1" opacity="0.6"/></svg>
+      <span>VC ปิด</span>
     </div>
     <div class="lg-div"></div>
     <!-- ปุ่ม Note -->
@@ -10799,7 +10807,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev16.0 — EPANET Chlorine decay model + Zone Influence + อิทธิพล VC (Sim จาก EPANET, ไม่ใช่ค่าวัดจริง) + 🧪 What-If Dosing , Forecast จาก Pair คู่สถานี หาค่า K : 🔒 Firebase Auth + Security Rules + App Check (Enforced)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev16.0 — EPANET Chlorine decay model + Zone Influence + อิทธิพล VC (Sim จาก EPANET, ไม่ใช่ค่าวัดจริง) + Cl₂ What-If Dosing , Forecast จาก Pair คู่สถานี หาค่า K : 🔒 Firebase Auth + Security Rules + App Check (Enforced)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -10900,6 +10908,27 @@ function submitFeedback(){
           <line x1="10" y1="2.5" x2="14" y2="2.5" stroke="#3388cc" stroke-width="0.3" opacity="0.4"/>
         </svg>
         <span>จุดตรวจคุณภาพน้ำ</span>
+      </div>
+      <div class="t3d-sym-row">
+        <svg width="22" height="18" viewBox="0 0 22 18">
+          <line x1="2" y1="10" x2="8" y2="10" stroke="#7744bb" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+          <line x1="14" y1="10" x2="20" y2="10" stroke="#7744bb" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+          <circle cx="11" cy="10" r="3.5" fill="#5522aa" stroke="#cc88ff" stroke-width="1"/>
+          <line x1="11" y1="6.5" x2="11" y2="3" stroke="#aa66ff" stroke-width="1"/>
+          <circle cx="11" cy="2" r="2" fill="none" stroke="#cc88ff" stroke-width="0.8"/>
+          <circle cx="11" cy="2" r="0.8" fill="#cc88ff"/>
+        </svg>
+        <span style="color:#cc88ff;">VC เปิด (sim)</span>
+      </div>
+      <div class="t3d-sym-row">
+        <svg width="22" height="18" viewBox="0 0 22 18">
+          <line x1="2" y1="10" x2="8" y2="10" stroke="#777" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+          <line x1="14" y1="10" x2="20" y2="10" stroke="#777" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+          <circle cx="11" cy="10" r="3.5" fill="#555" stroke="#999" stroke-width="1" opacity="0.5"/>
+          <line x1="11" y1="6.5" x2="11" y2="3" stroke="#888" stroke-width="1" opacity="0.4"/>
+          <circle cx="11" cy="2" r="2" fill="none" stroke="#999" stroke-width="0.8" opacity="0.4"/>
+        </svg>
+        <span style="color:#888;">VC ปิด</span>
       </div>
     </div>
   </div>
@@ -11733,7 +11762,76 @@ function submitFeedback(){
       }
     }
 
-    // Hide loading
+    // ── rev16.0: VC Mini Valve Markers ─────────────────────────────
+    if (typeof VC_STATIONS !== 'undefined') {
+      var _vcPipeMat = new THREE.MeshPhongMaterial({
+        color: 0x7744bb, emissive: 0x1a0e33, transparent: true, opacity: 0.5, shininess: 40
+      });
+      var _vcBodyActive = new THREE.MeshPhongMaterial({
+        color: 0x5522aa, emissive: 0x1a0833, shininess: 80, specular: 0xaa66ff
+      });
+      var _vcBodyClosed = new THREE.MeshPhongMaterial({
+        color: 0x555555, emissive: 0x1a1a1a, transparent: true, opacity: 0.35, shininess: 20
+      });
+      var _vcWheelActive = new THREE.MeshPhongMaterial({
+        color: 0xcc88ff, emissive: 0x331155, shininess: 100
+      });
+      var _vcWheelClosed = new THREE.MeshPhongMaterial({
+        color: 0x888888, emissive: 0x222222, transparent: true, opacity: 0.4
+      });
+      var _vcEdgeA = new THREE.LineBasicMaterial({ color: 0xcc88ff, transparent: true, opacity: 0.6 });
+      var _vcEdgeC = new THREE.LineBasicMaterial({ color: 0x777777, transparent: true, opacity: 0.3 });
+
+      for (var vi = 0; vi < VC_STATIONS.length; vi++) {
+        var vc = VC_STATIONS[vi];
+        var vcAct = vc.valvePct != null && vc.valvePct > 0;
+        var vnx = ((vc.lon - LON0) / dLon - 0.5) * planeW;
+        var vnz = -((vc.lat - LAT0) / dLat - 0.5) * planeH;
+        var vcFrc = vcAct ? (vc.frc || 0) : 0;
+        var vcH = _isEC3 ? 0.03 : Math.min(1, vcFrc / 1.5) * 0.25 * _heightMul;
+        var vcY = vcH - 0.15;
+
+        // Pipe (horizontal)
+        var pGeo = new THREE.CylinderBufferGeometry(0.004, 0.004, 0.05, 6);
+        var pL = new THREE.Mesh(pGeo, _vcPipeMat);
+        pL.rotation.z = Math.PI / 2;
+        pL.position.set(vnx, vcY + 0.015, vnz);
+        _scene.add(pL);
+
+        // Valve body (sphere)
+        var bGeo = new THREE.SphereBufferGeometry(0.012, 8, 6);
+        var body = new THREE.Mesh(bGeo, vcAct ? _vcBodyActive : _vcBodyClosed);
+        body.position.set(vnx, vcY + 0.015, vnz);
+        _scene.add(body);
+        addEdges(body, vcAct ? _vcEdgeA : _vcEdgeC, _scene);
+
+        // Stem (vertical)
+        var stGeo = new THREE.CylinderBufferGeometry(0.002, 0.002, 0.02, 4);
+        var stem = new THREE.Mesh(stGeo, vcAct ? _vcWheelActive : _vcWheelClosed);
+        stem.position.set(vnx, vcY + 0.035, vnz);
+        _scene.add(stem);
+
+        // Handwheel (torus)
+        var whGeo = new THREE.TorusBufferGeometry(0.008, 0.0015, 6, 12);
+        var wheel = new THREE.Mesh(whGeo, vcAct ? _vcWheelActive : _vcWheelClosed);
+        wheel.position.set(vnx, vcY + 0.045, vnz);
+        wheel.rotation.x = Math.PI / 2;
+        _scene.add(wheel);
+
+        // Label
+        var vcLbl = (vc.name || vc.id).replace('VC ','');
+        vcLbl += vcAct ? ' (' + vcFrc.toFixed(2) + ')' : ' (ปิด)';
+        var vcSp = makeTextSprite(vcLbl, {
+          color: vcAct ? '#cc88ff' : '#999999',
+          outline: 'rgba(10,0,20,0.9)',
+          scale: 0.03, fontSize: 14
+        });
+        vcSp.position.set(vnx, vcY + 0.065, vnz);
+        vcSp.visible = _labelsVisible;
+        _scene.add(vcSp);
+        _labelSprites.push(vcSp);
+      }
+    }
     document.getElementById('terrain3d-loading').style.display = 'none';
     document.getElementById('t3d-rotate-btn').classList.toggle('active', _autoRotate);
 
@@ -12796,14 +12894,14 @@ function submitFeedback(){
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
 <p style="color:#999;font-size:11px;margin:0 0 16px;">rev16.0 — April 2026 · M sandbox · 🔒 Security Upgrade</p>
 
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 rev16.0 — What-If Chlorine Dosing</h3>
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ rev16.0 — What-If Chlorine Dosing</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
 <b>A. What-If Simulation</b> — จำลองการปรับคลอรีนที่สถานีสูบจ่าย ดูผลกระทบต่อ contour + monitor<br>
 <b>B. ปรับ FRC ±0.1 ถึง ±0.5</b> — เห็นผลทันทีว่า monitor รอบๆ เปลี่ยนแค่ไหน<br>
 <b>C. Reset</b> — คืนค่าเดิมทุกสถานี
 </p>
 
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 rev16.0 — What-If + Performance</h3>
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ rev16.0 — What-If + Performance</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
 <b>A. What-If Dosing</b> — จำลองปรับคลอรีน ± ที่สถานีสูบจ่าย ดูผลต่อ contour + monitor (Zone Influence)<br>
 <b>B. Performance</b> — Pre-cache zone data + bbox reject → buildIdwCache เร็วขึ้น 3-5x<br>
