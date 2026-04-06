@@ -3196,11 +3196,18 @@ function epanetDecay(dKm, sensor) {
 }
 
 // ── Parameter helpers ────────────────────────────────────────────────────────
+// rev16.0: mapping string id → numeric id สำหรับ EC_FALLBACK
+const _EC_ID_MAP = {'SP01':1,'SP02':2,'SP03':3,'SP04':4,'SP05':5,'SP06':6,'SP07':7,'SP08':8,'SP09':9,'SP10':10,'SP11':11,'SP12':12,
+  'SW01':13,'SW02':14,'SW03':15,'SW04':16,'SW05':17,'SW06':18,'SW07':19,'SW08':20,'SW09':21,'SW10':22,'SW11':33};
+
 function getParamVal(s) {
   if (PARAM_MODE === 'ec') {
     if (s.ec != null) return s.ec;
-    // fallback สำหรับสถานีที่มาจาก SENSORS_FALLBACK (มี numeric id)
+    // fallback: numeric id
     if (typeof s.id === 'number') return EC_FALLBACK[s.id] || 300;
+    // fallback: string id → map to numeric
+    const numId = _EC_ID_MAP[s.id];
+    if (numId && EC_FALLBACK[numId]) return EC_FALLBACK[numId];
     return 300;
   }
   return s.frc;
@@ -5070,11 +5077,15 @@ function buildMarkers() {
     for (const vc of VC_STATIONS) {
       const active = isVcActive(vc);
       const closed = !active;
-      const pv = active ? (vc.frc || 0) : 0;
-      const c = active ? statusColor(pv) : '#999';
+      const _vcSrc = SENSORS.find(s=>String(s.id)===vc.sourceId);
+      // FRC mode: ใช้ vc.frc (sim), EC mode: ใช้ EC จาก source
+      const pv = closed ? 0 : (PARAM_MODE === 'ec' ? (_vcSrc ? getParamVal(_vcSrc) : 300) : (vc.frc || 0));
+      const c = active ? (PARAM_MODE === 'ec' ? '#1565c0' : statusColor(pv)) : '#999';
       const sz = 9;
       const pair = VC_PAIR[vc.id] || {};
       const srcName = {SP01:'TR1',SP02:'TR2',SP03:'TR3',SP11:'MTR'}[vc.sourceId] || vc.sourceId;
+      const srcFrc = _vcSrc ? (_vcSrc.frc||'?') : '?';
+      const srcEc = _vcSrc ? getParamVal({..._vcSrc, frc:null}) : '?';
 
       const markerHtml = `<div style="display:flex;flex-direction:column;align-items:center;">
         <div style="width:${sz}px;height:${sz}px;border-radius:4px;background:${closed?'#999':c};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${closed?'#99999988':c+'88'};cursor:pointer;${closed?'opacity:.6;':''}"></div>
@@ -5091,7 +5102,7 @@ function buildMarkers() {
         <div class="bigval" style="color:${closed?'#999':c}">${closed?'— ปิด —':paramFormat(pv)+' <span style="font-size:14px;color:#555">'+paramUnit()+'</span>'}</div>
         <div class="pr"><span>ประเภท</span><span class="pv" style="color:#6c3483">🔗 Valve Chamber (sim)</span></div>
         <div class="pr"><span>ข้อมูล</span><span class="pv" style="color:#6c3483">ค่า simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)</span></div>
-        <div class="pr"><span>ต้นทาง</span><span class="pv" style="color:#111">${srcName} (FRC ${(SENSORS.find(s=>String(s.id)===vc.sourceId)||{}).frc||'?'})</span></div>
+        <div class="pr"><span>ต้นทาง</span><span class="pv" style="color:#111">${srcName} (FRC ${srcFrc} / EC ${typeof srcEc === 'number' ? srcEc : '?'} µS/cm)</span></div>
         <div class="pr"><span>TT</span><span class="pv" style="color:#111">${pair.tt||'?'} ชม. (ประมาณการ)</span></div>
         <div class="pr"><span>K</span><span class="pv" style="color:#111">${pair.K||'?'} /hr</span></div>
         <div class="pr"><span>สถานะวาล์ว</span><span class="pv" style="color:${closed?'#c00':'#27ae60'};font-weight:700">${closed?'❌ ปิด':'✅ เปิด ('+vc.valvePct+'%)'}</span></div>
