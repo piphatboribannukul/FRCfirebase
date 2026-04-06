@@ -350,12 +350,16 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
   #ai-insight-btn .ai-pulse { display: none !important; }
   #flow-btn { display: none !important; }
   /* rev16.0: mobile 3D + Cl₂ + AI ติด hamburger มุมซ้าย */
-  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 102px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
-  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 140px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
-  /* ซ่อนเมื่อ sidebar เปิด */
+  #terrain3d-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 112px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 10px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #whatif-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 150px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 11px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  #ai-insight-btn { display: flex !important; position: fixed !important; bottom: auto !important; top: 188px !important; left: 10px !important; right: auto !important; width: 34px !important; height: 34px !important; font-size: 13px !important; border-radius: 8px !important; z-index: 1100 !important; }
+  /* ซ่อนเมื่อ sidebar หรือ AI panel เปิด */
   body.sb-open #terrain3d-btn,
   body.sb-open #whatif-btn,
-  body.sb-open #ai-insight-btn { display: none !important; }
+  body.sb-open #ai-insight-btn,
+  body.ai-open #terrain3d-btn,
+  body.ai-open #whatif-btn,
+  body.ai-open #ai-insight-btn { display: none !important; }
 
   /* ── Disclaimer — force แสดงบน mobile ── */
   #disclaimer-bar {
@@ -10049,10 +10053,12 @@ function toggleAiPanel() {
     panel.classList.remove('open');
     if(btn) btn.classList.remove('active');
     overlay.style.display = 'none';
+    document.body.classList.remove('ai-open'); // rev16.0
   } else {
     panel.classList.add('open');
     if(btn) btn.classList.add('active');
     if (window.innerWidth <= 640) overlay.style.display = 'block';
+    document.body.classList.add('ai-open'); // rev16.0
     runAiAnalysis();
   }
   _syncFloatingBtns();
