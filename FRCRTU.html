@@ -3608,14 +3608,36 @@ function buildIdwCache() {
       if (PARAM_MODE === 'ec') {
         _idwCache[j * rows + i] = _idw(lat, lon);
       } else {
-        // Pipe-network-aware FRC: blend pipe decay with geographic IDW
+        // Pipe-network contour: ใช้ค่าจริงตามเส้นท่อ + zone influence
+        // 1. VC zone override (highest priority)
+        let vcVal = null;
+        if (typeof VC_STATIONS !== 'undefined' && window.CUSTOM_ZONES) {
+          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+            if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+            if (!_pip(lat, lon, zone.coords)) continue;
+            const vc = VC_STATIONS.find(v => v.id === sid);
+            if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+            const vcFrc = vc.frc || 0;
+            if (vcFrc <= 0) continue;
+            const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
+            const pair = typeof VC_PAIR !== 'undefined' ? VC_PAIR[sid] : null;
+            const kLocal = pair ? pair.K : 0.05;
+            vcVal = Math.max(0, vcFrc * Math.exp(-kLocal * (dKm / 1.5)));
+            break;
+          }
+        }
+        if (vcVal !== null) {
+          _idwCache[j * rows + i] = vcVal;
+          continue;
+        }
+
+        // 2. Pipe-network FRC (pressure-adjusted decay along pipes)
         const pipeFrc = _pipeAwareFrc(lat, lon, j, i);
-        const geoFrc = _frc(lat, lon);
         if (pipeFrc !== null) {
-          // Blend: 70% pipe-network, 30% geographic (smooth transition)
-          _idwCache[j * rows + i] = pipeFrc * 0.7 + geoFrc * 0.3;
+          _idwCache[j * rows + i] = pipeFrc;
         } else {
-          _idwCache[j * rows + i] = geoFrc;
+          // 3. Fallback: zone-based FRC (geographic, for areas without pipe coverage)
+          _idwCache[j * rows + i] = _frc(lat, lon);
         }
       }
     }
