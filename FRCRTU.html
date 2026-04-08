@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev16.1</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev18</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -3136,6 +3136,10 @@ const EPANET = {
 // K_total [1/s] = (kb/86400) + (kw/86400)×(4/D)
 let K_total = (EPANET.kb / 86400) + (EPANET.kw / 86400) * (4 / EPANET.D);
 const DEG_TO_KM = 111.0;
+// rev18: Euclidean-to-pipe distance correction factor
+// Euclidean distance สั้นกว่าเส้นท่อจริง ~1.3x (calibrate จาก 38 monitor stations)
+// ใช้กับ zone-based decay ที่ไม่มี pipe grid data เท่านั้น
+const EUCLID_PIPE_FACTOR = 1.30;
 
 function applyEpanet() {
   EPANET.kb = parseFloat(document.getElementById('ep-kb').value) || 0.80;
@@ -3514,7 +3518,7 @@ function frcZone(lat, lon) {
     }
   }
 
-  const dKm = Math.sqrt(((nearest.lat - lat)**2 + (nearest.lon - lon)**2)) * DEG_TO_KM;
+  const dKm = Math.sqrt(((nearest.lat - lat)**2 + (nearest.lon - lon)**2)) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
   return nearest.frc * epanetDecay(dKm, nearest);
 }
 
@@ -3667,8 +3671,8 @@ function buildIdwCache() {
                 const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
                 zoneVal = src.frc * epanetDecay(pd.dist_km * pFactor, src);
               } else {
-                // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean + decay
-                zoneVal = src.frc * epanetDecay(dKm, src);
+                // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean × EUCLID_PIPE_FACTOR
+                zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src);
               }
               break;
             }
