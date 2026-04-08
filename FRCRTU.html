@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev16.0</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev16.1</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -3463,7 +3463,10 @@ function _ensureFrcSources() {
 }
 
 function frcZone(lat, lon) {
-  // rev16.0: VC zone check (bbox reject) — ใช้ cached data
+  // rev16.1: Zone Influence — ใช้ CUSTOM_ZONES polygon เป็นตัวกำหนดโซน
+  // Priority: 1) VC zone  2) CUSTOM_ZONES polygon  3) MDIS hardcoded  4) nearest fallback
+
+  // ── 1. VC zone (Valve Chamber) — highest priority ──
   if (typeof VC_STATIONS !== 'undefined' && window.CUSTOM_ZONES) {
     for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
       if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
@@ -3482,14 +3485,28 @@ function frcZone(lat, lon) {
   const sources = _ensureFrcSources();
   if (sources.length === 0) return idwDirect(lat, lon, 2);
 
-  let nearest = null, minDist = Infinity;
+  let nearest = null;
 
-  if (_inMdisZone(lat, lon)) {
+  // ── 2. CUSTOM_ZONES polygon — สถานีสูบจ่าย (ข้าม VC) ──
+  if (window.CUSTOM_ZONES) {
+    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+      if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+      if (!_pip(lat, lon, zone.coords)) continue;
+      // หา source station ที่ตรงกับ sid ของโซน
+      const src = sources.find(s => String(s.id) === sid);
+      if (src && src.frc > 0) { nearest = src; break; }
+    }
+  }
+
+  // ── 3. MDIS zone hardcoded (fallback เฉพาะพื้นที่มหาสวัสดิ์) ──
+  if (!nearest && _inMdisZone(lat, lon)) {
     nearest = sources.find(s => s.name?.trim() === 'สถานีสูบจ่ายน้ำมหาสวัสดิ์' ||
                                 s.id === 'SP12' || s.id === 12);
   }
 
+  // ── 4. Nearest source fallback (จุดที่ไม่อยู่ใน polygon ไหนเลย) ──
   if (!nearest) {
+    let minDist = Infinity;
     for (const s of sources) {
       const anch = getAnchorLatLon(s);
       const d = (anch.lat - lat) ** 2 + (anch.lon - lon) ** 2;
@@ -3631,12 +3648,43 @@ function buildIdwCache() {
           continue;
         }
 
-        // 2. Pipe-network FRC (pressure-adjusted decay along pipes)
+        // 2. CUSTOM_ZONES polygon — สถานีสูบจ่าย (highest priority after VC)
+        //    rev16.1: Zone Influence polygon กำหนดว่าจุดนี้อยู่ในโซนสถานีสูบจ่ายไหน
+        //    ป้องกัน pipe grid assign sensor ข้ามโซน
+        let zoneVal = null;
+        if (window.CUSTOM_ZONES) {
+          const sources = _ensureFrcSources();
+          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+            if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+            if (!_pip(lat, lon, zone.coords)) continue;
+            const src = sources.find(s => String(s.id) === sid);
+            if (src && src.frc > 0) {
+              const dKm = Math.sqrt((src.lat-lat)**2+(src.lon-lon)**2)*DEG_TO_KM;
+              // ถ้ามี pipe data ในโซนนี้ ใช้ pipe distance แทน Euclidean (แม่นกว่า)
+              const pd = _getPipeDist ? _getPipeDist(j, i) : null;
+              if (pd && String(pd.sensorId) === String(sid)) {
+                // pipe grid ชี้ไปที่ sensor เดียวกับ zone → ใช้ pipe distance
+                const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+                zoneVal = src.frc * epanetDecay(pd.dist_km * pFactor, src);
+              } else {
+                // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean + decay
+                zoneVal = src.frc * epanetDecay(dKm, src);
+              }
+              break;
+            }
+          }
+        }
+        if (zoneVal !== null) {
+          _idwCache[j * rows + i] = zoneVal;
+          continue;
+        }
+
+        // 3. Pipe-network FRC (เฉพาะพื้นที่ไม่มี CUSTOM_ZONES polygon ครอบ)
         const pipeFrc = _pipeAwareFrc(lat, lon, j, i);
         if (pipeFrc !== null) {
           _idwCache[j * rows + i] = pipeFrc;
         } else {
-          // 3. Fallback: zone-based FRC (geographic, for areas without pipe coverage)
+          // 4. Fallback: zone-based FRC (geographic, for areas without pipe coverage)
           _idwCache[j * rows + i] = _frc(lat, lon);
         }
       }
