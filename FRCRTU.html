@@ -2442,6 +2442,29 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </button>
     <div id="ep-ktotal" style="margin-top:7px;font-size:9.5px;color:#c080a0;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
     <div id="ep-autofit-info" style="display:none;margin-top:4px;font-size:9px;color:#2a5a90;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
+
+    <!-- rev18: Per-Station K Editor -->
+    <hr style="border:none;border-top:1px solid #f0d0e0;margin:10px 0 8px;">
+    <h3 style="font-size:11px;color:#804060;margin:0 0 6px;">K เฉพาะสถานีสูบจ่าย</h3>
+    <div style="font-size:8.5px;color:#a08090;margin-bottom:6px;">เลือกสถานี → ปรับ K → กด Apply</div>
+    <select id="ep-station-select" onchange="onStationKSelect()" style="width:100%;padding:4px;font-size:10px;border:1px solid #e0c0d0;border-radius:4px;margin-bottom:5px;background:#fff8fc;">
+      <option value="">— เลือกสถานี —</option>
+    </select>
+    <div id="ep-station-k-editor" style="display:none;">
+      <div class="ep-row" style="margin-top:4px;">
+        <span class="ep-label" style="font-size:10px;">K</span>
+        <input class="ep-input" id="ep-station-k" type="number" step="0.001" min="0" max="1" value="0" style="width:70px;">
+        <span class="ep-unit">/hr</span>
+      </div>
+      <div style="display:flex;gap:3px;font-size:8px;color:#a08090;margin:2px 0;">
+        <span>half-life: <b id="ep-station-hl">—</b></span>
+        <span>|</span>
+        <span>K/day: <b id="ep-station-kday">—</b></span>
+      </div>
+      <button class="ep-apply" onclick="applyStationK()" style="margin-top:4px;width:100%;font-size:10px;padding:4px;">✅ Apply K สถานีนี้ & Rebuild</button>
+      <button onclick="resetStationK()" style="margin-top:3px;width:100%;font-size:9px;padding:3px;background:#fff0f5;color:#a06080;border:1px solid #e0c0d0;border-radius:4px;cursor:pointer;">↩ Reset เป็นค่า default</button>
+    </div>
+    <div id="ep-station-k-list" style="margin-top:8px;font-size:8.5px;max-height:200px;overflow-y:auto;"></div>
     </div><!-- /sb-body EPANET -->
   </div>
   <!-- Historical API block -->
@@ -3187,26 +3210,138 @@ window.addEventListener('load', () => {
   const k_per_km = K_total * 1000 / EPANET.v;
   document.getElementById('ep-ktotal').textContent =
     `K = ${(K_total*86400).toFixed(4)}/day  |  ${k_per_km.toFixed(4)}/km`;
+  initStationKEditor();
 });
+
+// ── rev18: Per-Station K for Contour ─────────────────────────────────────────
+// CONTOUR_K_OVERRIDE: K ที่ user ปรับเฉพาะสถานี สำหรับ contour
+// เริ่มต้นเป็น {} → ถ้ามีค่า จะ override K_total สำหรับสถานีนั้นใน contour
+const CONTOUR_K_OVERRIDE = {};
+
+// Source stations สำหรับ dropdown (pump + plant ที่มี zone)
+const _EP_PUMP_STATIONS = [];
+
+function initStationKEditor() {
+  const sel = document.getElementById('ep-station-select');
+  if (!sel) return;
+  // รวบรวม source stations
+  const excl = new Set(['SP01','SP02','SP03','SP11']);
+  const srcTypes = new Set(['pump','plant']);
+  const stns = SENSORS.filter(s => srcTypes.has(s.type) && !excl.has(String(s.id)));
+  stns.sort((a,b) => String(a.id).localeCompare(String(b.id)));
+  _EP_PUMP_STATIONS.length = 0;
+  stns.forEach(s => {
+    _EP_PUMP_STATIONS.push(s);
+    const opt = document.createElement('option');
+    opt.value = String(s.id);
+    const shortName = (s.name || '').replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.');
+    opt.textContent = `${s.id} — ${shortName}`;
+    sel.appendChild(opt);
+  });
+  renderStationKList();
+}
+
+function onStationKSelect() {
+  const sid = document.getElementById('ep-station-select').value;
+  const editor = document.getElementById('ep-station-k-editor');
+  if (!sid) { editor.style.display = 'none'; return; }
+  editor.style.display = 'block';
+  // แสดงค่า K ปัจจุบัน
+  const k_hr = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid]
+             : STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid]
+             : (K_total * 3600);
+  document.getElementById('ep-station-k').value = k_hr.toFixed(5);
+  updateStationKDisplay(k_hr);
+}
+
+function updateStationKDisplay(k_hr) {
+  const hl = k_hr > 0 ? (0.693 / k_hr).toFixed(1) : '∞';
+  const kday = (k_hr * 24).toFixed(4);
+  document.getElementById('ep-station-hl').textContent = hl + ' ชม.';
+  document.getElementById('ep-station-kday').textContent = kday + '/day';
+}
+
+// Live update display when typing
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('ep-station-k');
+  if (inp) inp.addEventListener('input', () => {
+    updateStationKDisplay(parseFloat(inp.value) || 0);
+  });
+});
+
+function applyStationK() {
+  const sid = document.getElementById('ep-station-select').value;
+  if (!sid) return;
+  const k_hr = parseFloat(document.getElementById('ep-station-k').value);
+  if (isNaN(k_hr) || k_hr <= 0) return;
+  CONTOUR_K_OVERRIDE[sid] = k_hr;
+  // Save to localStorage
+  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  renderStationKList();
+  buildIdwCache();
+  redrawContour();
+}
+
+function resetStationK() {
+  const sid = document.getElementById('ep-station-select').value;
+  if (!sid) return;
+  delete CONTOUR_K_OVERRIDE[sid];
+  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  onStationKSelect(); // refresh display
+  renderStationKList();
+  buildIdwCache();
+  redrawContour();
+}
+
+function renderStationKList() {
+  const el = document.getElementById('ep-station-k-list');
+  if (!el) return;
+  const keys = Object.keys(CONTOUR_K_OVERRIDE);
+  if (keys.length === 0) {
+    el.innerHTML = '<div style="color:#c0a0b0;text-align:center;padding:4px;">ยังไม่มี K ที่ปรับเฉพาะสถานี</div>';
+    return;
+  }
+  let html = '<div style="color:#804060;font-weight:600;margin-bottom:3px;">K ที่ปรับแล้ว:</div>';
+  keys.sort().forEach(sid => {
+    const k = CONTOUR_K_OVERRIDE[sid];
+    const s = SENSORS.find(x => String(x.id) === sid);
+    const name = s ? (s.name||'').replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.') : sid;
+    const hl = (0.693 / k).toFixed(0);
+    html += `<div style="display:flex;justify-content:space-between;padding:1px 0;border-bottom:1px solid #f5e8f0;">`;
+    html += `<span>${sid} ${name.substring(0,15)}</span>`;
+    html += `<span style="font-family:monospace;">${k.toFixed(4)}/hr (hl=${hl}h)</span>`;
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+}
+
+// โหลด CONTOUR_K_OVERRIDE จาก localStorage
+try {
+  const saved = localStorage.getItem('mwa_contour_k_override');
+  if (saved) Object.assign(CONTOUR_K_OVERRIDE, JSON.parse(saved));
+} catch(e) {}
 
 function epanetDecay(dKm, sensor) {
   const L_m = dKm * 1000;
   const t   = L_m / EPANET.v;  // travel time [s]
 
-  // MH group: ใช้ k per-sensor จาก STATION_K_OVERRIDE (fit จากข้อมูลจริง)
-  // CP group: ใช้ K_total จาก EPANET sidebar parameters (เดิม)
-  const MH_IDS = new Set(['SP11','SP12','SW08','SW09','SW10','SM06',
-    'S024','S025','S026','S027','S028','S029','S030','S031','S032']);
-
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
+
+    // rev18: ถ้า user ปรับ K เฉพาะสถานีไว้ → ใช้ค่านั้น (priority สูงสุด)
+    if (CONTOUR_K_OVERRIDE[sid] != null) {
+      return Math.exp(-(CONTOUR_K_OVERRIDE[sid] / 3600) * t);
+    }
+
+    // MH group: ใช้ k per-sensor จาก STATION_K_OVERRIDE (fit จากข้อมูลจริง)
+    const MH_IDS = new Set(['SP11','SP12','SW08','SW09','SW10','SM06',
+      'S024','S025','S026','S027','S028','S029','S030','S031','S032']);
     if (MH_IDS.has(sid)) {
-      // MH: ใช้ k จาก STATION_K_OVERRIDE
       const k_hr = STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : 0.038;
       return Math.exp(-(k_hr / 3600) * t);
     }
   }
-  // CP (และ fallback): ใช้ K_total จาก EPANET sidebar เหมือนเดิม
+  // CP (และ fallback): ใช้ K_total จาก EPANET sidebar
   return Math.exp(-K_total * t);
 }
 
