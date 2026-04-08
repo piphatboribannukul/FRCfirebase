@@ -3275,8 +3275,7 @@ function applyStationK() {
   const k_hr = parseFloat(document.getElementById('ep-station-k').value);
   if (isNaN(k_hr) || k_hr <= 0) return;
   CONTOUR_K_OVERRIDE[sid] = k_hr;
-  // Save to localStorage
-  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  _saveContourK();
   renderStationKList();
   buildIdwCache();
   redrawContour();
@@ -3286,11 +3285,73 @@ function resetStationK() {
   const sid = document.getElementById('ep-station-select').value;
   if (!sid) return;
   delete CONTOUR_K_OVERRIDE[sid];
-  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  _saveContourK();
   onStationKSelect(); // refresh display
   renderStationKList();
   buildIdwCache();
   redrawContour();
+}
+
+// ── Firebase + localStorage save/load ────────────────────────────────────
+const _CONTOUR_K_FB_PATH = 'settings/contour_k_override';
+
+async function _saveContourK() {
+  // 1. localStorage (backup เสมอ)
+  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  // 2. Firebase (primary)
+  if (window._fbReady && window._fb) {
+    try {
+      await window._fbSet(window._fbRef(window._fb, _CONTOUR_K_FB_PATH), CONTOUR_K_OVERRIDE);
+      console.log('[ContourK] ✅ saved to Firebase:', Object.keys(CONTOUR_K_OVERRIDE).length, 'stations');
+    } catch(e) {
+      console.warn('[ContourK] Firebase save failed:', e.message, '→ localStorage only');
+    }
+  }
+}
+
+async function _loadContourK() {
+  // 1. ลอง Firebase ก่อน
+  if (window._fbReady && window._fb) {
+    try {
+      const snap = await window._fbGet(window._fbRef(window._fb, _CONTOUR_K_FB_PATH));
+      if (snap && snap.exists()) {
+        const data = snap.val();
+        const count = Object.keys(data).length;
+        if (count > 0) {
+          Object.keys(CONTOUR_K_OVERRIDE).forEach(k => delete CONTOUR_K_OVERRIDE[k]);
+          Object.assign(CONTOUR_K_OVERRIDE, data);
+          console.log(`[ContourK] ✅ loaded ${count} station K from Firebase`);
+          renderStationKList();
+          return;
+        }
+      }
+    } catch(e) {
+      console.warn('[ContourK] Firebase load failed:', e.message);
+    }
+  }
+  // 2. Fallback: localStorage
+  try {
+    const saved = localStorage.getItem('mwa_contour_k_override');
+    if (saved) {
+      const data = JSON.parse(saved);
+      Object.assign(CONTOUR_K_OVERRIDE, data);
+      console.log(`[ContourK] loaded ${Object.keys(data).length} station K from localStorage`);
+    }
+  } catch(e) {}
+  renderStationKList();
+}
+
+// โหลด: localStorage ทันที (fast), Firebase หลัง ready (override)
+try {
+  const saved = localStorage.getItem('mwa_contour_k_override');
+  if (saved) Object.assign(CONTOUR_K_OVERRIDE, JSON.parse(saved));
+} catch(e) {}
+
+// โหลดจาก Firebase เมื่อพร้อม
+if (window._fbReady) {
+  _loadContourK();
+} else {
+  window.addEventListener('firebase-ready', () => _loadContourK(), { once: true });
 }
 
 function renderStationKList() {
@@ -3314,12 +3375,6 @@ function renderStationKList() {
   });
   el.innerHTML = html;
 }
-
-// โหลด CONTOUR_K_OVERRIDE จาก localStorage
-try {
-  const saved = localStorage.getItem('mwa_contour_k_override');
-  if (saved) Object.assign(CONTOUR_K_OVERRIDE, JSON.parse(saved));
-} catch(e) {}
 
 function epanetDecay(dKm, sensor) {
   const L_m = dKm * 1000;
