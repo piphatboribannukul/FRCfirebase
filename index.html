@@ -3216,7 +3216,12 @@ window.addEventListener('load', () => {
 // ── rev18: Per-Station K for Contour ─────────────────────────────────────────
 // CONTOUR_K_OVERRIDE: K ที่ user ปรับเฉพาะสถานี สำหรับ contour
 // เริ่มต้นเป็น {} → ถ้ามีค่า จะ override K_total สำหรับสถานีนั้นใน contour
-const CONTOUR_K_OVERRIDE = {};
+const CONTOUR_K_OVERRIDE = {
+  'SW05': 0.095,  // สจ.มีนบุรี
+  'SW06': 0.080,  // สจ.ลาดกระบัง
+  'SW07': 0.080,  // สจ.บางพลี
+  'SW04': 0.095,  // สจ.สำโรง
+};
 
 // Source stations สำหรับ dropdown (pump + plant ที่มี zone)
 const _EP_PUMP_STATIONS = [];
