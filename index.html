@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev18</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev20.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2134,7 +2134,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev16.0</span>
+  <span id="v2-badge">⬡ rev20.0</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2319,6 +2319,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="toggle-row"><span>🔧 โครงข่ายท่อ EPANET</span><div class="tog on" id="t-pipes" onclick="toggleLayer('pipes')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>📡 RTU สถานีวัด (236)</span><div class="tog off" id="t-rtu" onclick="toggleLayer('rtu')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🗺️ EPANET Contour (FRC sim)</span><div class="tog off" id="t-epanet" onclick="toggleLayer('epanet')"><div class="tok"></div></div></div>
+    <div class="toggle-row"><span>🌊 น้ำดิบ EC (แม่น้ำ)</span><div class="tog off" id="t-rawwater" onclick="toggleLayer('rawwater')"><div class="tok"></div></div></div>
     </div><!-- /sb-body ชั้นข้อมูล -->
   </div>
   <!-- Zone Influence -->
@@ -2755,7 +2756,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev16.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev20.0 · Apr 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2807,7 +2808,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev16.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev20.0 · Apr 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -3940,7 +3941,7 @@ setTimeout(() => {
 }, 6000);
 L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
 
-const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,rtu:false,epanet:false};
+const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,rtu:false,epanet:false,rawwater:false};
 
 // ══════════════════════════════════════════════════════════════════
 // CONTOUR: Single offscreen canvas rendered in lat/lon space
@@ -4462,6 +4463,8 @@ const EC_SOURCE_MAP = {
   // โรงงานอื่น
   'ธนบุรี':    'โรงงานผลิตน้ำธนบุรี',
   'สามเสน3':   'โรงงานผลิตน้ำสามเสน 3',
+  // rev19: น้ำดิบสำแล — ใช้ EC จาก API น้ำดิบ
+  'RAW_SAMLE':  '_RAW_WATER_SAMLE_',
 };
 
 const EC_ROOT_SOURCE_MAP = {
@@ -4526,6 +4529,12 @@ const EC_ROOT_SOURCE_MAP = {
   'สถานีสูบจ่ายน้ำท่าพระ':       { root: 'MTR', ttRoot: 7  },
   // ── พระราชวังดุสิต (สามเสน 3) ─────────────────────────────────────────
   'พระราชวังดุสิต สวนจิตรลดา':   { root: 'สามเสน3', ttRoot: 1 },
+  // ── rev19: โรงงานบางเขน — source จากน้ำดิบสำแล +13 ชม. ────────────
+  'สถานีสูบส่งน้ำบางเขน 1 (TR1)':   { root: 'RAW_SAMLE', ttRoot: 13 },
+  'สถานีสูบส่งน้ำบางเขน 2 (TR2)':   { root: 'RAW_SAMLE', ttRoot: 13 },
+  'สถานีสูบส่งน้ำบางเขน 3 (TR3)':   { root: 'RAW_SAMLE', ttRoot: 13 },
+  'สถานีสูบจ่ายน้ำบางเขน 1 (Dis1)': { root: 'RAW_SAMLE', ttRoot: 13 },
+  'สถานีสูบจ่ายน้ำบางเขน 2 (Dis2)': { root: 'RAW_SAMLE', ttRoot: 13 },
 };
 let ROOT_SOURCE_MAP = {};
 function buildMarkers() {
@@ -4536,6 +4545,12 @@ function buildMarkers() {
   // tt_from = เวลาจากโรงงาน/สถานีสูบส่ง → สถานีนี้  (ชม.)
   // tt_label = ป้ายอธิบายต้นทาง
   const TRAVEL_TIME = {
+    // rev19: โรงงานบางเขน — source จากน้ำดิบสำแล (คลองประปา 13 ชม.)
+    'สถานีสูบส่งน้ำบางเขน 1 (TR1)':   { tt_from: '13', tt_label: 'จาก สำแล (น้ำดิบ)' },
+    'สถานีสูบส่งน้ำบางเขน 2 (TR2)':   { tt_from: '13', tt_label: 'จาก สำแล (น้ำดิบ)' },
+    'สถานีสูบส่งน้ำบางเขน 3 (TR3)':   { tt_from: '13', tt_label: 'จาก สำแล (น้ำดิบ)' },
+    'สถานีสูบจ่ายน้ำบางเขน 1 (Dis1)': { tt_from: '13', tt_label: 'จาก สำแล (น้ำดิบ)' },
+    'สถานีสูบจ่ายน้ำบางเขน 2 (Dis2)': { tt_from: '13', tt_label: 'จาก สำแล (น้ำดิบ)' },
     // สถานีสูบจ่ายน้ำ (สจ.) — จากโรงงาน/สถานีสูบส่ง
     'สถานีสูบจ่ายน้ำลุมพินี':          { tt_from: '6',     tt_label: 'จาก TR1' },
     'สถานีสูบจ่ายน้ำพหลโยธิน':         { tt_from: '5',     tt_label: 'จาก TR1' },
@@ -4877,6 +4892,30 @@ function buildMarkers() {
           +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1':'0.8')+'" opacity="'+(_dkEC?'0.6':'0.4')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
           +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="'+(_dkEC?'#80b0ff':'#4060c0')+'" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
       })()
+      // rev19: เส้น forecast น้ำดิบจากสำแล (เส้นประแดง) สำหรับ SP01-SP05
+      +(()=>{
+        const rw = window._rawWaterEc;
+        const bangkhenIds = ['SP01','SP02','SP03','SP04','SP05','1','2','3','4','5'];
+        if (!rw || !rw.ec || !bangkhenIds.includes(String(sensorId))) return '';
+        const rwEc = rw.ec;
+        const rwTT = rw.travelHours || 13;
+        const _dk = document.body.classList.contains('dark');
+        // เส้นแนวนอนแสดง EC น้ำดิบที่จะถึง ที่ t = rwTT
+        const yRw = pyClamp(rwEc);
+        const xStart = px(0);  // จาก "ตอนนี้"
+        const xEnd = px(rwTT); // ถึงใน rwTT ชม.
+        const xEndClamped = Math.min(xEnd, PL + cw);
+        // เส้นประแดง
+        let rwSvg = '<line x1="'+xStart.toFixed(1)+'" y1="'+yRw.toFixed(1)+'" x2="'+xEndClamped.toFixed(1)+'" y2="'+yRw.toFixed(1)+'" stroke="'+(_dk?'#ff6666':'#cc0055')+'" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.8" clip-path="url(#ecclip_'+sensorId+')"/>';
+        // จุดที่ถึง
+        if (xEnd <= PL + cw) {
+          rwSvg += '<circle cx="'+xEnd.toFixed(1)+'" cy="'+yRw.toFixed(1)+'" r="4" fill="'+(_dk?'#ff6666':'#cc0055')+'" stroke="#fff" stroke-width="1.5" clip-path="url(#ecclip_'+sensorId+')"/>';
+          rwSvg += '<text x="'+(xEnd+5).toFixed(1)+'" y="'+(yRw-4).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk?'#ff8888':'#cc0055')+'" font-family="JetBrains Mono,monospace" clip-path="url(#ecclip_'+sensorId+')">น้ำดิบ '+rwEc+'</text>';
+        }
+        // ป้ายกำกับ
+        rwSvg += '<text x="'+(xStart+3).toFixed(1)+'" y="'+(yRw-5).toFixed(1)+'" font-size="8" fill="'+(_dk?'#ff8888':'#cc0055')+'" font-family="Sarabun,sans-serif" clip-path="url(#ecclip_'+sensorId+')">🌊 สำแล→บางเขน +'+rwTT+'ชม.</text>';
+        return rwSvg;
+      })()
       +'<line x1="'+xNow.toFixed(1)+'" y1="'+PT+'" x2="'+xNow.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+(document.body.classList.contains('dark')?'#80b0ff':'#1565c0')+'" stroke-width="1.5" opacity="0.5"/>'
       +'<text x="'+xNow.toFixed(1)+'" y="'+(PT-3).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#80b0ff':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>'
       +'<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ch).toFixed(1)+'" stroke="#c0d8f0" stroke-width="1"/>'
@@ -4896,7 +4935,9 @@ function buildMarkers() {
       +'/>'
       +'</svg>'
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
-      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ Confidence Band (±20%)</span></span>'
+      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ ±20%</span>'
+      +(window._rawWaterEc && ['SP01','SP02','SP03','SP04','SP05','1','2','3','4','5'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
+      +'</span>'
       +'<span style="color:'+endColor+';font-weight:700">'+endStatus+' ที่ '+toHHMM(nowHr+ttHours)+'</span>'
       +'</div></div>';
   }
@@ -5395,6 +5436,7 @@ function buildMarkers() {
     // กราฟสถานีต้นทาง (TR1/TR2/TR3/Dis1/Dis2/MTR/MDIS/โรงงาน)
     let sourceChart = '';
     // sourceChart เฉพาะ SP (โรงงาน/MTR/MDIS) ไม่แสดงสำหรับ SW/SM
+    const _bangkhenIds = new Set(['SP01','SP02','SP03','SP04','SP05']);
     if (s.type === 'plant' || (s.type === 'pump' && String(s.id).startsWith('SP'))) {
       try { sourceChart = buildSourceChart(s); } catch(e) { console.error('[SC]',e); }
     }
@@ -5470,20 +5512,30 @@ function buildMarkers() {
       const ecRootInfo = EC_ROOT_SOURCE_MAP[s.name?.trim()] || EC_ROOT_SOURCE_MAP[s.name?.replace(/\s+/g,' ').trim()];
       if (ecRootInfo) {
         // หา sensor ของ root (TR1/TR2/TR3/MTR) จาก EC_SOURCE_MAP
-        const ecRootKey = ecRootInfo.root; // เช่น "TR1", "TR2", "MTR"
-        const ecPlantName = EC_SOURCE_MAP[ecRootKey];
-        const ecPlantSensor = ecPlantName
-          ? SENSORS.find(x => x.name === ecPlantName || x.name.includes(ecPlantName.replace(/\s*\d+$/, '').trim()))
-          : null;
-        const ecSrcVal = ecPlantSensor ? getParamVal(ecPlantSensor) : ecNow;
-        const ecSrcId  = ecPlantSensor ? ecPlantSensor.id : null;
-        const ecLabel  = ecRootKey;
+        const ecRootKey = ecRootInfo.root; // เช่น "TR1", "TR2", "MTR", "RAW_SAMLE"
         const ecTT     = ecRootInfo.ttRoot || 0;
-        if (ecTT > 0) {
-          decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId);
-          // บันทึกค่าคาดการณ์ที่ปลายทาง (t=ttHours จากนี้)
-          const foreTs = Date.now() + ecTT * 3600000;
-          saveEcForecast(s.id, foreTs, ecSrcVal, ecSrcVal*1.15, ecSrcVal*0.85);
+
+        // rev19: RAW_SAMLE → ดึง EC จาก API น้ำดิบสำแล
+        if (ecRootKey === 'RAW_SAMLE' && window._rawWaterEc && window._rawWaterEc.ec > 0) {
+          const rwEc = window._rawWaterEc.ec;
+          if (ecTT > 0) {
+            decayChart = buildEcForecastChart(rwEc, '🌊 น้ำดิบสำแล', ecTT, s.id, ecNow, null);
+            const foreTs = Date.now() + ecTT * 3600000;
+            saveEcForecast(s.id, foreTs, rwEc, rwEc*1.15, rwEc*0.85);
+          }
+        } else {
+          const ecPlantName = EC_SOURCE_MAP[ecRootKey];
+          const ecPlantSensor = ecPlantName
+            ? SENSORS.find(x => x.name === ecPlantName || x.name.includes(ecPlantName.replace(/\s*\d+$/, '').trim()))
+            : null;
+          const ecSrcVal = ecPlantSensor ? getParamVal(ecPlantSensor) : ecNow;
+          const ecSrcId  = ecPlantSensor ? ecPlantSensor.id : null;
+          const ecLabel  = ecRootKey;
+          if (ecTT > 0) {
+            decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId);
+            const foreTs = Date.now() + ecTT * 3600000;
+            saveEcForecast(s.id, foreTs, ecSrcVal, ecSrcVal*1.15, ecSrcVal*0.85);
+          }
         }
       } else if (rootInfo && rootInfo.mix) {
         // mix fallback
@@ -5591,7 +5643,7 @@ function buildMarkers() {
       ${_vcClosed?'':'<div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:'+c+'">'+paramStatus(pv)+'</span></div>'}
       ${ecRow}
       ${_vcClosed?'':ttHtml}
-      ${_vcClosed?'':sourceChart}
+      ${_vcClosed?'':(sourceChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
       ${_vcClosed?'':decayChart}
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
   }
@@ -6051,6 +6103,19 @@ function setParam(mode) {
   buildMarkers();
   updateStats();
   renderTab();
+
+  // rev20.0: เปิดชั้นน้ำดิบ EC อัตโนมัติเมื่อเข้า Conductivity mode
+  if (mode === 'ec' && !layers.rawwater) {
+    layers.rawwater = true;
+    const rwToggle = document.getElementById('t-rawwater');
+    if (rwToggle) rwToggle.className = 'tog on';
+    // trigger raw water layer
+    if (typeof toggleLayer === 'function') {
+      // undo the toggle we just did manually, let toggleLayer handle it
+      layers.rawwater = false;
+      toggleLayer('rawwater');
+    }
+  }
   // reset unified timeline เมื่อเปลี่ยน mode (FRC/EC ใช้ frame ต่างกัน)
   _unifiedLoaded = false;
   _unifiedFrames = [];
@@ -13507,6 +13572,484 @@ function submitFeedback(){
 • Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev16.0 · M sandbox · Water Quality Division · March 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev20.0 · M sandbox · Water Quality Division · April 2026 · 🔒 Security Upgrade</div>
 </div></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     Raw Water EC — สถานีวัดคุณภาพน้ำดิบ (แม่น้ำเจ้าพระยา)
+     rev18: marker + EC contour along river + API realtime
+     ══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ── 1. สถานีน้ำดิบ กปน. (พิกัดปรับ rev19) ─────────────────────────
+  const RAW_WATER_STATIONS = {
+    'T3': { name: 'วัดบ้านแป้ง',           lat: 14.2388, lon: 100.5755 },
+    'S1': { name: 'สำแล',                 lat: 14.0406, lon: 100.5560 },
+    'S3': { name: 'วัดไผ่ล้อม',           lat: 14.0770, lon: 100.5254 },
+    'S4': { name: 'วัดมะขาม',             lat: 14.0041, lon: 100.5405 },
+    'T4': { name: 'สะพานพระนั่งเกล้า',    lat: 13.8636, lon: 100.4881 },
+    'S7': { name: 'สะพานพระพุทธยอดฟ้า',  lat: 13.7404, lon: 100.5000 },
+    'T1': { name: 'การท่าเรือ',           lat: 13.7075, lon: 100.5728 },
+    'S6': { name: 'คลองลัดโพธิ์',         lat: 13.6538, lon: 100.5306 },
+    'T2': { name: 'โรงไฟฟ้าพระนครใต้',    lat: 13.6122, lon: 100.5616 },
+  };
+
+  // ── 2. API endpoint ─────────────────────────────────────────────────
+  const RAW_WATER_API = 'https://bigdata.mwa.co.th/data-service/internal/big-data/api/v1/783f543c-666c-35b4-795b-40dd2446b291/720721b3-cdaa-199d-9286-52f97cf00dfb/data?token=y0pBvoNbZSQWULB88PXeHBn2dHEgzaFyxSeH3V7a9jgWwn9VAmuGLhqkwrHLpdRm7wNn4DJsYLUT81JpZTwFqZkawNqdq2Osi1igZmYMlD37sKnU8Sy3aLgAQjKoHcdN';
+
+  // ── 3. State ────────────────────────────────────────────────────────
+  let _rwLayerGroup = null;
+  let _rwContourLayer = null;
+  let _rwData = {};  // stn_id → { ec, time, temp, ... }
+  let _rwHistory = {}; // stn_id → [{ec, time}, ...]
+  let _rwFetchTimer = null;
+
+  // ── 4. EC Color scale (สำหรับน้ำดิบ: 100-2000 µS/cm) ──────────────
+  function rwEcColor(ec) {
+    if (ec == null || ec <= 0) return 'rgba(150,150,150,0.6)';
+    if (ec < 200) return 'rgba(40,80,200,0.75)';       // น้ำเงิน = ดีมาก
+    if (ec < 400) return 'rgba(50,190,170,0.75)';       // เขียวฟ้า = ดี
+    if (ec < 600) return 'rgba(120,200,80,0.7)';        // เขียว = ปกติ
+    if (ec < 800) return 'rgba(240,170,20,0.75)';       // ส้ม = สูง
+    if (ec < 1000) return 'rgba(220,80,16,0.8)';        // แดง = สูงมาก
+    return 'rgba(160,0,80,0.85)';                        // ม่วง = วิกฤต (เค็ม)
+  }
+
+  function rwEcText(ec) {
+    if (ec == null) return '—';
+    if (ec < 200) return 'ดีมาก';
+    if (ec < 400) return 'ดี';
+    if (ec < 600) return 'ปกติ';
+    if (ec < 800) return 'สูง ⚠';
+    if (ec < 1000) return 'สูงมาก ⚠';
+    return 'วิกฤต (น้ำเค็ม) 🔴';
+  }
+
+  // ── 5. Marker creation ──────────────────────────────────────────────
+  function createRwMarkers() {
+    if (!_rwLayerGroup) _rwLayerGroup = L.layerGroup();
+
+    _rwLayerGroup.clearLayers();
+
+    Object.entries(RAW_WATER_STATIONS).forEach(([sid, st]) => {
+      const d = _rwData[sid];
+      const ec = d ? d.ec : null;
+      const time = d ? d.time : null;
+      const color = rwEcColor(ec);
+
+      // Circle marker
+      const marker = L.circleMarker([st.lat, st.lon], {
+        radius: 10,
+        fillColor: color,
+        fillOpacity: 0.85,
+        color: '#fff',
+        weight: 2,
+        opacity: 0.9,
+      });
+
+      // Popup
+      const ecStr = ec != null ? `${ec} µS/cm` : 'ไม่มีข้อมูล';
+      const timeStr = time ? new Date(time).toLocaleString('th-TH', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
+      const tempStr = d && d.temp ? `${d.temp}°C` : '—';
+
+      marker.bindPopup(`
+        <div style="font-family:'Sarabun',sans-serif;min-width:180px;">
+          <div style="font-weight:700;color:#1a3a60;font-size:13px;">🌊 ${st.name}</div>
+          <div style="font-size:10px;color:#888;">${sid} · น้ำดิบ · แม่น้ำเจ้าพระยา</div>
+          <hr style="margin:5px 0;border:none;border-top:1px solid #e0e8f0;">
+          <div style="font-size:20px;font-weight:700;color:#1a3a60;">${ecStr}</div>
+          <div style="font-size:11px;color:${ec!=null?'#1a6a40':'#999'};">${rwEcText(ec)}</div>
+          <div style="font-size:9px;color:#888;margin-top:4px;">🕐 ${timeStr} · 🌡 ${tempStr}</div>
+        </div>
+      `, {maxWidth: 250});
+
+      // Label
+      marker.bindTooltip(`${sid}`, {
+        permanent: true, direction: 'top', offset: [0, -8],
+        className: 'rw-label',
+      });
+
+      _rwLayerGroup.addLayer(marker);
+    });
+  }
+
+  // ── 6. River EC contour (polyline along river with EC gradient) ──────
+  // rev19: เส้นแม่น้ำเจ้าพระยาจริง 81 waypoints (วัดบ้านแป้ง → อ่าวไทย)
+  const CHAO_PHRAYA_RIVER = [
+    [14.23814,100.57665],[14.23299,100.57440],[14.22151,100.57216],[14.21479,100.57053],
+    [14.20192,100.56358],[14.19460,100.55542],[14.19242,100.54460],[14.20212,100.51296],
+    [14.20034,100.50745],[14.19361,100.50438],[14.15462,100.51234],[14.12671,100.52439],
+    [14.11206,100.54909],[14.10097,100.54787],[14.08474,100.52541],[14.07602,100.52419],
+    [14.06751,100.53133],[14.05206,100.55215],[14.04097,100.55399],[14.04124,100.55337],
+    [14.03017,100.54225],[14.02331,100.53604],[14.01015,100.53720],[14.00048,100.53965],
+    [13.99460,100.53503],[13.98858,100.52825],[13.97947,100.52580],[13.97219,100.52883],
+    [13.96042,100.53807],[13.95202,100.53821],[13.94557,100.53186],[13.94347,100.51540],
+    [13.94095,100.50385],[13.92147,100.49851],[13.91433,100.49159],[13.91839,100.47311],
+    [13.91657,100.46777],[13.91013,100.46676],[13.90438,100.47080],[13.90060,100.48264],
+    [13.89836,100.48942],[13.89121,100.49000],[13.87313,100.47571],[13.85884,100.47787],
+    [13.84959,100.48682],[13.81550,100.50740],[13.81367,100.51435],[13.80650,100.51779],
+    [13.79483,100.51358],[13.78074,100.50217],[13.75915,100.48852],[13.74865,100.48800],
+    [13.73981,100.49521],[13.73622,100.50774],[13.72163,100.51289],[13.70963,100.50508],
+    [13.70020,100.49187],[13.69612,100.49015],[13.69111,100.49144],[13.68394,100.51384],
+    [13.67118,100.53281],[13.67101,100.54551],[13.68219,100.55220],[13.69870,100.55178],
+    [13.70646,100.55641],[13.69954,100.57881],[13.69128,100.58800],[13.68377,100.58903],
+    [13.67218,100.58113],[13.65667,100.56285],[13.66076,100.54233],[13.65659,100.53504],
+    [13.64291,100.53478],[13.62497,100.54422],[13.61113,100.56637],[13.61029,100.58619],
+    [13.59703,100.59246],[13.58260,100.58559],[13.56866,100.57735],[13.54955,100.58422],
+    [13.53520,100.59744],
+  ];
+
+  function drawRwContour() {
+    if (_rwContourLayer) _rwLayerGroup.removeLayer(_rwContourLayer);
+    _rwContourLayer = L.layerGroup();
+
+    // ── เส้นแม่น้ำเจ้าพระยา (สีน้ำเงินเข้ม สวย) ──────────────────────
+    // Outer glow
+    const riverGlow = L.polyline(CHAO_PHRAYA_RIVER, {
+      color: '#1a3a6a',
+      weight: 12,
+      opacity: 0.15,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    _rwContourLayer.addLayer(riverGlow);
+
+    // ขอบขาว
+    const riverBorder = L.polyline(CHAO_PHRAYA_RIVER, {
+      color: '#c8daf0',
+      weight: 7,
+      opacity: 0.4,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    _rwContourLayer.addLayer(riverBorder);
+
+    // เส้นหลัก สีน้ำเงินเข้ม
+    const riverMain = L.polyline(CHAO_PHRAYA_RIVER, {
+      color: '#1a3a6a',
+      weight: 4,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    riverMain.bindTooltip('แม่น้ำเจ้าพระยา', { sticky: true, className: 'rw-label' });
+    _rwContourLayer.addLayer(riverMain);
+
+    // ── EC contour ทับเส้นแม่น้ำ (สีตาม EC ถ้ามีข้อมูล) ─────────────
+    const riverOrder = ['T3','S1','S3','S4','T4','S7','T1','S6','T2'];
+    const pts = [];
+    riverOrder.forEach(sid => {
+      const st = RAW_WATER_STATIONS[sid];
+      const d = _rwData[sid];
+      if (st && d && d.ec != null) {
+        pts.push({ lat: st.lat, lon: st.lon, ec: d.ec, sid });
+      }
+    });
+
+    if (pts.length >= 2) {
+      function dist2(a, b) { return (a[0]-b[0])**2 + (a[1]-b[1])**2; }
+
+      const stnRiverIdx = pts.map(p => {
+        let minD = 1e9, bestI = 0;
+        CHAO_PHRAYA_RIVER.forEach((rp, i) => {
+          const d = dist2([p.lat, p.lon], rp);
+          if (d < minD) { minD = d; bestI = i; }
+        });
+        return bestI;
+      });
+
+      for (let i = 0; i < CHAO_PHRAYA_RIVER.length - 1; i++) {
+        let beforeIdx = 0, afterIdx = pts.length - 1;
+        for (let s = 0; s < pts.length; s++) {
+          if (stnRiverIdx[s] <= i) beforeIdx = s;
+        }
+        for (let s = pts.length - 1; s >= 0; s--) {
+          if (stnRiverIdx[s] >= i) afterIdx = s;
+        }
+
+        const sA = pts[beforeIdx], sB = pts[afterIdx];
+        const riA = stnRiverIdx[beforeIdx], riB = stnRiverIdx[afterIdx];
+        const t = riA === riB ? 0 : (i - riA) / (riB - riA);
+        const ec = sA.ec + (sB.ec - sA.ec) * Math.max(0, Math.min(1, t));
+        const color = rwEcColor(ec);
+
+        const seg = L.polyline([CHAO_PHRAYA_RIVER[i], CHAO_PHRAYA_RIVER[i + 1]], {
+          color: color,
+          weight: 5,
+          opacity: 0.45,
+          lineCap: 'round',
+          lineJoin: 'round',
+        });
+        _rwContourLayer.addLayer(seg);
+      }
+    }
+
+    _rwLayerGroup.addLayer(_rwContourLayer);
+  }
+
+  // ── 7. API Fetch ────────────────────────────────────────────────────
+  async function fetchRawWaterData() {
+    try {
+      console.log('[RawWater] Fetching API...');
+      const resp = await fetch(RAW_WATER_API);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      const records = json.data || [];
+
+      // หาค่าล่าสุดของแต่ละสถานี
+      const latest = {};
+      records.forEach(r => {
+        const sid = r.stn_id;
+        if (!latest[sid] || r.datetimes > latest[sid].datetimes) {
+          latest[sid] = r;
+        }
+      });
+
+      // อัปเดต _rwData
+      Object.entries(latest).forEach(([sid, r]) => {
+        _rwData[sid] = {
+          ec: r.conducted,
+          temp: r.temp,
+          tds: r.tds,
+          salinity: r.salinity,
+          ph: r.ph,
+          turbid: r.turbid,
+          time: r.datetimes,
+        };
+      });
+
+      console.log(`[RawWater] ✅ ${Object.keys(latest).length} stations updated`);
+
+      // ── rev19: บันทึก EC น้ำดิบลง Firebase ────────────────────────────
+      if (window._fbReady && window._fb) {
+        try {
+          const now = Date.now();
+          for (const [sid, r] of Object.entries(latest)) {
+            if (r.conducted == null || r.conducted <= 0) continue;
+            const ts = new Date(r.datetimes).getTime() || now;
+            const fbKey = `history/raw_${sid.replace(/\//g,'-')}/${ts}`;
+            await window._fbSet(
+              window._fbRef(window._fb, fbKey),
+              { ec: r.conducted, temp: r.temp || null, ts: ts }
+            );
+          }
+          console.log('[RawWater] ✅ saved EC to Firebase');
+        } catch(e) {
+          console.warn('[RawWater] Firebase save error:', e.message);
+        }
+      }
+
+      // Rebuild markers + contour
+      if (layers.rawwater) {
+        createRwMarkers();
+        drawRwContour();
+      }
+
+      // rev19: rebuild main station markers เพื่อให้ SP01-SP05 popup ใช้ข้อมูลน้ำดิบ
+      if (typeof buildMarkers === 'function') buildMarkers();
+
+    } catch (e) {
+      console.warn('[RawWater] API fetch failed:', e.message);
+    }
+  }
+
+  // ── 8. Layer toggle integration ─────────────────────────────────────
+  const _origToggle = window.toggleLayer;
+  window.toggleLayer = function(name) {
+    if (name === 'rawwater') {
+      layers.rawwater = !layers.rawwater;
+      const el = document.getElementById('t-rawwater');
+      if (el) el.className = layers.rawwater ? 'tog on' : 'tog off';
+
+      if (layers.rawwater) {
+        if (!_rwLayerGroup) _rwLayerGroup = L.layerGroup();
+        _rwLayerGroup.addTo(map);
+        createRwMarkers();
+        drawRwContour();
+        // เริ่ม fetch ถ้ายังไม่มีข้อมูล
+        if (Object.keys(_rwData).length === 0) fetchRawWaterData();
+        // Auto-refresh ทุก 10 นาที
+        if (!_rwFetchTimer) _rwFetchTimer = setInterval(fetchRawWaterData, 600000);
+      } else {
+        if (_rwLayerGroup) _rwLayerGroup.remove();
+        if (_rwFetchTimer) { clearInterval(_rwFetchTimer); _rwFetchTimer = null; }
+      }
+      return;
+    }
+    if (_origToggle) _origToggle(name);
+  };
+
+  // ── 9. CSS สำหรับ label ─────────────────────────────────────────────
+  const style = document.createElement('style');
+  style.textContent = `
+    .rw-label {
+      background: rgba(26,58,96,0.85) !important;
+      color: #fff !important;
+      border: none !important;
+      border-radius: 3px !important;
+      padding: 1px 4px !important;
+      font-size: 9px !important;
+      font-weight: 700 !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+    }
+    .rw-label::before { display: none !important; }
+  `;
+  document.head.appendChild(style);
+
+  // ── 10. Initial fetch เมื่อ page load (ไม่ต้องรอ toggle) ────────────
+  // Pre-fetch เพื่อให้ข้อมูลพร้อมเมื่อ user toggle on
+  setTimeout(fetchRawWaterData, 3000);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── 11. คลองประปา สำแล → บางเขน (rev19) ───────────────────────────
+  // เส้นทางน้ำดิบ: travel time 13 ชม. → forecast EC ที่บางเขน
+  // ══════════════════════════════════════════════════════════════════════
+
+  const CANAL_WAYPOINTS = [
+    [14.04061, 100.55608],  // สถานีสูบน้ำดิบสำแล
+    [14.03932, 100.55777],
+    [14.03547, 100.55977],
+    [14.03175, 100.56105],
+    [14.02826, 100.56168],
+    [14.02445, 100.56225],
+    [14.01995, 100.56301],
+    [14.01235, 100.56414],  // ปทุมธานี
+    [14.00092, 100.56584],
+    [13.98047, 100.56988],
+    [13.97081, 100.57237],  // ปากเกร็ด
+    [13.94892, 100.56696],
+    [13.91859, 100.55985],  // หลักสี่
+    [13.89578, 100.55459],
+    [13.88517, 100.55221],  // ใกล้โรงงานผลิตน้ำบางเขน
+    [13.87791, 100.55039],  // โรงงานผลิตน้ำบางเขน (ปลายคลองประปา)
+  ];
+
+  const CANAL_TRAVEL_HOURS = 13; // เวลาเดินทางน้ำดิบ สำแล→บางเขน
+
+  let _canalLayer = null;
+  let _canalForecastLayer = null;
+
+  function drawCanalLine() {
+    if (_canalLayer) _rwLayerGroup.removeLayer(_canalLayer);
+    _canalLayer = L.layerGroup();
+
+    // เส้นคลองประปา — เส้นคู่ (glow + main) สวยกว่า
+    // Outer glow
+    const canalGlow = L.polyline(CANAL_WAYPOINTS, {
+      color: '#40a0ff',
+      weight: 8,
+      opacity: 0.2,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    _canalLayer.addLayer(canalGlow);
+
+    // Main line (ขอบขาว)
+    const canalBorder = L.polyline(CANAL_WAYPOINTS, {
+      color: '#ffffff',
+      weight: 5,
+      opacity: 0.6,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    _canalLayer.addLayer(canalBorder);
+
+    // Inner line (สีน้ำเงินเข้ม เส้นประ)
+    const canalLine = L.polyline(CANAL_WAYPOINTS, {
+      color: '#1a5090',
+      weight: 3,
+      opacity: 0.9,
+      dashArray: '10, 6',
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    canalLine.bindTooltip('คลองประปา (สำแล → บางเขน) ~18 km · 13 ชม.', {
+      sticky: true, className: 'rw-label'
+    });
+    _canalLayer.addLayer(canalLine);
+
+    // จุดต้นทาง (สำแล) — ใหญ่ขึ้น มี pulse
+    const startMarker = L.circleMarker(CANAL_WAYPOINTS[0], {
+      radius: 8, fillColor: '#1a5090', fillOpacity: 0.9, color: '#fff', weight: 3
+    });
+    startMarker.bindTooltip('🌊 สำแล (ต้นทางน้ำดิบ)', { permanent: false, direction: 'top' });
+    _canalLayer.addLayer(startMarker);
+
+    // จุดปลายทาง (บางเขน) — แดง ใหญ่ขึ้น
+    const endMarker = L.circleMarker(CANAL_WAYPOINTS[CANAL_WAYPOINTS.length - 1], {
+      radius: 8, fillColor: '#cc0055', fillOpacity: 0.9, color: '#fff', weight: 3
+    });
+    endMarker.bindTooltip('🏭 โรงงานผลิตน้ำบางเขน', { permanent: false, direction: 'top' });
+    _canalLayer.addLayer(endMarker);
+
+    // ป้ายกำกับกลางเส้น
+    const midIdx = Math.floor(CANAL_WAYPOINTS.length / 2);
+    const midPt = CANAL_WAYPOINTS[midIdx];
+    const labelMarker = L.marker(midPt, {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="background:rgba(26,80,144,0.85);color:#fff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;font-family:Sarabun,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.3);transform:translate(-50%,-50%);">คลองประปา 18 km · 13 ชม.</div>',
+        iconSize: [0, 0],
+      }),
+      interactive: false,
+    });
+    _canalLayer.addLayer(labelMarker);
+
+    _rwLayerGroup.addLayer(_canalLayer);
+  }
+
+  function buildCanalForecast() {
+    if (_canalForecastLayer) _rwLayerGroup.removeLayer(_canalForecastLayer);
+    _canalForecastLayer = L.layerGroup();
+
+    const samlaData = _rwData['S1'];
+    if (!samlaData || !samlaData.ec) return;
+
+    const ecNow = samlaData.ec;
+
+    // เส้นคลองเปลี่ยนสีตาม EC ปัจจุบัน
+    const color = rwEcColor(ecNow);
+    const animLine = L.polyline(CANAL_WAYPOINTS, {
+      color: color,
+      weight: 6,
+      opacity: 0.5,
+    });
+    animLine.bindTooltip(`คลองประปา EC=${ecNow} µS/cm → ถึงบางเขน +${CANAL_TRAVEL_HOURS} ชม.`, {
+      sticky: true, className: 'rw-label'
+    });
+    _canalForecastLayer.addLayer(animLine);
+
+    _rwLayerGroup.addLayer(_canalForecastLayer);
+
+    // ── rev19: เพิ่ม EC forecast จากสำแลเข้า popup ของ SP01-SP05 ──
+    // โดย set global variable ให้ buildEcForecastChart ดึงค่าจากน้ำดิบได้
+    window._rawWaterEc = {
+      ec: ecNow,
+      time: samlaData.time,
+      travelHours: CANAL_TRAVEL_HOURS,
+      source: 'สำแล (S1)',
+    };
+
+    // ซ่อนกราฟค่าจริงของ SP01-SP05 (ใช้กราฟ forecast แทน)
+    if (!document.getElementById('rw-hide-bangkhen-css')) {
+      const css = document.createElement('style');
+      css.id = 'rw-hide-bangkhen-css';
+      css.textContent = '.bangkhen-source-chart { display: none !important; }';
+      document.head.appendChild(css);
+    }
+  }
+
+  // Hook เข้ากับ createRwMarkers เดิม
+  const _origCreateRwMarkers = createRwMarkers;
+  createRwMarkers = function() {
+    _origCreateRwMarkers();
+    drawCanalLine();
+    buildCanalForecast();
+  };
+
+})();
+</script>
 </body></html>
