@@ -3185,24 +3185,22 @@ window.addEventListener('load', () => {
     `K = ${(K_total*86400).toFixed(4)}/day  |  ${k_per_km.toFixed(4)}/km`;
 });
 
+// rev17.3: pipe-pair-fit K สำหรับ pipe distance (calibrated จากเส้นท่อ)
+
 function epanetDecay(dKm, sensor) {
   const L_m = dKm * 1000;
-  const t   = L_m / EPANET.v;  // travel time [s]
-
-  // rev17.3: ใช้ per-station K จาก STATION_K_OVERRIDE สำหรับทุกสถานี
+  const t   = L_m / EPANET.v;
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
-    const k_hr = STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : 0.035;
+    const k_hr = STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : 0.15;
     return Math.exp(-(k_hr / 3600) * t);
   }
-  // fallback: ใช้ K_total จาก EPANET sidebar
   return Math.exp(-K_total * t);
 }
 
 // ── Parameter helpers ────────────────────────────────────────────────────────
 // rev17.0: mapping string id → numeric id สำหรับ EC_FALLBACK
-const _EC_ID_MAP = {'SP01':1,'SP02':2,'SP03':3,'SP04':0.60900,'SP05':0.55400,'SP06':0.80000,'SP07':0.41300,'SP08':0.41300,'SP09':0.63700,'SP10':0.41300,'SP11':11,'SP12':0.22600,
-  'SW01':0.80000,'SW02':0.47700,'SW03':0.80000,'SW04':0.39400,'SW05':0.50100,'SW06':0.66000,'SW07':0.57600,'SW08':0.23200,'SW09':0.26000,'SW10':0.31400,'SW11':33};
+const _EC_ID_MAP = {'SP01':1,'SP02':2,'SP03':3,'SP04':4,'SP05':5,'SP06':6,'SP07':7,'SP08':8,'SP09':9,'SP10':10,'SP11':11,'SP12':12,'SW01':13,'SW02':14,'SW03':15,'SW04':16,'SW05':17,'SW06':18,'SW07':19,'SW08':20,'SW09':21,'SW10':22,'SW11':33};
 
 function getParamVal(s) {
   if (PARAM_MODE === 'ec') {
@@ -6134,10 +6132,10 @@ const STATION_K_OVERRIDE = {
   'S032': 0.06459,  // MDIS→ตั้งพิรุฬห์ hl=11h [3mo-fit]
   'SM06': 0.02595,  // MDIS→บางบัวทอง hl=27h [3mo-fit]
   'SP11': 0.02221,  // MTR→ราษฎร์บูรณะ hl=31h [3mo-fit]
-  'SP12': 0.03181,  // MDIS median hl=22h [3mo-fit]
-  'SW08': 0.02221,  // MTR→ราษฎร์บูรณะ hl=31h [3mo-fit]
-  'SW09': 0.04684,  // MTR→เพชรเกษม hl=15h [3mo-fit]
-  'SW10': 0.02026,  // MTR→ท่าพระ hl=34h [3mo-fit]
+  'SP12': 0.31810,  // MDIS median hl=22h [3mo-fit]
+  'SW08': 0.22210,  // MTR→ราษฎร์บูรณะ hl=31h [3mo-fit]
+  'SW09': 0.46840,  // MTR→เพชรเกษม hl=15h [3mo-fit]
+  'SW10': 0.20260,  // MTR→ท่าพระ hl=34h [3mo-fit]
   // ── กลุ่มเจ้าพระยา (CP) — ค่าเดิม rev.21 ──────────────────────────────
   'S001': 0.01728,  // เตรียมอุดม hl=40h [self-fit]
   'S002': 0.03913,  // ทหารขนส่ง hl=18h [pair-fit]
@@ -6170,21 +6168,21 @@ const STATION_K_OVERRIDE = {
   'SP01': 0.00860,  // TR1 hl=81h [self-fit]
   'SP02': 0.00667,  // TR2 hl=104h [self-fit]
   'SP03': 0.04350,  // TR3 hl=16h [pair-fit]
-  'SP04': 0.03913,  // Dis1 hl=18h [pair-fit]
-  'SP05': 0.04542,  // Dis2 hl=15h [pair-fit]
-  'SP06': 0.02963,  // ธนบุรี hl=23h [pair-fit]
-  'SP07': 0.01273,  // สามเสน1 hl=54h [self-fit]
-  'SP08': 0.01134,  // สามเสน2 hl=61h [self-fit]
-  'SP09': 0.03008,  // สามเสน3 hl=23h [pair-fit]
-  'SP10': 0.00942,  // สามเสน4 hl=74h [self-fit]
-  'SW01': 0.02956,  // ลุมพินี hl=23h [pair-fit]
-  'SW02': 0.02819,  // ลาดพร้าว hl=25h [pair-fit]
-  'SW03': 0.03355,  // คลองเตย hl=21h [pair-fit]
-  'SW04': 0.03567,  // สำโรง hl=19h [pair-fit]
-  'SW05': 0.02433,  // มีนบุรี hl=28h [pair-fit]
-  'SW06': 0.03977,  // ลาดกระบัง hl=17h [pair-fit]
-  'SW07': 0.02852,  // บางพลี hl=24h [pair-fit]
-  'SW11': 0.41300,  // พหลโยธิน hl=24h [pair-fit]
+  'SP04': 0.39130,  // Dis1 hl=18h [pair-fit]
+  'SP05': 0.45420,  // Dis2 hl=15h [pair-fit]
+  'SP06': 0.29630,  // ธนบุรี hl=23h [pair-fit]
+  'SP07': 0.12730,  // สามเสน1 hl=54h [self-fit]
+  'SP08': 0.11340,  // สามเสน2 hl=61h [self-fit]
+  'SP09': 0.30080,  // สามเสน3 hl=23h [pair-fit]
+  'SP10': 0.09420,  // สามเสน4 hl=74h [self-fit]
+  'SW01': 0.29560,  // ลุมพินี hl=23h [pair-fit]
+  'SW02': 0.28190,  // ลาดพร้าว hl=25h [pair-fit]
+  'SW03': 0.33550,  // คลองเตย hl=21h [pair-fit]
+  'SW04': 0.35670,  // สำโรง hl=19h [pair-fit]
+  'SW05': 0.24330,  // มีนบุรี hl=28h [pair-fit]
+  'SW06': 0.39770,  // ลาดกระบัง hl=17h [pair-fit]
+  'SW07': 0.28520,  // บางพลี hl=24h [pair-fit]
+  'SW11': 0.29120,  // พหลโยธิน hl=24h [pair-fit]
 }; // รวม 61 สถานี | MH=rev.25 fit, CP=rev.21 original
  // รวม 51 สถานี | rev.25 fit จากข้อมูลจริง 3 เดือน (ม.ค.-มี.ค. 2569)
 
