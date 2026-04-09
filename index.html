@@ -3675,7 +3675,8 @@ function frcZone(lat, lon) {
       const vc = VC_STATIONS.find(v => v.id === sid);
       if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
       const vcFrc = vc.frc || 0;
-      if (vcFrc <= 0) continue;
+      // rev20: ถ้า VC active (valvePct>0) แต่ FRC=0 → return 0 (พื้นที่ไม่มีคลอรีน)
+      if (vcFrc <= 0) return 0;
       const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
       const pair = VC_PAIR ? VC_PAIR[sid] : null;
       const kLocal = pair ? pair.K : 0.05;
