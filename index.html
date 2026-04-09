@@ -13952,6 +13952,7 @@ function submitFeedback(){
       });
 
       // rev21: populate _rwHistory สำหรับ EC trend chart ใน popup
+      // เริ่มจาก API records (อาจมีแค่ snapshot ล่าสุด)
       records.forEach(r => {
         const sid = r.stn_id;
         if (r.conducted == null || r.conducted <= 0) return;
@@ -13961,8 +13962,36 @@ function submitFeedback(){
         if (!_rwHistory[sid].find(h => h.ts === ts)) {
           _rwHistory[sid].push({ ec: r.conducted, ts });
         }
-        if (_rwHistory[sid].length > 100) _rwHistory[sid] = _rwHistory[sid].slice(-100);
       });
+
+      // rev21: ดึง history เพิ่มจาก Firebase (ที่สะสมไว้ทุก 10 นาที)
+      if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
+        const twoDaysAgo = Date.now() - 48 * 3600000;
+        for (const sid of Object.keys(RAW_WATER_STATIONS)) {
+          try {
+            const fbPath = `history/raw_${sid.replace(/\//g,'-')}`;
+            const snap = await window._fbGet(window._fbRef(window._fb, fbPath));
+            const val = snap.val ? snap.val() : snap;
+            if (val && typeof val === 'object') {
+              if (!_rwHistory[sid]) _rwHistory[sid] = [];
+              Object.values(val).forEach(rec => {
+                if (!rec || rec.ec == null || rec.ec <= 0) return;
+                const ts = rec.ts || 0;
+                if (ts < twoDaysAgo) return; // เฉพาะ 2 วันล่าสุด
+                if (!_rwHistory[sid].find(h => h.ts === ts)) {
+                  _rwHistory[sid].push({ ec: rec.ec, ts });
+                }
+              });
+            }
+          } catch(e) { /* ignore per-station errors */ }
+        }
+        // sort & limit
+        Object.keys(_rwHistory).forEach(sid => {
+          _rwHistory[sid].sort((a,b) => a.ts - b.ts);
+          if (_rwHistory[sid].length > 200) _rwHistory[sid] = _rwHistory[sid].slice(-200);
+        });
+        console.log('[RawWater] ✅ Firebase history loaded:', Object.entries(_rwHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
+      }
 
       console.log(`[RawWater] ✅ ${Object.keys(latest).length} stations updated`);
 
@@ -14797,11 +14826,36 @@ function submitFeedback(){
         if (!_mkHistory[sid]) _mkHistory[sid] = [];
         _mkHistory[sid].push({ ec: r.conducted, ts: new Date(r.datetimes).getTime() });
       });
+
+      // rev21: ดึง history เพิ่มจาก Firebase (สะสมทุก 10 นาที)
+      if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
+        const twoDaysAgo = Date.now() - 48 * 3600000;
+        for (const sid of Object.keys(MK_STATIONS)) {
+          try {
+            const fbPath = `history/rawmk_${sid.replace(/\//g,'-')}`;
+            const snap = await window._fbGet(window._fbRef(window._fb, fbPath));
+            const val = snap.val ? snap.val() : snap;
+            if (val && typeof val === 'object') {
+              if (!_mkHistory[sid]) _mkHistory[sid] = [];
+              Object.values(val).forEach(rec => {
+                if (!rec || rec.ec == null || rec.ec <= 0) return;
+                const ts = rec.ts || 0;
+                if (ts < twoDaysAgo) return;
+                if (!_mkHistory[sid].find(h => h.ts === ts)) {
+                  _mkHistory[sid].push({ ec: rec.ec, ts });
+                }
+              });
+            }
+          } catch(e) { /* ignore */ }
+        }
+      }
+
       // Sort & limit
       Object.keys(_mkHistory).forEach(sid => {
         _mkHistory[sid].sort((a,b) => a.ts - b.ts);
-        if (_mkHistory[sid].length > 100) _mkHistory[sid] = _mkHistory[sid].slice(-100);
+        if (_mkHistory[sid].length > 200) _mkHistory[sid] = _mkHistory[sid].slice(-200);
       });
+      console.log('[MaeKlong] ✅ history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
 
       console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
 
