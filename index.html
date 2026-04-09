@@ -5622,7 +5622,7 @@ function buildMarkers() {
     // EC extra info
     const ecRow = PARAM_MODE === 'ec'
       ? `<div class="pr" style="margin-top:5px"><span>FRC</span><span class="pv">${s.frc.toFixed(3)} mg/L</span></div>`
-      : `<div class="pr" style="margin-top:5px"><span>EC</span><span class="pv">${s.ec != null ? s.ec : (EC_FALLBACK[s.id]||'—')} μS/cm</span></div>`;
+      : `<div class="pr" style="margin-top:5px"><span>EC</span><span class="pv">${EC_FALLBACK[s.id]||'—'} μS/cm</span></div>`;
 
     const ttHtml = tt
       ? `<div class="pr" style="margin-top:5px;border-top:1px solid #f5d8ec;padding-top:5px;">
@@ -6158,19 +6158,14 @@ function setParam(mode) {
   updateStats();
   renderTab();
 
-  // rev20.0: เปิดชั้นน้ำดิบ EC อัตโนมัติเมื่อเข้า Conductivity mode
-  if (mode === 'ec' && !layers.rawwater) {
-    layers.rawwater = true;
-    const rwToggle = document.getElementById('t-rawwater');
-    if (rwToggle) rwToggle.className = 'tog on';
-    // trigger raw water layer
-    if (typeof toggleLayer === 'function') {
-      // undo the toggle we just did manually, let toggleLayer handle it
-      layers.rawwater = false;
-      toggleLayer('rawwater');
-    }
+  // rev21: EC → เปิดน้ำดิบทั้ง 2 ฝั่ง / FRC → ปิดทั้ง 2 ฝั่ง อัตโนมัติ
+  if (mode === 'ec') {
+    if (!layers.rawwater)       toggleLayer('rawwater');
+    if (!layers['rawwater-mk']) toggleLayer('rawwater-mk');
+  } else {
+    if (layers.rawwater)        toggleLayer('rawwater');
+    if (layers['rawwater-mk'])  toggleLayer('rawwater-mk');
   }
-  // rev20.0: แม่กลองไม่ auto-toggle เพราะจะ zoom out ไกล — user toggle เอง
   // reset unified timeline เมื่อเปลี่ยน mode (FRC/EC ใช้ frame ต่างกัน)
   _unifiedLoaded = false;
   _unifiedFrames = [];
@@ -13682,55 +13677,55 @@ function submitFeedback(){
     return 'วิกฤต (น้ำเค็ม) 🔴';
   }
 
-  // ── 5. Marker creation ──────────────────────────────────────────────
+  // ── 5. Rich popup builder (เจ้าพระยา) — เหมือนสถานีน้ำประปา ──────
   function buildRwPopupHtml(sid, st, d, history) {
     const ec = d ? d.ec : null;
     const time = d ? d.time : null;
     const ecStr = ec != null ? `${ec} µS/cm` : 'ไม่มีข้อมูล';
     const timeStr = time ? new Date(time).toLocaleString('th-TH', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
     const tempStr = d && d.temp != null ? `${d.temp}°C` : '—';
-    const tdsStr = d && d.tds != null ? `${d.tds} mg/L` : '—';
-    const salStr = d && d.salinity != null ? `${d.salinity} ppt` : '—';
     const phStr = d && d.ph != null ? `${d.ph}` : '—';
     const turbStr = d && d.turbid != null ? `${d.turbid} NTU` : '—';
+    const salStr = d && d.salinity != null ? `${d.salinity} ppt` : '—';
+    const tdsStr = d && d.tds != null ? `${d.tds} mg/L` : '—';
     const _dk = document.body.classList.contains('dark');
 
-    // ── EC Trend Chart จาก _rwHistory ───────────────────────────────────
+    // ── EC Trend Chart จาก _rwHistory ───────────────────────────────
     let chartSvg = '';
     if (history && history.length >= 2) {
       const W = 320, H = 100, pad = 28, padR = 10, padT = 12, padB = 22;
-      const sorted = [...history].sort((a,b) => a.ts - b.ts).slice(-48);
+      const now = Date.now();
+      const twoDaysAgo = now - 48 * 3600000;  // ย้อนหลัง 2 วัน
+      const sorted = [...history].filter(r => r.ts >= twoDaysAgo).sort((a,b) => a.ts - b.ts);
+      if (sorted.length >= 2) {
       const minT = sorted[0].ts, maxT = sorted[sorted.length-1].ts;
       const ecVals = sorted.map(r => r.ec);
       const minEc = Math.min(...ecVals), maxEc = Math.max(...ecVals);
       const rangeEc = Math.max(maxEc - minEc, 10);
       const rangeT = Math.max(maxT - minT, 1);
-
       const x = (ts) => pad + (ts - minT) / rangeT * (W - pad - padR);
       const y = (v) => padT + (1 - (v - (minEc - rangeEc*0.1)) / (rangeEc * 1.2)) * (H - padT - padB);
-
       let pathD = sorted.map((r,i) => `${i===0?'M':'L'}${x(r.ts).toFixed(1)},${y(r.ec).toFixed(1)}`).join(' ');
-      let areaD = pathD + ` L${x(sorted[sorted.length-1].ts).toFixed(1)},${(H-padB).toFixed(1)} L${x(sorted[0].ts).toFixed(1)},${(H-padB).toFixed(1)} Z`;
-
+      let areaD = pathD + ` L${x(maxT).toFixed(1)},${(H-padB).toFixed(1)} L${x(minT).toFixed(1)},${(H-padB).toFixed(1)} Z`;
       const bgFill = _dk ? 'rgba(20,25,50,0.85)' : '#f5f8ff';
       const gridColor = _dk ? 'rgba(255,255,255,0.1)' : '#e0e8f0';
       const textColor = _dk ? '#9090b8' : '#888';
       const lineColor = '#1a5090';
       const fillColor = _dk ? 'rgba(40,100,200,0.15)' : 'rgba(40,100,200,0.1)';
-
       chartSvg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin:6px auto 2px;">
         <rect x="0" y="0" width="${W}" height="${H}" rx="6" fill="${bgFill}"/>
         <line x1="${pad}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="${gridColor}" stroke-width="1"/>
         <line x1="${pad}" y1="${padT}" x2="${pad}" y2="${H-padB}" stroke="${gridColor}" stroke-width="1"/>
         <path d="${areaD}" fill="${fillColor}"/>
         <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        ${sorted.length <= 24 ? sorted.map(r => `<circle cx="${x(r.ts).toFixed(1)}" cy="${y(r.ec).toFixed(1)}" r="2.5" fill="${lineColor}" stroke="#fff" stroke-width="1"/>`).join('') : ''}
-        <text x="${pad}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace">${new Date(minT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
-        <text x="${W-padR}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${new Date(maxT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
+        ${sorted.length <= 30 ? sorted.map(r => `<circle cx="${x(r.ts).toFixed(1)}" cy="${y(r.ec).toFixed(1)}" r="2.5" fill="${lineColor}" stroke="#fff" stroke-width="1"/>`).join('') : ''}
+        <text x="${pad}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace">${new Date(minT).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</text>
+        <text x="${W-padR}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${new Date(maxT).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</text>
         <text x="${pad-3}" y="${padT+8}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${maxEc}</text>
         <text x="${pad-3}" y="${H-padB}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${minEc}</text>
-        <text x="${W/2}" y="${padT-1}" font-size="8" fill="${_dk?'#6090cc':'#4060a0'}" font-family="Sarabun,sans-serif" font-weight="700" text-anchor="middle">EC Trend (${sorted.length} records)</text>
+        <text x="${W/2}" y="${padT-1}" font-size="8" fill="${_dk?'#6090cc':'#4060a0'}" font-family="Sarabun,sans-serif" font-weight="700" text-anchor="middle">EC ย้อนหลัง 2 วัน (${sorted.length} จุด)</text>
       </svg>`;
+      }
     }
 
     return `
@@ -13759,6 +13754,7 @@ function submitFeedback(){
     `;
   }
 
+  // ── 5b. Marker creation ─────────────────────────────────────────────
   function createRwMarkers() {
     if (!_rwLayerGroup) _rwLayerGroup = L.layerGroup();
 
@@ -13767,24 +13763,25 @@ function submitFeedback(){
     Object.entries(RAW_WATER_STATIONS).forEach(([sid, st]) => {
       const d = _rwData[sid];
       const ec = d ? d.ec : null;
-      const time = d ? d.time : null;
       const color = rwEcColor(ec);
       const history = _rwHistory[sid] || [];
 
-      // Use L.marker + divIcon for bigger tap target (mobile-friendly)
-      const sz = 32;  // ขนาดวงกลมจริง
-      const tap = 44;  // พื้นที่กดขั้นต่ำ (Apple HIG recommend 44px)
-      const off = (tap - sz) / 2;
+      // rev21: S1 สำแล = สถานีหลัก (ต้นทางน้ำดิบ) → marker ใหญ่, สถานีอื่น → เล็กลง
+      const isSamle = (sid === 'S1');
+      const sz  = isSamle ? 16 : 9;    // วงกลม visual
+      const tap = isSamle ? 44 : 36;   // พื้นที่กด
       const marker = L.marker([st.lat, st.lon], {
         icon: L.divIcon({
-          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${color}88;"></div></div>`,
+          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:${isSamle?'2.5':'2'}px solid rgba(255,255,255,.95);box-shadow:0 2px ${isSamle?'8':'5'}px ${color}88;"></div></div>`,
           className: '',
           iconSize: [tap, tap],
           iconAnchor: [tap/2, tap/2],
         }),
+        zIndexOffset: isSamle ? 1200 : 1000,
+        interactive: true,
       });
 
-      // Rich popup — same style as main stations
+      // Rich popup — เหมือนสถานีน้ำประปา
       marker.bindPopup(buildRwPopupHtml(sid, st, d, history), {
         maxWidth: Math.min(400, window.innerWidth - 20),
         minWidth: Math.min(280, window.innerWidth - 30),
@@ -13795,9 +13792,9 @@ function submitFeedback(){
         keepInView: false,
       });
 
-      // Label
-      marker.bindTooltip(`${sid}`, {
-        permanent: true, direction: 'top', offset: [0, -8],
+      // Label — แสดงรหัส + ชื่อเต็ม (pointer-events:none ใน CSS)
+      marker.bindTooltip(`${sid} ${st.name}`, {
+        permanent: true, direction: 'top', offset: [0, -14],
         className: 'rw-label',
       });
 
@@ -13843,6 +13840,7 @@ function submitFeedback(){
       opacity: 0.15,
       lineCap: 'round',
       lineJoin: 'round',
+      interactive: false,
     });
     _rwContourLayer.addLayer(riverGlow);
 
@@ -13853,6 +13851,7 @@ function submitFeedback(){
       opacity: 0.4,
       lineCap: 'round',
       lineJoin: 'round',
+      interactive: false,
     });
     _rwContourLayer.addLayer(riverBorder);
 
@@ -13863,6 +13862,7 @@ function submitFeedback(){
       opacity: 0.85,
       lineCap: 'round',
       lineJoin: 'round',
+      interactive: false,
     });
     riverMain.bindTooltip('แม่น้ำเจ้าพระยา', { sticky: true, className: 'rw-label' });
     _rwContourLayer.addLayer(riverMain);
@@ -13911,6 +13911,7 @@ function submitFeedback(){
           opacity: 0.45,
           lineCap: 'round',
           lineJoin: 'round',
+          interactive: false,
         });
         _rwContourLayer.addLayer(seg);
       }
@@ -13950,18 +13951,16 @@ function submitFeedback(){
         };
       });
 
-      // อัปเดต _rwHistory — เก็บ EC ย้อนหลังสำหรับ trend chart ใน popup
+      // rev21: populate _rwHistory สำหรับ EC trend chart ใน popup
       records.forEach(r => {
         const sid = r.stn_id;
         if (r.conducted == null || r.conducted <= 0) return;
         if (!_rwHistory[sid]) _rwHistory[sid] = [];
         const ts = new Date(r.datetimes).getTime();
         if (!ts || isNaN(ts)) return;
-        // ไม่เพิ่มซ้ำ
         if (!_rwHistory[sid].find(h => h.ts === ts)) {
-          _rwHistory[sid].push({ ec: r.conducted, ts: ts });
+          _rwHistory[sid].push({ ec: r.conducted, ts });
         }
-        // จำกัดไว้ 100 records ล่าสุด
         if (_rwHistory[sid].length > 100) _rwHistory[sid] = _rwHistory[sid].slice(-100);
       });
 
@@ -14039,6 +14038,7 @@ function submitFeedback(){
       font-weight: 700 !important;
       font-family: 'JetBrains Mono', monospace !important;
       box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+      pointer-events: none !important;
     }
     .rw-label::before { display: none !important; }
   `;
@@ -14346,7 +14346,10 @@ function submitFeedback(){
     let chartSvg = '';
     if (history && history.length >= 2) {
       const W = 320, H = 100, pad = 28, padR = 10, padT = 12, padB = 22;
-      const sorted = [...history].sort((a,b) => a.ts - b.ts).slice(-48); // last 48 records
+      const now = Date.now();
+      const twoDaysAgo = now - 48 * 3600000;
+      const sorted = [...history].filter(r => r.ts >= twoDaysAgo).sort((a,b) => a.ts - b.ts);
+      if (sorted.length >= 2) {
       const minT = sorted[0].ts, maxT = sorted[sorted.length-1].ts;
       const ecVals = sorted.map(r => r.ec);
       const minEc = Math.min(...ecVals), maxEc = Math.max(...ecVals);
@@ -14356,9 +14359,7 @@ function submitFeedback(){
       const x = (ts) => pad + (ts - minT) / rangeT * (W - pad - padR);
       const y = (v) => padT + (1 - (v - (minEc - rangeEc*0.1)) / (rangeEc * 1.2)) * (H - padT - padB);
 
-      // Build path
       let pathD = sorted.map((r,i) => `${i===0?'M':'L'}${x(r.ts).toFixed(1)},${y(r.ec).toFixed(1)}`).join(' ');
-      // Area fill
       let areaD = pathD + ` L${x(sorted[sorted.length-1].ts).toFixed(1)},${(H-padB).toFixed(1)} L${x(sorted[0].ts).toFixed(1)},${(H-padB).toFixed(1)} Z`;
 
       const bgFill = _dk ? 'rgba(20,25,50,0.85)' : '#f5f8ff';
@@ -14373,13 +14374,14 @@ function submitFeedback(){
         <line x1="${pad}" y1="${padT}" x2="${pad}" y2="${H-padB}" stroke="${gridColor}" stroke-width="1"/>
         <path d="${areaD}" fill="${fillColor}"/>
         <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        ${sorted.length <= 24 ? sorted.map(r => `<circle cx="${x(r.ts).toFixed(1)}" cy="${y(r.ec).toFixed(1)}" r="2.5" fill="${lineColor}" stroke="#fff" stroke-width="1"/>`).join('') : ''}
-        <text x="${pad}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace">${new Date(minT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
-        <text x="${W-padR}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${new Date(maxT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
+        ${sorted.length <= 30 ? sorted.map(r => `<circle cx="${x(r.ts).toFixed(1)}" cy="${y(r.ec).toFixed(1)}" r="2.5" fill="${lineColor}" stroke="#fff" stroke-width="1"/>`).join('') : ''}
+        <text x="${pad}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace">${new Date(minT).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</text>
+        <text x="${W-padR}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${new Date(maxT).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</text>
         <text x="${pad-3}" y="${padT+8}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${maxEc}</text>
         <text x="${pad-3}" y="${H-padB}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${minEc}</text>
-        <text x="${W/2}" y="${padT-1}" font-size="8" fill="${_dk?'#6090cc':'#4060a0'}" font-family="Sarabun,sans-serif" font-weight="700" text-anchor="middle">EC Trend (${sorted.length} records)</text>
+        <text x="${W/2}" y="${padT-1}" font-size="8" fill="${_dk?'#6090cc':'#4060a0'}" font-family="Sarabun,sans-serif" font-weight="700" text-anchor="middle">EC ย้อนหลัง 2 วัน (${sorted.length} จุด)</text>
       </svg>`;
+      }
     }
 
     return `
@@ -14420,16 +14422,19 @@ function submitFeedback(){
       const ec = d ? d.ec : null;
       const color = mkEcColor(ec);
 
-      // Use L.marker + divIcon for bigger tap target (mobile-friendly)
-      const sz = 32;
-      const tap = 44;
+      // rev21: S11 เขื่อนแม่กลอง = ต้นทาง → marker ใหญ่, T5/S16 → เล็กลง
+      const isMain = (sid === 'S11');
+      const sz  = isMain ? 16 : 9;
+      const tap = isMain ? 44 : 36;
       const marker = L.marker([st.lat, st.lon], {
         icon: L.divIcon({
-          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${color}88;"></div></div>`,
+          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:${isMain?'2.5':'2'}px solid rgba(255,255,255,.95);box-shadow:0 2px ${isMain?'8':'5'}px ${color}88;"></div></div>`,
           className: '',
           iconSize: [tap, tap],
           iconAnchor: [tap/2, tap/2],
         }),
+        zIndexOffset: isMain ? 1200 : 1000,
+        interactive: true,
       });
 
       // Rich popup
@@ -14444,9 +14449,9 @@ function submitFeedback(){
         keepInView: false,
       });
 
-      // Label
-      marker.bindTooltip(`${sid}`, {
-        permanent: true, direction: 'top', offset: [0, -10],
+      // Label — แสดงรหัส + ชื่อเต็ม (pointer-events:none ใน CSS)
+      marker.bindTooltip(`${sid} ${st.name}`, {
+        permanent: true, direction: 'top', offset: [0, -14],
         className: 'mk-label',
       });
 
@@ -14504,41 +14509,41 @@ function submitFeedback(){
     // === แม่น้ำแม่กลอง ===
     // Outer glow
     _mkContour.addLayer(L.polyline(MAE_KLONG_RIVER, {
-      color: '#0a5040', weight: 10, opacity: 0.12, lineCap: 'round', lineJoin: 'round',
+      color: '#0a5040', weight: 10, opacity: 0.12, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     // Border
     _mkContour.addLayer(L.polyline(MAE_KLONG_RIVER, {
-      color: '#c0e8d8', weight: 6, opacity: 0.35, lineCap: 'round', lineJoin: 'round',
+      color: '#c0e8d8', weight: 6, opacity: 0.35, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     // Main line
     const mkMain = L.polyline(MAE_KLONG_RIVER, {
-      color: '#1a6050', weight: 3.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round',
+      color: '#1a6050', weight: 3.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false,
     });
     mkMain.bindTooltip('แม่น้ำแม่กลอง', { sticky: true, className: 'mk-label' });
     _mkContour.addLayer(mkMain);
 
     // === แม่น้ำแควใหญ่ ===
     _mkContour.addLayer(L.polyline(KWAI_YAI_RIVER, {
-      color: '#0a4050', weight: 8, opacity: 0.1, lineCap: 'round', lineJoin: 'round',
+      color: '#0a4050', weight: 8, opacity: 0.1, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     _mkContour.addLayer(L.polyline(KWAI_YAI_RIVER, {
-      color: '#b0d8e0', weight: 5, opacity: 0.3, lineCap: 'round', lineJoin: 'round',
+      color: '#b0d8e0', weight: 5, opacity: 0.3, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     const kwaiMain = L.polyline(KWAI_YAI_RIVER, {
-      color: '#1a5070', weight: 3, opacity: 0.8, lineCap: 'round', lineJoin: 'round',
+      color: '#1a5070', weight: 3, opacity: 0.8, lineCap: 'round', lineJoin: 'round', interactive: false,
     });
     kwaiMain.bindTooltip('แม่น้ำแควใหญ่', { sticky: true, className: 'mk-label' });
     _mkContour.addLayer(kwaiMain);
 
     // === แม่น้ำแควน้อย ===
     _mkContour.addLayer(L.polyline(KWAI_NOI_RIVER, {
-      color: '#0a4060', weight: 7, opacity: 0.1, lineCap: 'round', lineJoin: 'round',
+      color: '#0a4060', weight: 7, opacity: 0.1, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     _mkContour.addLayer(L.polyline(KWAI_NOI_RIVER, {
-      color: '#b0d0e8', weight: 4.5, opacity: 0.3, lineCap: 'round', lineJoin: 'round',
+      color: '#b0d0e8', weight: 4.5, opacity: 0.3, lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
     const knoiMain = L.polyline(KWAI_NOI_RIVER, {
-      color: '#1a4070', weight: 2.5, opacity: 0.8, lineCap: 'round', lineJoin: 'round',
+      color: '#1a4070', weight: 2.5, opacity: 0.8, lineCap: 'round', lineJoin: 'round', interactive: false,
     });
     knoiMain.bindTooltip('แม่น้ำแควน้อย', { sticky: true, className: 'mk-label' });
     _mkContour.addLayer(knoiMain);
@@ -14551,7 +14556,7 @@ function submitFeedback(){
         // EC อาจเพิ่มขึ้นเล็กน้อยตามที่น้ำไหลไกลจากเขื่อน (mix with runoff)
         const ec = s11d.ec * (1 + t * 0.15);
         const seg = L.polyline([MAE_KLONG_RIVER[i], MAE_KLONG_RIVER[i+1]], {
-          color: mkEcColor(ec), weight: 5, opacity: 0.4, lineCap: 'round', lineJoin: 'round',
+          color: mkEcColor(ec), weight: 5, opacity: 0.4, lineCap: 'round', lineJoin: 'round', interactive: false,
         });
         _mkContour.addLayer(seg);
       }
@@ -14563,7 +14568,7 @@ function submitFeedback(){
         const t = i / Math.max(KWAI_YAI_RIVER.length - 1, 1);
         const ec = t5d.ec * (1 + t * 0.05);
         const seg = L.polyline([KWAI_YAI_RIVER[i], KWAI_YAI_RIVER[i+1]], {
-          color: mkEcColor(ec), weight: 4, opacity: 0.35, lineCap: 'round', lineJoin: 'round',
+          color: mkEcColor(ec), weight: 4, opacity: 0.35, lineCap: 'round', lineJoin: 'round', interactive: false,
         });
         _mkContour.addLayer(seg);
       }
@@ -14659,19 +14664,19 @@ function submitFeedback(){
     // Outer glow — สีเขียวน้ำทะเล
     _canalWestLayer.addLayer(L.polyline(CANAL_WEST_WAYPOINTS, {
       color: '#20a080', weight: 8, opacity: 0.18,
-      lineCap: 'round', lineJoin: 'round',
+      lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
 
     // ขอบขาว
     _canalWestLayer.addLayer(L.polyline(CANAL_WEST_WAYPOINTS, {
       color: '#ffffff', weight: 5, opacity: 0.55,
-      lineCap: 'round', lineJoin: 'round',
+      lineCap: 'round', lineJoin: 'round', interactive: false,
     }));
 
     // Inner line (สีเขียวเข้ม เส้นประ)
     const canalLine = L.polyline(CANAL_WEST_WAYPOINTS, {
       color: '#0a6050', weight: 3, opacity: 0.9,
-      dashArray: '10, 6', lineCap: 'round', lineJoin: 'round',
+      dashArray: '10, 6', lineCap: 'round', lineJoin: 'round', interactive: false,
     });
     canalLine.bindTooltip('คลองประปาฝั่งตะวันตก (แม่กลอง → มหาสวัสดิ์)', {
       sticky: true, className: 'mk-label',
@@ -14684,7 +14689,7 @@ function submitFeedback(){
       const ecColor = mkEcColor(s11d.ec);
       _canalWestLayer.addLayer(L.polyline(CANAL_WEST_WAYPOINTS, {
         color: ecColor, weight: 6, opacity: 0.4,
-        lineCap: 'round', lineJoin: 'round',
+        lineCap: 'round', lineJoin: 'round', interactive: false,
       }));
     }
 
@@ -14882,6 +14887,7 @@ function submitFeedback(){
       font-weight: 700 !important;
       font-family: 'JetBrains Mono', monospace !important;
       box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+      pointer-events: none !important;
     }
     .mk-label::before { display: none !important; }
   `;
