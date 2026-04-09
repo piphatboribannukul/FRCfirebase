@@ -13683,6 +13683,82 @@ function submitFeedback(){
   }
 
   // ── 5. Marker creation ──────────────────────────────────────────────
+  function buildRwPopupHtml(sid, st, d, history) {
+    const ec = d ? d.ec : null;
+    const time = d ? d.time : null;
+    const ecStr = ec != null ? `${ec} µS/cm` : 'ไม่มีข้อมูล';
+    const timeStr = time ? new Date(time).toLocaleString('th-TH', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
+    const tempStr = d && d.temp != null ? `${d.temp}°C` : '—';
+    const tdsStr = d && d.tds != null ? `${d.tds} mg/L` : '—';
+    const salStr = d && d.salinity != null ? `${d.salinity} ppt` : '—';
+    const phStr = d && d.ph != null ? `${d.ph}` : '—';
+    const turbStr = d && d.turbid != null ? `${d.turbid} NTU` : '—';
+    const _dk = document.body.classList.contains('dark');
+
+    // ── EC Trend Chart จาก _rwHistory ───────────────────────────────────
+    let chartSvg = '';
+    if (history && history.length >= 2) {
+      const W = 320, H = 100, pad = 28, padR = 10, padT = 12, padB = 22;
+      const sorted = [...history].sort((a,b) => a.ts - b.ts).slice(-48);
+      const minT = sorted[0].ts, maxT = sorted[sorted.length-1].ts;
+      const ecVals = sorted.map(r => r.ec);
+      const minEc = Math.min(...ecVals), maxEc = Math.max(...ecVals);
+      const rangeEc = Math.max(maxEc - minEc, 10);
+      const rangeT = Math.max(maxT - minT, 1);
+
+      const x = (ts) => pad + (ts - minT) / rangeT * (W - pad - padR);
+      const y = (v) => padT + (1 - (v - (minEc - rangeEc*0.1)) / (rangeEc * 1.2)) * (H - padT - padB);
+
+      let pathD = sorted.map((r,i) => `${i===0?'M':'L'}${x(r.ts).toFixed(1)},${y(r.ec).toFixed(1)}`).join(' ');
+      let areaD = pathD + ` L${x(sorted[sorted.length-1].ts).toFixed(1)},${(H-padB).toFixed(1)} L${x(sorted[0].ts).toFixed(1)},${(H-padB).toFixed(1)} Z`;
+
+      const bgFill = _dk ? 'rgba(20,25,50,0.85)' : '#f5f8ff';
+      const gridColor = _dk ? 'rgba(255,255,255,0.1)' : '#e0e8f0';
+      const textColor = _dk ? '#9090b8' : '#888';
+      const lineColor = '#1a5090';
+      const fillColor = _dk ? 'rgba(40,100,200,0.15)' : 'rgba(40,100,200,0.1)';
+
+      chartSvg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin:6px auto 2px;">
+        <rect x="0" y="0" width="${W}" height="${H}" rx="6" fill="${bgFill}"/>
+        <line x1="${pad}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="${gridColor}" stroke-width="1"/>
+        <line x1="${pad}" y1="${padT}" x2="${pad}" y2="${H-padB}" stroke="${gridColor}" stroke-width="1"/>
+        <path d="${areaD}" fill="${fillColor}"/>
+        <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${sorted.length <= 24 ? sorted.map(r => `<circle cx="${x(r.ts).toFixed(1)}" cy="${y(r.ec).toFixed(1)}" r="2.5" fill="${lineColor}" stroke="#fff" stroke-width="1"/>`).join('') : ''}
+        <text x="${pad}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace">${new Date(minT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
+        <text x="${W-padR}" y="${H-4}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${new Date(maxT).toLocaleDateString('th-TH',{day:'2-digit',month:'short'})}</text>
+        <text x="${pad-3}" y="${padT+8}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${maxEc}</text>
+        <text x="${pad-3}" y="${H-padB}" font-size="8" fill="${textColor}" font-family="JetBrains Mono,monospace" text-anchor="end">${minEc}</text>
+        <text x="${W/2}" y="${padT-1}" font-size="8" fill="${_dk?'#6090cc':'#4060a0'}" font-family="Sarabun,sans-serif" font-weight="700" text-anchor="middle">EC Trend (${sorted.length} records)</text>
+      </svg>`;
+    }
+
+    return `
+      <div class="lpop" style="font-family:'Sarabun',sans-serif;min-width:220px;max-width:380px;">
+        <h4 style="font-size:14px;color:${_dk?'#80c0ff':'#1a3a60'};border-bottom:1.5px solid ${_dk?'rgba(255,255,255,0.08)':'#e0e8f0'};padding-bottom:6px;">
+          🌊 ${st.name}
+        </h4>
+        <div style="font-size:10px;color:#888;">${sid} · น้ำดิบ · แม่น้ำเจ้าพระยา</div>
+        <div style="font-size:22px;font-weight:700;color:${_dk?'#80c0ff':'#1a5090'};margin:6px 0 2px;">⚡ ${ecStr}</div>
+        <div style="font-size:11px;color:${ec!=null?(_dk?'#4ecca3':'#1a6a40'):'#999'};font-weight:600;">${rwEcText(ec)}</div>
+        <div style="font-size:9px;color:#888;margin-top:4px;">🕐 ${timeStr}</div>
+        <div style="border-top:1px solid ${_dk?'rgba(255,255,255,0.06)':'#e8f0ff'};margin:8px 0 6px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11px;">
+          <div class="pr"><span>🌡 อุณหภูมิ</span><span class="pv">${tempStr}</span></div>
+          <div class="pr"><span>pH</span><span class="pv">${phStr}</span></div>
+          <div class="pr"><span>🌫 ความขุ่น</span><span class="pv">${turbStr}</span></div>
+          <div class="pr"><span>🧂 Salinity</span><span class="pv">${salStr}</span></div>
+          <div class="pr"><span>TDS</span><span class="pv">${tdsStr}</span></div>
+          <div class="pr"><span>📍 พิกัด</span><span class="pv">${st.lat.toFixed(4)}, ${st.lon.toFixed(4)}</span></div>
+        </div>
+        ${chartSvg}
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid ${_dk?'rgba(255,255,255,0.06)':'#e8f0ff'};">
+          <div style="font-size:9px;color:${_dk?'#6090cc':'#4060a0'};font-weight:600;">ℹ️ ค่า EC น้ำดิบนี้ใช้คาดการณ์ EC ที่โรงผลิตน้ำ</div>
+        </div>
+      </div>
+    `;
+  }
+
   function createRwMarkers() {
     if (!_rwLayerGroup) _rwLayerGroup = L.layerGroup();
 
@@ -13693,32 +13769,31 @@ function submitFeedback(){
       const ec = d ? d.ec : null;
       const time = d ? d.time : null;
       const color = rwEcColor(ec);
+      const history = _rwHistory[sid] || [];
 
-      // Circle marker
-      const marker = L.circleMarker([st.lat, st.lon], {
-        radius: 10,
-        fillColor: color,
-        fillOpacity: 0.85,
-        color: '#fff',
-        weight: 2,
-        opacity: 0.9,
+      // Use L.marker + divIcon for bigger tap target (mobile-friendly)
+      const sz = 32;  // ขนาดวงกลมจริง
+      const tap = 44;  // พื้นที่กดขั้นต่ำ (Apple HIG recommend 44px)
+      const off = (tap - sz) / 2;
+      const marker = L.marker([st.lat, st.lon], {
+        icon: L.divIcon({
+          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${color}88;"></div></div>`,
+          className: '',
+          iconSize: [tap, tap],
+          iconAnchor: [tap/2, tap/2],
+        }),
       });
 
-      // Popup
-      const ecStr = ec != null ? `${ec} µS/cm` : 'ไม่มีข้อมูล';
-      const timeStr = time ? new Date(time).toLocaleString('th-TH', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
-      const tempStr = d && d.temp ? `${d.temp}°C` : '—';
-
-      marker.bindPopup(`
-        <div style="font-family:'Sarabun',sans-serif;min-width:180px;">
-          <div style="font-weight:700;color:#1a3a60;font-size:13px;">🌊 ${st.name}</div>
-          <div style="font-size:10px;color:#888;">${sid} · น้ำดิบ · แม่น้ำเจ้าพระยา</div>
-          <hr style="margin:5px 0;border:none;border-top:1px solid #e0e8f0;">
-          <div style="font-size:20px;font-weight:700;color:#1a3a60;">${ecStr}</div>
-          <div style="font-size:11px;color:${ec!=null?'#1a6a40':'#999'};">${rwEcText(ec)}</div>
-          <div style="font-size:9px;color:#888;margin-top:4px;">🕐 ${timeStr} · 🌡 ${tempStr}</div>
-        </div>
-      `, {maxWidth: 250});
+      // Rich popup — same style as main stations
+      marker.bindPopup(buildRwPopupHtml(sid, st, d, history), {
+        maxWidth: Math.min(400, window.innerWidth - 20),
+        minWidth: Math.min(280, window.innerWidth - 30),
+        className: 'pk-pop',
+        autoPan: true,
+        autoPanPaddingTopLeft: [10, 80],
+        autoPanPaddingBottomRight: [10, 40],
+        keepInView: false,
+      });
 
       // Label
       marker.bindTooltip(`${sid}`, {
@@ -13873,6 +13948,21 @@ function submitFeedback(){
           turbid: r.turbid,
           time: r.datetimes,
         };
+      });
+
+      // อัปเดต _rwHistory — เก็บ EC ย้อนหลังสำหรับ trend chart ใน popup
+      records.forEach(r => {
+        const sid = r.stn_id;
+        if (r.conducted == null || r.conducted <= 0) return;
+        if (!_rwHistory[sid]) _rwHistory[sid] = [];
+        const ts = new Date(r.datetimes).getTime();
+        if (!ts || isNaN(ts)) return;
+        // ไม่เพิ่มซ้ำ
+        if (!_rwHistory[sid].find(h => h.ts === ts)) {
+          _rwHistory[sid].push({ ec: r.conducted, ts: ts });
+        }
+        // จำกัดไว้ 100 records ล่าสุด
+        if (_rwHistory[sid].length > 100) _rwHistory[sid] = _rwHistory[sid].slice(-100);
       });
 
       console.log(`[RawWater] ✅ ${Object.keys(latest).length} stations updated`);
@@ -14330,20 +14420,28 @@ function submitFeedback(){
       const ec = d ? d.ec : null;
       const color = mkEcColor(ec);
 
-      // Diamond-shaped marker (rotated square) to differentiate from east side
-      const marker = L.circleMarker([st.lat, st.lon], {
-        radius: 11,
-        fillColor: color,
-        fillOpacity: 0.9,
-        color: '#fff',
-        weight: 2.5,
-        opacity: 0.95,
+      // Use L.marker + divIcon for bigger tap target (mobile-friendly)
+      const sz = 32;
+      const tap = 44;
+      const marker = L.marker([st.lat, st.lon], {
+        icon: L.divIcon({
+          html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px ${color}88;"></div></div>`,
+          className: '',
+          iconSize: [tap, tap],
+          iconAnchor: [tap/2, tap/2],
+        }),
       });
 
       // Rich popup
       const history = _mkHistory[sid] || [];
       marker.bindPopup(buildMkPopupHtml(sid, st, d, history), {
-        maxWidth: 380, className: 'pk-pop',
+        maxWidth: Math.min(400, window.innerWidth - 20),
+        minWidth: Math.min(280, window.innerWidth - 30),
+        className: 'pk-pop',
+        autoPan: true,
+        autoPanPaddingTopLeft: [10, 80],
+        autoPanPaddingBottomRight: [10, 40],
+        keepInView: false,
       });
 
       // Label
