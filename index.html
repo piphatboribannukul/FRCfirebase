@@ -5622,7 +5622,7 @@ function buildMarkers() {
     // EC extra info
     const ecRow = PARAM_MODE === 'ec'
       ? `<div class="pr" style="margin-top:5px"><span>FRC</span><span class="pv">${s.frc.toFixed(3)} mg/L</span></div>`
-      : `<div class="pr" style="margin-top:5px"><span>EC</span><span class="pv">${EC_FALLBACK[s.id]||'—'} μS/cm</span></div>`;
+      : `<div class="pr" style="margin-top:5px"><span>EC</span><span class="pv">${s.ec != null ? s.ec : (EC_FALLBACK[s.id]||'—')} μS/cm</span></div>`;
 
     const ttHtml = tt
       ? `<div class="pr" style="margin-top:5px;border-top:1px solid #f5d8ec;padding-top:5px;">
