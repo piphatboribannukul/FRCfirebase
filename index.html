@@ -3837,7 +3837,8 @@ function buildIdwCache() {
             const vc = VC_STATIONS.find(v => v.id === sid);
             if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
             const vcFrc = vc.frc || 0;
-            if (vcFrc <= 0) continue;
+            // rev20: VC active แต่ FRC=0 → ใช้ 0 (พื้นที่ไม่มีคลอรีน)
+            if (vcFrc <= 0) { vcVal = 0; if(!window._vcDbg){window._vcDbg=true;console.log('[IDW] VC '+sid+' FRC=0 → vcVal=0 at',lat.toFixed(4),lon.toFixed(4));} break; }
             const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
             const pair = typeof VC_PAIR !== 'undefined' ? VC_PAIR[sid] : null;
             const kLocal = pair ? pair.K : 0.05;
@@ -7814,7 +7815,7 @@ function buildSnapFrame(snap) {
         const vc = VC_STATIONS.find(v => v.id === sid);
         if (!vc || !isVcActive(vc)) continue; // VC ปิด (0%) / null → ไม่มีผล ข้ามไป
         const vcFrc = (typeof getVcFrc === 'function') ? getVcFrc(sid) : vc.frc;
-        if (vcFrc <= 0) continue;
+        if (vcFrc <= 0) return 0;
         // Decay ต่อจาก VC ไปยังจุดนี้
         const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
         const pair = (typeof VC_PAIR !== 'undefined') ? VC_PAIR[sid] : null;
@@ -8058,7 +8059,7 @@ function startLoadFc() {
             var vc=VC_STATIONS.find(function(v){return v.id===vsid;});
             if(!vc||!isVcActive(vc)) continue; // VC ปิด → ไม่มีผล
             var vcFrc=(typeof getVcFrc==='function')?getVcFrc(vsid):(vc.frc||0);
-            if(vcFrc<=0) continue;
+            if(vcFrc<=0) return 0;
             var vdKm=Math.sqrt((vc.lat-lat)*(vc.lat-lat)+(vc.lon-lon)*(vc.lon-lon))*DEG_TO_KM;
             var vPair=(typeof VC_PAIR!=='undefined')?VC_PAIR[vsid]:null;
             var vkL=vPair?vPair.K:0.05;
