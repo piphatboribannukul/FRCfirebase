@@ -5530,7 +5530,7 @@ function buildMarkers() {
 
     // กราฟคาดการณ์ EC: monitor + มี travel time
     // ใช้ root source (TR/MH/MDIS/โรงงาน) แทน สจ. → forecast ไกลและถูกต้องกว่า
-    if (PARAM_MODE === 'ec' && (s.type === 'monitor' || s.type === 'pump') && tt && ttHours) {
+    if (PARAM_MODE === 'ec' && (s.type === 'monitor' || s.type === 'pump' || s.type === 'plant') && tt && ttHours) {
       const rootInfo = EC_ROOT_SOURCE_MAP[s.name] || EC_ROOT_SOURCE_MAP[s.name?.replace(/\s+/g, ' ').trim()];
       const rootLabel = rootInfo ? rootInfo.root : tt.tt_label;
       const rootTT    = rootInfo ? rootInfo.ttRoot : ttHours;
