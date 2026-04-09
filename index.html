@@ -3838,7 +3838,7 @@ function buildIdwCache() {
             if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
             const vcFrc = vc.frc || 0;
             // rev20: VC active แต่ FRC=0 → ใช้ 0 (พื้นที่ไม่มีคลอรีน)
-            if (vcFrc <= 0) { vcVal = 0; if(!window._vcDbg){window._vcDbg=true;console.log('[IDW] VC '+sid+' FRC=0 → vcVal=0 at',lat.toFixed(4),lon.toFixed(4));} break; }
+            if (vcFrc <= 0) { vcVal = 0; break; }
             const dKm = Math.sqrt((vc.lat-lat)**2+(vc.lon-lon)**2)*DEG_TO_KM;
             const pair = typeof VC_PAIR !== 'undefined' ? VC_PAIR[sid] : null;
             const kLocal = pair ? pair.K : 0.05;
