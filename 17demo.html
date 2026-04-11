@@ -3235,10 +3235,9 @@ window.addEventListener('load', () => {
 // CONTOUR_K_OVERRIDE: K ที่ user ปรับเฉพาะสถานี สำหรับ contour
 // เริ่มต้นเป็น {} → ถ้ามีค่า จะ override K_total สำหรับสถานีนั้นใน contour
 const CONTOUR_K_OVERRIDE = {
-  'SW05': 0.095,  // สจ.มีนบุรี
-  'SW06': 0.080,  // สจ.ลาดกระบัง
-  'SW07': 0.080,  // สจ.บางพลี
-  'SW04': 0.095,  // สจ.สำโรง
+  // rev22: ใช้ STATION_K_OVERRIDE เป็นหลัก (fit จากข้อมูล pair 3 เดือน)
+  // CONTOUR_K_OVERRIDE ไว้ให้ user ปรับเองผ่าน Firebase (priority สูงกว่า STATION_K)
+  // ถ้าต้องการ override K เฉพาะสถานี ให้เพิ่มที่นี่ เช่น: 'SW07': 0.040
 };
 
 // Source stations สำหรับ dropdown (pump + plant ที่มี zone)
@@ -3406,20 +3405,18 @@ function epanetDecay(dKm, sensor) {
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
 
-    // rev18: ถ้า user ปรับ K เฉพาะสถานีไว้ → ใช้ค่านั้น (priority สูงสุด)
+    // Priority 1: CONTOUR_K_OVERRIDE — user ปรับ K เฉพาะสถานี (สูงสุด)
     if (CONTOUR_K_OVERRIDE[sid] != null) {
       return Math.exp(-(CONTOUR_K_OVERRIDE[sid] / 3600) * t);
     }
 
-    // MH group: ใช้ k per-sensor จาก STATION_K_OVERRIDE (fit จากข้อมูลจริง)
-    const MH_IDS = new Set(['SP11','SP12','SW08','SW09','SW10','SM06',
-      'S024','S025','S026','S027','S028','S029','S030','S031','S032']);
-    if (MH_IDS.has(sid)) {
-      const k_hr = STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : 0.038;
-      return Math.exp(-(k_hr / 3600) * t);
+    // Priority 2: STATION_K_OVERRIDE — K fit จากข้อมูล pair จริง (ทุกสถานี)
+    // rev22: ใช้ STATION_K_OVERRIDE สำหรับทุกสถานี ไม่จำกัดแค่ MH group
+    if (STATION_K_OVERRIDE[sid] != null) {
+      return Math.exp(-(STATION_K_OVERRIDE[sid] / 3600) * t);
     }
   }
-  // CP (และ fallback): ใช้ K_total จาก EPANET sidebar
+  // Fallback: K_total จาก EPANET sidebar (สำหรับสถานีที่ไม่มี K override)
   return Math.exp(-K_total * t);
 }
 
