@@ -4590,85 +4590,86 @@ const EC_SOURCE_MAP = {
   'RAW_MAEKLONG': '_RAW_WATER_MAEKLONG_',
 };
 
-// rev22: EC reduction factor — โรงผลิตน้ำ blend ลด EC ลง 5-10%
-// ค่ากลาง 0.925 (ลด 7.5%), confidence band ±10% → ครอบ 0.85–1.0
-const EC_PLANT_REDUCTION = 0.925;
-const EC_PLANT_BAND = 0.10; // ±10% confidence band
+// rev22: confidence band for EC forecast (±15%)
+const EC_FORECAST_BAND = 0.10; // ±10% confidence band
 
 const EC_ROOT_SOURCE_MAP = {
-  // ── TR1 (อุโมงค์บางเขน 1) ─────────────────────────────────────────
-  'สำนักงานประปาสาขาทุ่งมหาเมฆ':                              { root: 'TR1',  ttRoot: 7    },
-  'บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)':    { root: 'TR1',  ttRoot: 12   },
-  'โรงเรียนหาดอมราอักษรลักษณ์วิทยา':                          { root: 'TR1',  ttRoot: 14   },
-  'บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)':       { root: 'TR1',  ttRoot: 11   },
-  'สำนักงานประปาสาขาสมุทรปราการ':                             { root: 'TR1',  ttRoot: 10   },
-  'โรงไฟฟ้าพระนครใต้':                                         { root: 'TR1',  ttRoot: 12   },
-  // ── TR2 (อุโมงค์บางเขน 2) ─────────────────────────────────────────
-  'บริษัท โอสถสภา จำกัด (มหาชน)':                             { root: 'TR2',  ttRoot: 5    },
-  'สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ':                 { root: 'TR2',  ttRoot: 8    },
-  'ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ':                    { root: 'TR2',  ttRoot: 9    },
-  'สำนักงานประปาสาขาสุขุมวิท-พระโขนง':                        { root: 'TR2',  ttRoot: 7    },
-  // ── TR3 (อุโมงค์บางเขน 3) ─────────────────────────────────────────
-  'นิคมอุตสาหกรรมบางพลี':                                      { root: 'TR3',  ttRoot: 19   },
-  'สถานีตำรวจภูธรคลองด่าน':                                    { root: 'TR3',  ttRoot: 30   },
-  'นิคมอุตสาหกรรมบางปู':                                       { root: 'TR3',  ttRoot: 21   },
-  'มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)':     { root: 'TR3',  ttRoot: 20   },
-  'บริษัท มหาจักรออโตพาร์ท จำกัด':                            { root: 'TR3',  ttRoot: 22   },
-  'สำนักงานประปาสาขามีนบุรี':                                  { root: 'TR3',  ttRoot: 10   },
-  'นิคมอุตสาหกรรมบางชัน':                                      { root: 'TR3',  ttRoot: 9    },
-  'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์':                         { root: 'TR3',  ttRoot: 12   },
-  'นิคมอุตสาหกรรมลาดกระบัง':                                   { root: 'TR3',  ttRoot: 13   },
-  'บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)':          { root: 'TR3',  ttRoot: 13   },
-  // ── MTR (อุโมงค์มหาสวัสดิ์) ──────────────────────────────────────
-  'ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)':      { root: 'MTR',  ttRoot: 19   },
-  'ศูนย์กีฬาเฉลิมพระเกียรติ':                                  { root: 'MTR',  ttRoot: 12   },
-  'มหาวิทยาลัยเอเชียอาคเนย์':                                  { root: 'MTR',  ttRoot: 15   },
-  'เรือนจำพิเศษธนบุรี':                                         { root: 'MTR',  ttRoot: 8    },
-  'ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)': { root: 'MTR', ttRoot: 12 },
-  // ── Dis1 (สถานีสูบจ่ายน้ำบางเขน 1) ───────────────────────────────
-  'สำนักงานประปาสาขานนทบุรี':                                  { root: 'Dis1', ttRoot: 4.5  },
-  'กองพันทหารสื่อสาร':                                          { root: 'Dis1', ttRoot: 5    },
-  'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                   { root: 'Dis1', ttRoot: 5    },
-  'โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก':                      { root: 'Dis1', ttRoot: 6    },
-  'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี':                 { root: 'Dis1', ttRoot: 11.5 },
-  // ── Dis2 (สถานีสูบจ่ายน้ำบางเขน 2) ───────────────────────────────
-  'โรงพยาบาลภูมิพลอดุลยเดช':                                   { root: 'Dis2', ttRoot: 3.5  },
-  'โรงพยาบาลซีจีเอช สายไหม':                                   { root: 'Dis2', ttRoot: 10   },
-  // ── ธนบุรี ────────────────────────────────────────────────────────
-  'โรงพยาบาลศิริราช':                                           { root: 'ธนบุรี', ttRoot: 2  },
-  // ── MDIS (สถานีสูบจ่ายน้ำมหาสวัสดิ์) ─────────────────────────────
-  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'MDIS', ttRoot: 12   },
-  'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'MDIS', ttRoot: 6.5  },
-  'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี':              { root: 'MDIS', ttRoot: 4.5  },
-  'สำนักงานประปาสาขาบางบัวทอง':                                { root: 'MDIS', ttRoot: 10.5 },
-  'สถานีตำรวจภูธรไทรน้อย':                                     { root: 'MDIS', ttRoot: 16.5 },
-  // ── พระราชวังดุสิต (สามเสน 3) ─────────────────────────────────────
-  // ── สถานีสูบจ่ายน้ำ → root ────────────────────────────────────────────
-  'สถานีสูบจ่ายน้ำลุมพินี':    { root: 'TR1', ttRoot: 6  },
-  'สถานีสูบจ่ายน้ำพหลโยธิน':   { root: 'TR1', ttRoot: 5  },
-  'สถานีสูบจ่ายน้ำสำโรง':       { root: 'TR1', ttRoot: 7  },
-  'สถานีสูบจ่ายน้ำลาดพร้าว':    { root: 'TR2', ttRoot: 3  },
-  'สถานีสูบจ่ายน้ำคลองเตย':     { root: 'TR2', ttRoot: 4  },
-  'สถานีสูบจ่ายน้ำบางพลี':       { root: 'TR3', ttRoot: 13 },
-  'สถานีสูบจ่ายน้ำมีนบุรี':      { root: 'TR3', ttRoot: 7  },
-  'สถานีสูบจ่ายน้ำลาดกระบัง':   { root: 'TR3', ttRoot: 8  },
-  'สถานีสูบจ่ายน้ำราษฎร์บูรณะ': { root: 'MTR', ttRoot: 7  },
-  'สถานีสูบจ่ายน้ำเพชรเกษม':    { root: 'MTR', ttRoot: 2  },
-  'สถานีสูบจ่ายน้ำท่าพระ':       { root: 'MTR', ttRoot: 7  },
-  // ── พระราชวังดุสิต (สามเสน 3) ─────────────────────────────────────────
-  'พระราชวังดุสิต สวนจิตรลดา':   { root: 'สามเสน3', ttRoot: 1 },
-  // ── rev19: โรงงานบางเขน — source จากน้ำดิบสำแล +13 ชม. ────────────
+  // ── rev22: ทุกสถานี root จากน้ำดิบสำแล / แม่กลอง ──────────────────
+  // ttRoot = เวลาเดินทางรวม (น้ำดิบ → โรงผลิต → อุโมงค์ → สถานี)
+  //
+  // ฝั่งบางเขน: สำแล +13 ชม. → TR/Dis → สถานี
+  // ── TR1 (สำแล→บางเขน 13 + TR1→สถานี) ─────────────────────────────
+  'สำนักงานประปาสาขาทุ่งมหาเมฆ':                              { root: 'RAW_SAMLE',  ttRoot: 20   }, // 13+7
+  'บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)':    { root: 'RAW_SAMLE',  ttRoot: 25   }, // 13+12
+  'โรงเรียนหาดอมราอักษรลักษณ์วิทยา':                          { root: 'RAW_SAMLE',  ttRoot: 27   }, // 13+14
+  'บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)':       { root: 'RAW_SAMLE',  ttRoot: 24   }, // 13+11
+  'สำนักงานประปาสาขาสมุทรปราการ':                             { root: 'RAW_SAMLE',  ttRoot: 23   }, // 13+10
+  'โรงไฟฟ้าพระนครใต้':                                         { root: 'RAW_SAMLE',  ttRoot: 25   }, // 13+12
+  // ── TR2 (สำแล→บางเขน 13 + TR2→สถานี) ─────────────────────────────
+  'บริษัท โอสถสภา จำกัด (มหาชน)':                             { root: 'RAW_SAMLE',  ttRoot: 18   }, // 13+5
+  'สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ':                 { root: 'RAW_SAMLE',  ttRoot: 21   }, // 13+8
+  'ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ':                    { root: 'RAW_SAMLE',  ttRoot: 22   }, // 13+9
+  'สำนักงานประปาสาขาสุขุมวิท-พระโขนง':                        { root: 'RAW_SAMLE',  ttRoot: 20   }, // 13+7
+  // ── TR3 (สำแล→บางเขน 13 + TR3→สถานี) ─────────────────────────────
+  'นิคมอุตสาหกรรมบางพลี':                                      { root: 'RAW_SAMLE',  ttRoot: 32   }, // 13+19
+  'สถานีตำรวจภูธรคลองด่าน':                                    { root: 'RAW_SAMLE',  ttRoot: 43   }, // 13+30
+  'นิคมอุตสาหกรรมบางปู':                                       { root: 'RAW_SAMLE',  ttRoot: 34   }, // 13+21
+  'มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)':     { root: 'RAW_SAMLE',  ttRoot: 33   }, // 13+20
+  'บริษัท มหาจักรออโตพาร์ท จำกัด':                            { root: 'RAW_SAMLE',  ttRoot: 35   }, // 13+22
+  'สำนักงานประปาสาขามีนบุรี':                                  { root: 'RAW_SAMLE',  ttRoot: 23   }, // 13+10
+  'นิคมอุตสาหกรรมบางชัน':                                      { root: 'RAW_SAMLE',  ttRoot: 22   }, // 13+9
+  'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์':                         { root: 'RAW_SAMLE',  ttRoot: 25   }, // 13+12
+  'นิคมอุตสาหกรรมลาดกระบัง':                                   { root: 'RAW_SAMLE',  ttRoot: 26   }, // 13+13
+  'บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)':          { root: 'RAW_SAMLE',  ttRoot: 26   }, // 13+13
+  // ── MTR (แม่กลอง→มหาสวัสดิ์ 48 + MTR→สถานี) ─────────────────────
+  'ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)':      { root: 'RAW_MAEKLONG', ttRoot: 67  }, // 48+19
+  'ศูนย์กีฬาเฉลิมพระเกียรติ':                                  { root: 'RAW_MAEKLONG', ttRoot: 60  }, // 48+12
+  'มหาวิทยาลัยเอเชียอาคเนย์':                                  { root: 'RAW_MAEKLONG', ttRoot: 63  }, // 48+15
+  'เรือนจำพิเศษธนบุรี':                                         { root: 'RAW_MAEKLONG', ttRoot: 56  }, // 48+8
+  'ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)': { root: 'RAW_MAEKLONG', ttRoot: 60 }, // 48+12
+  // ── Dis1 (สำแล→บางเขน 13 + Dis1→สถานี) ───────────────────────────
+  'สำนักงานประปาสาขานนทบุรี':                                  { root: 'RAW_SAMLE',  ttRoot: 17.5 }, // 13+4.5
+  'กองพันทหารสื่อสาร':                                          { root: 'RAW_SAMLE',  ttRoot: 18   }, // 13+5
+  'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                   { root: 'RAW_SAMLE',  ttRoot: 18   }, // 13+5
+  'โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก':                      { root: 'RAW_SAMLE',  ttRoot: 19   }, // 13+6
+  'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี':                 { root: 'RAW_SAMLE',  ttRoot: 24.5 }, // 13+11.5
+  // ── Dis2 (สำแล→บางเขน 13 + Dis2→สถานี) ───────────────────────────
+  'โรงพยาบาลภูมิพลอดุลยเดช':                                   { root: 'RAW_SAMLE',  ttRoot: 16.5 }, // 13+3.5
+  'โรงพยาบาลซีจีเอช สายไหม':                                   { root: 'RAW_SAMLE',  ttRoot: 23   }, // 13+10
+  // ── ธนบุรี (สำแล→สามเสน 44 + สามเสน→ธนบุรี 2) ───────────────────
+  'โรงพยาบาลศิริราช':                                           { root: 'RAW_SAMLE',  ttRoot: 46   }, // 44+2
+  // ── MDIS (แม่กลอง→มหาสวัสดิ์ 48 + MDIS→สถานี) ───────────────────
+  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 60  }, // 48+12
+  'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'RAW_MAEKLONG', ttRoot: 54.5}, // 48+6.5
+  'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี':              { root: 'RAW_MAEKLONG', ttRoot: 52.5}, // 48+4.5
+  'สำนักงานประปาสาขาบางบัวทอง':                                { root: 'RAW_MAEKLONG', ttRoot: 58.5}, // 48+10.5
+  'สถานีตำรวจภูธรไทรน้อย':                                     { root: 'RAW_MAEKLONG', ttRoot: 64.5}, // 48+16.5
+  // ── สถานีสูบจ่ายน้ำ → RAW source ─────────────────────────────────
+  'สถานีสูบจ่ายน้ำลุมพินี':    { root: 'RAW_SAMLE',    ttRoot: 19  }, // 13+6
+  'สถานีสูบจ่ายน้ำพหลโยธิน':   { root: 'RAW_SAMLE',    ttRoot: 18  }, // 13+5
+  'สถานีสูบจ่ายน้ำสำโรง':       { root: 'RAW_SAMLE',    ttRoot: 20  }, // 13+7
+  'สถานีสูบจ่ายน้ำลาดพร้าว':    { root: 'RAW_SAMLE',    ttRoot: 16  }, // 13+3
+  'สถานีสูบจ่ายน้ำคลองเตย':     { root: 'RAW_SAMLE',    ttRoot: 17  }, // 13+4
+  'สถานีสูบจ่ายน้ำบางพลี':       { root: 'RAW_SAMLE',    ttRoot: 26  }, // 13+13
+  'สถานีสูบจ่ายน้ำมีนบุรี':      { root: 'RAW_SAMLE',    ttRoot: 20  }, // 13+7
+  'สถานีสูบจ่ายน้ำลาดกระบัง':   { root: 'RAW_SAMLE',    ttRoot: 21  }, // 13+8
+  'สถานีสูบจ่ายน้ำราษฎร์บูรณะ': { root: 'RAW_MAEKLONG', ttRoot: 55  }, // 48+7
+  'สถานีสูบจ่ายน้ำเพชรเกษม':    { root: 'RAW_MAEKLONG', ttRoot: 50  }, // 48+2
+  'สถานีสูบจ่ายน้ำท่าพระ':       { root: 'RAW_MAEKLONG', ttRoot: 55  }, // 48+7
+  // ── พระราชวังดุสิต (สามเสน 3 → สำแล +44 +1) ─────────────────────
+  'พระราชวังดุสิต สวนจิตรลดา':   { root: 'RAW_SAMLE',    ttRoot: 45  }, // 44+1
+  // ── โรงงานบางเขน — source จากน้ำดิบสำแล +13 ชม. ──────────────────
   'สถานีสูบส่งน้ำบางเขน 1 (TR1)':   { root: 'RAW_SAMLE', ttRoot: 13 },
   'สถานีสูบส่งน้ำบางเขน 2 (TR2)':   { root: 'RAW_SAMLE', ttRoot: 13 },
   'สถานีสูบส่งน้ำบางเขน 3 (TR3)':   { root: 'RAW_SAMLE', ttRoot: 13 },
   'สถานีสูบจ่ายน้ำบางเขน 1 (Dis1)': { root: 'RAW_SAMLE', ttRoot: 13 },
   'สถานีสูบจ่ายน้ำบางเขน 2 (Dis2)': { root: 'RAW_SAMLE', ttRoot: 13 },
-  // rev20: โรงงานสามเสน 1–4 — source จากน้ำดิบสำแล +44 ชม.
+  // โรงงานสามเสน 1–4 — source จากน้ำดิบสำแล +44 ชม.
   'โรงงานผลิตน้ำสามเสน 1':          { root: 'RAW_SAMLE', ttRoot: 44 },
   'โรงงานผลิตน้ำสามเสน 2':          { root: 'RAW_SAMLE', ttRoot: 44 },
   'โรงงานผลิตน้ำสามเสน 3':          { root: 'RAW_SAMLE', ttRoot: 44 },
   'โรงงานผลิตน้ำสามเสน 4':          { root: 'RAW_SAMLE', ttRoot: 44 },
-  // rev20: มหาสวัสดิ์ — source จากน้ำดิบเขื่อนแม่กลอง +48 ชม.
+  // มหาสวัสดิ์ — source จากน้ำดิบเขื่อนแม่กลอง +48 ชม.
   'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)': { root: 'RAW_MAEKLONG', ttRoot: 48 },
   'สถานีสูบจ่ายน้ำมหาสวัสดิ์':      { root: 'RAW_MAEKLONG', ttRoot: 48 },
 };
@@ -4859,9 +4860,8 @@ function buildMarkers() {
   }
 
   function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId, opts) {
-    // opts = { reduction: 0.925, band: 0.10 } for raw water sources
-    const reduction = (opts && opts.reduction) || 1.0;
-    const bandPct   = (opts && opts.band != null) ? opts.band : 0.15;
+    // opts = { band: 0.15 } — confidence band percentage
+    const bandPct   = (opts && opts.band != null) ? opts.band : 0.10;
     if (!ttHours || ttHours <= 0) return '';
     const ec0 = (ecNow != null && ecNow > 0) ? ecNow : ecSource;
     const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
@@ -4873,7 +4873,8 @@ function buildMarkers() {
     // ── 24h ย้อนหลัง + คาดการณ์ถึง ttHours ──
     const HIST_WIN = 24;   // x-axis ย้อนหลัง 24hr
     const DATA_WIN = 168;  // filter ข้อมูล 7 วัน
-    const FORE_WIN = 24;
+    // rev22: FORE_WIN dynamic — ขยายตาม ttHours (min 24, max 72)
+    const FORE_WIN = Math.min(72, Math.max(24, Math.ceil(ttHours / 6) * 6 + 6));
     const totalT = HIST_WIN + FORE_WIN;
     const steps = 60;
 
@@ -4898,17 +4899,16 @@ function buildMarkers() {
     const pts1 = destPts.length >= 1 ? [...destPts.sort((a,b) => a.t - b.t)] : [];
     pts1.push({ t: 0, f: ec0 });
 
-    // EC ไม่สลายตัวตามระยะทาง → forecast = ecSource × reduction (ลด blend โรงผลิต)
-    // ecSource = ค่าจากน้ำดิบ/โรงงาน/TR/MTR โดยตรง
-    const ecForecast = ecSource * reduction; // rev22: ลดค่าตาม blend factor
+    // EC ไม่สลายตัวตามระยะทาง → forecast = ecSource (flat)
+    // ecSource = ค่าจากน้ำดิบสำแล/แม่กลอง โดยตรง
     const foreSteps = Math.round(steps * ttHours / FORE_WIN);
     const pts2 = [];
     for (let i = 0; i <= foreSteps; i++) {
       const t = (i / foreSteps) * ttHours;
-      pts2.push({ t, f: ecForecast }); // flat line = ecForecast ถึง ttHours
+      pts2.push({ t, f: ecSource }); // flat line = ecSource ถึง ttHours
     }
 
-    const BAND = bandPct; // rev22: ใช้ band จาก opts (default 0.15, raw water = 0.10)
+    const BAND = bandPct;
     // แกน Y คงที่ 0–500 μS/cm
     const yMax = 500;
     const yMin = 0;
@@ -5013,7 +5013,7 @@ function buildMarkers() {
     return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;overflow:hidden;max-width:100%;">'
       +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
       +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
-      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+(reduction < 1 ? Math.round(ecForecast)+' (ลด '+Math.round((1-reduction)*100)+'% blend) ' : '')+'(ถึง +'+ttHours+'ชม.)'
+      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+Math.round(ecSource)+' (ถึง +'+ttHours+'ชม.)'
       +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
       +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 '+W+' '+H+'">'
@@ -5025,7 +5025,7 @@ function buildMarkers() {
       +'<path d="'+smoothPath(pts1,px,py)+'" fill="none" stroke="'+(document.body.classList.contains('dark')?'#4ea8de':'#1565c0')+'" stroke-width="2" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>'
       +pts1.map(p=>'<circle cx="'+px(p.t).toFixed(1)+'" cy="'+py(p.f).toFixed(1)+'" r="2.5" fill="'+(document.body.classList.contains('dark')?'#4ea8de':'#1565c0')+'" stroke="'+(document.body.classList.contains('dark')?'rgba(255,255,255,.3)':'#fff')+'" stroke-width="1" clip-path="url(#ecclip_'+sensorId+')"/>').join('')
       +(()=>{
-        // Safe Zone Band ±20% — dark-mode aware
+        // Confidence Band ±10% — rev22: เพิ่มความชัด
         const _dkEC = document.body.classList.contains('dark');
         const pts2hi = pts2.map(p => ({ t:p.t, f:p.f*(1+BAND) }));
         const pts2lo = pts2.map(p => ({ t:p.t, f:Math.max(0, p.f*(1-BAND)) }));
@@ -5035,9 +5035,9 @@ function buildMarkers() {
         bandD += ' Z';
         const hiPath = 'M'+pts2hi.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
         const loPath = 'M'+pts2lo.map(p=>px(p.t).toFixed(1)+','+pyClamp(p.f).toFixed(1)).join(' L');
-        return '<path d="'+bandD+'" fill="'+(_dkEC?'#4ecca3':'#a5d6a7')+'" opacity="'+(_dkEC?'0.15':'0.12')+'" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+hiPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1':'0.8')+'" opacity="'+(_dkEC?'0.6':'0.4')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
-          +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#66bb6a')+'" stroke-width="'+(_dkEC?'1':'0.8')+'" opacity="'+(_dkEC?'0.6':'0.4')+'" clip-path="url(#ecclip_'+sensorId+')"/>'
+        return '<path d="'+bandD+'" fill="'+(_dkEC?'#4ecca3':'#81c784')+'" opacity="'+(_dkEC?'0.28':'0.22')+'" stroke="none" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+hiPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#43a047')+'" stroke-width="'+(_dkEC?'1.5':'1.2')+'" opacity="'+(_dkEC?'0.8':'0.6')+'" stroke-dasharray="4,2" clip-path="url(#ecclip_'+sensorId+')"/>'
+          +'<path d="'+loPath+'" fill="none" stroke="'+(_dkEC?'#4ecca3':'#43a047')+'" stroke-width="'+(_dkEC?'1.5':'1.2')+'" opacity="'+(_dkEC?'0.8':'0.6')+'" stroke-dasharray="4,2" clip-path="url(#ecclip_'+sensorId+')"/>'
           +'<path d="'+smoothPath(pts2,px,py)+'" fill="none" stroke="'+(_dkEC?'#80b0ff':'#4060c0')+'" stroke-width="1.8" stroke-dasharray="5,3" stroke-linejoin="round" clip-path="url(#ecclip_'+sensorId+')"/>';
       })()
       // rev19: เส้น forecast น้ำดิบจากสำแล (เส้นประแดง) สำหรับ SP01-SP05
@@ -5107,7 +5107,7 @@ function buildMarkers() {
       +'/>'
       +'</svg>'
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
-      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์'+(reduction < 1 ? ' (−'+Math.round((1-reduction)*100)+'%)' : '')+'</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ ±'+Math.round(BAND*100)+'%</span>'
+      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#43a047">▓ Confidence band ±'+Math.round(BAND*100)+'%</span>'
       +(window._rawWaterEc && ['SP01','SP02','SP03','SP04','SP05','SP07','SP08','SP09','SP10','1','2','3','4','5','7','8','9','10'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
       +(window._mkRawWaterData && window._mkRawWaterData['S11'] && ['SP11','SP12','11','12'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#0a6050">- - น้ำดิบแม่กลอง</span>' : '')
       +'</span>'
@@ -5692,21 +5692,40 @@ function buildMarkers() {
         if (ecRootKey === 'RAW_SAMLE' && window._rawWaterEc && window._rawWaterEc.ec > 0) {
           const rwEc = window._rawWaterEc.ec;
           if (ecTT > 0) {
-            // rev22: ใช้ reduction factor — โรงผลิตลด EC ~7.5% จาก blend
-            decayChart = buildEcForecastChart(rwEc, '🌊 น้ำดิบสำแล', ecTT, s.id, ecNow, null, { reduction: EC_PLANT_REDUCTION, band: EC_PLANT_BAND });
-            const ecFore = rwEc * EC_PLANT_REDUCTION;
+            // rev22: สร้าง label แสดง breakdown เวลาเดินทาง
+            let rwLabel = '🌊 น้ำดิบสำแล';
+            if (ecTT > 13) {
+              // มี intermediate — หา tt จาก TRAVEL_TIME
+              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
+              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 13);
+              const ttSrc = ttInfo ? ttInfo.tt_label : '';
+              rwLabel = '🌊 สำแล→บางเขน 13ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+            }
+            if (ecTT >= 44 && ecTT <= 46) {
+              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
+              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 44);
+              const ttSrc = ttInfo ? ttInfo.tt_label : '';
+              rwLabel = '🌊 สำแล→สามเสน 44ชม.' + (ttSrc && ecTT > 44 ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+            }
+            decayChart = buildEcForecastChart(rwEc, rwLabel, ecTT, s.id, ecNow, null);
             const foreTs = Date.now() + ecTT * 3600000;
-            saveEcForecast(s.id, foreTs, ecFore, ecFore*(1+EC_PLANT_BAND), ecFore*(1-EC_PLANT_BAND));
+            saveEcForecast(s.id, foreTs, rwEc, rwEc*(1+EC_FORECAST_BAND), rwEc*(1-EC_FORECAST_BAND));
           }
         // rev20: RAW_MAEKLONG → ดึง EC จาก API น้ำดิบแม่กลอง (S11)
         } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11'] && window._mkRawWaterData['S11'].ec > 0) {
           const mkEc = window._mkRawWaterData['S11'].ec;
           if (ecTT > 0) {
-            // rev22: ใช้ reduction factor — โรงผลิตลด EC ~7.5% จาก blend
-            decayChart = buildEcForecastChart(mkEc, '🏔️ น้ำดิบแม่กลอง', ecTT, s.id, ecNow, null, { reduction: EC_PLANT_REDUCTION, band: EC_PLANT_BAND });
-            const ecFore = mkEc * EC_PLANT_REDUCTION;
+            // rev22: สร้าง label แสดง breakdown เวลาเดินทาง
+            let mkLabel = '🏔️ น้ำดิบแม่กลอง';
+            if (ecTT > 48) {
+              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
+              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 48);
+              const ttSrc = ttInfo ? ttInfo.tt_label : '';
+              mkLabel = '🏔️ แม่กลอง→มหาสวัสดิ์ 48ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+            }
+            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null);
             const foreTs = Date.now() + ecTT * 3600000;
-            saveEcForecast(s.id, foreTs, ecFore, ecFore*(1+EC_PLANT_BAND), ecFore*(1-EC_PLANT_BAND));
+            saveEcForecast(s.id, foreTs, mkEc, mkEc*(1+EC_FORECAST_BAND), mkEc*(1-EC_FORECAST_BAND));
           }
         } else {
           const ecPlantName = EC_SOURCE_MAP[ecRootKey];
@@ -9864,18 +9883,16 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     if (!ecSrcSensor && srcSensor && ttHours > 0) { ecSrcSensor = srcSensor; ecTT = ttHours; }
     
     if (ecSrcSensor && ecTT > 0) {
-      // rev22: กำหนด reduction สำหรับ RAW_SAMLE / RAW_MAEKLONG
-      var ecReduction = (ecRootInfo && (ecRootInfo.root==='RAW_SAMLE'||ecRootInfo.root==='RAW_MAEKLONG')) ? EC_PLANT_REDUCTION : 1.0;
       var ecSrcCode = String(ecSrcSensor.id).replace(/\/|\./g,'-');
       var _ecHist = getHistCached();
       var ecSrcHist = (_ecHist[ecSrcCode]||[]).filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
       for(var fi2=0;fi2<actPts.length;fi2++){
         var srcTs2=actPts[fi2].ts-ecTT*3600000, srcEc=ecSrcSensor.ec||250;
         for(var j2=0;j2<ecSrcHist.length;j2++){if(ecSrcHist[j2].ts<=srcTs2&&ecSrcHist[j2].ec!=null)srcEc=ecSrcHist[j2].ec;}
-        forePts.push({ts:actPts[fi2].ts, v:srcEc * ecReduction});
+        forePts.push({ts:actPts[fi2].ts, v:srcEc});
       }
       // forecast อนาคต
-      var lastEc=(ecSrcSensor.ec||250) * ecReduction;
+      var lastEc=ecSrcSensor.ec||250;
       for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ecTT/6*3600000,v:lastEc});}
     }
   }
@@ -10763,16 +10780,13 @@ function rpBuildCompare(containerId, mode) {
         }
       }
       const srcEc = ecSrc.ec||250;
-      // rev22: apply reduction for RAW sources
-      const ecReduction2 = (ecRootInfo && (ecRootInfo.root==='RAW_SAMLE'||ecRootInfo.root==='RAW_MAEKLONG')) ? EC_PLANT_REDUCTION : 1.0;
-      const ecForecast2 = Math.round(srcEc * ecReduction2);
       const actEc = s.ec||250;
-      const diff = actEc - ecForecast2;
+      const diff = actEc - srcEc;
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
         <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecLabel} (${ecSrc.name.length>20?ecSrc.name.substring(0,18)+'…':ecSrc.name})</span></div>
         <div class="cc-r"><span style="color:#706080">EC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">tt</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecTT} ชม.</span></div>
-        <div class="cc-r"><span style="color:#706080">คาดการณ์${ecReduction2<1?' (−'+Math.round((1-ecReduction2)*100)+'% blend)':''}</span><span style="font-family:'JetBrains Mono',monospace">${ecForecast2}</span></div>
+        <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(actEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${Math.abs(diff)<30?'#2dd4a0':'#f0a030'}">${diff>=0?'+':''}${Math.round(diff)}</span></div></div>`;
     }
