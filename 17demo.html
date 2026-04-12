@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev21.0</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev22.1</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2134,7 +2134,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev21.0</span>
+  <span id="v2-badge">⬡ rev22.1</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2448,7 +2448,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
     <!-- rev18: Per-Station K Editor -->
     <hr style="border:none;border-top:1px solid #f0d0e0;margin:10px 0 8px;">
-    <h3 style="font-size:11px;color:#804060;margin:0 0 6px;">K เฉพาะสถานีสูบจ่าย</h3>
+    <h3 style="font-size:11px;color:#804060;margin:0 0 6px;">K เฉพาะสถานีสูบจ่าย / VC</h3>
     <div style="font-size:8.5px;color:#a08090;margin-bottom:6px;">เลือกสถานี → ปรับ K → กด Apply</div>
     <select id="ep-station-select" onchange="onStationKSelect()" style="width:100%;padding:4px;font-size:10px;border:1px solid #e0c0d0;border-radius:4px;margin-bottom:5px;background:#fff8fc;">
       <option value="">— เลือกสถานี —</option>
@@ -2773,7 +2773,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev21.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2825,7 +2825,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev21.0 · Apr 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -3053,25 +3053,23 @@ const VC_STATIONS = [
 // VC_PAIR: K (decay rate 1/hr) สำหรับ pair source→VC (ปรับได้จาก UI)
 // Travel time คำนวณจากระยะทางจริงใน EPANET (ไม่ใช้ค่าคงที่)
 const VC_PAIR = {
-  // K fit จาก pair จริง (ต้นทาง→สจ.) + TT ประมาณการณ์จริง (ชม.)
-  // TR1 group: K = 0.1016 /hr
-  "VC01": { K:0.1016, tt:2 },   // ประชานุกูล ← TR1
-  "VC02": { K:0.1016, tt:2 },   // เฉลิมพันธ์ ← TR1
-  "VC03": { K:0.1016, tt:2 },   // ประดิพัทธ์ ← TR1 (ปิด)
-  "VC04": { K:0.1016, tt:3 },   // สามเสน ← TR1
-  "VC05": { K:0.1016, tt:6 },   // สี่พระยา ← TR1
-  "VC06": { K:0.1016, tt:6 },   // ลาดหญ้า ← TR1
-  "VC07": { K:0.1016, tt:7 },   // ราษฎรบูรณะ ← TR1
-  "VC09": { K:0.1016, tt:6 },   // ลุมพินี ← TR1
-  // TR2 group: K = 0.1291 /hr
-  "VC10": { K:0.1291, tt:7 },   // สุนทรโกษา ← TR2 (ปิด)
-  "VC11": { K:0.1291, tt:7 },   // พระราม 9 ← TR2
-  // TR3 group: K = 0.0665 /hr
-  "VC12": { K:0.0665, tt:4 },   // นวมินทร์ ← TR3
-  "VC13": { K:0.0665, tt:3 },   // มัยลาภ ← TR3
-  "VC14": { K:0.0665, tt:11 },  // วงแหวนตะวันออก ← TR3
-  // MTR group: K = 0.0832 /hr
-  "VC08": { K:0.0832, tt:3 },   // กัลปพฤกษ์ ← MTR (ปิด)
+  // rev22: K ปรับตาม zone — ฝั่งตะวันตก 0.07, ฝั่งตะวันออก 0.08
+  // West (TR1 + MTR): K = 0.07 /hr
+  "VC01": { K:0.0700, tt:2 },   // ประชานุกูล ← TR1 (West)
+  "VC02": { K:0.0700, tt:2 },   // เฉลิมพันธ์ ← TR1 (West)
+  "VC03": { K:0.0700, tt:2 },   // ประดิพัทธ์ ← TR1 (West, ปิด)
+  "VC04": { K:0.0700, tt:3 },   // สามเสน ← TR1 (West)
+  "VC05": { K:0.0700, tt:6 },   // สี่พระยา ← TR1 (West)
+  "VC06": { K:0.0700, tt:6 },   // ลาดหญ้า ← TR1 (West)
+  "VC07": { K:0.0700, tt:7 },   // ราษฎรบูรณะ ← TR1 (West)
+  "VC08": { K:0.0700, tt:3 },   // กัลปพฤกษ์ ← MTR (West, ปิด)
+  "VC09": { K:0.0700, tt:6 },   // ลุมพินี ← TR1 (West)
+  "VC10": { K:0.0700, tt:7 },   // สุนทรโกษา ← TR2 (West)
+  // East (TR2 east + TR3): K = 0.08 /hr
+  "VC11": { K:0.0800, tt:7 },   // พระราม 9 ← TR2 (East)
+  "VC12": { K:0.0800, tt:4 },   // นวมินทร์ ← TR3 (East)
+  "VC13": { K:0.0800, tt:3 },   // มัยลาภ ← TR3 (East)
+  "VC14": { K:0.0800, tt:11 },  // วงแหวนตะวันออก ← TR3 (East)
 };
 
 // ── VC helper functions ──────────────────────────────────────────────
@@ -3235,28 +3233,26 @@ window.addEventListener('load', () => {
 // CONTOUR_K_OVERRIDE: K ที่ user ปรับเฉพาะสถานี สำหรับ contour
 // เริ่มต้นเป็น {} → ถ้ามีค่า จะ override K_total สำหรับสถานีนั้นใน contour
 const CONTOUR_K_OVERRIDE = {
-  // rev22: K calibrated จากข้อมูล TWQMS 1 สัปดาห์ (5-12 เม.ย. 2569)
-  // FRC ต้นทาง (1-week avg) → FRC monitor (1-week avg) → pipe distance → fit K
-  // Capped to 0.010-0.060 /hr range (HL = 12-69 hr)
-  'SP04': 0.06000,  // สถานีสูบจ่ายน้ำบางเขน 1 ( HL=12hr FRC=1.46
-  'SP05': 0.06000,  // สถานีสูบจ่ายน้ำบางเขน 2 ( HL=12hr FRC=1.50
-  'SP06': 0.06000,  // โรงงานผลิตน้ำธนบุรี HL=12hr FRC=1.21
-  'SP07': 0.01300,  // โรงงานผลิตน้ำสามเสน 1 HL=53hr FRC=1.08
-  'SP08': 0.01100,  // โรงงานผลิตน้ำสามเสน 2 HL=63hr FRC=1.16
-  'SP09': 0.06000,  // โรงงานผลิตน้ำสามเสน 3 HL=12hr FRC=1.16
-  'SP10': 0.01000,  // โรงงานผลิตน้ำสามเสน 4 HL=69hr FRC=1.13
-  'SP12': 0.04601,  // สถานีสูบจ่ายน้ำมหาสวัสดิ์ HL=15hr FRC=1.06
-  'SW01': 0.06000,  // สถานีสูบจ่ายน้ำลุมพินี HL=12hr FRC=1.07
-  'SW02': 0.06000,  // สถานีสูบจ่ายน้ำลาดพร้าว HL=12hr FRC=1.21
-  'SW03': 0.06000,  // สถานีสูบจ่ายน้ำคลองเตย HL=12hr FRC=1.22
-  'SW04': 0.06000,  // สถานีสูบจ่ายน้ำสำโรง HL=12hr FRC=1.10
-  'SW05': 0.06000,  // สถานีสูบจ่ายน้ำมีนบุรี HL=12hr FRC=1.09
-  'SW06': 0.06000,  // สถานีสูบจ่ายน้ำลาดกระบัง HL=12hr FRC=1.16
-  'SW07': 0.06000,  // สถานีสูบจ่ายน้ำบางพลี HL=12hr FRC=1.02
-  'SW08': 0.06000,  // สถานีสูบจ่ายน้ำราษฎร์บูรณ HL=12hr FRC=1.07
-  'SW09': 0.06000,  // สถานีสูบจ่ายน้ำเพชรเกษม HL=12hr FRC=1.25
-  'SW10': 0.06000,  // สถานีสูบจ่ายน้ำท่าพระ HL=12hr FRC=1.15
-  'SW11': 0.02500,  // สถานีสูบจ่ายน้ำพหลโยธิน HL=28hr FRC=1.17
+  // rev22: K ปรับจาก UI + calibrate กับ monitor 1 สัปดาห์ (5-12 เม.ย. 2569)
+  'SP04': 0.0800,  // สถานีสูบจ่ายน้ำบางเขน 1 ( HL=9hr
+  'SP05': 0.0800,  // สถานีสูบจ่ายน้ำบางเขน 2 ( HL=9hr
+  'SP06': 0.0800,  // โรงงานผลิตน้ำธนบุรี HL=9hr
+  'SP07': 0.0800,  // โรงงานผลิตน้ำสามเสน 1 HL=9hr
+  'SP08': 0.0800,  // โรงงานผลิตน้ำสามเสน 2 HL=9hr
+  'SP09': 0.0800,  // โรงงานผลิตน้ำสามเสน 3 HL=9hr
+  'SP10': 0.0800,  // โรงงานผลิตน้ำสามเสน 4 HL=9hr
+  'SP12': 0.0700,  // สถานีสูบจ่ายน้ำมหาสวัสดิ์ HL=10hr
+  'SW01': 0.0800,  // สถานีสูบจ่ายน้ำลุมพินี HL=9hr
+  'SW02': 0.0850,  // สถานีสูบจ่ายน้ำลาดพร้าว HL=8hr
+  'SW03': 0.0850,  // สถานีสูบจ่ายน้ำคลองเตย HL=8hr
+  'SW04': 0.0900,  // สถานีสูบจ่ายน้ำสำโรง HL=8hr
+  'SW05': 0.0900,  // สถานีสูบจ่ายน้ำมีนบุรี HL=8hr
+  'SW06': 0.1000,  // สถานีสูบจ่ายน้ำลาดกระบัง HL=7hr
+  'SW07': 0.0900,  // สถานีสูบจ่ายน้ำบางพลี HL=8hr
+  'SW08': 0.0750,  // สถานีสูบจ่ายน้ำราษฎร์บูรณ HL=9hr
+  'SW09': 0.0650,  // สถานีสูบจ่ายน้ำเพชรเกษม HL=11hr
+  'SW10': 0.0800,  // สถานีสูบจ่ายน้ำท่าพระ HL=9hr
+  'SW11': 0.0800,  // สถานีสูบจ่ายน้ำพหลโยธิน HL=9hr
 };
 
 // Source stations สำหรับ dropdown (pump + plant ที่มี zone)
@@ -3279,6 +3275,20 @@ function initStationKEditor() {
     opt.textContent = `${s.id} — ${shortName}`;
     sel.appendChild(opt);
   });
+  // rev22: เพิ่ม VC (Valve Chamber) เข้า dropdown
+  if (typeof VC_STATIONS !== 'undefined') {
+    const sep = document.createElement('option');
+    sep.disabled = true;
+    sep.textContent = '── VC (Valve Chamber) ──';
+    sel.appendChild(sep);
+    VC_STATIONS.forEach(vc => {
+      const opt = document.createElement('option');
+      opt.value = vc.id;
+      const shortName = (vc.name || '').replace('VC ','');
+      opt.textContent = `${vc.id} — ${shortName}`;
+      sel.appendChild(opt);
+    });
+  }
   renderStationKList();
 }
 
@@ -3287,10 +3297,17 @@ function onStationKSelect() {
   const editor = document.getElementById('ep-station-k-editor');
   if (!sid) { editor.style.display = 'none'; return; }
   editor.style.display = 'block';
-  // แสดงค่า K ปัจจุบัน
-  const k_hr = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid]
-             : STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid]
-             : (K_total * 3600);
+  // แสดงค่า K ปัจจุบัน — รองรับทั้ง สจ. และ VC
+  let k_hr;
+  if (sid.startsWith('VC')) {
+    const pair = typeof VC_PAIR !== 'undefined' ? VC_PAIR[sid] : null;
+    k_hr = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid]
+         : pair ? pair.K : 0.07;
+  } else {
+    k_hr = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid]
+         : STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid]
+         : (K_total * 3600);
+  }
   document.getElementById('ep-station-k').value = k_hr.toFixed(5);
   updateStationKDisplay(k_hr);
 }
@@ -3316,6 +3333,10 @@ function applyStationK() {
   const k_hr = parseFloat(document.getElementById('ep-station-k').value);
   if (isNaN(k_hr) || k_hr <= 0) return;
   CONTOUR_K_OVERRIDE[sid] = k_hr;
+  // rev22: ถ้าเป็น VC → อัพเดท VC_PAIR.K ด้วย (ใช้ใน buildIdwCache VC section)
+  if (sid.startsWith('VC') && typeof VC_PAIR !== 'undefined' && VC_PAIR[sid]) {
+    VC_PAIR[sid].K = k_hr;
+  }
   _saveContourK();
   renderStationKList();
   buildIdwCache();
@@ -3326,6 +3347,11 @@ function resetStationK() {
   const sid = document.getElementById('ep-station-select').value;
   if (!sid) return;
   delete CONTOUR_K_OVERRIDE[sid];
+  // rev22: reset VC_PAIR.K กลับเป็นค่า default ตามฝั่ง
+  if (sid.startsWith('VC') && typeof VC_PAIR !== 'undefined' && VC_PAIR[sid]) {
+    const eastVCs = new Set(['VC11','VC12','VC13','VC14']);
+    VC_PAIR[sid].K = eastVCs.has(sid) ? 0.0800 : 0.0700;
+  }
   _saveContourK();
   onStationKSelect(); // refresh display
   renderStationKList();
@@ -3361,6 +3387,12 @@ async function _loadContourK() {
         if (count > 0) {
           Object.keys(CONTOUR_K_OVERRIDE).forEach(k => delete CONTOUR_K_OVERRIDE[k]);
           Object.assign(CONTOUR_K_OVERRIDE, data);
+          // rev22: sync VC_PAIR.K with loaded K overrides
+          if (typeof VC_PAIR !== 'undefined') {
+            Object.keys(data).forEach(sid => {
+              if (sid.startsWith('VC') && VC_PAIR[sid]) VC_PAIR[sid].K = data[sid];
+            });
+          }
           console.log(`[ContourK] ✅ loaded ${count} station K from Firebase`);
           renderStationKList();
           return;
@@ -4558,6 +4590,11 @@ const EC_SOURCE_MAP = {
   'RAW_MAEKLONG': '_RAW_WATER_MAEKLONG_',
 };
 
+// rev22: EC reduction factor — โรงผลิตน้ำ blend ลด EC ลง 5-10%
+// ค่ากลาง 0.925 (ลด 7.5%), confidence band ±10% → ครอบ 0.85–1.0
+const EC_PLANT_REDUCTION = 0.925;
+const EC_PLANT_BAND = 0.10; // ±10% confidence band
+
 const EC_ROOT_SOURCE_MAP = {
   // ── TR1 (อุโมงค์บางเขน 1) ─────────────────────────────────────────
   'สำนักงานประปาสาขาทุ่งมหาเมฆ':                              { root: 'TR1',  ttRoot: 7    },
@@ -4821,7 +4858,10 @@ function buildMarkers() {
     return d;
   }
 
-  function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId) {
+  function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId, opts) {
+    // opts = { reduction: 0.925, band: 0.10 } for raw water sources
+    const reduction = (opts && opts.reduction) || 1.0;
+    const bandPct   = (opts && opts.band != null) ? opts.band : 0.15;
     if (!ttHours || ttHours <= 0) return '';
     const ec0 = (ecNow != null && ecNow > 0) ? ecNow : ecSource;
     const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
@@ -4858,16 +4898,17 @@ function buildMarkers() {
     const pts1 = destPts.length >= 1 ? [...destPts.sort((a,b) => a.t - b.t)] : [];
     pts1.push({ t: 0, f: ec0 });
 
-    // EC ไม่สลายตัวตามระยะทาง → forecast = ecSource (flat) delayed ttHours
-    // ecSource = ค่าจากโรงงาน/TR/MTR โดยตรง
+    // EC ไม่สลายตัวตามระยะทาง → forecast = ecSource × reduction (ลด blend โรงผลิต)
+    // ecSource = ค่าจากน้ำดิบ/โรงงาน/TR/MTR โดยตรง
+    const ecForecast = ecSource * reduction; // rev22: ลดค่าตาม blend factor
     const foreSteps = Math.round(steps * ttHours / FORE_WIN);
     const pts2 = [];
     for (let i = 0; i <= foreSteps; i++) {
       const t = (i / foreSteps) * ttHours;
-      pts2.push({ t, f: ecSource }); // flat line = ecSource ถึง ttHours
+      pts2.push({ t, f: ecForecast }); // flat line = ecForecast ถึง ttHours
     }
 
-    const BAND = 0.15;
+    const BAND = bandPct; // rev22: ใช้ band จาก opts (default 0.15, raw water = 0.10)
     // แกน Y คงที่ 0–500 μS/cm
     const yMax = 500;
     const yMin = 0;
@@ -4972,7 +5013,7 @@ function buildMarkers() {
     return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;overflow:hidden;max-width:100%;">'
       +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
       +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
-      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ (ถึง +'+ttHours+'ชม.)'
+      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+(reduction < 1 ? Math.round(ecForecast)+' (ลด '+Math.round((1-reduction)*100)+'% blend) ' : '')+'(ถึง +'+ttHours+'ชม.)'
       +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
       +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 '+W+' '+H+'">'
@@ -5066,7 +5107,7 @@ function buildMarkers() {
       +'/>'
       +'</svg>'
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
-      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ ±20%</span>'
+      +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์'+(reduction < 1 ? ' (−'+Math.round((1-reduction)*100)+'%)' : '')+'</span>&nbsp;&nbsp;<span style="color:#66bb6a">▓ ±'+Math.round(BAND*100)+'%</span>'
       +(window._rawWaterEc && ['SP01','SP02','SP03','SP04','SP05','SP07','SP08','SP09','SP10','1','2','3','4','5','7','8','9','10'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
       +(window._mkRawWaterData && window._mkRawWaterData['S11'] && ['SP11','SP12','11','12'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#0a6050">- - น้ำดิบแม่กลอง</span>' : '')
       +'</span>'
@@ -5651,17 +5692,21 @@ function buildMarkers() {
         if (ecRootKey === 'RAW_SAMLE' && window._rawWaterEc && window._rawWaterEc.ec > 0) {
           const rwEc = window._rawWaterEc.ec;
           if (ecTT > 0) {
-            decayChart = buildEcForecastChart(rwEc, '🌊 น้ำดิบสำแล', ecTT, s.id, ecNow, null);
+            // rev22: ใช้ reduction factor — โรงผลิตลด EC ~7.5% จาก blend
+            decayChart = buildEcForecastChart(rwEc, '🌊 น้ำดิบสำแล', ecTT, s.id, ecNow, null, { reduction: EC_PLANT_REDUCTION, band: EC_PLANT_BAND });
+            const ecFore = rwEc * EC_PLANT_REDUCTION;
             const foreTs = Date.now() + ecTT * 3600000;
-            saveEcForecast(s.id, foreTs, rwEc, rwEc*1.15, rwEc*0.85);
+            saveEcForecast(s.id, foreTs, ecFore, ecFore*(1+EC_PLANT_BAND), ecFore*(1-EC_PLANT_BAND));
           }
         // rev20: RAW_MAEKLONG → ดึง EC จาก API น้ำดิบแม่กลอง (S11)
         } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11'] && window._mkRawWaterData['S11'].ec > 0) {
           const mkEc = window._mkRawWaterData['S11'].ec;
           if (ecTT > 0) {
-            decayChart = buildEcForecastChart(mkEc, '🏔️ น้ำดิบแม่กลอง', ecTT, s.id, ecNow, null);
+            // rev22: ใช้ reduction factor — โรงผลิตลด EC ~7.5% จาก blend
+            decayChart = buildEcForecastChart(mkEc, '🏔️ น้ำดิบแม่กลอง', ecTT, s.id, ecNow, null, { reduction: EC_PLANT_REDUCTION, band: EC_PLANT_BAND });
+            const ecFore = mkEc * EC_PLANT_REDUCTION;
             const foreTs = Date.now() + ecTT * 3600000;
-            saveEcForecast(s.id, foreTs, mkEc, mkEc*1.15, mkEc*0.85);
+            saveEcForecast(s.id, foreTs, ecFore, ecFore*(1+EC_PLANT_BAND), ecFore*(1-EC_PLANT_BAND));
           }
         } else {
           const ecPlantName = EC_SOURCE_MAP[ecRootKey];
@@ -6233,8 +6278,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev21.0 — EC Mode · Zone Influence Model + น้ำดิบ EC (เจ้าพระยา/แม่กลอง) · Firebase + github (M 9 เม.ย.69)</span>'
-      : '<span>⚠ rev21.0 — EPANET Chlorine decay + Zone Influence · Forecast จาก Pair คู่สถานี หาค่า K : Firebase + github (M 9 เม.ย.69)</span>';
+      ? '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour + KMZ Network + 1-Week Calibrated K · Firebase + github (M 12 เม.ย.69)</span>'
+      : '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (M 12 เม.ย.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -9819,16 +9864,18 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     if (!ecSrcSensor && srcSensor && ttHours > 0) { ecSrcSensor = srcSensor; ecTT = ttHours; }
     
     if (ecSrcSensor && ecTT > 0) {
+      // rev22: กำหนด reduction สำหรับ RAW_SAMLE / RAW_MAEKLONG
+      var ecReduction = (ecRootInfo && (ecRootInfo.root==='RAW_SAMLE'||ecRootInfo.root==='RAW_MAEKLONG')) ? EC_PLANT_REDUCTION : 1.0;
       var ecSrcCode = String(ecSrcSensor.id).replace(/\/|\./g,'-');
       var _ecHist = getHistCached();
       var ecSrcHist = (_ecHist[ecSrcCode]||[]).filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
       for(var fi2=0;fi2<actPts.length;fi2++){
         var srcTs2=actPts[fi2].ts-ecTT*3600000, srcEc=ecSrcSensor.ec||250;
         for(var j2=0;j2<ecSrcHist.length;j2++){if(ecSrcHist[j2].ts<=srcTs2&&ecSrcHist[j2].ec!=null)srcEc=ecSrcHist[j2].ec;}
-        forePts.push({ts:actPts[fi2].ts, v:srcEc});
+        forePts.push({ts:actPts[fi2].ts, v:srcEc * ecReduction});
       }
       // forecast อนาคต
-      var lastEc=ecSrcSensor.ec||250;
+      var lastEc=(ecSrcSensor.ec||250) * ecReduction;
       for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ecTT/6*3600000,v:lastEc});}
     }
   }
@@ -10716,13 +10763,16 @@ function rpBuildCompare(containerId, mode) {
         }
       }
       const srcEc = ecSrc.ec||250;
+      // rev22: apply reduction for RAW sources
+      const ecReduction2 = (ecRootInfo && (ecRootInfo.root==='RAW_SAMLE'||ecRootInfo.root==='RAW_MAEKLONG')) ? EC_PLANT_REDUCTION : 1.0;
+      const ecForecast2 = Math.round(srcEc * ecReduction2);
       const actEc = s.ec||250;
-      const diff = actEc - srcEc;
+      const diff = actEc - ecForecast2;
       h += `<div class="rp-ccard"><div class="cc-t">${s.name}</div>
         <div class="cc-r"><span style="color:#706080">ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecLabel} (${ecSrc.name.length>20?ecSrc.name.substring(0,18)+'…':ecSrc.name})</span></div>
         <div class="cc-r"><span style="color:#706080">EC ต้นทาง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">tt</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;">${ecTT} ชม.</span></div>
-        <div class="cc-r"><span style="color:#706080">คาดการณ์</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(srcEc)}</span></div>
+        <div class="cc-r"><span style="color:#706080">คาดการณ์${ecReduction2<1?' (−'+Math.round((1-ecReduction2)*100)+'% blend)':''}</span><span style="font-family:'JetBrains Mono',monospace">${ecForecast2}</span></div>
         <div class="cc-r"><span style="color:#706080">ค่าจริง</span><span style="font-family:'JetBrains Mono',monospace">${Math.round(actEc)}</span></div>
         <div class="cc-r"><span style="color:#706080">ผลต่าง</span><span style="font-family:'JetBrains Mono',monospace;color:${Math.abs(diff)<30?'#2dd4a0':'#f0a030'}">${diff>=0?'+':''}${Math.round(diff)}</span></div></div>`;
     }
@@ -11556,7 +11606,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev21.0 — EPANET Chlorine decay + Zone Influence + น้ำดิบ EC (เจ้าพระยา/แม่กลอง) + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (M 9 เม.ย.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev22.1 — EPANET Pipe-Aware Contour + KMZ Network (D/Material/Velocity) + Calibrated K + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (M 12 เม.ย.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
