@@ -4860,8 +4860,9 @@ function buildMarkers() {
   }
 
   function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId, opts) {
-    // opts = { band: 0.15 } — confidence band percentage
+    // opts = { band: 0.10, rwHistKey: 'S1' or 'S11' } — raw water history key
     const bandPct   = (opts && opts.band != null) ? opts.band : 0.10;
+    const rwHistKey = (opts && opts.rwHistKey) || null;
     if (!ttHours || ttHours <= 0) return '';
     const ec0 = (ecNow != null && ecNow > 0) ? ecNow : ecSource;
     const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
@@ -4899,13 +4900,42 @@ function buildMarkers() {
     const pts1 = destPts.length >= 1 ? [...destPts.sort((a,b) => a.t - b.t)] : [];
     pts1.push({ t: 0, f: ec0 });
 
-    // EC ไม่สลายตัวตามระยะทาง → forecast = ecSource (flat)
-    // ecSource = ค่าจากน้ำดิบสำแล/แม่กลอง โดยตรง
+    // rev22: EC forecast ใช้ history ของน้ำดิบ shifted ตาม travel time
+    // น้ำที่ถึงสถานี ณ เวลา (now + t) ออกจากต้นทาง ณ เวลา (now + t - ttHours)
+    // ดังนั้น forecast EC ที่เวลา t = EC น้ำดิบ ณ (now + t - ttHours)
     const foreSteps = Math.round(steps * ttHours / FORE_WIN);
     const pts2 = [];
+
+    // ดึง raw water history
+    let rwHist = [];
+    if (rwHistKey) {
+      const rwH = rwHistKey === 'S1' ? (window._rawWaterHistory || {}) : (window._mkRawWaterHistory || {});
+      rwHist = (rwH[rwHistKey] || []).filter(p => p.ec != null && p.ec > 0).sort((a,b) => a.ts - b.ts);
+    }
+
+    // helper: interpolate EC from history at given timestamp
+    function getRwEcAt(ts) {
+      if (rwHist.length === 0) return ecSource;
+      // ถ้าก่อน history → ใช้ค่าแรก, หลัง history → ใช้ค่าสุดท้าย
+      if (ts <= rwHist[0].ts) return rwHist[0].ec;
+      if (ts >= rwHist[rwHist.length-1].ts) return rwHist[rwHist.length-1].ec;
+      // interpolate
+      for (let i = 1; i < rwHist.length; i++) {
+        if (rwHist[i].ts >= ts) {
+          const p0 = rwHist[i-1], p1 = rwHist[i];
+          const frac = (ts - p0.ts) / (p1.ts - p0.ts);
+          return p0.ec + (p1.ec - p0.ec) * frac;
+        }
+      }
+      return ecSource;
+    }
+
     for (let i = 0; i <= foreSteps; i++) {
       const t = (i / foreSteps) * ttHours;
-      pts2.push({ t, f: ecSource }); // flat line = ecSource ถึง ttHours
+      // น้ำที่ถึงสถานี ณ now+t ออกจากต้นทาง ณ now+t-ttHours
+      const srcTs = nowMs + (t - ttHours) * 3600000;
+      const ecVal = getRwEcAt(srcTs);
+      pts2.push({ t, f: ecVal });
     }
 
     const BAND = bandPct;
@@ -5013,7 +5043,7 @@ function buildMarkers() {
     return '<div style="margin-top:8px;border-top:1px solid '+(document.body.classList.contains('dark')?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:7px;overflow:hidden;max-width:100%;">'
       +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
       +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
-      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+Math.round(ecSource)+' (ถึง +'+ttHours+'ชม.)'
+      +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+Math.round(ecEnd)+' (ถึง +'+ttHours+'ชม.)'
       +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
       +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 '+W+' '+H+'">'
@@ -5707,7 +5737,7 @@ function buildMarkers() {
               const ttSrc = ttInfo ? ttInfo.tt_label : '';
               rwLabel = '🌊 สำแล→สามเสน 44ชม.' + (ttSrc && ecTT > 44 ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
             }
-            decayChart = buildEcForecastChart(rwEc, rwLabel, ecTT, s.id, ecNow, null);
+            decayChart = buildEcForecastChart(rwEc, rwLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S1' });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, rwEc, rwEc*(1+EC_FORECAST_BAND), rwEc*(1-EC_FORECAST_BAND));
           }
@@ -5723,7 +5753,7 @@ function buildMarkers() {
               const ttSrc = ttInfo ? ttInfo.tt_label : '';
               mkLabel = '🏔️ แม่กลอง→มหาสวัสดิ์ 48ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
             }
-            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null);
+            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11' });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, mkEc, mkEc*(1+EC_FORECAST_BAND), mkEc*(1-EC_FORECAST_BAND));
           }
@@ -14435,6 +14465,7 @@ function submitFeedback(){
       travelHours: CANAL_TRAVEL_HOURS,
       source: 'สำแล (S1)',
     };
+    window._rawWaterHistory = _rwHistory; // rev22: expose history for forecast chart
 
     // ซ่อนกราฟค่าจริงของ SP01-SP05 (ใช้กราฟ forecast แทน)
     if (!document.getElementById('rw-hide-bangkhen-css')) {
@@ -15108,6 +15139,7 @@ function submitFeedback(){
   // ── 12. Expose data globally สำหรับ EC forecast / What-If ───────────
   window._mkRawWaterData = _mkData;
   window._mkRawWaterStations = MK_STATIONS;
+  window._mkRawWaterHistory = _mkHistory;  // rev22: expose history
 
 })();
 </script>
