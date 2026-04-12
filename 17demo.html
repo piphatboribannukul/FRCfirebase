@@ -5877,7 +5877,7 @@ function buildMarkers() {
       ${_vcClosed?'':'<div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:'+c+'">'+paramStatus(pv)+'</span></div>'}
       ${ecRow}
       ${_vcClosed?'':ttHtml}
-      ${_vcClosed?'':(sourceChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
+      ${_vcClosed?'':(sourceChart && !decayChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
       ${_vcClosed?'':decayChart}
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
   }
