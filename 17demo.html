@@ -14151,7 +14151,7 @@ function submitFeedback(){
 
       // rev21: ดึง history เพิ่มจาก Firebase (ที่สะสมไว้ทุก 10 นาที)
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
-        const twoDaysAgo = Date.now() - 48 * 3600000;
+        const sevenDaysAgo = Date.now() - 168 * 3600000; // rev22: ขยายเป็น 7 วัน
         for (const sid of Object.keys(RAW_WATER_STATIONS)) {
           try {
             const fbPath = `history/raw_${sid.replace(/\//g,'-')}`;
@@ -14162,7 +14162,7 @@ function submitFeedback(){
               Object.values(val).forEach(rec => {
                 if (!rec || rec.ec == null || rec.ec <= 0) return;
                 const ts = rec.ts || 0;
-                if (ts < twoDaysAgo) return; // เฉพาะ 2 วันล่าสุด
+                if (ts < sevenDaysAgo) return; // เฉพาะ 2 วันล่าสุด
                 if (!_rwHistory[sid].find(h => h.ts === ts)) {
                   _rwHistory[sid].push({ ec: rec.ec, ts });
                 }
@@ -14173,9 +14173,11 @@ function submitFeedback(){
         // sort & limit
         Object.keys(_rwHistory).forEach(sid => {
           _rwHistory[sid].sort((a,b) => a.ts - b.ts);
-          if (_rwHistory[sid].length > 200) _rwHistory[sid] = _rwHistory[sid].slice(-200);
+          if (_rwHistory[sid].length > 1008) _rwHistory[sid] = _rwHistory[sid].slice(-1008);
         });
         console.log('[RawWater] ✅ Firebase history loaded:', Object.entries(_rwHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
+        // rev22: update global reference
+        window._rawWaterHistory = _rwHistory;
       }
 
       console.log(`[RawWater] ✅ ${Object.keys(latest).length} stations updated`);
@@ -15005,7 +15007,8 @@ function submitFeedback(){
       });
 
       // Build history for charts (เก็บ last 100 records per station)
-      _mkHistory = {};
+      // rev22: clear แทน reassign เพื่อรักษา reference ที่ window._mkRawWaterHistory ชี้อยู่
+      Object.keys(_mkHistory).forEach(k => delete _mkHistory[k]);
       records.forEach(r => {
         const sid = r.stn_id;
         if (!MK_STATIONS[sid]) return;
@@ -15015,7 +15018,7 @@ function submitFeedback(){
 
       // rev21: ดึง history เพิ่มจาก Firebase (สะสมทุก 10 นาที)
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
-        const twoDaysAgo = Date.now() - 48 * 3600000;
+        const sevenDaysAgo = Date.now() - 168 * 3600000; // rev22: ขยายเป็น 7 วัน
         for (const sid of Object.keys(MK_STATIONS)) {
           try {
             const fbPath = `history/rawmk_${sid.replace(/\//g,'-')}`;
@@ -15026,7 +15029,7 @@ function submitFeedback(){
               Object.values(val).forEach(rec => {
                 if (!rec || rec.ec == null || rec.ec <= 0) return;
                 const ts = rec.ts || 0;
-                if (ts < twoDaysAgo) return;
+                if (ts < sevenDaysAgo) return;
                 if (!_mkHistory[sid].find(h => h.ts === ts)) {
                   _mkHistory[sid].push({ ec: rec.ec, ts });
                 }
@@ -15039,9 +15042,12 @@ function submitFeedback(){
       // Sort & limit
       Object.keys(_mkHistory).forEach(sid => {
         _mkHistory[sid].sort((a,b) => a.ts - b.ts);
-        if (_mkHistory[sid].length > 200) _mkHistory[sid] = _mkHistory[sid].slice(-200);
+        if (_mkHistory[sid].length > 1008) _mkHistory[sid] = _mkHistory[sid].slice(-1008);
       });
       console.log('[MaeKlong] ✅ history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
+      // rev22: update global reference
+      window._mkRawWaterHistory = _mkHistory;
+      window._mkRawWaterData = _mkData;
 
       console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
 
