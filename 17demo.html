@@ -15012,13 +15012,24 @@ function submitFeedback(){
       records.forEach(r => {
         const sid = r.stn_id;
         if (!MK_STATIONS[sid]) return;
+      // rev21: ดึง history จาก API records
+      records.forEach(r => {
+        const sid = r.stn_id;
+        if (!MK_STATIONS[sid]) return;
         if (!_mkHistory[sid]) _mkHistory[sid] = [];
         _mkHistory[sid].push({ ec: r.conducted, ts: new Date(r.datetimes).getTime() });
       });
 
-      // rev21: ดึง history เพิ่มจาก Firebase (สะสมทุก 10 นาที)
+      console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
+
+    } catch (e) {
+      console.warn('[MaeKlong] API fetch failed:', e.message);
+    }
+
+    // rev22: โหลด Firebase history แม้ API ล้มเหลว + pre-seed จาก fallback
+    try {
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
-        const sevenDaysAgo = Date.now() - 168 * 3600000; // rev22: ขยายเป็น 7 วัน
+        const sevenDaysAgo = Date.now() - 168 * 3600000;
         for (const sid of Object.keys(MK_STATIONS)) {
           try {
             const fbPath = `history/rawmk_${sid.replace(/\//g,'-')}`;
@@ -15035,48 +15046,50 @@ function submitFeedback(){
                 }
               });
             }
-          } catch(e) { /* ignore */ }
+          } catch(e2) { /* ignore */ }
         }
+        // Sort & limit
+        Object.keys(_mkHistory).forEach(sid => {
+          _mkHistory[sid].sort((a,b) => a.ts - b.ts);
+          if (_mkHistory[sid].length > 1008) _mkHistory[sid] = _mkHistory[sid].slice(-1008);
+        });
+        console.log('[MaeKlong] ✅ Firebase history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
       }
 
-      // Sort & limit
-      Object.keys(_mkHistory).forEach(sid => {
-        _mkHistory[sid].sort((a,b) => a.ts - b.ts);
-        if (_mkHistory[sid].length > 1008) _mkHistory[sid] = _mkHistory[sid].slice(-1008);
-      });
-      console.log('[MaeKlong] ✅ history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
-      // rev22: update global reference
-      window._mkRawWaterHistory = _mkHistory;
-      window._mkRawWaterData = _mkData;
-
-      console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
-
-      // ── บันทึกลง Firebase ────────────────────────────────────────────
-      if (window._fbReady && window._fb) {
-        try {
-          const now = Date.now();
-          for (const [sid, r] of Object.entries(latest)) {
-            if (r.conducted == null || r.conducted <= 0) continue;
-            const ts = new Date(r.datetimes).getTime() || now;
-            const fbKey = `history/rawmk_${sid.replace(/\//g,'-')}/${ts}`;
-            await window._fbSet(
-              window._fbRef(window._fb, fbKey),
-              { ec: r.conducted, temp: r.temp || null, ts: ts }
-            );
+      // Pre-seed: ถ้า _mkHistory ยังว่าง ใส่ค่า current จาก _mkData เป็น 1 จุด
+      Object.entries(_mkData).forEach(([sid, d]) => {
+        if (d && d.ec > 0 && d.time) {
+          if (!_mkHistory[sid]) _mkHistory[sid] = [];
+          const ts = new Date(d.time).getTime();
+          if (ts > 0 && !_mkHistory[sid].find(h => h.ts === ts)) {
+            _mkHistory[sid].push({ ec: d.ec, ts });
           }
-          console.log('[MaeKlong] ✅ saved EC to Firebase');
-        } catch(e) {
-          console.warn('[MaeKlong] Firebase save error:', e.message);
         }
-      }
+      });
 
-      // Rebuild markers + contour
-      if (layers['rawwater-mk']) {
-        createMkMarkers();
+      // บันทึก fallback/current data ลง Firebase ทุก 10 นาที
+      if (window._fbReady && window._fb && window._fbSet && window._fbRef) {
+        const now = Date.now();
+        Object.entries(_mkData).forEach(([sid, d]) => {
+          if (d && d.ec > 0) {
+            const ts = d.time ? new Date(d.time).getTime() : now;
+            const fbKey = `history/rawmk_${sid.replace(/\//g,'-')}/${ts}`;
+            window._fbSet(window._fbRef(window._fb, fbKey), { ec: d.ec, temp: d.temp || null, ts });
+          }
+        });
+        console.log('[MaeKlong] ✅ saved current EC to Firebase (fallback or API)');
       }
+    } catch(e3) {
+      console.warn('[MaeKlong] Firebase fallback error:', e3.message);
+    }
 
-    } catch (e) {
-      console.warn('[MaeKlong] API fetch failed:', e.message);
+    // Update global refs
+    window._mkRawWaterHistory = _mkHistory;
+    window._mkRawWaterData = _mkData;
+
+    // Rebuild markers
+    if (layers['rawwater-mk']) {
+      createMkMarkers();
     }
   }
 
