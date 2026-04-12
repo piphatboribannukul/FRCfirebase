@@ -2321,7 +2321,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="toggle-row"><span>📡 RTU สถานีวัด (236)</span><div class="tog off" id="t-rtu" onclick="toggleLayer('rtu')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🗺️ EPANET Contour (FRC sim)</span><div class="tog off" id="t-epanet" onclick="toggleLayer('epanet')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🌊 น้ำดิบ EC (เจ้าพระยา)</span><div class="tog off" id="t-rawwater" onclick="toggleLayer('rawwater')"><div class="tok"></div></div></div>
-    <div class="toggle-row"><span>🏔️ น้ำดิบ EC (แม่กลอง)</span><div class="tog on" id="t-rawwater-mk" onclick="toggleLayer('rawwater-mk')"><div class="tok"></div></div></div>
+    <div class="toggle-row"><span>🏔️ น้ำดิบ EC (แม่กลอง)</span><div class="tog off" id="t-rawwater-mk" onclick="toggleLayer('rawwater-mk')"><div class="tok"></div></div></div>
     </div><!-- /sb-body ชั้นข้อมูล -->
   </div>
   <!-- Zone Influence -->
@@ -4012,7 +4012,7 @@ setTimeout(() => {
 }, 6000);
 L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
 
-const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,pipelines:false,rtu:false,epanet:false,rawwater:false,'rawwater-mk':true};
+const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,pipelines:false,rtu:false,epanet:false,rawwater:false,'rawwater-mk':false};
 
 // ══════════════════════════════════════════════════════════════════
 // CONTOUR: Single offscreen canvas rendered in lat/lon space
@@ -6379,6 +6379,8 @@ function setParam(mode) {
   renderTab();
 
   // rev21: EC → เปิดน้ำดิบทั้ง 2 ฝั่ง / FRC → ปิดทั้ง 2 ฝั่ง อัตโนมัติ
+  // rev22: ใช้ _autoToggle flag เพื่อไม่ zoom เมื่อ auto-toggle
+  window._mkAutoToggle = true;
   if (mode === 'ec') {
     if (!layers.rawwater)       toggleLayer('rawwater');
     if (!layers['rawwater-mk']) toggleLayer('rawwater-mk');
@@ -6386,6 +6388,7 @@ function setParam(mode) {
     if (layers.rawwater)        toggleLayer('rawwater');
     if (layers['rawwater-mk'])  toggleLayer('rawwater-mk');
   }
+  window._mkAutoToggle = false;
   // reset unified timeline เมื่อเปลี่ยน mode (FRC/EC ใช้ frame ต่างกัน)
   _unifiedLoaded = false;
   _unifiedFrames = [];
@@ -14957,15 +14960,16 @@ function submitFeedback(){
       const isFactory = poi.isFactory;
       const isAlert = poi.isAlert;
       const isStart = poi.isStart;
-      const fillColor = isFactory ? '#cc0055' : isAlert ? '#e08020' : isStart ? '#1a5090' : '#0a6050';
-      const radius = (isFactory || isStart) ? 8 : 6;
+      // rev22: จุดเล็กลง สีเดียวกัน
+      const fillColor = isFactory ? '#cc0055' : '#0a8070';
+      const radius = isFactory ? 5 : isStart ? 4 : 3;
 
       const m = L.circleMarker([poi.lat, poi.lon], {
         radius: radius,
         fillColor: fillColor,
-        fillOpacity: 0.9,
+        fillOpacity: 0.7,
         color: '#fff',
-        weight: 2,
+        weight: 1.5,
       });
 
       // EC info ใน tooltip
@@ -15156,17 +15160,18 @@ function submitFeedback(){
         // Auto-refresh ทุก 10 นาที
         if (!_mkFetchTimer) _mkFetchTimer = setInterval(fetchMkData, 600000);
 
-        // Zoom out ให้เห็นทั้ง กปน. + แม่กลอง
-        _mkPrevBounds = map.getBounds();
-        // Bounds ครอบคลุม: T5 แควใหญ่ (14.898, 98.954) → กรุงเทพฝั่งตะวันออก (13.45, 100.97)
-        map.flyToBounds([[13.75, 99.38],[14.10, 100.50]], {
-          padding: [20, 20], duration: 1.0, maxZoom: 10,
-        });
+        // Zoom out ให้เห็นทั้ง กปน. + แม่กลอง (เฉพาะ manual toggle ไม่ใช่ auto)
+        if (!window._mkAutoToggle) {
+          _mkPrevBounds = map.getBounds();
+          map.flyToBounds([[13.75, 99.38],[14.10, 100.50]], {
+            padding: [20, 20], duration: 1.0, maxZoom: 10,
+          });
+        }
       } else {
         if (_mkLayerGroup) _mkLayerGroup.remove();
         if (_mkFetchTimer) { clearInterval(_mkFetchTimer); _mkFetchTimer = null; }
-        // กลับ bounds เดิม
-        if (_mkPrevBounds) {
+        // กลับ bounds เดิม (เฉพาะ manual toggle)
+        if (!window._mkAutoToggle && _mkPrevBounds) {
           map.flyToBounds(_mkPrevBounds, { duration: 0.8 });
           _mkPrevBounds = null;
         }
@@ -15198,14 +15203,6 @@ function submitFeedback(){
 
   // ── 11. Initial fetch เมื่อ page load ────────────────────────────────
   setTimeout(fetchMkData, 4000);
-
-  // rev22: default on — add layer to map on init
-  if (layers['rawwater-mk']) {
-    if (!_mkLayerGroup) _mkLayerGroup = L.layerGroup();
-    _mkLayerGroup.addTo(map);
-    createMkMarkers();
-    if (!_mkFetchTimer) _mkFetchTimer = setInterval(fetchMkData, 600000);
-  }
 
   // ── 12. Expose data globally สำหรับ EC forecast / What-If ───────────
   window._mkRawWaterData = _mkData;
