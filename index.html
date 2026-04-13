@@ -2134,7 +2134,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev24.1</span>
+  <span id="v2-badge">⬡ rev25.1</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -3449,9 +3449,23 @@ function renderStationKList() {
   el.innerHTML = html;
 }
 
-function epanetDecay(dKm, sensor) {
+function epanetDecay(dKm, sensor, lat, lon) {
   const L_m = dKm * 1000;
-  const t   = L_m / EPANET.v;  // travel time [s]
+  // rev25: adjust velocity based on nearest RTU live pressure
+  let v_adj = EPANET.v;
+  if (window._rtuLive && window._rtuLive.length > 0 && lat != null && lon != null) {
+    let minD2 = Infinity, nearP = 0;
+    for (const rtu of window._rtuLive) {
+      const d2 = (rtu.lt - lat)**2 + (rtu.ln - lon)**2;
+      if (d2 < minD2) { minD2 = d2; nearP = rtu.lP; }
+    }
+    if (nearP > 0 && window._rtuPNominal > 0) {
+      // v ∝ √P (Bernoulli) → clamp factor 0.5–2.0
+      const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(nearP / window._rtuPNominal)));
+      v_adj = EPANET.v * pFactor;
+    }
+  }
+  const t   = L_m / v_adj;  // travel time [s] — pressure-adjusted
 
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
@@ -3794,7 +3808,7 @@ function frcZone(lat, lon) {
   }
 
   const dKm = Math.sqrt(((nearest.lat - lat)**2 + (nearest.lon - lon)**2)) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
-  return nearest.frc * epanetDecay(dKm, nearest);
+  return nearest.frc * epanetDecay(dKm, nearest, lat, lon);
 }
 
 
@@ -3885,7 +3899,7 @@ function _pipeAwareFrc(lat, lon, j, i) {
   // Use epanetDecay() so sensor-specific K (CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE)
   // is applied consistently — same formula as Zone path
   const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-  return sensor.frc * epanetDecay(pd.dist_km * pFactor, sensor);
+  return sensor.frc * epanetDecay(pd.dist_km * pFactor, sensor, lat, lon);
 }
 
 function buildIdwCache() {
@@ -3972,10 +3986,10 @@ function buildIdwCache() {
                 // v6: pipe grid ชี้ไปที่ sensor เดียวกับ zone → ใช้ pipe distance
                 // epanetDecay() ใช้ K จาก CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE
                 const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-                zoneVal = src.frc * epanetDecay(pd.dist_km * pFactor, src);
+                zoneVal = src.frc * epanetDecay(pd.dist_km * pFactor, src, lat, lon);
               } else {
                 // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean × EUCLID_PIPE_FACTOR
-                zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src);
+                zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src, lat, lon);
               }
               break;
             }
@@ -4513,7 +4527,15 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
     const res = new Uint8Array(tot); let off=0;
     for(const c of ch){res.set(c,off);off+=c.length;}
     const rtus = JSON.parse(new TextDecoder().decode(res));
-    // rtus: [{id,b,loc,lt,ln,p,q,qr,d,s,c}, ...]
+    // rtus: [{id,b,loc,lt,ln,p,q,qr,d,s,c,lP,lF,lC,lA,ptc}, ...]
+    // rev25: expose RTU live pressure globally for contour calculation
+    window._rtuLive = rtus.filter(r => r.c === 1 && r.lP > 0);
+    window._rtuPNominal = (function(){
+      const online = rtus.filter(r => r.c === 1 && r.lP > 0);
+      if (!online.length) return 15;
+      return online.reduce((s,r) => s + r.lP, 0) / online.length;
+    })();
+    console.log('RTU live pressure: ' + window._rtuLive.length + ' stations, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc')
     
     // RTU comparison data from EPANET simulation
     const _rtuCompB64 = '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';
