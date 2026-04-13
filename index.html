@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev22.1</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour rev23</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2134,7 +2134,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev22.1</span>
+  <span id="v2-badge">⬡ rev23</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2773,7 +2773,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev23 · Apr 2026</div>
     </div>
 
     <!-- EC note -->
@@ -2781,10 +2781,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl ec">
         <tr><th colspan="2">Contour Model</th></tr>
-        <tr><td>วิธีคำนวณ</td><td>Zone Influence custom (หลัก) · ไม่มี decay</td></tr>
+        <tr><td>วิธีคำนวณ</td><td>Zone Influence custom + Pipe Network + Pressure (rev23)</td></tr>
         <tr><td>Zone หลัก</td><td>CUSTOM_ZONES polygon วาดไว้ล่วงหน้า</td></tr>
-        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน)</td></tr>
-        <tr><td>Zone Editor</td><td>วาด/แก้ไข polygon · circle บนแผนที่ · export/import JSON</td></tr>
+        <tr><td>Pipe Network</td><td>KMZ pipe grid (Dijkstra) ระบุ source จริงตามเส้นท่อ</td></tr>
+        <tr><td>Pressure</td><td>RTU pressure factor ปรับทิศทาง flow + mixing weight</td></tr>
+        <tr><td>Mixing Zone</td><td>จุดที่ pipe ≠ zone → ผสม EC ตาม pressure (20-80%)</td></tr>
+        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน+ไม่มี pipe)</td></tr>
         <tr><td>Decay</td><td>ไม่มี (EC = conservative parameter)</td></tr>
         <tr><td>ตัดออก</td><td>TR1/TR2/TR3/MTR (อุโมงค์ส่งน้ำ)</td></tr>
       </table>
@@ -2825,7 +2827,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev23 · Apr 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -3875,6 +3877,39 @@ function _pipeAwareFrc(lat, lon, j, i) {
   return sensor.frc * epanetDecay(pd.dist_km * pFactor, sensor);
 }
 
+// ── rev23: Pipe-aware EC — ใช้ pipe network + pressure เพื่อหา source จริง ──────
+// EC ไม่ decay แต่ต้องรู้ว่า "น้ำจาก source ไหนไหลมาถึงจุดนี้จริงๆ"
+// ใช้ pipe grid (Dijkstra connectivity) + pressure direction เพื่อระบุ source
+// จุดผสมน้ำ: ถ้า pipe ชี้ไป source A แต่ zone กำหนด source B → ผสม EC ตามสัดส่วน pressure
+function _pipeAwareEc(lat, lon, j, i) {
+  const pd = _getPipeDist(j, i);
+  if (!pd) return null; // no pipe data → fallback
+
+  // หา source sensor ที่ pipe grid ชี้ไป
+  const pipeSensor = SENSORS.find(s => String(s.id) === pd.sensorId);
+  if (!pipeSensor) return null;
+
+  const pipeEc = getParamVal(pipeSensor);
+
+  // rev23: Pressure-based flow direction adjustment
+  // ถ้า pressure สูง (pFactor < 1) → น้ำไหลแรงจาก source นี้ → เชื่อ pipe grid มากขึ้น
+  // ถ้า pressure ต่ำ (pFactor > 1) → น้ำไหลช้า/อาจมีน้ำจาก source อื่นผสม
+  const pFactor = _getPressureFactor(j, i);
+
+  // ถ้า pressure factor ปกติ (0.7-1.3) → ใช้ค่า EC จาก pipe source ตรงๆ
+  if (pFactor <= 1.3) return pipeEc;
+
+  // ถ้า pressure ต่ำมาก (>1.3) → พื้นที่ชายขอบ อาจมีน้ำจาก source อื่นผสม
+  // ผสม EC กับ nearest source ตาม zone (weighted by inverse pressure factor)
+  const _idwFn = window.idwZone || idwZone;
+  const zoneEc = _idwFn(lat, lon);
+
+  // Weight: pipe source มี weight มากขึ้นเมื่อ pressure สูง (pFactor ต่ำ)
+  // pFactor=1.3 → wPipe=1.0 (ใช้ pipe ล้วน), pFactor=2.0 → wPipe≈0.43
+  const wPipe = Math.max(0, Math.min(1, 1.3 / pFactor));
+  return pipeEc * wPipe + zoneEc * (1 - wPipe);
+}
+
 function buildIdwCache() {
   const rows = CACHE_RES + 1;
   _idwCache = new Float32Array(rows * rows);
@@ -3892,6 +3927,73 @@ function buildIdwCache() {
     for(let i=0; i<rows; i++) {
       const lon = CACHE_LON0 + i * dlon;
       if (PARAM_MODE === 'ec') {
+        // ══ rev23: Pipe-aware EC contour ══════════════════════════════════
+        // Priority 1: VC zone polygon → ใช้ EC จาก source ของ VC ตรงๆ
+        let ecVal = null;
+        if (typeof VC_STATIONS !== 'undefined' && window.CUSTOM_ZONES) {
+          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+            if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+            if (!_pip(lat, lon, zone.coords)) continue;
+            const vc = VC_STATIONS.find(v => v.id === sid);
+            if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+            const src = SENSORS.find(x => String(x.id) === vc.sourceId);
+            if (src) { ecVal = getParamVal(src); break; }
+          }
+        }
+        if (ecVal !== null) {
+          _idwCache[j * rows + i] = ecVal;
+          continue;
+        }
+
+        // Priority 2: CUSTOM_ZONES polygon (สถานีสูบจ่าย) + pipe network
+        //   ถ้าจุดอยู่ใน zone polygon → ใช้ EC ของ source นั้น
+        //   แต่ถ้ามี pipe data ชี้ไป source อื่น + pressure ต่ำ → ผสม EC
+        if (window.CUSTOM_ZONES) {
+          const sources = _ensureFrcSources();
+          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+            if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+            if (!_pip(lat, lon, zone.coords)) continue;
+            const src = sources.find(s => String(s.id) === sid);
+            if (!src) continue;
+            const zoneEc = getParamVal(src);
+
+            // rev23: ตรวจ pipe grid — ถ้า pipe ชี้ไป source เดียวกับ zone → ยืนยัน
+            // ถ้า pipe ชี้ไป source อื่น → จุดผสมน้ำ ผสม EC ตาม pressure weight
+            const pd = _getPipeDist ? _getPipeDist(j, i) : null;
+            if (pd && String(pd.sensorId) !== String(sid)) {
+              // Pipe ชี้ไปคนละ source กับ zone → mixing zone!
+              const pipeSrc = SENSORS.find(s => String(s.id) === pd.sensorId);
+              if (pipeSrc) {
+                const pipeEc = getParamVal(pipeSrc);
+                const pFactor = _getPressureFactor(j, i);
+                // pFactor ต่ำ = pressure สูง = pipe source มีอิทธิพลมาก
+                // pFactor สูง = pressure ต่ำ = zone source มีอิทธิพลมาก
+                // Clamp mixing weight: pipe influence 20-80%
+                const wPipe = Math.max(0.2, Math.min(0.8, 1.0 / pFactor));
+                ecVal = pipeEc * wPipe + zoneEc * (1 - wPipe);
+              } else {
+                ecVal = zoneEc;
+              }
+            } else {
+              // Pipe ยืนยัน source เดียวกับ zone หรือไม่มี pipe data → ใช้ zone EC
+              ecVal = zoneEc;
+            }
+            break;
+          }
+        }
+        if (ecVal !== null) {
+          _idwCache[j * rows + i] = ecVal;
+          continue;
+        }
+
+        // Priority 3: Pipe-network EC (พื้นที่ไม่มี polygon ครอบ)
+        const pipeEc = _pipeAwareEc(lat, lon, j, i);
+        if (pipeEc !== null) {
+          _idwCache[j * rows + i] = pipeEc;
+          continue;
+        }
+
+        // Priority 4: Fallback — nearest source zone (geographic)
         _idwCache[j * rows + i] = _idw(lat, lon);
       } else {
         // Pipe-network contour: ใช้ค่าจริงตามเส้นท่อ + zone influence
@@ -4865,7 +4967,7 @@ function buildMarkers() {
     const rwHistKey = (opts && opts.rwHistKey) || null;
     if (!ttHours || ttHours <= 0) return '';
     const ec0 = (ecNow != null && ecNow > 0) ? ecNow : ecSource;
-    const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
+    const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 32;
     const cw = W - PL - PR, ch = H - PT - PB;
     const now = new Date();
     const nowMs = now.getTime();
@@ -5011,7 +5113,9 @@ function buildMarkers() {
     }
 
     let hourlyMarksEc = '';
-    let lastDateStr = '';
+    // rev23: สะสม tick ตามวัน เพื่อวาง date label ตรงกลางกลุ่ม (แบบ Excel)
+    const _dk = document.body.classList.contains('dark');
+    const dayGroups = {}; // { dateStr: [x1, x2, ...] }
     for (const { t } of visibleTicksEc) {
       const x = px(t);
       const isFuture = t > 0;
@@ -5027,26 +5131,30 @@ function buildMarkers() {
       } else {
         showDot = false;
       }
-      const _dkMark = document.body.classList.contains('dark');
-      const ecColor  = ecVal != null ? (ecVal >= EC_CONFIG.hi ? (_dkMark?'#ff6666':'#b32800') : ecVal >= EC_CONFIG.lo ? (_dkMark?'#4ea8de':'#1565c0') : (_dkMark?'#6dd5fa':'#40b0e0')) : '#bbb';
       const cy = ecVal != null ? pyClamp(ecVal) : PT + ch/2;
       const lineColor = isNowTick ? '#1565c0' : beyondFore ? '#ccc' : isFuture ? '#4060c0' : '#b0c8e8';
       const sw = isNowTick ? 1.5 : 0.7;
       const r  = isNowTick ? 3.5 : isFuture ? 2.5 : 3;
-      const tColor = beyondFore ? '#bbb' : isFuture ? '#4060a0' : '#6090c0';
-      // rev22: แสดงวันที่เมื่อข้ามวัน
-      const curDateStr = toDateLabel(t);
-      const showDate = curDateStr !== lastDateStr;
-      if (showDate) lastDateStr = curDateStr;
-      const tickLabel = toHHMM(nowHr+t) + (showDate ? '\\n' + curDateStr : '');
+      // Time label (row 1 — ใต้กราฟ)
       hourlyMarksEc +=
         '<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+lineColor+'" stroke-width="'+sw+'" stroke-dasharray="2,3" opacity="'+(isNowTick?0.8:beyondFore?0.3:0.45)+'"/>'
        +(showDot ? '<circle cx="'+x.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r+'" fill="'+(isNowTick?'#1565c0':isFuture?'#4060c0':'#1565c0')+'" stroke="#fff" stroke-width="1.2" opacity="'+(isFuture?0.8:1)+'"/>' : '')
-       +'<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+32).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+32).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#c0c0e0':'#222')+'" text-anchor="start" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>'
-       +(showDate ? '<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+44).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+44).toFixed(1)+'" font-size="8" font-weight="700" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" text-anchor="start" font-family="Sarabun,sans-serif">'+curDateStr+'</text>'
-       +'<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+(document.body.classList.contains('dark')?'#6090cc':'#1565c0')+'" stroke-width="1.5" opacity="0.5" stroke-dasharray="4,2"/>'
-       +'<circle cx="'+x.toFixed(1)+'" cy="'+PT+'" r="3" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" opacity="0.6"/>' : '')
-       +('');
+       +'<text x="'+x.toFixed(1)+'" y="'+(PT+ch+11).toFixed(1)+'" font-size="8" font-weight="600" fill="'+(_dk?'#c0c0e0':'#555')+'" text-anchor="middle" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>';
+      // สะสม x ของแต่ละวัน
+      const curDateStr = toDateLabel(t);
+      if (!dayGroups[curDateStr]) dayGroups[curDateStr] = [];
+      dayGroups[curDateStr].push(x);
+    }
+    // Date labels (row 2 — ตรงกลางกลุ่มของแต่ละวัน)
+    for (const [dateStr, xArr] of Object.entries(dayGroups)) {
+      const xMin = Math.min(...xArr);
+      const xMax = Math.max(...xArr);
+      const xMid = (xMin + xMax) / 2;
+      // เส้นแบ่งวัน (ที่ tick แรกของวัน)
+      hourlyMarksEc += '<line x1="'+xMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+xMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dk?'#6090cc':'#1565c0')+'" stroke-width="0.8" opacity="0.4"/>';
+      // Date label ตรงกลาง
+      hourlyMarksEc += '<text x="'+xMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+dateStr+'</text>';
+    }
     }
 
     const endStatus = ecEnd >= EC_CONFIG.hi ? '⚠ เกินมาตรฐาน' : ecEnd >= EC_CONFIG.lo ? '✓ ปกติ' : '↓ ต่ำ';
@@ -5164,7 +5272,7 @@ function buildMarkers() {
   function buildDecayChart(frcSource, sourceName, ttHours, sensorId, frcNow, srcId, sensorName) {
       if (!ttHours || ttHours <= 0) return '';
       const frc0 = (frcNow != null && frcNow > 0) ? frcNow : frcSource;
-      const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 52;
+      const W = Math.min(420, (window.innerWidth||420)*0.82), H = Math.min(220, W*0.52), PL = 30, PR = 14, PT = 22, PB = 32;
       const cw = W - PL - PR, ch = H - PT - PB;
       const k_hr = getStationKhr(sensorId);
 
@@ -5328,11 +5436,12 @@ function buildMarkers() {
         if (x - lastX >= MIN_TICK_PX) { visibleTicks.push(tick); lastX = x; }
       }
 
-      let _lastDateStrFrc = '';
+      const _dk2 = document.body.classList.contains('dark');
+      const dayGroupsFrc = {};
       const hourlyMarks = visibleTicks.map(({ t, hr }) => {
         const x = px(t);
         const isFuture = t > 0;
-        const beyondFore = t > ttHours; // เกินช่วงคาดการณ์จริง
+        const beyondFore = t > ttHours;
 
         let fVal = null, showDot = true;
         if (!isFuture) {
@@ -5342,19 +5451,17 @@ function buildMarkers() {
           const ptNear2 = pts2.reduce((a,b) => Math.abs(b.t-t)<Math.abs(a.t-t)?b:a, pts2[0]);
           fVal = ptNear2 ? ptNear2.f : null;
         } else {
-          showDot = false; // ไม่มีข้อมูลคาดการณ์
+          showDot = false;
         }
 
-        const fColor = fVal != null ? (fVal >= 1.0 ? '#cc0055' : fVal >= 0.2 ? '#e06030' : '#b07000') : '#bbb';
         const cy = fVal != null ? pyClamp(fVal) : PT + ch/2;
         const isNowTick = Math.abs(t) < 0.05;
 
-        // rev22: วันที่เมื่อข้ามวัน
+        // สะสม x ตามวัน
         const curDateStrFrc = toDateLabel(t);
-        const showDateFrc = curDateStrFrc !== _lastDateStrFrc;
-        if (showDateFrc) _lastDateStrFrc = curDateStrFrc;
+        if (!dayGroupsFrc[curDateStrFrc]) dayGroupsFrc[curDateStrFrc] = [];
+        dayGroupsFrc[curDateStrFrc].push(x);
 
-        const _dk2 = document.body.classList.contains('dark');
         return `
           <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
             stroke="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture&&!beyondFore?(_dk2?'#a080d0':'#6c5ce7'):beyondFore?(_dk2?'rgba(255,255,255,.1)':'#dde0e8'):(_dk2?'rgba(255,255,255,.12)':'#e0e4f0')}"
@@ -5362,17 +5469,19 @@ function buildMarkers() {
             opacity="${isNowTick?0.8:beyondFore?0.3:0.45}"/>
           ${showDot ? `<circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isNowTick?3.5:isFuture?2.5:3}"
             fill="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture?(_dk2?'#a080d0':'#6c5ce7'):(_dk2?'#ff4477':'#e84393')}" stroke="${_dk2?'rgba(255,255,255,.3)':'#fff'}" stroke-width="1.2" opacity="${isFuture?0.8:1}"/>` : ''}
-          <text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+32).toFixed(1)})"
-            x="${x.toFixed(1)}" y="${(PT+ch+32).toFixed(1)}"
-            font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#c0c0e0':'#636e8a'}" text-anchor="start" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
-          ${showDateFrc ? `<text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+44).toFixed(1)})"
-            x="${x.toFixed(1)}" y="${(PT+ch+44).toFixed(1)}"
-            font-size="8" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="start" font-family="Sarabun,sans-serif">${curDateStrFrc}</text>
-          <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
-            stroke="${_dk2?'#d080b0':'#e84393'}" stroke-width="1.5" opacity="0.5" stroke-dasharray="4,2"/>
-          <circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="${_dk2?'#d080b0':'#e84393'}" opacity="0.6"/>` : ''}
+          <text x="${x.toFixed(1)}" y="${(PT+ch+11).toFixed(1)}"
+            font-size="8" font-weight="600" fill="${_dk2?'#c0c0e0':'#555'}" text-anchor="middle" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
           `;
       }).join('');
+      // Date labels ตรงกลางกลุ่มของแต่ละวัน (row 2)
+      let dateLabelsFrc = '';
+      for (const [dateStr, xArr] of Object.entries(dayGroupsFrc)) {
+        const xMin = Math.min(...xArr);
+        const xMax = Math.max(...xArr);
+        const xMid = (xMin + xMax) / 2;
+        dateLabelsFrc += `<line x1="${xMin.toFixed(1)}" y1="${PT+ch+1}" x2="${xMin.toFixed(1)}" y2="${PT+ch+26}" stroke="${_dk2?'#d080b0':'#e84393'}" stroke-width="0.8" opacity="0.4"/>`;
+        dateLabelsFrc += `<text x="${xMid.toFixed(1)}" y="${(PT+ch+24).toFixed(1)}" font-size="9" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">${dateStr}</text>`;
+      }
 
       const hasHistory = destHist.length >= 1;
 
@@ -5462,7 +5571,7 @@ function buildMarkers() {
     <text x="${xNow.toFixed(1)}" y="${(PT-3).toFixed(1)}" font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#ff4477':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>
     <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
     <line x1="${PL}" y1="${(PT+ch).toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
-    ${yLabels}${hourlyMarks}
+    ${yLabels}${hourlyMarks}${dateLabelsFrc}
     <!-- Tooltip group -->
     <g id="chart-tt-${sensorId}" style="display:none;pointer-events:none;">
       <line id="chart-tt-line-${sensorId}" x1="0" y1="${PT}" x2="0" y2="${PT+ch}" stroke="#666" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
@@ -5588,7 +5697,7 @@ function buildMarkers() {
       lastXt = xx;
       var isNT = Math.abs(xt) < 0.05;
       xAx += '<line x1="' + xx.toFixed(1) + '" y1="' + PT + '" x2="' + xx.toFixed(1) + '" y2="' + (PT+ch) + '" stroke="' + (isNT?mc:'#e0d0e8') + '" stroke-width="' + (isNT?'1.5':'0.6') + '" ' + (isNT?'':'stroke-dasharray="2,4"') + ' opacity="' + (isNT?'0.7':'0.45') + '"/>';
-      xAx += '<text transform="rotate(-90 ' + xx.toFixed(1) + ' ' + (PT+ch+32) + ')" x="' + xx.toFixed(1) + '" y="' + (PT+ch+32) + '" font-size="9" font-weight="bold" fill="#222" text-anchor="start" font-family="monospace">' + toHM(hh) + '</text>';
+      xAx += '<text x="' + xx.toFixed(1) + '" y="' + (PT+ch+12) + '" font-size="8.5" font-weight="bold" fill="#222" text-anchor="middle" font-family="monospace">' + toHM(hh) + '</text>';
     }
 
     // smooth line + fill
@@ -6362,8 +6471,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour + KMZ Network + 1-Week Calibrated K · Firebase + github (M 12 เม.ย.69)</span>'
-      : '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (M 12 เม.ย.69)</span>';
+      ? '<span>⚠ rev23 — EC Pipe-Aware Contour + Pressure-Based Mixing + KMZ Network + Zone Influence · Firebase + github (อา 13 เม.ย.69)</span>'
+      : '<span>⚠ rev23 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (อา 13 เม.ย.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -11688,7 +11797,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev22.1 — EPANET Pipe-Aware Contour + KMZ Network (D/Material/Velocity) + Calibrated K + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (M 12 เม.ย.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev23 — EC Pipe-Aware Contour + Pressure-Based Mixing + EPANET Pipe Network + KMZ + Calibrated K + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (อา 13 เม.ย.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
