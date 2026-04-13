@@ -5391,21 +5391,14 @@ function buildMarkers() {
 
         const _dk2 = document.body.classList.contains('dark');
         return `
-          <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
-            stroke="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture&&!beyondFore?(_dk2?'#a080d0':'#6c5ce7'):beyondFore?(_dk2?'rgba(255,255,255,.1)':'#dde0e8'):(_dk2?'rgba(255,255,255,.12)':'#e0e4f0')}"
-            stroke-width="${isNowTick?1.5:0.7}" stroke-dasharray="${isNowTick?'':'2,3'}"
-            opacity="${isNowTick?0.8:beyondFore?0.3:0.45}"/>
-          ${showDot ? `<circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isNowTick?3.5:isFuture?2.5:3}"
-            fill="${isNowTick?(_dk2?'#ff4477':'#e84393'):isFuture?(_dk2?'#a080d0':'#6c5ce7'):(_dk2?'#ff4477':'#e84393')}" stroke="${_dk2?'rgba(255,255,255,.3)':'#fff'}" stroke-width="1.2" opacity="${isFuture?0.8:1}"/>` : ''}
+          ${isNowTick ? `<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
+            stroke="${_dk2?'#ff4477':'#e84393'}"
+            stroke-width="1.5" stroke-dasharray="2,3" opacity="0.8"/>` : ''}
           <text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+32).toFixed(1)})"
             x="${x.toFixed(1)}" y="${(PT+ch+32).toFixed(1)}"
             font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#c0c0e0':'#636e8a'}" text-anchor="start" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
-          ${showDateFrc ? `<text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+44).toFixed(1)})"
-            x="${x.toFixed(1)}" y="${(PT+ch+44).toFixed(1)}"
-            font-size="8" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="start" font-family="Sarabun,sans-serif">${curDateStrFrc}</text>
-          <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
-            stroke="${_dk2?'#d080b0':'#e84393'}" stroke-width="1.5" opacity="0.5" stroke-dasharray="4,2"/>
-          <circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="${_dk2?'#d080b0':'#e84393'}" opacity="0.6"/>` : ''}
+          ${showDateFrc ? `<text x="${x.toFixed(1)}" y="${(PT+ch+38).toFixed(1)}"
+            font-size="8" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">${curDateStrFrc}</text>` : ''}
           `;
       }).join('');
 
