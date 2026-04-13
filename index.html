@@ -5906,7 +5906,7 @@ function buildMarkers() {
           const ecSrcId  = ecPlantSensor ? ecPlantSensor.id : null;
           const ecLabel  = ecRootKey;
           if (ecTT > 0) {
-            decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId);
+            decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId, { rwHistKey: ecRootKey==='RAW_SAMLE'?'S1':ecRootKey==='RAW_MAEKLONG'?'S11':null });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, ecSrcVal, ecSrcVal*1.15, ecSrcVal*0.85);
           }
@@ -5925,7 +5925,7 @@ function buildMarkers() {
         }
         if (wTotal > 0) {
           ecMixed /= wTotal;
-          decayChart = buildEcForecastChart(ecMixed, labelParts.join('+'), useTTmix, s.id, ecNow, null);
+          decayChart = buildEcForecastChart(ecMixed, labelParts.join('+'), useTTmix, s.id, ecNow, null, { rwHistKey: (rootInfo&&rootInfo.mix&&rootInfo.mix[0]&&rootInfo.mix[0].root==='RAW_SAMLE')?'S1':(rootInfo&&rootInfo.mix&&rootInfo.mix[0]&&rootInfo.mix[0].root==='RAW_MAEKLONG')?'S11':null });
         }
       } else {
         // single source fallback
@@ -5934,7 +5934,7 @@ function buildMarkers() {
         const useTT      = rootSensor ? rootTT : ttHours;
         const useLabel   = (rootSensor ? rootLabel : tt.tt_label).replace(/^จาก\s*/, '');
         if (useSensor) {
-          decayChart = buildEcForecastChart(getParamVal(useSensor), useLabel, useTT, s.id, ecNow, useSensor.id);
+          decayChart = buildEcForecastChart(getParamVal(useSensor), useLabel, useTT, s.id, ecNow, useSensor.id, { rwHistKey: (rootLabel==='RAW_SAMLE'||rootLabel.includes('สำแล'))?'S1':(rootLabel==='RAW_MAEKLONG'||rootLabel.includes('แม่กลอง'))?'S11':null });
         }
       }
     }
