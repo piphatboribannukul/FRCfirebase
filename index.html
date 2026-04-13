@@ -3770,7 +3770,20 @@ function frcZone(lat, lon) {
                                 s.id === 'SP12' || s.id === 12);
   }
 
-  // ── 4. Nearest source fallback (จุดที่ไม่อยู่ใน polygon ไหนเลย) ──
+  // ── 4. Nearest zone polygon fallback (rev24: ใช้ centroid ของ polygon ที่ใกล้ที่สุด) ──
+  if (!nearest && window.CUSTOM_ZONES) {
+    let minDist = Infinity;
+    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+      if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+      const cx = zone.coords.reduce((a,c)=>a+c[0],0)/zone.coords.length;
+      const cy = zone.coords.reduce((a,c)=>a+c[1],0)/zone.coords.length;
+      const d = (cx-lat)**2+(cy-lon)**2;
+      if (d < minDist) {
+        const src = sources.find(s => String(s.id) === sid);
+        if (src && src.frc > 0) { minDist = d; nearest = src; }
+      }
+    }
+  }
   if (!nearest) {
     let minDist = Infinity;
     for (const s of sources) {
@@ -3892,7 +3905,35 @@ function buildIdwCache() {
     for(let i=0; i<rows; i++) {
       const lon = CACHE_LON0 + i * dlon;
       if (PARAM_MODE === 'ec') {
-        _idwCache[j * rows + i] = _idw(lat, lon);
+        // rev24: EC zone-aware — ถ้าอยู่ใน CUSTOM_ZONES ใช้ source ของ zone นั้น
+        let _ecZoneVal = null;
+        if (window.CUSTOM_ZONES) {
+          for (const [_esid, _ezone] of Object.entries(window.CUSTOM_ZONES)) {
+            if (_esid.startsWith('VC') || !_ezone.coords || _ezone.coords.length < 3) continue;
+            if (!_pip(lat, lon, _ezone.coords)) continue;
+            const _esrc = SENSORS.find(s => String(s.id) === _esid);
+            if (_esrc) { _ecZoneVal = getParamVal(_esrc); break; }
+          }
+        }
+        if (_ecZoneVal !== null) {
+          _idwCache[j * rows + i] = _ecZoneVal;
+        } else {
+          // rev24: nearest zone polygon centroid for EC
+          let _ecNearest = null, _ecMinD = Infinity;
+          if (window.CUSTOM_ZONES) {
+            for (const [_esid2, _ezone2] of Object.entries(window.CUSTOM_ZONES)) {
+              if (_esid2.startsWith('VC') || !_ezone2.coords || _ezone2.coords.length < 3) continue;
+              const _ecx = _ezone2.coords.reduce((a,c)=>a+c[0],0)/_ezone2.coords.length;
+              const _ecy = _ezone2.coords.reduce((a,c)=>a+c[1],0)/_ezone2.coords.length;
+              const _ed = (_ecx-lat)**2+(_ecy-lon)**2;
+              if (_ed < _ecMinD) {
+                const _esrc2 = SENSORS.find(s => String(s.id) === _esid2);
+                if (_esrc2) { _ecMinD = _ed; _ecNearest = _esrc2; }
+              }
+            }
+          }
+          _idwCache[j * rows + i] = _ecNearest ? getParamVal(_ecNearest) : _idw(lat, lon);
+        }
       } else {
         // Pipe-network contour: ใช้ค่าจริงตามเส้นท่อ + zone influence
         // 1. VC zone override (highest priority)
@@ -9971,8 +10012,8 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   var allVals=actPts.map(function(p){return p.v;}).concat(forePts.map(function(p){return p.v;})).concat(futPts.map(function(p){return p.v;}));
   var yMin=0, yMax=Math.max.apply(null,allVals)*1.2;
   if(param==='frc')yMax=Math.max(yMax,2.0);else yMax=Math.max(yMax,400);
-  var tMin=actPts[0].ts;
-  var tMax=futPts.length>0?futPts[futPts.length-1].ts:Math.max(actPts[actPts.length-1].ts,nowMs);
+  var tMin0=actPts[0].ts;var tMinDate=new Date(tMin0);tMinDate.setHours(0,0,0,0);var tMin=tMinDate.getTime();
+  var tMax=Math.max(actPts[actPts.length-1].ts,nowMs+1*3600000);
   tMax=Math.max(tMax,nowMs+1*3600000);
   if(tMax-tMin<3600000)tMax=tMin+3600000;
 
@@ -10008,8 +10049,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     var isFut=tx>nowMs;
     ctx.fillStyle=isFut?(isDk?'#a080d0':'#6050a0'):(isDk?'#b0b0d0':'#806080');
     ctx.fillText(String(dd.getHours()).padStart(2,'0')+':00',px(tx),PT+ch+13);
-    ctx.strokeStyle=isDk?'rgba(255,255,255,.04)':'rgba(0,0,0,.04)';ctx.lineWidth=0.3;
-    ctx.beginPath();ctx.moveTo(px(tx),PT);ctx.lineTo(px(tx),PT+ch);ctx.stroke();
+    // rev24: vertical grid lines removed (keep only ตอนนี้ line)
   }
 
   // FRC thresholds
@@ -10034,14 +10074,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     for(var bi2=forePts.length-1;bi2>=0;bi2--)ctx.lineTo(px(forePts[bi2].ts),py(Math.max(0,forePts[bi2].v*0.85)));
     ctx.closePath();ctx.fill();
   }
-  // Confidence band (future)
-  if(futPts.length>=2){
-    ctx.fillStyle=isDk?'rgba(120,80,200,0.10)':'rgba(100,70,200,0.06)';
-    ctx.beginPath();
-    for(var ci=0;ci<futPts.length;ci++)ctx.lineTo(px(futPts[ci].ts),py(futPts[ci].v*1.15));
-    for(var ci2=futPts.length-1;ci2>=0;ci2--)ctx.lineTo(px(futPts[ci2].ts),py(Math.max(0,futPts[ci2].v*0.85)));
-    ctx.closePath();ctx.fill();
-  }
+  // rev24: future band removed
 
   // forecast line (past) — dashed green
   if(forePts.length>=2){
@@ -10050,17 +10083,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     for(var fl=1;fl<forePts.length;fl++)ctx.lineTo(px(forePts[fl].ts),py(forePts[fl].v));
     ctx.stroke();ctx.setLineDash([]);
   }
-  // forecast line (future) — dashed purple
-  if(futPts.length>=2){
-    ctx.strokeStyle=isDk?'#a080d0':'#7c5ce7';ctx.lineWidth=1.8;ctx.setLineDash([6,4]);
-    ctx.beginPath();ctx.moveTo(px(futPts[0].ts),py(futPts[0].v));
-    for(var fl2=1;fl2<futPts.length;fl2++)ctx.lineTo(px(futPts[fl2].ts),py(futPts[fl2].v));
-    ctx.stroke();ctx.setLineDash([]);
-    // label
-    var lastFut=futPts[futPts.length-1];
-    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.font='bold 9px Sarabun';ctx.textAlign='left';
-    ctx.fillText('คาดการณ์',px(lastFut.ts)+4,py(lastFut.v)+3);
-  }
+  // rev24: future forecast line removed
 
   // Actual line
   var actColor=param==='frc'?(isDk?'#ff4477':'#e84393'):(isDk?'#4ea8de':'#1565c0');
@@ -10088,12 +10111,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     ctx.fillStyle=isDk?'#4ecca3':'#00b894';ctx.fillText('คาดการณ์ย้อนหลัง',lx+16,ly);
     lx+=140;
   }
-  if(futPts.length>0){
-    ctx.strokeStyle=isDk?'#a080d0':'#7c5ce7';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
-    ctx.beginPath();ctx.moveTo(lx,ly-2);ctx.lineTo(lx+12,ly-2);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.fillText('คาดการณ์อนาคต (+'+Math.round(ttHours)+'ชม.)',lx+16,ly);
-    lx+=180;
-  }
+  // rev24: future legend removed
   if(forePts.length>0||futPts.length>0){
     ctx.fillStyle=isDk?'rgba(78,204,163,0.35)':'rgba(0,184,148,0.25)';ctx.fillRect(lx,ly-6,12,10);
     ctx.fillStyle=isDk?'#90b0a0':'#607060';ctx.fillText('Band ±15%',lx+16,ly);
