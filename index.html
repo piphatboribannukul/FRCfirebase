@@ -5081,10 +5081,7 @@ function buildMarkers() {
         (isNowTick?'<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+lineColor+'" stroke-width="'+sw+'" stroke-dasharray="2,3" opacity="0.8"/>':'')
        
        +'<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+32).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+32).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#c0c0e0':'#222')+'" text-anchor="start" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>'
-       +(showDate ? '<text x="'+x.toFixed(1)+'" y="'+(PT+ch+75).toFixed(1)+'" font-size="8" font-weight="700" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+curDateStr+'</text>'
-       
-       ' : '')
-       +('');
+       +(showDate ? '<text x="'+x.toFixed(1)+'" y="'+(PT+ch+75).toFixed(1)+'" font-size="8" font-weight="700" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+curDateStr+'</text>' : '');
     }
 
     const endStatus = ecEnd >= EC_CONFIG.hi ? '⚠ เกินมาตรฐาน' : ecEnd >= EC_CONFIG.lo ? '✓ ปกติ' : '↓ ต่ำ';
