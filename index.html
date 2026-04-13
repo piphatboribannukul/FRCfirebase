@@ -5100,12 +5100,26 @@ function buildMarkers() {
       if (!ecDayGroups[curDateStr]) ecDayGroups[curDateStr] = [];
       ecDayGroups[curDateStr].push(x);
     }
-    // rev23: date label row 2 (ตรงกลางกลุ่มวัน — แบบ Excel)
-    for (var _dg of Object.entries(ecDayGroups)) {
-      var dgDate = _dg[0], dgXs = _dg[1];
+    // rev23: date label row 2 — เส้นแบ่งตรง 00:00 จริง, วันที่ตรงกลาง tick group
+    var ecDayKeys = Object.keys(ecDayGroups);
+    for (var _di = 0; _di < ecDayKeys.length; _di++) {
+      var dgDate = ecDayKeys[_di], dgXs = ecDayGroups[dgDate];
       var dgMin = Math.min.apply(null, dgXs), dgMax = Math.max.apply(null, dgXs);
       var dgMid = (dgMin + dgMax) / 2;
-      hourlyMarksEc += '<line x1="'+dgMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+dgMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dkEc?'#6090cc':'#1565c0')+'" stroke-width="0.8" opacity="0.4"/>';
+      // คำนวณ t offset ของ 00:00 ของวันนี้: t_midnight = -(nowHr % 24) + dayOffset*24
+      // ใช้ tick แรกของกลุ่ม หา date แล้วคำนวณ midnight
+      var firstT = visibleTicksEc.find(function(tk){ return toDateLabel(tk.t) === dgDate; });
+      if (firstT) {
+        var dObj = new Date(nowMs + firstT.t * 3600000);
+        dObj.setHours(0, 0, 0, 0);
+        var tMidnight = (dObj.getTime() - nowMs) / 3600000;
+        var xMidnight = px(tMidnight);
+        // เส้นแบ่งวันที่ 00:00 (ยกเว้นวันแรกสุด)
+        if (_di > 0 && xMidnight >= PL && xMidnight <= PL + cw) {
+          hourlyMarksEc += '<line x1="'+xMidnight.toFixed(1)+'" y1="'+PT+'" x2="'+xMidnight.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dkEc?'#6090cc':'#1565c0')+'" stroke-width="1" opacity="0.5"/>';
+        }
+      }
+      // วันที่ตรงกลาง tick group
       hourlyMarksEc += '<text x="'+dgMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dkEc?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+dgDate+'</text>';
     }
 
@@ -5424,12 +5438,22 @@ function buildMarkers() {
             font-size="8" font-weight="600" fill="${_dk2?'#c0c0e0':'#555'}" text-anchor="middle" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
           `;
       }).join('');
-      // rev23: date labels ตรงกลางกลุ่มวัน (row 2) — ต่อเข้า hourlyMarks
-      for (var _fg of Object.entries(frcDayGroups)) {
-        var fgD = _fg[0], fgXs = _fg[1];
+      // rev23: date labels — เส้นแบ่งตรง 00:00 จริง, วันที่ตรงกลาง tick group
+      var frcDayKeys = Object.keys(frcDayGroups);
+      for (var _fi = 0; _fi < frcDayKeys.length; _fi++) {
+        var fgD = frcDayKeys[_fi], fgXs = frcDayGroups[fgD];
         var fgMin = Math.min.apply(null, fgXs), fgMax = Math.max.apply(null, fgXs);
         var fgMid = (fgMin + fgMax) / 2;
-        hourlyMarks += '<line x1="'+fgMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+fgMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dk2?'#d080b0':'#e84393')+'" stroke-width="0.8" opacity="0.4"/>';
+        var firstTF = visibleTicks.find(function(tk){ return toDateLabel(tk.t) === fgD; });
+        if (firstTF) {
+          var dObjF = new Date(nowMs + firstTF.t * 3600000);
+          dObjF.setHours(0, 0, 0, 0);
+          var tMidnightF = (dObjF.getTime() - nowMs) / 3600000;
+          var xMidnightF = px(tMidnightF);
+          if (_fi > 0 && xMidnightF >= PL && xMidnightF <= PL + cw) {
+            hourlyMarks += '<line x1="'+xMidnightF.toFixed(1)+'" y1="'+PT+'" x2="'+xMidnightF.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dk2?'#d080b0':'#e84393')+'" stroke-width="1" opacity="0.5"/>';
+          }
+        }
         hourlyMarks += '<text x="'+fgMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk2?'#d080b0':'#e84393')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+fgD+'</text>';
       }
 
