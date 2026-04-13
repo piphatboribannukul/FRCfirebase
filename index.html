@@ -2781,12 +2781,10 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl ec">
         <tr><th colspan="2">Contour Model</th></tr>
-        <tr><td>วิธีคำนวณ</td><td>Zone Influence custom + Pipe Network + Pressure (rev23)</td></tr>
+        <tr><td>วิธีคำนวณ</td><td>Zone Influence + Pipe Network + Pressure Mixing (rev23)</td></tr>
         <tr><td>Zone หลัก</td><td>CUSTOM_ZONES polygon วาดไว้ล่วงหน้า</td></tr>
-        <tr><td>Pipe Network</td><td>KMZ pipe grid (Dijkstra) ระบุ source จริงตามเส้นท่อ</td></tr>
-        <tr><td>Pressure</td><td>RTU pressure factor ปรับทิศทาง flow + mixing weight</td></tr>
-        <tr><td>Mixing Zone</td><td>จุดที่ pipe ≠ zone → ผสม EC ตาม pressure (20-80%)</td></tr>
-        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน+ไม่มี pipe)</td></tr>
+        <tr><td>Fallback</td><td>nearest-neighbor สจ./โรงผลิต (จุดนอกโซน)</td></tr>
+        <tr><td>Zone Editor</td><td>วาด/แก้ไข polygon · circle บนแผนที่ · export/import JSON</td></tr>
         <tr><td>Decay</td><td>ไม่มี (EC = conservative parameter)</td></tr>
         <tr><td>ตัดออก</td><td>TR1/TR2/TR3/MTR (อุโมงค์ส่งน้ำ)</td></tr>
       </table>
@@ -3877,36 +3875,18 @@ function _pipeAwareFrc(lat, lon, j, i) {
   return sensor.frc * epanetDecay(pd.dist_km * pFactor, sensor);
 }
 
-// ── rev23: Pipe-aware EC — ใช้ pipe network + pressure เพื่อหา source จริง ──────
-// EC ไม่ decay แต่ต้องรู้ว่า "น้ำจาก source ไหนไหลมาถึงจุดนี้จริงๆ"
-// ใช้ pipe grid (Dijkstra connectivity) + pressure direction เพื่อระบุ source
-// จุดผสมน้ำ: ถ้า pipe ชี้ไป source A แต่ zone กำหนด source B → ผสม EC ตามสัดส่วน pressure
+// rev23: Pipe-aware EC — ใช้ pipe network + pressure เพื่อหา source จริง
 function _pipeAwareEc(lat, lon, j, i) {
-  const pd = _getPipeDist(j, i);
-  if (!pd) return null; // no pipe data → fallback
-
-  // หา source sensor ที่ pipe grid ชี้ไป
-  const pipeSensor = SENSORS.find(s => String(s.id) === pd.sensorId);
+  var pd = _getPipeDist(j, i);
+  if (!pd) return null;
+  var pipeSensor = SENSORS.find(function(s){ return String(s.id) === pd.sensorId; });
   if (!pipeSensor) return null;
-
-  const pipeEc = getParamVal(pipeSensor);
-
-  // rev23: Pressure-based flow direction adjustment
-  // ถ้า pressure สูง (pFactor < 1) → น้ำไหลแรงจาก source นี้ → เชื่อ pipe grid มากขึ้น
-  // ถ้า pressure ต่ำ (pFactor > 1) → น้ำไหลช้า/อาจมีน้ำจาก source อื่นผสม
-  const pFactor = _getPressureFactor(j, i);
-
-  // ถ้า pressure factor ปกติ (0.7-1.3) → ใช้ค่า EC จาก pipe source ตรงๆ
+  var pipeEc = getParamVal(pipeSensor);
+  var pFactor = _getPressureFactor(j, i);
   if (pFactor <= 1.3) return pipeEc;
-
-  // ถ้า pressure ต่ำมาก (>1.3) → พื้นที่ชายขอบ อาจมีน้ำจาก source อื่นผสม
-  // ผสม EC กับ nearest source ตาม zone (weighted by inverse pressure factor)
-  const _idwFn = window.idwZone || idwZone;
-  const zoneEc = _idwFn(lat, lon);
-
-  // Weight: pipe source มี weight มากขึ้นเมื่อ pressure สูง (pFactor ต่ำ)
-  // pFactor=1.3 → wPipe=1.0 (ใช้ pipe ล้วน), pFactor=2.0 → wPipe≈0.43
-  const wPipe = Math.max(0, Math.min(1, 1.3 / pFactor));
+  var _idwFn = window.idwZone || idwZone;
+  var zoneEc = _idwFn(lat, lon);
+  var wPipe = Math.max(0, Math.min(1, 1.3 / pFactor));
   return pipeEc * wPipe + zoneEc * (1 - wPipe);
 }
 
@@ -3927,73 +3907,49 @@ function buildIdwCache() {
     for(let i=0; i<rows; i++) {
       const lon = CACHE_LON0 + i * dlon;
       if (PARAM_MODE === 'ec') {
-        // ══ rev23: Pipe-aware EC contour ══════════════════════════════════
-        // Priority 1: VC zone polygon → ใช้ EC จาก source ของ VC ตรงๆ
-        let ecVal = null;
+        // rev23: Pipe-aware EC contour
+        // P1: VC zone
+        var ecVal = null;
         if (typeof VC_STATIONS !== 'undefined' && window.CUSTOM_ZONES) {
-          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+          for (var _e1 of Object.entries(window.CUSTOM_ZONES)) {
+            var sid = _e1[0], zone = _e1[1];
             if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
             if (!_pip(lat, lon, zone.coords)) continue;
-            const vc = VC_STATIONS.find(v => v.id === sid);
+            var vc = VC_STATIONS.find(function(v){ return v.id === sid; });
             if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
-            const src = SENSORS.find(x => String(x.id) === vc.sourceId);
+            var src = SENSORS.find(function(x){ return String(x.id) === vc.sourceId; });
             if (src) { ecVal = getParamVal(src); break; }
           }
         }
-        if (ecVal !== null) {
-          _idwCache[j * rows + i] = ecVal;
-          continue;
-        }
-
-        // Priority 2: CUSTOM_ZONES polygon (สถานีสูบจ่าย) + pipe network
-        //   ถ้าจุดอยู่ใน zone polygon → ใช้ EC ของ source นั้น
-        //   แต่ถ้ามี pipe data ชี้ไป source อื่น + pressure ต่ำ → ผสม EC
+        if (ecVal !== null) { _idwCache[j * rows + i] = ecVal; continue; }
+        // P2: Custom Zone + pipe network mixing
         if (window.CUSTOM_ZONES) {
-          const sources = _ensureFrcSources();
-          for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
-            if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
-            if (!_pip(lat, lon, zone.coords)) continue;
-            const src = sources.find(s => String(s.id) === sid);
-            if (!src) continue;
-            const zoneEc = getParamVal(src);
-
-            // rev23: ตรวจ pipe grid — ถ้า pipe ชี้ไป source เดียวกับ zone → ยืนยัน
-            // ถ้า pipe ชี้ไป source อื่น → จุดผสมน้ำ ผสม EC ตาม pressure weight
-            const pd = _getPipeDist ? _getPipeDist(j, i) : null;
-            if (pd && String(pd.sensorId) !== String(sid)) {
-              // Pipe ชี้ไปคนละ source กับ zone → mixing zone!
-              const pipeSrc = SENSORS.find(s => String(s.id) === pd.sensorId);
+          var sources = _ensureFrcSources();
+          for (var _e2 of Object.entries(window.CUSTOM_ZONES)) {
+            var sid2 = _e2[0], zone2 = _e2[1];
+            if (sid2.startsWith('VC') || !zone2.coords || zone2.coords.length < 3) continue;
+            if (!_pip(lat, lon, zone2.coords)) continue;
+            var src2 = sources.find(function(s){ return String(s.id) === sid2; });
+            if (!src2) continue;
+            var zoneEc = getParamVal(src2);
+            var pd = _getPipeDist ? _getPipeDist(j, i) : null;
+            if (pd && String(pd.sensorId) !== String(sid2)) {
+              var pipeSrc = SENSORS.find(function(s){ return String(s.id) === pd.sensorId; });
               if (pipeSrc) {
-                const pipeEc = getParamVal(pipeSrc);
-                const pFactor = _getPressureFactor(j, i);
-                // pFactor ต่ำ = pressure สูง = pipe source มีอิทธิพลมาก
-                // pFactor สูง = pressure ต่ำ = zone source มีอิทธิพลมาก
-                // Clamp mixing weight: pipe influence 20-80%
-                const wPipe = Math.max(0.2, Math.min(0.8, 1.0 / pFactor));
-                ecVal = pipeEc * wPipe + zoneEc * (1 - wPipe);
-              } else {
-                ecVal = zoneEc;
-              }
-            } else {
-              // Pipe ยืนยัน source เดียวกับ zone หรือไม่มี pipe data → ใช้ zone EC
-              ecVal = zoneEc;
-            }
+                var pipeEc = getParamVal(pipeSrc);
+                var pF = _getPressureFactor(j, i);
+                var wP = Math.max(0.2, Math.min(0.8, 1.0 / pF));
+                ecVal = pipeEc * wP + zoneEc * (1 - wP);
+              } else { ecVal = zoneEc; }
+            } else { ecVal = zoneEc; }
             break;
           }
         }
-        if (ecVal !== null) {
-          _idwCache[j * rows + i] = ecVal;
-          continue;
-        }
-
-        // Priority 3: Pipe-network EC (พื้นที่ไม่มี polygon ครอบ)
-        const pipeEc = _pipeAwareEc(lat, lon, j, i);
-        if (pipeEc !== null) {
-          _idwCache[j * rows + i] = pipeEc;
-          continue;
-        }
-
-        // Priority 4: Fallback — nearest source zone (geographic)
+        if (ecVal !== null) { _idwCache[j * rows + i] = ecVal; continue; }
+        // P3: Pipe-network EC
+        var pipeEc2 = _pipeAwareEc(lat, lon, j, i);
+        if (pipeEc2 !== null) { _idwCache[j * rows + i] = pipeEc2; continue; }
+        // P4: Fallback
         _idwCache[j * rows + i] = _idw(lat, lon);
       } else {
         // Pipe-network contour: ใช้ค่าจริงตามเส้นท่อ + zone influence
@@ -5113,9 +5069,8 @@ function buildMarkers() {
     }
 
     let hourlyMarksEc = '';
-    // rev23: สะสม tick ตามวัน เพื่อวาง date label ตรงกลางกลุ่ม (แบบ Excel)
-    const _dk = document.body.classList.contains('dark');
-    const dayGroups = {}; // { dateStr: [x1, x2, ...] }
+    var _dkEc = document.body.classList.contains('dark');
+    var ecDayGroups = {};
     for (const { t } of visibleTicksEc) {
       const x = px(t);
       const isFuture = t > 0;
@@ -5135,26 +5090,23 @@ function buildMarkers() {
       const lineColor = isNowTick ? '#1565c0' : beyondFore ? '#ccc' : isFuture ? '#4060c0' : '#b0c8e8';
       const sw = isNowTick ? 1.5 : 0.7;
       const r  = isNowTick ? 3.5 : isFuture ? 2.5 : 3;
-      // Time label (row 1 — ใต้กราฟ)
+      // rev23: time label row 1 (แนวนอน)
       hourlyMarksEc +=
         '<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+lineColor+'" stroke-width="'+sw+'" stroke-dasharray="2,3" opacity="'+(isNowTick?0.8:beyondFore?0.3:0.45)+'"/>'
        +(showDot ? '<circle cx="'+x.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r+'" fill="'+(isNowTick?'#1565c0':isFuture?'#4060c0':'#1565c0')+'" stroke="#fff" stroke-width="1.2" opacity="'+(isFuture?0.8:1)+'"/>' : '')
-       +'<text x="'+x.toFixed(1)+'" y="'+(PT+ch+11).toFixed(1)+'" font-size="8" font-weight="600" fill="'+(_dk?'#c0c0e0':'#555')+'" text-anchor="middle" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>';
-      // สะสม x ของแต่ละวัน
-      const curDateStr = toDateLabel(t);
-      if (!dayGroups[curDateStr]) dayGroups[curDateStr] = [];
-      dayGroups[curDateStr].push(x);
+       +'<text x="'+x.toFixed(1)+'" y="'+(PT+ch+11).toFixed(1)+'" font-size="8" font-weight="600" fill="'+(_dkEc?'#c0c0e0':'#555')+'" text-anchor="middle" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>';
+      // สะสม x ตามวัน
+      var curDateStr = toDateLabel(t);
+      if (!ecDayGroups[curDateStr]) ecDayGroups[curDateStr] = [];
+      ecDayGroups[curDateStr].push(x);
     }
-    // Date labels (row 2 — ตรงกลางกลุ่มของแต่ละวัน)
-    for (const [dateStr, xArr] of Object.entries(dayGroups)) {
-      const xMin = Math.min(...xArr);
-      const xMax = Math.max(...xArr);
-      const xMid = (xMin + xMax) / 2;
-      // เส้นแบ่งวัน (ที่ tick แรกของวัน)
-      hourlyMarksEc += '<line x1="'+xMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+xMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dk?'#6090cc':'#1565c0')+'" stroke-width="0.8" opacity="0.4"/>';
-      // Date label ตรงกลาง
-      hourlyMarksEc += '<text x="'+xMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+dateStr+'</text>';
-    }
+    // rev23: date label row 2 (ตรงกลางกลุ่มวัน — แบบ Excel)
+    for (var _dg of Object.entries(ecDayGroups)) {
+      var dgDate = _dg[0], dgXs = _dg[1];
+      var dgMin = Math.min.apply(null, dgXs), dgMax = Math.max.apply(null, dgXs);
+      var dgMid = (dgMin + dgMax) / 2;
+      hourlyMarksEc += '<line x1="'+dgMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+dgMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dkEc?'#6090cc':'#1565c0')+'" stroke-width="0.8" opacity="0.4"/>';
+      hourlyMarksEc += '<text x="'+dgMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dkEc?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+dgDate+'</text>';
     }
 
     const endStatus = ecEnd >= EC_CONFIG.hi ? '⚠ เกินมาตรฐาน' : ecEnd >= EC_CONFIG.lo ? '✓ ปกติ' : '↓ ต่ำ';
@@ -5436,9 +5388,9 @@ function buildMarkers() {
         if (x - lastX >= MIN_TICK_PX) { visibleTicks.push(tick); lastX = x; }
       }
 
-      const _dk2 = document.body.classList.contains('dark');
-      const dayGroupsFrc = {};
-      const hourlyMarks = visibleTicks.map(({ t, hr }) => {
+      var _dk2 = document.body.classList.contains('dark');
+      var frcDayGroups = {};
+      let hourlyMarks = visibleTicks.map(({ t, hr }) => {
         const x = px(t);
         const isFuture = t > 0;
         const beyondFore = t > ttHours;
@@ -5456,11 +5408,10 @@ function buildMarkers() {
 
         const cy = fVal != null ? pyClamp(fVal) : PT + ch/2;
         const isNowTick = Math.abs(t) < 0.05;
-
         // สะสม x ตามวัน
-        const curDateStrFrc = toDateLabel(t);
-        if (!dayGroupsFrc[curDateStrFrc]) dayGroupsFrc[curDateStrFrc] = [];
-        dayGroupsFrc[curDateStrFrc].push(x);
+        var curDateStrFrc = toDateLabel(t);
+        if (!frcDayGroups[curDateStrFrc]) frcDayGroups[curDateStrFrc] = [];
+        frcDayGroups[curDateStrFrc].push(x);
 
         return `
           <line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(PT+ch).toFixed(1)}"
@@ -5473,14 +5424,13 @@ function buildMarkers() {
             font-size="8" font-weight="600" fill="${_dk2?'#c0c0e0':'#555'}" text-anchor="middle" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
           `;
       }).join('');
-      // Date labels ตรงกลางกลุ่มของแต่ละวัน (row 2)
-      let dateLabelsFrc = '';
-      for (const [dateStr, xArr] of Object.entries(dayGroupsFrc)) {
-        const xMin = Math.min(...xArr);
-        const xMax = Math.max(...xArr);
-        const xMid = (xMin + xMax) / 2;
-        dateLabelsFrc += `<line x1="${xMin.toFixed(1)}" y1="${PT+ch+1}" x2="${xMin.toFixed(1)}" y2="${PT+ch+26}" stroke="${_dk2?'#d080b0':'#e84393'}" stroke-width="0.8" opacity="0.4"/>`;
-        dateLabelsFrc += `<text x="${xMid.toFixed(1)}" y="${(PT+ch+24).toFixed(1)}" font-size="9" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">${dateStr}</text>`;
+      // rev23: date labels ตรงกลางกลุ่มวัน (row 2) — ต่อเข้า hourlyMarks
+      for (var _fg of Object.entries(frcDayGroups)) {
+        var fgD = _fg[0], fgXs = _fg[1];
+        var fgMin = Math.min.apply(null, fgXs), fgMax = Math.max.apply(null, fgXs);
+        var fgMid = (fgMin + fgMax) / 2;
+        hourlyMarks += '<line x1="'+fgMin.toFixed(1)+'" y1="'+(PT+ch+1)+'" x2="'+fgMin.toFixed(1)+'" y2="'+(PT+ch+26)+'" stroke="'+(_dk2?'#d080b0':'#e84393')+'" stroke-width="0.8" opacity="0.4"/>';
+        hourlyMarks += '<text x="'+fgMid.toFixed(1)+'" y="'+(PT+ch+24).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk2?'#d080b0':'#e84393')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+fgD+'</text>';
       }
 
       const hasHistory = destHist.length >= 1;
@@ -5571,7 +5521,7 @@ function buildMarkers() {
     <text x="${xNow.toFixed(1)}" y="${(PT-3).toFixed(1)}" font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#ff4477':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">ตอนนี้</text>
     <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
     <line x1="${PL}" y1="${(PT+ch).toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${(PT+ch).toFixed(1)}" stroke="${document.body.classList.contains('dark')?'rgba(255,255,255,.15)':'#d0d5e0'}" stroke-width="1"/>
-    ${yLabels}${hourlyMarks}${dateLabelsFrc}
+    ${yLabels}${hourlyMarks}
     <!-- Tooltip group -->
     <g id="chart-tt-${sensorId}" style="display:none;pointer-events:none;">
       <line id="chart-tt-line-${sensorId}" x1="0" y1="${PT}" x2="0" y2="${PT+ch}" stroke="#666" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
@@ -6471,8 +6421,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev23 — EC Pipe-Aware Contour + Pressure-Based Mixing + KMZ Network + Zone Influence · Firebase + github (อา 13 เม.ย.69)</span>'
-      : '<span>⚠ rev23 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (อา 13 เม.ย.69)</span>';
+      ? '<span>⚠ rev23 — EC Pipe-Aware Contour + Pressure Mixing + KMZ Network + Calibrated K · Firebase + github (M 12 เม.ย.69)</span>'
+      : '<span>⚠ rev23 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (M 12 เม.ย.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -11797,7 +11747,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev23 — EC Pipe-Aware Contour + Pressure-Based Mixing + EPANET Pipe Network + KMZ + Calibrated K + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (อา 13 เม.ย.69)</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev23 — EC+FRC Pipe-Aware Contour + Pressure Mixing + KMZ Network + Calibrated K + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check (M 12 เม.ย.69)</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
