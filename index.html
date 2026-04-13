@@ -2,7 +2,60 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=
+
+    // ══════ rev26: Pipe Interpolation Layers (Pressure + EC along pipes) ══════
+    window._pipePressureGroup = L.layerGroup();
+    window._pipeEcGroup = L.layerGroup();
+    setTimeout(function(){
+      try {
+        var rtuOn = (window._rtuLive || []).filter(function(r){return r.lP > 0;});
+        var ecSensors = typeof SENSORS!=='undefined' ? SENSORS.filter(function(s){return s.ec>0;}) : [];
+        if (!rtuOn.length) { console.warn('[PipeInterp] No RTU online'); return; }
+        var pipeSegs = [];
+        if (typeof pipeNetGroup !== 'undefined') {
+          pipeNetGroup.eachLayer(function(layer) {
+            var ll = layer.getLatLngs();
+            if (ll && ll.length >= 2) pipeSegs.push(ll);
+          });
+        }
+        if (!pipeSegs.length) { console.warn('[PipeInterp] No pipe segments'); return; }
+        function pressColor(p) {
+          return p>=30?'#ef4444':p>=20?'#f97316':p>=15?'#22c55e':p>=10?'#3b82f6':p>=5?'#06b6d4':'#6b7280';
+        }
+        function ecInterpColor(ec) {
+          return ec>=400?'#ef4444':ec>=300?'#f97316':ec>=250?'#eab308':ec>=200?'#22c55e':ec>=150?'#06b6d4':'#3b82f6';
+        }
+        function idw3(lat, lon, pts, fn) {
+          var arr = [];
+          for (var i=0; i<pts.length; i++) {
+            var v = fn(pts[i]);
+            if (v==null || isNaN(v)) continue;
+            var d = Math.sqrt(Math.pow(pts[i].lat-lat,2)+Math.pow(pts[i].lon-lon,2))*111;
+            arr.push({d:Math.max(d,0.01), v:v});
+          }
+          arr.sort(function(a,b){return a.d-b.d;});
+          var wS=0, vS=0;
+          for (var j=0; j<Math.min(3,arr.length); j++) { var w=1/(arr[j].d*arr[j].d); wS+=w; vS+=w*arr[j].v; }
+          return wS>0 ? vS/wS : null;
+        }
+        var prR = L.canvas({padding:0.3});
+        var ecR = L.canvas({padding:0.3});
+        var prC=0, ecC=0;
+        var step = Math.max(1, Math.floor(pipeSegs.length/3000));
+        for (var si=0; si<pipeSegs.length; si+=step) {
+          var seg = pipeSegs[si];
+          var mLat = (seg[0].lat+seg[seg.length-1].lat)/2;
+          var mLon = (seg[0].lng+seg[seg.length-1].lng)/2;
+          var pV = idw3(mLat, mLon, rtuOn.map(function(r){return {lat:r.lt,lon:r.ln,v:r.lP};}), function(p){return p.v;});
+          if (pV!=null) { L.polyline(seg,{color:pressColor(pV),weight:2.5,opacity:0.7,interactive:false,renderer:prR}).addTo(window._pipePressureGroup); prC++; }
+          var eV = idw3(mLat, mLon, ecSensors.map(function(s){return {lat:s.lat,lon:s.lon,v:s.ec};}), function(p){return p.v;});
+          if (eV!=null) { L.polyline(seg,{color:ecInterpColor(eV),weight:2.5,opacity:0.7,interactive:false,renderer:ecR}).addTo(window._pipeEcGroup); ecC++; }
+        }
+        console.log('[PipeInterp] pressure='+prC+', EC='+ecC+' segments');
+      } catch(e) { console.warn('[PipeInterp] Error:', e); }
+    }, 5000);
+1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2134,7 +2187,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev25.1</span>
+  <span id="v2-badge">⬡ rev26+ecinter.1</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2318,7 +2371,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="toggle-row"><span>เส้น 0.2 / 1.0 mg/L</span><div class="tog on" id="t-thresh" onclick="toggleLayer('thresh')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🔧 โครงข่ายท่อ EPANET</span><div class="tog on" id="t-pipes" onclick="toggleLayer('pipes')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🔵 แนวท่อ MWA (KMZ)</span><div class="tog off" id="t-pipelines" onclick="toggleLayer('pipelines')"><div class="tok"></div></div></div>
-    <div class="toggle-row"><span>📡 RTU Live (236 สถานี)</span><div class="tog off" id="t-rtu" onclick="toggleLayer('rtu')"><div class="tok"></div></div></div>
+    <div class="toggle-row"><span>📡 RTU Live (236 สถานี)</span><div class="tog off" id="t-rtu" onclick="toggleLayer('rtu')"><div class="tok"></div></div>    <div class="toggle-row"><span>🔴 Pressure ตามแนวท่อ</span><div class="tog off" id="t-pipe-pressure" onclick="toggleLayer('pipe-pressure')"><div class="tok"></div></div></div>
+    <div class="toggle-row"><span>🟡 EC ตามแนวท่อ</span><div class="tog off" id="t-pipe-ec" onclick="toggleLayer('pipe-ec')"><div class="tok"></div></div></div>
+</div>
     <div class="toggle-row"><span>🗺️ EPANET Contour (FRC sim)</span><div class="tog off" id="t-epanet" onclick="toggleLayer('epanet')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🌊 น้ำดิบ EC (เจ้าพระยา)</span><div class="tog off" id="t-rawwater" onclick="toggleLayer('rawwater')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🏔️ น้ำดิบ EC (แม่กลอง)</span><div class="tog off" id="t-rawwater-mk" onclick="toggleLayer('rawwater-mk')"><div class="tok"></div></div></div>
@@ -4062,7 +4117,7 @@ setTimeout(() => {
 }, 6000);
 L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
 
-const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,pipelines:false,rtu:false,epanet:false,rawwater:false,'rawwater-mk':false};
+const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,pipelines:false,rtu:false,'pipe-pressure':false,'pipe-ec':false,epanet:false,rawwater:false,'rawwater-mk':false};
 
 // ══════════════════════════════════════════════════════════════════
 // CONTOUR: Single offscreen canvas rendered in lat/lon space
@@ -6140,6 +6195,8 @@ function toggleLayer(name) {
     if(plLeg) plLeg.style.display=layers.pipelines?'':'none';
   }
   else if(name==='rtu') layers.rtu?map.addLayer(rtuGroup):map.removeLayer(rtuGroup);
+  else if(name==='pipe-pressure') { if(window._pipePressureGroup){if(layers['pipe-pressure'])window._pipePressureGroup.addTo(map);else map.removeLayer(window._pipePressureGroup);} }
+  else if(name==='pipe-ec') { if(window._pipeEcGroup){if(layers['pipe-ec'])window._pipeEcGroup.addTo(map);else map.removeLayer(window._pipeEcGroup);} }
   else if(name==='epanet') layers.epanet?map.addLayer(epanetContourLayer):map.removeLayer(epanetContourLayer);
   else if(name==='flow') { if(layers.flow) startFlowAnimation(); else stopFlowAnimation(); }
 }
