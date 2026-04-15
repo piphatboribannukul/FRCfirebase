@@ -10132,6 +10132,14 @@ function rpTrendDraw(sensor, param, allData, _ids) {
 
   var statsEl = document.getElementById(STID);
   if (actPts.length===0) {
+    // rev26: fallback — ใช้ค่า live ปัจจุบันจาก sensor object
+    var _liveVal = param==='frc'?(sensor.frc||0):(sensor.ec||0);
+    if (_liveVal > 0) {
+      actPts.push({ts:nowMs-3600000, v:_liveVal});
+      actPts.push({ts:nowMs, v:_liveVal});
+    }
+  }
+  if (actPts.length===0) {
     ctx.fillStyle=isDk?'#ff8888':'#cc0044';ctx.font='bold 13px Sarabun,sans-serif';ctx.textAlign='center';
     ctx.fillText('ไม่พบค่า '+(param==='frc'?'FRC':'EC')+' ใน '+data.length+' records',W/2,H/2-10);
     if(data.length>0){ctx.font='10px JetBrains Mono';ctx.fillStyle=isDk?'#c0a0b0':'#a06080';ctx.fillText('fields: '+Object.keys(data[0]).join(', '),W/2,H/2+10);}
@@ -10206,12 +10214,40 @@ function rpTrendDraw(sensor, param, allData, _ids) {
       var ecSrcHist = (_ecHist[ecSrcCode]||[]).filter(function(p){return p.ts>=nowMs-72*3600000&&p.ec!=null&&p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
       for(var fi2=0;fi2<actPts.length;fi2++){
         var srcTs2=actPts[fi2].ts-ecTT*3600000, srcEc=ecSrcSensor.ec||250;
-        for(var j2=0;j2<ecSrcHist.length;j2++){if(ecSrcHist[j2].ts<=srcTs2&&ecSrcHist[j2].ec!=null)srcEc=ecSrcHist[j2].ec;}
+        // rev26: interpolate from raw water history
+        var _rwK3=null;
+        var _ecRI3=typeof EC_ROOT_SOURCE_MAP!=='undefined'?(EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]):null;
+        if(_ecRI3&&_ecRI3.root==='RAW_SAMLE')_rwK3='S1';
+        else if(_ecRI3&&_ecRI3.root==='RAW_MAEKLONG')_rwK3='S11';
+        if(_rwK3){
+          var _rwH3=_rwK3==='S1'?(window._rawWaterHistory||{}):(window._mkRawWaterHistory||{});
+          var _rwHist3=(_rwH3[_rwK3]||[]).filter(function(p){return p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
+          if(_rwHist3.length>0){
+            if(srcTs2<=_rwHist3[0].ts)srcEc=_rwHist3[0].ec;
+            else if(srcTs2>=_rwHist3[_rwHist3.length-1].ts)srcEc=_rwHist3[_rwHist3.length-1].ec;
+            else{for(var j2=1;j2<_rwHist3.length;j2++){if(_rwHist3[j2].ts>=srcTs2){var _p0=_rwHist3[j2-1],_p1=_rwHist3[j2];srcEc=_p0.ec+(_p1.ec-_p0.ec)*((srcTs2-_p0.ts)/(_p1.ts-_p0.ts));break;}}}
+          }
+        } else {
+          for(var j2=0;j2<ecSrcHist.length;j2++){if(ecSrcHist[j2].ts<=srcTs2&&ecSrcHist[j2].ec!=null)srcEc=ecSrcHist[j2].ec;}
+        }
         forePts.push({ts:actPts[fi2].ts, v:srcEc});
       }
-      // forecast อนาคต
-      var lastEc=ecSrcSensor.ec||250;
-      for(var fs2=0;fs2<=6;fs2++){futPts.push({ts:nowMs+fs2*ecTT/6*3600000,v:lastEc});}
+      // forecast อนาคต — rev26: ใช้ raw water history shifted ตาม travel time
+      var _rwKey2=null;
+      var _ecRI2=typeof EC_ROOT_SOURCE_MAP!=='undefined'?(EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]):null;
+      if(_ecRI2&&_ecRI2.root==='RAW_SAMLE')_rwKey2='S1';
+      else if(_ecRI2&&_ecRI2.root==='RAW_MAEKLONG')_rwKey2='S11';
+      var _rwH2=_rwKey2==='S1'?(window._rawWaterHistory||{}):(window._mkRawWaterHistory||{});
+      var _rwHist2=(_rwH2[_rwKey2]||[]).filter(function(p){return p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
+      function _getRwEc2(ts){
+        if(!_rwHist2.length)return ecSrcSensor.ec||250;
+        if(ts<=_rwHist2[0].ts)return _rwHist2[0].ec;
+        if(ts>=_rwHist2[_rwHist2.length-1].ts)return _rwHist2[_rwHist2.length-1].ec;
+        for(var ri=1;ri<_rwHist2.length;ri++){if(_rwHist2[ri].ts>=ts){var f0=_rwHist2[ri-1],f1=_rwHist2[ri];return f0.ec+(f1.ec-f0.ec)*((ts-f0.ts)/(f1.ts-f0.ts));}}
+        return ecSrcSensor.ec||250;
+      }
+      var _futStepsEc=12;
+      for(var fs2=0;fs2<=_futStepsEc;fs2++){var _ft2=(fs2/_futStepsEc)*ecTT;var _fSrcTs2=nowMs+(_ft2-ecTT)*3600000;futPts.push({ts:nowMs+_ft2*3600000,v:_getRwEc2(_fSrcTs2)});}
     }
   }
 
