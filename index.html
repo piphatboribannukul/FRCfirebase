@@ -2499,6 +2499,14 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       🤖 Apply Auto-fit k
     </button>
     <div id="ep-ktotal" style="margin-top:7px;font-size:9.5px;color:#c080a0;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
+    <div style="margin-top:10px;padding:6px 8px;background:rgba(21,101,192,0.06);border-radius:6px;border:1px solid rgba(21,101,192,0.15);">
+      <div class="ep-row" style="margin:0;">
+        <span class="ep-label" style="color:#1565c0;font-weight:700;">EC กราฟ Y-Max</span>
+        <input class="ep-input" id="ec-ymax-input" type="number" step="50" min="100" max="1500" value="400"
+          onchange="EC_CONFIG.yMax=parseInt(this.value)||400;">
+        <span class="ep-unit">μS/cm</span>
+      </div>
+    </div>
     <div id="ep-autofit-info" style="display:none;margin-top:4px;font-size:9px;color:#2a5a90;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
 
     <!-- rev18: Per-Station K Editor -->
@@ -3055,6 +3063,7 @@ const EC_CONFIG = {
   lo: 200,   // ต่ำกว่าปกติ
   hi: 600,   // เกินมาตรฐาน (WHO drinking water guideline)
   max: 1000, // ค่าสูงสุด scale
+  yMax: 400, // แกน Y สูงสุดในกราฟ popup (ปรับได้)
   label: 'EC (ความนำไฟฟ้า)',
 };
 
@@ -5055,7 +5064,7 @@ function buildMarkers() {
 
     const BAND = bandPct;
     // แกน Y คงที่ 0–500 μS/cm
-    const yMax = 500;
+    const yMax = (typeof EC_CONFIG !== 'undefined' && EC_CONFIG.yMax) ? EC_CONFIG.yMax : 400;
     const yMin = 0;
 
     function px(t) { return PL + ((t + HIST_WIN) / totalT) * cw; }
