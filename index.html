@@ -2500,6 +2500,12 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </button>
     <div id="ep-ktotal" style="margin-top:7px;font-size:9.5px;color:#c080a0;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
     <div style="margin-top:10px;padding:6px 8px;background:rgba(21,101,192,0.06);border-radius:6px;border:1px solid rgba(21,101,192,0.15);">
+      <div class="ep-row" style="margin:0 0 4px 0;">
+        <span class="ep-label" style="color:#1565c0;font-weight:700;">EC กราฟ Y-Min</span>
+        <input class="ep-input" id="ec-ymin-input" type="number" step="50" min="0" max="500" value="0"
+          onchange="EC_CONFIG.yMin=parseInt(this.value)||0;">
+        <span class="ep-unit">μS/cm</span>
+      </div>
       <div class="ep-row" style="margin:0;">
         <span class="ep-label" style="color:#1565c0;font-weight:700;">EC กราฟ Y-Max</span>
         <input class="ep-input" id="ec-ymax-input" type="number" step="50" min="100" max="1500" value="400"
@@ -3064,6 +3070,7 @@ const EC_CONFIG = {
   hi: 600,   // เกินมาตรฐาน (WHO drinking water guideline)
   max: 1000, // ค่าสูงสุด scale
   yMax: 400, // แกน Y สูงสุดในกราฟ popup (ปรับได้)
+  yMin: 0,   // แกน Y ต่ำสุดในกราฟ popup (ปรับได้)
   label: 'EC (ความนำไฟฟ้า)',
 };
 
@@ -4677,6 +4684,131 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
     console.log('RTU loaded:', rtus.length, 'stations ('+online+' online, '+offline+' offline)');
   } catch(e) { console.warn('RTU load failed:', e); }
 })();
+// ══════ rev26: RTU Live Auto-Refresh (Intranet only) ══════
+(function initRtuAutoRefresh() {
+  const RTU_API_REGISTRY = 'http://172.16.193.162/smartmap/kml/rtu_db.php';
+  const RTU_API_QUERY = 'http://172.16.193.162/smartmap/kml/rtu_db.php?query=all';
+  const RTU_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 นาที
+  let _rtuIsIntranet = false;
+
+  // ทดสอบว่าอยู่บน intranet หรือไม่
+  async function checkIntranet() {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000); // timeout 3 วินาที
+      const resp = await fetch(RTU_API_REGISTRY, { signal: ctrl.signal, mode: 'no-cors' });
+      clearTimeout(timer);
+      _rtuIsIntranet = true;
+      console.log('[RTU-Refresh] ✅ Intranet detected — auto-refresh enabled (every 5 min)');
+      return true;
+    } catch(e) {
+      _rtuIsIntranet = false;
+      console.log('[RTU-Refresh] ℹ️ Not on intranet — using embedded B64 data (no refresh)');
+      return false;
+    }
+  }
+
+  // ดึงข้อมูล RTU จาก intranet API
+  async function fetchRtuLive() {
+    if (!_rtuIsIntranet) return null;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      
+      // Fetch registry (station info)
+      const regResp = await fetch(RTU_API_REGISTRY, { signal: ctrl.signal });
+      const regData = await regResp.json();
+      
+      // Fetch live query (pressure/flow)
+      const qResp = await fetch(RTU_API_QUERY, { signal: ctrl.signal });
+      const qData = await qResp.json();
+      clearTimeout(timer);
+
+      // Merge registry + live data
+      const liveMap = {};
+      if (qData && qData.features) {
+        for (const f of qData.features) {
+          const p = f.properties || {};
+          liveMap[p.station_id || p.id] = {
+            lP: parseFloat(p.pressure) || 0,
+            lF: parseFloat(p.flow_forward) || 0,
+            lC: p.scada_color || '',
+            lA: p.alarm_color || ''
+          };
+        }
+      }
+
+      const stations = [];
+      if (regData && regData.features) {
+        for (const f of regData.features) {
+          const p = f.properties || {};
+          const coords = f.geometry ? f.geometry.coordinates : [0,0];
+          const live = liveMap[p.station_id || p.id] || {};
+          stations.push({
+            id: p.station_id || p.id,
+            b: p.branch || '',
+            loc: p.location || '',
+            lt: coords[1] || 0,
+            ln: coords[0] || 0,
+            c: live.lP > 0 ? 1 : 0,
+            lP: live.lP || 0,
+            lF: live.lF || 0,
+            lC: live.lC || '',
+            lA: live.lA || ''
+          });
+        }
+      }
+      return stations.length > 0 ? stations : null;
+    } catch(e) {
+      console.warn('[RTU-Refresh] Fetch failed:', e.message);
+      return null;
+    }
+  }
+
+  // อัปเดต global RTU data + redraw contour
+  async function refreshRtu() {
+    const stations = await fetchRtuLive();
+    if (!stations) return;
+    
+    const online = stations.filter(r => r.c === 1 && r.lP > 0);
+    window._rtuLive = online;
+    window._rtuPNominal = online.length > 0 
+      ? online.reduce((s,r) => s + r.lP, 0) / online.length 
+      : 15;
+    
+    console.log('[RTU-Refresh] ✅ Updated: ' + online.length + ' online, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc');
+    
+    // Redraw FRC contour with new pressure data
+    if (typeof buildIdwCache === 'function') buildIdwCache();
+    if (typeof redrawContour === 'function') redrawContour();
+    
+    // Update RTU markers on map
+    if (typeof rtuGroup !== 'undefined') {
+      rtuGroup.clearLayers();
+      for (const r of stations) {
+        const isOn = r.c === 1;
+        const color = r.lP >= 10 ? '#22c55e' : r.lP >= 5 ? '#3b82f6' : r.lP > 0 ? '#f59e0b' : '#6b7280';
+        L.circleMarker([r.lt, r.ln], {
+          radius: 5, fillColor: color, fillOpacity: isOn ? 0.8 : 0.3,
+          color: '#fff', weight: 1.5, opacity: isOn ? 0.9 : 0.4
+        }).bindPopup('<b>📡 '+r.id+'</b><br>P: '+(r.lP>0?r.lP.toFixed(1)+' mwc':'—')+'<br>F: '+(r.lF?r.lF.toLocaleString()+' m³/h':'—'))
+         .addTo(rtuGroup);
+      }
+    }
+  }
+
+  // เริ่มต้น
+  checkIntranet().then(function(isIntra) {
+    if (isIntra) {
+      // Refresh ทันทีครั้งแรก
+      refreshRtu();
+      // ตั้ง interval ทุก 5 นาที
+      setInterval(refreshRtu, RTU_REFRESH_INTERVAL);
+    }
+  });
+})();
+
+
 
 // ══════ EPANET Contour Overlay (FRC simulation) ══════
 const epanetContourLayer = L.imageOverlay(
@@ -5065,7 +5197,7 @@ function buildMarkers() {
     const BAND = bandPct;
     // แกน Y คงที่ 0–500 μS/cm
     const yMax = (typeof EC_CONFIG !== 'undefined' && EC_CONFIG.yMax) ? EC_CONFIG.yMax : 400;
-    const yMin = 0;
+    const yMin = (typeof EC_CONFIG !== 'undefined' && EC_CONFIG.yMin != null) ? EC_CONFIG.yMin : 0;
 
     function px(t) { return PL + ((t + HIST_WIN) / totalT) * cw; }
     function py(f) { return PT + (1 - (f - yMin) / (yMax - yMin)) * ch; }
