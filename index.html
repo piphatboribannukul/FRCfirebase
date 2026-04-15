@@ -2996,14 +2996,14 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
           <select id="rp-frc-pump-sel" onchange="rpChartSelectStation('frc','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
-          <div class="rp-chart"><canvas id="rp-frc-chart-pump"></canvas></div>
+          <div class="rp-chart"><canvas id="rp-frc-chart-pump"></canvas><div id="rp-frc-chart-pump-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
         <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
         <div class="rp-card">
           <select id="rp-frc-mon-sel" onchange="rpChartSelectStation('frc','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
-          <div class="rp-chart"><canvas id="rp-frc-chart-mon"></canvas></div>
+          <div class="rp-chart"><canvas id="rp-frc-chart-mon"></canvas><div id="rp-frc-chart-mon-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
         <div class="rp-section">ตาราง FRC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>FRC</th><th>สถานะ</th></tr></thead><tbody id="rp-frc-tbody"></tbody></table></div></div>
@@ -3037,14 +3037,14 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
           <select id="rp-ec-pump-sel" onchange="rpChartSelectStation('ec','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
-          <div class="rp-chart"><canvas id="rp-ec-chart-pump"></canvas></div>
+          <div class="rp-chart"><canvas id="rp-ec-chart-pump"></canvas><div id="rp-ec-chart-pump-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
         <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
         <div class="rp-card">
           <select id="rp-ec-mon-sel" onchange="rpChartSelectStation('ec','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
-          <div class="rp-chart"><canvas id="rp-ec-chart-mon"></canvas></div>
+          <div class="rp-chart"><canvas id="rp-ec-chart-mon"></canvas><div id="rp-ec-chart-mon-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
         <div class="rp-section">ตาราง EC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl ec"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>EC</th><th>สถานะ</th></tr></thead><tbody id="rp-ec-tbody"></tbody></table></div></div>
@@ -10435,7 +10435,23 @@ function rpChartSelectStation(param, type) {
   var sid=sel.value, d=_rpChartData;
   var stations=type==='pump'?d.pumps:d.mons;
   var thr=param==='frc'?[FRC_MIN,FRC_HI]:[EC_LO,EC_HI];
-  rpBuildChart('rp-'+param+'-chart-'+type, sid==='all'?stations:stations.filter(function(s){return String(s.id)===sid;}), d.hist, param, thr);
+  var canvasId='rp-'+param+'-chart-'+type;
+  if (sid !== 'all') {
+    // rev26: single station → use rpTrendDraw (with forecast + band like popup)
+    var s = stations.find(function(x){return String(x.id)===sid;});
+    if (s) {
+      // Destroy existing Chart.js chart
+      if (_rpCharts[canvasId]) { _rpCharts[canvasId].destroy(); _rpCharts[canvasId]=null; }
+      var code=String(s.id).replace(/\/|\./g,'-');
+      var fb=d.hist[code]||d.hist[String(s.id)]||[];
+      var lc=(typeof loadHistory==='function'?loadHistory():{})[code]||[];
+      var seen={};
+      var merged=[].concat(fb).concat(lc).filter(function(p){if(!p||!p.ts)return false;var k=Math.round(p.ts/60000);if(seen[k])return false;seen[k]=true;return true;}).sort(function(a,b){return a.ts-b.ts;});
+      rpTrendDraw(s, param, merged, { canvas:canvasId, stats:'rp-'+param+'-chart-'+type+'-stats' });
+      return;
+    }
+  }
+  rpBuildChart(canvasId, sid==='all'?stations:stations.filter(function(s){return String(s.id)===sid;}), d.hist, param, thr);
 }
 
 async function rpTrendFromReport(param) {
@@ -10973,10 +10989,10 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'nearest',axis:'x',intersect:false},
       plugins:{
-        legend:{display:true,position:'bottom',labels:{color:'#d0b8d8',font:{size:9,family:'Sarabun'},boxWidth:10,padding:6,
+        legend:{display:true,position:'bottom',labels:{color:'#ff6090',font:{size:9,family:'Sarabun'},boxWidth:10,padding:6,
           generateLabels:function(chart){
             return chart.data.datasets.map(function(ds,i){
-              return {text:ds.label, fillStyle:ds.borderColor, strokeStyle:ds.borderColor, lineWidth:2, hidden:!chart.isDatasetVisible(i), datasetIndex:i, fontColor:'#d0b8d8'};
+              return {text:ds.label, fillStyle:ds.borderColor, strokeStyle:ds.borderColor, lineWidth:2, hidden:!chart.isDatasetVisible(i), datasetIndex:i, fontColor:'#ff6090'};
             });
           }
         }},
