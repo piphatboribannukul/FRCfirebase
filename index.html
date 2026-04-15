@@ -5299,7 +5299,7 @@ function buildMarkers() {
         (isNowTick?'<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+lineColor+'" stroke-width="'+sw+'" stroke-dasharray="2,3" opacity="0.8"/>':'')
        
        +'<text transform="rotate(-90,'+x.toFixed(1)+','+(PT+ch+32).toFixed(1)+')" x="'+x.toFixed(1)+'" y="'+(PT+ch+32).toFixed(1)+'" font-size="9" font-weight="bold" fill="'+(document.body.classList.contains('dark')?'#c0c0e0':'#222')+'" text-anchor="start" font-family="JetBrains Mono,monospace">'+toHHMM(nowHr+t)+'</text>'
-       +(showDate ? '<text x="'+x.toFixed(1)+'" y="'+(PT+ch+38).toFixed(1)+'" font-size="8" font-weight="700" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+curDateStr+'</text>' : '');
+       +(showDate ? '<text x="'+x.toFixed(1)+'" y="'+(PT+ch+48).toFixed(1)+'" font-size="8" font-weight="700" fill="'+(document.body.classList.contains('dark')?'#80b0e0':'#1565c0')+'" text-anchor="middle" font-family="Sarabun,sans-serif">'+curDateStr+'</text>' : '');
     }
 
     const endStatus = ecEnd >= EC_CONFIG.hi ? '⚠ เกินมาตรฐาน' : ecEnd >= EC_CONFIG.lo ? '✓ ปกติ' : '↓ ต่ำ';
@@ -5615,7 +5615,7 @@ function buildMarkers() {
           <text transform="rotate(-90,${x.toFixed(1)},${(PT+ch+32).toFixed(1)})"
             x="${x.toFixed(1)}" y="${(PT+ch+32).toFixed(1)}"
             font-size="9" font-weight="bold" fill="${document.body.classList.contains('dark')?'#c0c0e0':'#636e8a'}" text-anchor="start" font-family="JetBrains Mono,monospace">${toHHMM(nowHr+t)}</text>
-          ${showDateFrc ? `<text x="${x.toFixed(1)}" y="${(PT+ch+38).toFixed(1)}"
+          ${showDateFrc ? `<text x="${x.toFixed(1)}" y="${(PT+ch+48).toFixed(1)}"
             font-size="8" font-weight="700" fill="${_dk2?'#d080b0':'#e84393'}" text-anchor="middle" font-family="Sarabun,sans-serif">${curDateStrFrc}</text>` : ''}
           `;
       }).join('');
@@ -10093,6 +10093,8 @@ async function rpTrendSelect(sid) {
 }
 function rpTrendDraw(sensor, param, allData, _ids) {
   var IDS = _ids || {};
+  // rev26: force dark colors for readability in both themes
+  var _forceVividColors = true;
   var CVID = IDS.canvas || 'rp-trend-canvas';
   var STID = IDS.stats || 'rp-trend-stats';
   var KIID = IDS.kinfo || 'rp-trend-kinfo';
@@ -10113,7 +10115,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   ctx.scale(dpr, dpr);
   var W = rect.width, H = rect.height;
   ctx.clearRect(0,0,W,H);
-  var isDk = document.body.classList.contains('dark');
+  var isDk = _forceVividColors || document.body.classList.contains('dark');
   var PL=46, PR=16, PT=16, PB=50;
   var cw = W-PL-PR, ch = H-PT-PB;
   var nowMs = Date.now();
@@ -10260,7 +10262,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     ctx.fillText(String(dd.getHours()).padStart(2,'0')+':00',0,0);
     ctx.restore();
     var _dl=dd.getDate()+' '+_mmN[dd.getMonth()];
-    if(_dl!==_lastDL){_lastDL=_dl;ctx.fillStyle=isDk?'#80b0e0':'#1565c0';ctx.font='bold 8px Sarabun,sans-serif';ctx.textAlign='center';ctx.fillText(_dl,px(tx),PT+ch+38);}
+    if(_dl!==_lastDL){_lastDL=_dl;ctx.fillStyle=isDk?'#80b0e0':'#1565c0';ctx.font='bold 8px Sarabun,sans-serif';ctx.textAlign='center';ctx.fillText(_dl,px(tx),PT+ch+48);}
   }
 
   // FRC thresholds
@@ -10982,7 +10984,7 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
     if (!data.length) return;
     datasets.push({ label: s.name, _fullName: s.name, data, borderColor: _rpColors[i%_rpColors.length], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.3 });
   });
-  if (!datasets.length) { ctx.parentElement.innerHTML = '<div style="text-align:center;padding:30px;color:#706080;">ไม่มีข้อมูล 24 ชม. ใน Firebase</div>'; return; }
+  if (!datasets.length) { ctx.parentElement.innerHTML = '<div style="text-align:center;padding:30px;color:#e84393;">ไม่มีข้อมูล 24 ชม. ใน Firebase</div>'; return; }
   _rpCharts[canvasId] = new Chart(ctx, {
     type:'line', data:{datasets},
     options:{
@@ -11060,8 +11062,8 @@ function rpBuildChart(canvasId, stations, hist, param, thresholds) {
         }
       },
       scales:{
-        x:{type:'linear',ticks:{color:'#706080',font:{size:8,family:'JetBrains Mono'},callback:v=>new Date(v).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),maxTicksLimit:10},grid:{color:'rgba(204,0,85,.06)'}},
-        y:{ticks:{color:'#706080',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(204,0,85,.08)'}}
+        x:{type:'linear',ticks:{color:'#706080',font:{size:8,family:'JetBrains Mono'},callback:v=>new Date(v).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),maxTicksLimit:10},grid:{color:'rgba(204,0,85,.15)'}},
+        y:{ticks:{color:'#706080',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(204,0,85,.20)'}}
       }
     },
     plugins:[{id:'thr',afterDraw(chart){const ya=chart.scales.y;const c2=chart.ctx;thresholds.forEach((t,i)=>{const y=ya.getPixelForValue(t);if(y<chart.chartArea.top||y>chart.chartArea.bottom)return;c2.save();c2.strokeStyle=i===0?'rgba(240,160,48,.4)':'rgba(45,212,160,.4)';c2.lineWidth=1;c2.setLineDash([5,3]);c2.beginPath();c2.moveTo(chart.chartArea.left,y);c2.lineTo(chart.chartArea.right,y);c2.stroke();c2.fillStyle=c2.strokeStyle;c2.font='9px JetBrains Mono';c2.fillText(t.toString(),chart.chartArea.right+3,y+3);c2.restore();});}}]
