@@ -10380,7 +10380,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   if(futPts.length>0){
     ctx.strokeStyle=isDk?'#a080d0':'#7c5ce7';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
     ctx.beginPath();ctx.moveTo(lx,ly-2);ctx.lineTo(lx+12,ly-2);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.fillText('คาดการณ์อนาคต (+'+Math.round(ttHours)+'ชม.)',lx+16,ly);
+    ctx.fillStyle=isDk?'#a080d0':'#7c5ce7';ctx.fillText('คาดการณ์อนาคต (+'+Math.round(param==='ec'?ecTT:ttHours)+'ชม.)',lx+16,ly);
     lx+=180;
   }
   if(forePts.length>0||futPts.length>0){
