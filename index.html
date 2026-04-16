@@ -4687,7 +4687,7 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
 // ══════ rev26: RTU Live Auto-Refresh (Intranet only) ══════
 (function initRtuAutoRefresh() {
   const RTU_API_REGISTRY = 'http://172.16.193.162/smartmap/kml/rtu_db.php';
-  const RTU_API_QUERY = 'http://172.16.193.162/smartmap/kml/rtu_db.php?query=all';
+  const RTU_API_QUERY = 'http://172.16.193.162/smartmap/rtu_query2.php';
   const RTU_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 นาที
   let _rtuIsIntranet = false;
 
@@ -4715,25 +4715,30 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10000);
       
-      // Fetch registry (station info)
+      // Fetch registry (station info) — GeoJSON
       const regResp = await fetch(RTU_API_REGISTRY, { signal: ctrl.signal });
       const regData = await regResp.json();
       
-      // Fetch live query (pressure/flow)
-      const qResp = await fetch(RTU_API_QUERY, { signal: ctrl.signal });
+      // Fetch live query (pressure/flow) — flat object [{P019_P, P019_F, P019_C, ...}]
+      const qResp = await fetch(RTU_API_QUERY + '?ts=' + Date.now(), { signal: ctrl.signal });
       const qData = await qResp.json();
       clearTimeout(timer);
 
-      // Merge registry + live data
+      // Parse flat live map: {"P019_P":"3.45","P019_F":"-1000.00","P019_C":"#FF0000",...}
       const liveMap = {};
-      if (qData && qData.features) {
-        for (const f of qData.features) {
-          const p = f.properties || {};
-          liveMap[p.station_id || p.id] = {
-            lP: parseFloat(p.pressure) || 0,
-            lF: parseFloat(p.flow_forward) || 0,
-            lC: p.scada_color || '',
-            lA: p.alarm_color || ''
+      if (qData && qData[0]) {
+        const flat = qData[0];
+        const seen = new Set();
+        for (const key of Object.keys(flat)) {
+          const m = key.match(/^(.+)_P$/);
+          if (m) seen.add(m[1]);
+        }
+        for (const sid of seen) {
+          liveMap[sid] = {
+            lP: parseFloat(flat[sid + '_P']) || 0,
+            lF: parseFloat(flat[sid + '_F']) || 0,
+            lC: flat[sid + '_C'] || '',
+            lA: flat[sid + '_A'] || ''
           };
         }
       }
@@ -4743,9 +4748,10 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
         for (const f of regData.features) {
           const p = f.properties || {};
           const coords = f.geometry ? f.geometry.coordinates : [0,0];
-          const live = liveMap[p.station_id || p.id] || {};
+          const sid = p.site_id || p.id || '';
+          const live = liveMap[sid] || {};
           stations.push({
-            id: p.station_id || p.id,
+            id: sid,
             b: p.branch || '',
             loc: p.location || '',
             lt: coords[1] || 0,
