@@ -3363,44 +3363,63 @@ const HYBRID_K_ALPHA = 0.25;   // EWA smoothing: ใหม่ 25% เก่า 7
 // คู่ src→dest เดียวกับ PAIR_TT_GLOBAL ใน fitAllK
 // ใช้ live FRC แทน historical
 const HYBRID_PAIRS = [
-  { src:'4',  dest:'23', tt:4.5  },
-  { src:'4',  dest:'30', tt:6    },
-  { src:'5',  dest:'32', tt:3.5  },
-  { src:'5',  dest:'34', tt:10   },
-  { src:'5',  dest:'29', tt:11.5 },
-  { src:'13', dest:'24', tt:1    },
-  { src:'14', dest:'37', tt:1.5  },
-  { src:'14', dest:'38', tt:5    },
-  { src:'15', dest:'25', tt:2.5  },
-  { src:'15', dest:'39', tt:5    },
-  { src:'16', dest:'26', tt:2.5  },
-  { src:'16', dest:'40', tt:4.5  },
-  { src:'16', dest:'41', tt:6.5  },
-  { src:'17', dest:'27', tt:2.5  },
-  { src:'17', dest:'45', tt:1.5  },
-  { src:'18', dest:'47', tt:1    },
-  { src:'18', dest:'48', tt:1    },
-  { src:'19', dest:'50', tt:5    },
-  { src:'19', dest:'52', tt:7    },
-  { src:'20', dest:'54', tt:3.5  },
-  { src:'21', dest:'56', tt:6.5  },
-  { src:'22', dest:'53', tt:3.5  },
-  { src:'12', dest:'28', tt:10.5 },
-  { src:'12', dest:'59', tt:12   },
-  { src:'12', dest:'58', tt:4.5  },
-  { src:'12', dest:'60', tt:16.5 },
-  { src:'12', dest:'61', tt:13   },
-  { src:'4',  dest:'31', tt:5    },
-  { src:'4',  dest:'29', tt:11.5 },
-  { src:'9',  dest:'35', tt:1    },
-  { src:'6',  dest:'36', tt:2    },
-  { src:'16', dest:'43', tt:4    },
-  { src:'17', dest:'44', tt:15   },
-  { src:'17', dest:'46', tt:4.5  },
-  { src:'18', dest:'49', tt:6    },
-  { src:'19', dest:'51', tt:17   },
-  { src:'21', dest:'57', tt:5.5  },
-  { src:'16', dest:'42', tt:3.5  },
+  // src=pump/plant id → dest=monitor id (ใช้ string id จริงจาก SENSORS)
+  // กลุ่ม SP04 (Dis1) → monitor
+  { src:'SP04', dest:'SM01', tt:4.5  }, // Dis1 → นนทบุรี
+  { src:'SP04', dest:'S002', tt:6    }, // Dis1 → ทหารขนส่ง
+  { src:'SP04', dest:'S003', tt:5    }, // Dis1 → กองพัน
+  { src:'SP04', dest:'S001', tt:11.5 }, // Dis1 → เตรียมอุดมฯ
+  // กลุ่ม SP05 (Dis2) → monitor
+  { src:'SP05', dest:'S004', tt:3.5  }, // Dis2 → ภูมิพล
+  { src:'SP05', dest:'S005', tt:10   }, // Dis2 → ซีจีเอช
+  { src:'SP05', dest:'S001', tt:11.5 }, // Dis2 → เตรียมอุดมฯ
+  // กลุ่ม SW01 (ลุมพินี) → monitor
+  { src:'SW01', dest:'SM02', tt:1    }, // ลุมพินี → ทุ่งมหาเมฆ
+  // กลุ่ม SW02 (ลาดพร้าว) → monitor
+  { src:'SW02', dest:'S008', tt:1.5  }, // ลาดพร้าว → โอสถสภา
+  { src:'SW02', dest:'S009', tt:5    }, // ลาดพร้าว → เกร็ดตระการ
+  // กลุ่ม SW03 (คลองเตย) → monitor
+  { src:'SW03', dest:'SM03', tt:2.5  }, // คลองเตย → สุขุมวิท
+  { src:'SW03', dest:'S010', tt:5    }, // คลองเตย → ท้องฟ้าจำลอง
+  // กลุ่ม SW04 (สำโรง) → monitor
+  { src:'SW04', dest:'SM04', tt:2.5  }, // สำโรง → สมุทรปราการ
+  { src:'SW04', dest:'S011', tt:4.5  }, // สำโรง → ศิครินทร์
+  { src:'SW04', dest:'S012', tt:6.5  }, // สำโรง → หาดอมรา
+  { src:'SW04', dest:'S014', tt:4    }, // สำโรง → โรงไฟฟ้า
+  { src:'SW04', dest:'S013', tt:3.5  }, // สำโรง → เอจีซี
+  // กลุ่ม SW05 (มีนบุรี) → monitor
+  { src:'SW05', dest:'SM05', tt:2.5  }, // มีนบุรี → สาขามีนบุรี
+  { src:'SW05', dest:'S016', tt:1.5  }, // มีนบุรี → บางชัน
+  { src:'SW05', dest:'S015', tt:15   }, // มีนบุรี → มหาจักร
+  { src:'SW05', dest:'S017', tt:4.5  }, // มีนบุรี → ไตเทียม
+  // กลุ่ม SW06 (ลาดกระบัง) → monitor
+  { src:'SW06', dest:'S018', tt:1    }, // ลาดกระบัง → นิคมลาดกระบัง
+  { src:'SW06', dest:'S019', tt:1    }, // ลาดกระบัง → สุวรรณภูมิ
+  { src:'SW06', dest:'S020', tt:6    }, // ลาดกระบัง → หัวเฉียว
+  // กลุ่ม SW07 (บางพลี) → monitor
+  { src:'SW07', dest:'S021', tt:5    }, // บางพลี → นิคมบางพลี
+  { src:'SW07', dest:'S023', tt:7    }, // บางพลี → บางปู
+  { src:'SW07', dest:'S022', tt:17   }, // บางพลี → คลองด่าน
+  // กลุ่ม SW08 (ราษฎร์บูรณะ) → monitor
+  { src:'SW08', dest:'S025', tt:3.5  }, // ราษฎร์บูรณะ → ศูนย์กีฬา
+  { src:'SW08', dest:'S026', tt:9.5  }, // ราษฎร์บูรณะ → มจธ บางขุนเทียน
+  // กลุ่ม SW09 (เพชรเกษม) → monitor
+  { src:'SW09', dest:'S027', tt:6.5  }, // เพชรเกษม → เอเชียอาคเนย์
+  { src:'SW09', dest:'S028', tt:5.5  }, // เพชรเกษม → เรือนจำธนบุรี
+  // กลุ่ม SW10 (ท่าพระ) → monitor
+  { src:'SW10', dest:'S024', tt:3.5  }, // ท่าพระ → บางแค
+  // กลุ่ม SP12 (MDIS/มหาสวัสดิ์) → monitor
+  { src:'SP12', dest:'SM06', tt:10.5 }, // MDIS → บางบัวทอง
+  { src:'SP12', dest:'S030', tt:12   }, // MDIS → ราชวินิต
+  { src:'SP12', dest:'S029', tt:4.5  }, // MDIS → บดินทรเดชา
+  { src:'SP12', dest:'S031', tt:16.5 }, // MDIS → ไทรน้อย
+  { src:'SP12', dest:'S032', tt:13   }, // MDIS → ตั้งพิรุฬห์ธรรม
+  // กลุ่ม SP09 (สามเสน 3) → monitor
+  { src:'SP09', dest:'S006', tt:1    }, // สามเสน3 → จิตรลดา
+  // กลุ่ม SP06 (ธนบุรี) → monitor
+  { src:'SP06', dest:'S007', tt:2    }, // ธนบุรี → ศิริราช
+  // กลุ่ม SW11 (พหลโยธิน) → monitor  
+  { src:'SW11', dest:'S002', tt:3    }, // พหลโยธิน → ทหารขนส่ง
 ];
 
 /**
@@ -3411,17 +3430,18 @@ const HYBRID_PAIRS = [
 function updateHybridK() {
   if (!SENSORS || SENSORS.length === 0) return;
 
-  // build lookup id → sensor (live frc)
+  // build lookup id → sensor (live frc) — รองรับ string id เช่น 'SP04', 'SM01'
   const byId = {};
   for (const s of SENSORS) {
     if (s.id != null) byId[String(s.id)] = s;
   }
 
   let updated = 0;
+  let skipped = 0;
   for (const pair of HYBRID_PAIRS) {
     const src  = byId[pair.src];
     const dest = byId[pair.dest];
-    if (!src || !dest) continue;
+    if (!src || !dest) { skipped++; continue; }
 
     const fSrc  = src.frc;
     const fDest = dest.frc;
@@ -3445,7 +3465,7 @@ function updateHybridK() {
 
     HYBRID_K[pair.dest] = kNew;
 
-    // quality flag: ดี/ปานกลาง/ไม่ดี ตามความต่าง FRC
+    // quality flag
     const diffPct = Math.abs(fDest - fSrc * Math.exp(-kNew * pair.tt)) / fSrc * 100;
     const quality = diffPct < 5 ? '🟢' : diffPct < 15 ? '🟡' : '🔴';
 
@@ -3456,16 +3476,14 @@ function updateHybridK() {
       quality, ts: Date.now()
     };
 
-    // propagate K ไปยัง src ด้วย (ใช้ค่าเดียวกัน ถ้ายังไม่มี)
+    // propagate K ไปยัง src ด้วย (ถ้ายังไม่มี)
     if (HYBRID_K[pair.src] == null) HYBRID_K[pair.src] = kNew;
 
     updated++;
   }
 
-  if (updated > 0) {
-    console.log(`[HybridK] ✅ updated ${updated} stations`, HYBRID_K);
-    _updateHybridBadge(updated);
-  }
+  console.log(`[HybridK] updated=${updated} skipped=${skipped} total_pairs=${HYBRID_PAIRS.length}`, HYBRID_K);
+  if (updated > 0) _updateHybridBadge(updated);
 }
 
 function _updateHybridBadge(n) {
