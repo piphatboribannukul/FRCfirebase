@@ -5558,6 +5558,7 @@ function buildMarkers() {
       +'<div style="font-size:9.5px;font-weight:700;color:'+(document.body.classList.contains('dark')?'#80c0ff':'#1040a0')+';letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">📈 คาดการณ์ EC ล่วงหน้า <span style="font-size:9px;font-weight:600;color:'+(document.body.classList.contains('dark')?'#90b8ff':'#4060c0')+';text-transform:none;letter-spacing:0;background:'+(document.body.classList.contains('dark')?'rgba(80,140,255,.1)':'#e8eeff')+';border-radius:4px;padding:1px 6px;margin-left:4px;">← '+sourceName+'</span></div>'
       +'<div style="font-size:9px;color:'+(document.body.classList.contains('dark')?'#90b8d8':'#6090c0')+';margin-bottom:4px;">'
       +'ปัจจุบัน '+Math.round(ec0)+' μS/cm · คาดการณ์ '+Math.round(ecEnd)+' (ถึง +'+ttHours+'ชม.)'
+      +(opts && opts.detail ? '<br><span style="font-size:8.5px;color:'+(document.body.classList.contains('dark')?'#70a8d8':'#2255a0')+'">📐 '+opts.detail+'</span>' : '')
       +(hasHistory ? ' · <span style="color:'+(document.body.classList.contains('dark')?'#60dd80':'#006020')+'">✅ ข้อมูลจริง '+destHist.length+' จุด</span>' : ' · <span style="color:'+(document.body.classList.contains('dark')?'#e0c060':'#a06000')+'">⏳ รอสะสมข้อมูล</span>')
       +'</div>'
       +'<svg width="'+W+'" height="'+H+'" style="display:block;overflow:visible;max-width:100%;height:auto;" viewBox="0 0 '+W+' '+H+'">'
@@ -5653,7 +5654,7 @@ function buildMarkers() {
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
       +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#43a047">▓ Confidence band ±'+Math.round(BAND*100)+'%</span>'
       +(window._rawWaterEc && ['SP01','SP02','SP03','SP04','SP05','SP07','SP08','SP09','SP10','1','2','3','4','5','7','8','9','10'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
-      +(window._mkRawWaterData && window._mkRawWaterData['S11'] && ['SP11','SP12','11','12'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#0a6050">- - น้ำดิบแม่กลอง</span>' : '')
+      +(window._mkRawWaterData && window._mkRawWaterData['S11'] && ['SP11','SP12','11','12'].includes(String(sensorId)) ? '&nbsp;&nbsp;<span style="color:#0a6050">- - คลองตะวันตก กม.14</span>' : '')
       +'</span>'
       +'<span style="color:'+endColor+';font-weight:700">'+endStatus+' ที่ '+toHHMM(nowHr+ttHours)+'</span>'
       +'</div></div>';
@@ -6248,38 +6249,47 @@ function buildMarkers() {
         if (ecRootKey === 'RAW_SAMLE' && window._rawWaterEc && window._rawWaterEc.ec > 0) {
           const rwEc = window._rawWaterEc.ec;
           if (ecTT > 0) {
-            // rev22: สร้าง label แสดง breakdown เวลาเดินทาง
-            let rwLabel = '🌊 น้ำดิบสำแล';
-            if (ecTT > 13) {
-              // มี intermediate — หา tt จาก TRAVEL_TIME
-              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
-              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 13);
-              const ttSrc = ttInfo ? ttInfo.tt_label : '';
-              rwLabel = '🌊 สำแล→บางเขน 17ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+            // rev27: short label สำหรับ header, full detail สำหรับ sub-label
+            const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
+            const ttLocal = ttInfo ? ttInfo.tt_from : '';
+            const ttSrc   = ttInfo ? ttInfo.tt_label.replace(/^จาก\s*/, '') : '';
+            let rwLabel, rwDetail;
+
+            if (ecTT >= 44 && ecTT <= 50) {
+              // สามเสน
+              rwLabel  = ttSrc && ttLocal
+                ? '🌊 สำแล (สามเสน, +' + ttSrc + ' ' + ttLocal + 'ชม.)'
+                : '🌊 สำแล (สามเสน)';
+              rwDetail = '13ชม. + ผลิต 2 + reservoir 2 + ส่งสามเสน 29ชม. = 48ชม.' + (ttSrc && ttLocal ? ' + ' + ttSrc + ' ' + ttLocal + 'ชม. = รวม ' + ecTT + 'ชม.' : '');
+            } else if (ecTT > 13) {
+              // บางเขน
+              rwLabel  = ttSrc && ttLocal
+                ? '🌊 สำแล (บางเขน, +' + ttSrc + ' ' + ttLocal + 'ชม.)'
+                : '🌊 สำแล (บางเขน)';
+              rwDetail = '13ชม. + ผลิต 2 + reservoir 2 = 17ชม.' + (ttSrc && ttLocal ? ' + ' + ttSrc + ' ' + ttLocal + 'ชม. = รวม ' + ecTT + 'ชม.' : '');
+            } else {
+              rwLabel  = '🌊 สำแล (น้ำดิบ)';
+              rwDetail = '';
             }
-            if (ecTT >= 44 && ecTT <= 46) {
-              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
-              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 44);
-              const ttSrc = ttInfo ? ttInfo.tt_label : '';
-              rwLabel = '🌊 สำแล→สามเสน 44ชม.' + (ttSrc && ecTT > 44 ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
-            }
-            decayChart = buildEcForecastChart(rwEc, rwLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S1' });
+            decayChart = buildEcForecastChart(rwEc, rwLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S1', detail: rwDetail });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, rwEc, rwEc*(1+EC_FORECAST_BAND), rwEc*(1-EC_FORECAST_BAND));
           }
-        // rev20: RAW_MAEKLONG → ดึง EC จาก API น้ำดิบแม่กลอง (S11)
+        // rev20: RAW_MAEKLONG → ดึง EC จาก API น้ำดิบคลองตะวันตก (S11)
         } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11'] && window._mkRawWaterData['S11'].ec > 0) {
           const mkEc = window._mkRawWaterData['S11'].ec;
           if (ecTT > 0) {
-            // rev22: สร้าง label แสดง breakdown เวลาเดินทาง
-            let mkLabel = '🏔️ น้ำดิบแม่กลอง';
-            if (ecTT > 48) {
-              const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
-              const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 48);
-              const ttSrc = ttInfo ? ttInfo.tt_label : '';
-              mkLabel = '🚰 คลองตะวันตก กม.14→มหาสวัสดิ์ 27ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
-            }
-            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11' });
+            // rev27: short label สำหรับ header, full detail สำหรับ sub-label
+            const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
+            const ttLocal = ttInfo ? ttInfo.tt_from : '';
+            const ttSrc   = ttInfo ? ttInfo.tt_label.replace(/^จาก\s*/, '') : '';
+            // short: แสดงใน checkbox header
+            const mkLabel = ttSrc && ttLocal
+              ? '🚰 คลองตะวันตก กม.14 (+' + ttSrc + ' ' + ttLocal + 'ชม.)'
+              : '🚰 คลองตะวันตก กม.14';
+            // full: แสดงใน sub-label (ส่งผ่าน opts)
+            const mkDetail = '23ชม. + ผลิต 2 + reservoir 2 = 27ชม.' + (ttSrc && ttLocal ? ' + ' + ttSrc + ' ' + ttLocal + 'ชม. = รวม ' + ecTT + 'ชม.' : '');
+            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11', detail: mkDetail });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, mkEc, mkEc*(1+EC_FORECAST_BAND), mkEc*(1-EC_FORECAST_BAND));
           }
