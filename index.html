@@ -5629,7 +5629,7 @@ function buildMarkers() {
           mkSvg += '<circle cx="'+xEnd.toFixed(1)+'" cy="'+yMk.toFixed(1)+'" r="4" fill="'+(_dk?'#60d0a0':'#0a6050')+'" stroke="#fff" stroke-width="1.5" clip-path="url(#ecclip_'+sensorId+')"/>';
           mkSvg += '<text x="'+(xEnd+5).toFixed(1)+'" y="'+(yMk-4).toFixed(1)+'" font-size="9" font-weight="700" fill="'+(_dk?'#80e0b0':'#0a6050')+'" font-family="JetBrains Mono,monospace" clip-path="url(#ecclip_'+sensorId+')">น้ำดิบ '+mkEc+'</text>';
         }
-        mkSvg += '<text x="'+(xStart+3).toFixed(1)+'" y="'+(yMk-5).toFixed(1)+'" font-size="8" fill="'+(_dk?'#80e0b0':'#0a6050')+'" font-family="Sarabun,sans-serif" clip-path="url(#ecclip_'+sensorId+')">🏔️ แม่กลอง→มหาสวัสดิ์ +'+mkTT+'ชม.</text>';
+        mkSvg += '<text x="'+(xStart+3).toFixed(1)+'" y="'+(yMk-5).toFixed(1)+'" font-size="8" fill="'+(_dk?'#80e0b0':'#0a6050')+'" font-family="Sarabun,sans-serif" clip-path="url(#ecclip_'+sensorId+')">🚰 คลองตะวันตก กม.14→มหาสวัสดิ์ +'+mkTT+'ชม.</text>';
         return mkSvg;
       })()
       +'<line x1="'+xNow.toFixed(1)+'" y1="'+PT+'" x2="'+xNow.toFixed(1)+'" y2="'+(PT+ch).toFixed(1)+'" stroke="'+(document.body.classList.contains('dark')?'#80b0ff':'#1565c0')+'" stroke-width="1.5" opacity="0.5"/>'
@@ -6255,7 +6255,7 @@ function buildMarkers() {
               const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
               const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 13);
               const ttSrc = ttInfo ? ttInfo.tt_label : '';
-              rwLabel = '🌊 สำแล→บางเขน 13ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+              rwLabel = '🌊 สำแล→บางเขน 17ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
             }
             if (ecTT >= 44 && ecTT <= 46) {
               const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
@@ -6277,7 +6277,7 @@ function buildMarkers() {
               const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
               const ttLocal = ttInfo ? ttInfo.tt_from : String(ecTT - 48);
               const ttSrc = ttInfo ? ttInfo.tt_label : '';
-              mkLabel = '🏔️ แม่กลอง→มหาสวัสดิ์ 48ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
+              mkLabel = '🚰 คลองตะวันตก กม.14→มหาสวัสดิ์ 27ชม.' + (ttSrc ? ' + '+ttSrc.replace(/^จาก\s*/,'')+' '+ttLocal+'ชม.' : '');
             }
             decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11' });
             const foreTs = Date.now() + ecTT * 3600000;
@@ -14385,7 +14385,7 @@ function submitFeedback(){
 <b style="color:#cc0055;">กลุ่มเจ้าพระยา (CP):</b><br>
 &nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR1 → สจ.ลุมพินี (6ชม.), สจ.พหลโยธิน (5ชม.), สจ.สำโรง (7ชม.) → monitor<br>
 &nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR2 → สจ.ลาดพร้าว (3ชม.), สจ.คลองเตย (4ชม.) → monitor<br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR3 → สจ.บางพลี (13ชม.), สจ.มีนบุรี (7ชม.), สจ.ลาดกระบัง (8ชม.) → monitor<br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR3 → สจ.บางพลี (17ชม.), สจ.มีนบุรี (17ชม.), สจ.ลาดกระบัง (17ชม.) → monitor<br>
 &nbsp;&nbsp;• โรงผลิตน้ำบางเขน → Dis1/Dis2 → monitor<br>
 &nbsp;&nbsp;• โรงงานผลิตน้ำธนบุรี → โรงพยาบาลศิริราช (2ชม.)<br>
 &nbsp;&nbsp;• โรงผลิตน้ำสามเสน 1-4 → monitor<br>
@@ -14923,7 +14923,7 @@ function submitFeedback(){
       lineCap: 'round',
       lineJoin: 'round',
     });
-    canalLine.bindTooltip('คลองประปา (สำแล → บางเขน) ~18 km · 13 ชม.', {
+    canalLine.bindTooltip('คลองประปา (สำแล → บางเขน) ~18 km · 13 ชม. + ผลิต 2 + reservoir 2 = 17 ชม.', {
       sticky: true, className: 'rw-label'
     });
     _canalLayer.addLayer(canalLine);
