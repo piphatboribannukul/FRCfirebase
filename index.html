@@ -15837,7 +15837,7 @@ function submitFeedback(){
         createMkMarkers();
         // fetch ถ้ายังไม่มีข้อมูล
         if (Object.keys(_mkData).length === 0) fetchMkData();
-        // Auto-refresh ทุก 10 นาที
+        // rev29: timer ทำงานระดับ global แล้ว — ไม่ต้องสร้างซ้ำที่นี่
         if (!_mkFetchTimer) _mkFetchTimer = setInterval(fetchMkData, 600000);
 
         // Zoom out ให้เห็นทั้ง กปน. + แม่กลอง (เฉพาะ manual toggle ไม่ใช่ auto)
@@ -15849,7 +15849,8 @@ function submitFeedback(){
         }
       } else {
         if (_mkLayerGroup) _mkLayerGroup.remove();
-        if (_mkFetchTimer) { clearInterval(_mkFetchTimer); _mkFetchTimer = null; }
+        // rev29: ห้ามล้าง timer — Forecast ฝั่งตะวันตกยังต้องใช้ค่า S11
+        // (เดิม: clearInterval ตอนปิด layer ทำให้ค่าค้าง)
         // กลับ bounds เดิม (เฉพาะ manual toggle)
         if (!window._mkAutoToggle && _mkPrevBounds) {
           map.flyToBounds(_mkPrevBounds, { duration: 0.8 });
@@ -15882,7 +15883,15 @@ function submitFeedback(){
   document.head.appendChild(style);
 
   // ── 11. Initial fetch เมื่อ page load (ทำเสมอ ไม่รอ toggle) ──────────
-  setTimeout(fetchMkData, 4000);
+  // rev29: auto-refresh ทุก 10 นาที ไม่ผูกกับ toggle layer
+  //        เพราะ Forecast ฝั่งตะวันตก ใช้ค่า S11 ตลอด แม้ layer ปิดอยู่
+  setTimeout(() => {
+    fetchMkData();
+    if (!_mkFetchTimer) {
+      _mkFetchTimer = setInterval(fetchMkData, 600000); // 10 นาที
+      console.log('[MaeKlong] 🔄 rev29 global auto-refresh enabled (every 10 min)');
+    }
+  }, 4000);
 
   // ── 12. Expose data globally สำหรับ EC forecast / What-If ───────────
   // ใช้ getter เพื่อให้ window._mkRawWaterData ชี้ไปที่ _mkData ปัจจุบันเสมอ
