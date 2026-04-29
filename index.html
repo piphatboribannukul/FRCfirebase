@@ -6317,15 +6317,28 @@ function buildMarkers() {
             const hopStr  = hopInfo && hopInfo.tt ? ' → ' + hopInfo.name + ' ' + hopInfo.tt + 'ชม.' : '';
 
             // full detail — ท่อนสุดท้ายใช้ชื่อสถานีปลายทางจริง (s.name)
-            // MDIS = สจ.มหาสวัสดิ์ → ปลายทาง (แสดง hop)
-            // MH/MTR = root ไม่มีปลายทางเพิ่ม
-            const isMkRoot = !ttSrc || ttSrc.includes('คลองตะวันตก') || ttSrc === 'MH' || ttSrc === 'MTR';
+            // สำหรับ pump station (ไม่มีใน TRAVEL_TIME) ใช้ PUMP_HOP แทน
+            const MK_PUMP_HOP = {
+              'สถานีสูบจ่ายน้ำราษฎร์บูรณะ': { tt: '7' },
+              'สถานีสูบจ่ายน้ำเพชรเกษม':    { tt: '2' },
+              'สถานีสูบจ่ายน้ำท่าพระ':       { tt: '7' },
+              'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)': { tt: '' },
+              'สถานีสูบจ่ายน้ำมหาสวัสดิ์':      { tt: '' },
+            };
+            const isPumpStation = s.type === 'pump' && MK_PUMP_HOP[s.name] !== undefined;
+            const isMkRoot = !ttSrc || ttSrc.includes('คลองตะวันตก') || ttSrc === 'MH' || ttSrc === 'MTR' || (isPumpStation && !MK_PUMP_HOP[s.name]?.tt);
             const isMdis   = ttSrc === 'MDIS' || ttSrc === 'สจ.มหาสวัสดิ์';
             const destName = (s.name || '').replace(/\s*\(.*?\)\s*/g, '').trim();
-            const mkDetail = 'เขื่อนแม่กลอง 96ชม. + ผลิตน้ำ 2ชม. + reservoir 2ชม. รวม 100ชม.'
-              + hopStr
-              + (isMdis && ttLocal ? ' → สจ.มหาสวัสดิ์ → ' + destName + ' ' + ttLocal + 'ชม.' : '')
-              + (!isMkRoot && !isMdis && ttLocal ? ' → ' + destName + ' ' + ttLocal + 'ชม.' : '');
+
+            let mkDetail = 'เขื่อนแม่กลอง 96ชม. + ผลิตน้ำ 2ชม. + reservoir 2ชม. รวม 100ชม.';
+            if (isPumpStation && MK_PUMP_HOP[s.name]?.tt) {
+              // pump station — แสดง → สจ.xxx Nชม.
+              mkDetail += ' → ' + destName + ' ' + MK_PUMP_HOP[s.name].tt + 'ชม.';
+            } else {
+              mkDetail += hopStr
+                + (isMdis && ttLocal ? ' → สจ.มหาสวัสดิ์ → ' + destName + ' ' + ttLocal + 'ชม.' : '')
+                + (!isMkRoot && !isMdis && ttLocal ? ' → ' + destName + ' ' + ttLocal + 'ชม.' : '');
+            }
             decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11', rootKey: 'RAW_MAEKLONG', detail: mkDetail });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, mkEc, mkEc*(1+EC_FORECAST_BAND), mkEc*(1-EC_FORECAST_BAND));
