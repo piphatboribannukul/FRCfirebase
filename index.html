@@ -15718,6 +15718,28 @@ function submitFeedback(){
     }
     } // end retry loop
 
+    // rev27: อ่านค่า live จาก Firebase rawmk (บันทึกโดย Railway ทุก 10 นาที)
+    try {
+      if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
+        for (const sid of Object.keys(MK_STATIONS)) {
+          try {
+            const snap = await window._fbGet(window._fbRef(window._fb, `rawmk/${sid}`));
+            const val = snap.val ? snap.val() : snap;
+            if (val && val.ec > 0 && val.ts && (Date.now() - val.ts) < 3600000) {
+              // ค่าไม่เก่าเกิน 1 ชม.
+              _mkData[sid] = {
+                ec: val.ec, temp: val.temp, ph: val.ph,
+                turbid: val.turbid, deo: val.deo,
+                salinity: val.salinity, tds: val.tds,
+                time: val.time, ts: val.ts,
+              };
+              console.log(`[MaeKlong] 🔥 Firebase live: ${sid} EC=${val.ec}`);
+            }
+          } catch(e2) {}
+        }
+      }
+    } catch(e1) {}
+
     // rev22: โหลด Firebase history แม้ API ล้มเหลว + pre-seed จาก fallback
     try {
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
@@ -15854,10 +15876,7 @@ function submitFeedback(){
     get: () => _mkData,
     configurable: true
   });
-  Object.defineProperty(window, '_mkRawWaterHistory', {
-    get: () => _mkHistory,
-    configurable: true
-  });
+  window._mkRawWaterHistory  = _mkHistory;
   window._mkRawWaterStations = MK_STATIONS;
 
 })();
