@@ -2187,7 +2187,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev27+hybrid.K</span>
+  <span id="v2-badge">⬡ rev28+hybrid.K</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2833,7 +2833,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><th colspan="2">EPANET Decay Parameters</th></tr>
         <tr><td>พารามิเตอร์</td><td>k<sub>b</sub>=0.70 · k<sub>w</sub>=0.10 · D=0.20m · v=0.45m/s</td></tr>
         <tr><td>k รายสถานี</td><td>fit 3 เดือน (ม.ค.–มี.ค. 2569) · 51 สถานี</td></tr>
-        <tr><td>MH (คลองตะวันตก กม.14)</td><td>k=0.038/hr · half-life ~19h</td></tr>
+        <tr><td>MH (เขื่อนแม่กลอง)</td><td>k=0.038/hr · half-life ~19h</td></tr>
         <tr><td>CP (เจ้าพระยา)</td><td>k=0.062/hr · half-life ~11h</td></tr>
         <tr><td>Auto-fit k</td><td>ใช้ค่า k เฉลี่ยจาก STATION_K ที่ fit จากข้อมูลจริง</td></tr>
         <tr><td>ปรับค่า</td><td>ปรับ k<sub>b</sub> k<sub>w</sub> D v ได้จาก sidebar</td></tr>
@@ -2893,7 +2893,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <table class="note-tbl ec">
         <tr><th colspan="2">ค่า EC อ้างอิง (μS/cm)</th></tr>
         <tr><td>บางเขน (เจ้าพระยา)</td><td>240–265</td></tr>
-        <tr><td>มหาสวัสดิ์ (คลองตะวันตก กม.14)</td><td>175–210</td></tr>
+        <tr><td>มหาสวัสดิ์ (เขื่อนแม่กลอง)</td><td>175–210</td></tr>
         <tr><td>ธนบุรี</td><td>~230</td></tr>
         <tr><td>สามเสน 1–4</td><td>~235</td></tr>
       </table>
@@ -5093,7 +5093,7 @@ const EC_SOURCE_MAP = {
 const EC_FORECAST_BAND = 0.10; // ±10% confidence band
 
 const EC_ROOT_SOURCE_MAP = {
-  // ── rev27: ทุกสถานี root จากน้ำดิบสำแล / คลองตะวันตก กม.14 ──────────────────
+  // ── rev28: ทุกสถานี root จากน้ำดิบสำแล / คลองตะวันตก กม.14 ──────────────────
   // ttRoot = เวลาเดินทางรวม (น้ำดิบ → โรงผลิต+ผลิต 2ชม.+reservoir 2ชม. → อุโมงค์ → สถานี)
   //
   // ฝั่งตะวันออก: สำแล +13 + ผลิต 2 + reservoir 2 = 17 ชม. → TR/Dis → สถานี
@@ -5194,7 +5194,7 @@ function buildMarkers() {
     'โรงงานผลิตน้ำสามเสน 2':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
     'โรงงานผลิตน้ำสามเสน 3':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
     'โรงงานผลิตน้ำสามเสน 4':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
-    // rev27: มหาสวัสดิ์ — source จากคลองตะวันตก กม.14 → โรงงานมหาสวัสดิ์ 23 ชม. + ผลิต 2 + reservoir 2 = 27 ชม.
+    // rev28: มหาสวัสดิ์ — source จากคลองตะวันตก กม.14 → โรงงานมหาสวัสดิ์ 23 ชม. + ผลิต 2 + reservoir 2 = 27 ชม.
     'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)': { tt_from: '27', tt_label: 'จาก เขื่อนแม่กลอง' },
     'สถานีสูบจ่ายน้ำมหาสวัสดิ์':      { tt_from: '27', tt_label: 'จาก เขื่อนแม่กลอง' },
     // สถานีสูบจ่ายน้ำ (สจ.) — จากโรงงาน/สถานีสูบส่ง
@@ -5654,7 +5654,7 @@ function buildMarkers() {
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
       +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#43a047">▓ Confidence band ±'+Math.round(BAND*100)+'%</span>'
       +(window._rawWaterEc && opts && opts.rootKey === 'RAW_SAMLE' ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
-      +(window._mkRawWaterData && window._mkRawWaterData['S11'] && opts && opts.rootKey === 'RAW_MAEKLONG' ? '&nbsp;&nbsp;<span style="color:#0a6050">- - คลองตะวันตก กม.14</span>' : '')
+      +(window._mkRawWaterData && window._mkRawWaterData['S11'] && opts && opts.rootKey === 'RAW_MAEKLONG' ? '&nbsp;&nbsp;<span style="color:#0a6050">- - เขื่อนแม่กลอง</span>' : '')
       +'</span>'
       +'<span style="color:'+endColor+';font-weight:700">'+endStatus+' ที่ '+toHHMM(nowHr+ttHours)+'</span>'
       +'</div></div>';
@@ -6249,7 +6249,7 @@ function buildMarkers() {
         if (ecRootKey === 'RAW_SAMLE' && window._rawWaterEc && window._rawWaterEc.ec > 0) {
           const rwEc = window._rawWaterEc.ec;
           if (ecTT > 0) {
-            // rev27: short label สำหรับ header, full detail สำหรับ sub-label
+            // rev28: short label สำหรับ header, full detail สำหรับ sub-label
             const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
             const ttLocal = ttInfo ? ttInfo.tt_from : '';
             const ttSrc   = ttInfo ? ttInfo.tt_label.replace(/^จาก\s*/, '') : '';
@@ -6297,7 +6297,7 @@ function buildMarkers() {
         } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11'] && window._mkRawWaterData['S11'].ec > 0) {
           const mkEc = window._mkRawWaterData['S11'].ec;
           if (ecTT > 0) {
-            // rev27: short label สำหรับ header, full detail สำหรับ sub-label
+            // rev28: short label สำหรับ header, full detail สำหรับ sub-label
             const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
             const ttLocal = ttInfo ? ttInfo.tt_from : '';
             const ttSrc   = ttInfo ? ttInfo.tt_label.replace(/^จาก\s*/, '') : '';
@@ -6361,7 +6361,7 @@ function buildMarkers() {
               + (pumpHop ? ' → ' + ecPumpDestName + ' ' + pumpHop.tt + 'ชม.' : ecTT > 17 ? ' → ' + ecPumpDestName + ' ' + (ecTT - 17) + 'ชม.' : '');
           } else if (ecRootKey === 'RAW_MAEKLONG') {
             ecDetail = 'เขื่อนแม่กลอง 96ชม. + ผลิตน้ำ 2ชม. + reservoir 2ชม. รวม 100ชม.'
-              + (pumpHop ? ' → ' + ecPumpDestName + ' ' + pumpHop.tt + 'ชม.' : ecTT > 27 ? ' → ' + ecPumpDestName + ' ' + (ecTT - 27) + 'ชม.' : '');
+              + (pumpHop ? ' → ' + ecPumpDestName + ' ' + pumpHop.tt + 'ชม.' : ecTT > 100 ? ' → ' + ecPumpDestName + ' ' + (ecTT - 100) + 'ชม.' : '');
           }
           if (ecTT > 0) {
             decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId, { rwHistKey: ecRootKey==='RAW_SAMLE'?'S1':ecRootKey==='RAW_MAEKLONG'?'S11':null, rootKey: ecRootKey, detail: ecDetail });
@@ -12318,7 +12318,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev27 — Hybrid K (Live Back-calc per Station) + EPANET Pipe-Aware Contour + KMZ Network + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev28 — Hybrid K (Live Back-calc per Station) + EPANET Pipe-Aware Contour + KMZ Network + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -15718,7 +15718,7 @@ function submitFeedback(){
     }
     } // end retry loop
 
-    // rev27: อ่านค่า live จาก Firebase rawmk (บันทึกโดย Railway ทุก 10 นาที)
+    // rev28: อ่านค่า live จาก Firebase rawmk (บันทึกโดย Railway ทุก 10 นาที)
     try {
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
         for (const sid of Object.keys(MK_STATIONS)) {
