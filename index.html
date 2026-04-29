@@ -15775,9 +15775,8 @@ function submitFeedback(){
       console.warn('[MaeKlong] Firebase fallback error:', e3.message);
     }
 
-    // Update global refs
+    // Update global refs (history เท่านั้น — _mkRawWaterData ใช้ getter แล้ว)
     window._mkRawWaterHistory = _mkHistory;
-    window._mkRawWaterData = _mkData;
 
     // Rebuild markers
     if (layers['rawwater-mk']) {
@@ -15846,13 +15845,20 @@ function submitFeedback(){
   `;
   document.head.appendChild(style);
 
-  // ── 11. Initial fetch เมื่อ page load ────────────────────────────────
+  // ── 11. Initial fetch เมื่อ page load (ทำเสมอ ไม่รอ toggle) ──────────
   setTimeout(fetchMkData, 4000);
 
   // ── 12. Expose data globally สำหรับ EC forecast / What-If ───────────
-  window._mkRawWaterData = _mkData;
+  // ใช้ getter เพื่อให้ window._mkRawWaterData ชี้ไปที่ _mkData ปัจจุบันเสมอ
+  Object.defineProperty(window, '_mkRawWaterData', {
+    get: () => _mkData,
+    configurable: true
+  });
+  Object.defineProperty(window, '_mkRawWaterHistory', {
+    get: () => _mkHistory,
+    configurable: true
+  });
   window._mkRawWaterStations = MK_STATIONS;
-  window._mkRawWaterHistory = _mkHistory;  // rev22: expose history
 
 })();
 </script>
