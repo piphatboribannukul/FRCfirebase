@@ -6354,7 +6354,8 @@ function buildMarkers() {
             'สถานีสูบจ่ายน้ำเพชรเกษม':    { src: 'MH',  tt: 2  },
             'สถานีสูบจ่ายน้ำท่าพระ':       { src: 'MH',  tt: 7  },
           };
-          const pumpHop = PUMP_HOP[s.name];
+          const pumpHop = PUMP_HOP[s.name] || PUMP_HOP[s.name?.trim()] ||
+            Object.entries(PUMP_HOP).find(([k]) => s.name && s.name.includes(k.replace('สถานีสูบจ่ายน้ำ','')))?.[1];
           let ecDetail = '';
           if (ecRootKey === 'RAW_SAMLE') {
             ecDetail = 'สำแล 13ชม. + ผลิตน้ำ 2ชม. + reservoir 2ชม. รวม 17ชม.'
@@ -15189,7 +15190,7 @@ function submitFeedback(){
 
   // Fallback data จาก API snapshot (ค่าล่าสุด 2026-04-08/09)
   const MK_FALLBACK = {
-    'S11': { ec:166, temp:32.00, tds:120, salinity:0.09, deo:9.00, ph:8.20, turbid:4.5, time:'2026-04-13T14:50' },
+    'S11': { ec:200, temp:29.00, tds:130, salinity:0.10, deo:5.00, ph:7.50, turbid:3.5, time:'2026-04-29T14:50' },
     'T5':  { ec:244, temp:28.39, tds:170, salinity:0.12, deo:3.26, depth:0.64, ph:7.55, turbid:3.2, time:'2026-04-13T14:50' },
     'S16': { ec:153, temp:27.18, tds:104, salinity:0.07, deo:7.30, ph:7.47, turbid:17.0, time:'2026-04-13T14:50' },
     'S9':  { ec:179, temp:29.78, tds:130, salinity:0.09, deo:5.12, ph:7.50, turbid:4.8, time:'2026-04-13T14:50' },
