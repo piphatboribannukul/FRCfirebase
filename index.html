@@ -15214,6 +15214,7 @@ function submitFeedback(){
   let _mkContourLayer = null;
   let _mkData = {};   // stn_id → { ec, temp, tds, salinity, ph, turbid, deo, nh4, depth, time }
   let _mkFetchTimer = null;
+  let _mkApiFetched = false; // rev29.1: true เมื่อ API หรือ Firebase live ดึงค่าจริงสำเร็จ
 
   // Fallback data จาก API snapshot (ค่าล่าสุด 2026-04-08/09)
   const MK_FALLBACK = {
@@ -15740,6 +15741,7 @@ function submitFeedback(){
       });
 
       console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
+      _mkApiFetched = true; // rev29.1: API ดึงข้อมูลจริงสำเร็จ
       break; // สำเร็จ — ออกจาก retry loop
 
     } catch (e) {
@@ -15766,6 +15768,7 @@ function submitFeedback(){
                 time: val.time, ts: val.ts,
               };
               console.log(`[MaeKlong] 🔥 Firebase live: ${sid} EC=${val.ec}`);
+              _mkApiFetched = true; // rev29.1: ได้ข้อมูลจริงจาก Firebase
             }
           } catch(e2) {}
         }
@@ -15795,7 +15798,20 @@ function submitFeedback(){
           } catch(e2) { /* ignore */ }
         }
         // Sort & limit
+        // rev29.1: ลบ record ที่ตรงกับ fallback timestamp (ข้อมูลปลอมที่บันทึกจาก fallback ก่อนหน้า)
+        const _fbTs = {};
+        Object.entries(MK_FALLBACK).forEach(([sid, d]) => {
+          if (d.time) _fbTs[sid] = new Date(d.time).getTime();
+        });
         Object.keys(_mkHistory).forEach(sid => {
+          if (_fbTs[sid]) {
+            const fbTime = _fbTs[sid];
+            const fbEc   = MK_FALLBACK[sid] ? MK_FALLBACK[sid].ec : null;
+            _mkHistory[sid] = _mkHistory[sid].filter(h => {
+              // ลบ record ที่ timestamp ตรง fallback + EC ตรง fallback (เป็น record ปลอม)
+              return !(h.ts === fbTime && fbEc != null && Math.abs(h.ec - fbEc) < 0.01);
+            });
+          }
           _mkHistory[sid].sort((a,b) => a.ts - b.ts);
           if (_mkHistory[sid].length > 1440) _mkHistory[sid] = _mkHistory[sid].slice(-1440); // rev29.1: 10 วัน × 144/วัน
         });
@@ -15803,18 +15819,22 @@ function submitFeedback(){
       }
 
       // Pre-seed: ถ้า _mkHistory ยังว่าง ใส่ค่า current จาก _mkData เป็น 1 จุด
-      Object.entries(_mkData).forEach(([sid, d]) => {
-        if (d && d.ec > 0 && d.time) {
-          if (!_mkHistory[sid]) _mkHistory[sid] = [];
-          const ts = new Date(d.time).getTime();
-          if (ts > 0 && !_mkHistory[sid].find(h => h.ts === ts)) {
-            _mkHistory[sid].push({ ec: d.ec, ts });
+      // rev29.1: เฉพาะเมื่อได้ข้อมูลจริง (ไม่ใช่ fallback)
+      if (_mkApiFetched) {
+        Object.entries(_mkData).forEach(([sid, d]) => {
+          if (d && d.ec > 0 && d.time) {
+            if (!_mkHistory[sid]) _mkHistory[sid] = [];
+            const ts = new Date(d.time).getTime();
+            if (ts > 0 && !_mkHistory[sid].find(h => h.ts === ts)) {
+              _mkHistory[sid].push({ ec: d.ec, ts });
+            }
           }
-        }
-      });
+        });
+      }
 
-      // บันทึก fallback/current data ลง Firebase ทุก 10 นาที
-      if (window._fbReady && window._fb && window._fbSet && window._fbRef) {
+      // บันทึก current data ลง Firebase ทุก 10 นาที — เฉพาะเมื่อได้ข้อมูลจริง
+      // rev29.1: ห้ามบันทึก fallback data ลง history (ป้องกัน EC 200 ค้างเป็น history ปลอม)
+      if (_mkApiFetched && window._fbReady && window._fb && window._fbSet && window._fbRef) {
         const now = Date.now();
         Object.entries(_mkData).forEach(([sid, d]) => {
           if (d && d.ec > 0) {
@@ -15823,7 +15843,7 @@ function submitFeedback(){
             window._fbSet(window._fbRef(window._fb, fbKey), { ec: d.ec, temp: d.temp || null, ts });
           }
         });
-        console.log('[MaeKlong] ✅ saved current EC to Firebase (fallback or API)');
+        console.log('[MaeKlong] ✅ saved live EC to Firebase history');
       }
     } catch(e3) {
       console.warn('[MaeKlong] Firebase fallback error:', e3.message);
