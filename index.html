@@ -15974,7 +15974,9 @@ function submitFeedback(){
 (function(){
   'use strict';
 
-  const SNP_SHEET_URL = 'https://docs.google.com/spreadsheets/d/17BLEtEo9HSpTH7sNiWYvkxZhiREkqQTkfHYGpA2NpvY/export?format=csv&gid=0';
+  const SNP_SHEET_ID = '17BLEtEo9HSpTH7sNiWYvkxZhiREkqQTkfHYGpA2NpvY';
+  // gviz endpoint ไม่โดน CORS block (ต่างจาก export?format=csv)
+  const SNP_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SNP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
   const SNP_RADIUS_KM = 5;
   let _snpData = [];       // parsed records
   let _snpLoaded = false;
@@ -16052,33 +16054,56 @@ function submitFeedback(){
 
   // ── Load Google Sheet ──
   async function loadSnpData() {
-    try {
-      console.log('[SNP] Loading Google Sheet...');
-      const resp = await fetch(SNP_SHEET_URL);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
-      const rows = parseCsv(text);
-      _snpData = rows.filter(r => {
-        if (!r['พิกัด']) return false;
-        const parts = r['พิกัด'].split(',');
-        if (parts.length !== 2) return false;
-        const lat = parseFloat(parts[0].trim());
-        const lng = parseFloat(parts[1].trim());
-        if (isNaN(lat) || isNaN(lng)) return false;
-        r._lat = lat;
-        r._lng = lng;
-        r._cl2 = parseFloat(r['คลอรีน']) || null;
-        r._turb = parseFloat(r['ความขุ่น']) || parseFloat(r['ความขุ่นจริง']) || null;
-        r._ec = parseFloat(r['ความนำไฟฟ้า']) || null;
-        r._ph = parseFloat(r['pH']) || null;
-        r._color = parseInt(r['สีปรากฎ']) || null;
-        return true;
-      });
-      _snpLoaded = true;
-      console.log(`[SNP] ✅ Loaded ${_snpData.length} records from Google Sheet`);
-    } catch(e) {
-      console.warn('[SNP] ⚠️ Failed to load:', e.message);
+    // ลอง gviz endpoint ก่อน (มักผ่าน CORS)
+    const urls = [
+      `https://docs.google.com/spreadsheets/d/${SNP_SHEET_ID}/gviz/tq?tqx=out:csv&gid=0`,
+      `https://docs.google.com/spreadsheets/d/${SNP_SHEET_ID}/export?format=csv&gid=0`,
+    ];
+    for (const url of urls) {
+      try {
+        console.log('[SNP] Trying:', url.substring(0, 80) + '...');
+        const resp = await fetch(url, { redirect: 'follow' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        if (text.length < 100) throw new Error('Response too short');
+        const rows = parseCsv(text);
+        if (rows.length < 5) throw new Error(`Only ${rows.length} rows parsed`);
+        _snpData = rows.filter(r => {
+          // gviz อาจเปลี่ยนชื่อ column → ลอง match ทั้ง exact และ contains
+          const coordCol = r['พิกัด'] || r[Object.keys(r).find(k => k.includes('พิกัด'))] || '';
+          if (!coordCol) return false;
+          const parts = coordCol.split(',');
+          if (parts.length !== 2) return false;
+          const lat = parseFloat(parts[0].trim());
+          const lng = parseFloat(parts[1].trim());
+          if (isNaN(lat) || isNaN(lng) || lat < 5 || lat > 21 || lng < 97 || lng > 106) return false;
+          r._lat = lat;
+          r._lng = lng;
+          // Match columns flexibly
+          const getCol = (name) => r[name] || r[Object.keys(r).find(k => k.includes(name)) || ''] || '';
+          r._cl2 = parseFloat(getCol('คลอรีน')) || null;
+          r._turb = parseFloat(getCol('ความขุ่นจริง')) || parseFloat(getCol('ความขุ่น')) || null;
+          r._ec = parseFloat(getCol('ความนำไฟฟ้า')) || null;
+          r._ph = parseFloat(getCol('pH')) || null;
+          r._color = parseInt(getCol('สีปรากฎ')) || null;
+          // Preserve display columns
+          r._place = getCol('สถานที่') || getCol('จุดเก็บ') || '—';
+          r._date = getCol('วันที่');
+          r._time = getCol('เวลา');
+          r._road = getCol('ถนน');
+          r._branch = getCol('สาขา');
+          r._source = getCol('รับน้ำจาก');
+          r._ecoli = getCol('อีโคไล') || getCol('อี.โค.ไล');
+          return true;
+        });
+        _snpLoaded = true;
+        console.log(`[SNP] ✅ Loaded ${_snpData.length} records from Google Sheet`);
+        return; // สำเร็จ
+      } catch(e) {
+        console.warn('[SNP] ⚠️ Failed:', e.message);
+      }
     }
+    console.error('[SNP] ❌ All fetch methods failed. Sheet must be shared as "Anyone with the link".');
   }
 
   // ── Haversine distance (km) ──
@@ -16156,17 +16181,17 @@ function submitFeedback(){
         const ecHtml = r._ec != null ? `<div class="snp-card-item"><b>EC</b> ${r._ec} μS/cm</div>` : '';
         const phHtml = r._ph != null ? `<div class="snp-card-item"><b>pH</b> ${r._ph.toFixed(2)}</div>` : '';
         const colorHtml = r._color != null ? `<div class="snp-card-item"><b>สี</b> ${r._color}</div>` : '';
-        const ecoliHtml = r['อีโคไล'] ? `<div class="snp-card-item"><b>E.coli</b> ${r['อีโคไล']}</div>` : '';
+        const ecoliHtml = r._ecoli ? `<div class="snp-card-item"><b>E.coli</b> ${r._ecoli}</div>` : '';
 
         cardsHtml += `
           <div class="snp-card" onclick="window.map.flyTo([${r._lat},${r._lng}],16);this.style.borderColor='#8e24aa';">
             <div class="snp-card-head">
-              <div class="snp-card-name">${r['สถานที่'] || r['จุดเก็บ'] || '—'}</div>
+              <div class="snp-card-name">${r._place}</div>
               <div class="snp-card-dist">📍 ${distLabel}</div>
             </div>
             <div class="snp-card-meta">
-              📅 ${fmtDate(r['วันที่'])} ⏰ ${r['เวลา'] || '—'}
-              · ${r['ถนน'] || ''} · ${r['สาขา'] || ''} · รับน้ำ: ${r['รับน้ำจาก'] || '—'}
+              📅 ${fmtDate(r._date)} ⏰ ${r._time || '—'}
+              · ${r._road || ''} · ${r._branch || ''} · รับน้ำ: ${r._source || '—'}
             </div>
             <div class="snp-card-grid">
               ${cl2Html}${turbHtml}${ecHtml}${phHtml}${colorHtml}${ecoliHtml}
@@ -16178,7 +16203,7 @@ function submitFeedback(){
         const m = L.circleMarker([r._lat, r._lng], {
           radius: 5, fillColor: mkColor, color: '#fff', weight: 1.5, fillOpacity: 0.85
         }).addTo(window.map);
-        m.bindTooltip(`<b>${(r['สถานที่']||'').substring(0,25)}</b><br>Cl₂: ${r._cl2!=null?r._cl2.toFixed(2):'—'} | EC: ${r._ec||'—'}`, {
+        m.bindTooltip(`<b>${(r._place||'').substring(0,25)}</b><br>Cl₂: ${r._cl2!=null?r._cl2.toFixed(2):'—'} | EC: ${r._ec||'—'}`, {
           className: 'snp-tip', direction: 'top', offset: [0, -6]
         });
         _snpMarkers.push(m);
@@ -16193,7 +16218,7 @@ function submitFeedback(){
     }
 
     // Unique dates
-    const uniqueDates = [...new Set(nearby.map(r => fmtDate(r['วันที่'])))];
+    const uniqueDates = [...new Set(nearby.map(r => fmtDate(r._date)))];
 
     overlay.innerHTML = `
       <div class="snp-panel">
