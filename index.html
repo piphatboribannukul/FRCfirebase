@@ -14809,6 +14809,9 @@ function submitFeedback(){
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
       const records = json.data || [];
+      // rev29.1: เก็บ records ทั้งหมดไว้ให้ fetchMkData ใช้ (API เดียวกัน ไม่ต้อง fetch ซ้ำ)
+      window._allRawRecords = records;
+      console.log(`[RawWater] API returned ${records.length} records total`);
 
       // หาค่าล่าสุดของแต่ละสถานี
       const latest = {};
@@ -15690,20 +15693,32 @@ function submitFeedback(){
     const MAX_RETRY = 3;
     for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
     try {
-      console.log(`[MaeKlong] Fetching API... (attempt ${attempt}/${MAX_RETRY})`);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // เพิ่มเป็น 30 วินาที
-      const resp = await fetch(MK_API, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      const records = json.data || [];
-      // rev29.1: debug — ตรวจว่า API return field อะไร + stn_id format
-      if (records.length > 0) {
-        const stnIds = [...new Set(records.map(r => r.stn_id))];
-        console.log(`[MaeKlong] API returned ${records.length} records from ${stnIds.length} stations: [${stnIds.join(', ')}]`);
+      // rev29.1: ใช้ records จาก fetchRawWaterData (API เดียวกัน) แทน fetch ซ้ำ
+      let records;
+      if (window._allRawRecords && window._allRawRecords.length > 0) {
+        records = window._allRawRecords;
+        console.log(`[MaeKlong] Using shared records from RawWater (${records.length} total)`);
       } else {
-        console.warn('[MaeKlong] API returned 0 records. json keys:', Object.keys(json).join(','));
+        // รอ _allRawRecords จาก fetchRawWaterData (ถ้ายังไม่พร้อม รอสูงสุด 30 วินาที)
+        console.log('[MaeKlong] Waiting for RawWater API data...');
+        for (let w = 0; w < 30; w++) {
+          await new Promise(r => setTimeout(r, 1000));
+          if (window._allRawRecords && window._allRawRecords.length > 0) break;
+        }
+        if (window._allRawRecords && window._allRawRecords.length > 0) {
+          records = window._allRawRecords;
+          console.log(`[MaeKlong] Got shared records (${records.length} total) after waiting`);
+        } else {
+          // Fallback: fetch เอง
+          console.log(`[MaeKlong] Fetching API directly... (attempt ${attempt}/${MAX_RETRY})`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          const resp = await fetch(MK_API, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const json = await resp.json();
+          records = json.data || [];
+        }
       }
 
       // หาค่าล่าสุดของแต่ละสถานี
