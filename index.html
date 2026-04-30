@@ -15698,6 +15698,13 @@ function submitFeedback(){
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
       const records = json.data || [];
+      // rev29.1: debug — ตรวจว่า API return field อะไร + stn_id format
+      if (records.length > 0) {
+        const stnIds = [...new Set(records.map(r => r.stn_id))];
+        console.log(`[MaeKlong] API returned ${records.length} records from ${stnIds.length} stations: [${stnIds.join(', ')}]`);
+      } else {
+        console.warn('[MaeKlong] API returned 0 records. json keys:', Object.keys(json).join(','));
+      }
 
       // หาค่าล่าสุดของแต่ละสถานี
       const latest = {};
@@ -15741,7 +15748,15 @@ function submitFeedback(){
       });
 
       console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
-      _mkApiFetched = true; // rev29.1: API ดึงข้อมูลจริงสำเร็จ
+      // rev29.1: debug — แสดง stn_id ทั้งหมดที่ API return มา เพื่อตรวจว่า match MK_STATIONS หรือไม่
+      if (Object.keys(latest).length === 0 && records.length > 0) {
+        const apiIds = [...new Set(records.map(r => r.stn_id))];
+        console.warn(`[MaeKlong] ⚠️ API returned ${records.length} records but 0 matched MK_STATIONS. API stn_ids:`, apiIds.join(', '));
+        console.warn(`[MaeKlong] ⚠️ MK_STATIONS keys:`, Object.keys(MK_STATIONS).join(', '));
+      }
+      if (Object.keys(latest).length > 0) {
+        _mkApiFetched = true; // rev29.1: API ดึงข้อมูลจริงสำเร็จ (มี station match)
+      }
       break; // สำเร็จ — ออกจาก retry loop
 
     } catch (e) {
