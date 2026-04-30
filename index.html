@@ -2187,7 +2187,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ rev28+hybrid.K</span>
+  <span id="v2-badge">⬡ rev29.1+hybrid.K</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -5374,7 +5374,7 @@ function buildMarkers() {
 
     // ── 24h ย้อนหลัง + คาดการณ์ถึง ttHours ──
     const HIST_WIN = 24;   // x-axis ย้อนหลัง 24hr
-    const DATA_WIN = 168;  // filter ข้อมูล 7 วัน
+    const DATA_WIN = 240;  // rev29.1: filter ข้อมูล 10 วัน (ครอบคลุม ttRoot ฝั่งตะวันตก 100+ ชม.)
     // rev22: FORE_WIN dynamic — ขยายตาม ttHours (min 24, max 72)
     const FORE_WIN = Math.min(72, Math.max(24, Math.ceil(ttHours / 6) * 6 + 6));
     const totalT = HIST_WIN + FORE_WIN;
@@ -5413,13 +5413,27 @@ function buildMarkers() {
       const rwH = rwHistKey === 'S1' ? (window._rawWaterHistory || {}) : (window._mkRawWaterHistory || {});
       rwHist = (rwH[rwHistKey] || []).filter(p => p.ec != null && p.ec > 0).sort((a,b) => a.ts - b.ts);
     }
+    // rev29.1: debug — ตรวจว่า history ครอบคลุม ttHours หรือไม่
+    if (rwHist.length > 0) {
+      const coverageHrs = ((nowMs - rwHist[0].ts) / 3600000).toFixed(1);
+      const neededHrs = ttHours.toFixed ? ttHours.toFixed(1) : ttHours;
+      if (parseFloat(coverageHrs) < ttHours) {
+        console.warn(`[EC Forecast] ⚠️ ${rwHistKey} history covers ${coverageHrs}h but ttRoot needs ${neededHrs}h — forecast may be flat for early portion`);
+      }
+    }
 
     // helper: interpolate EC from history at given timestamp
+    // rev29.1: ถ้า timestamp ห่างจากขอบ history มากกว่า 12 ชม. → ใช้ ecSource แทน
+    //          (ป้องกันค่าค้างกรณี history ยังสะสมไม่ครบ ttRoot)
+    const HIST_GAP_LIMIT = 12 * 3600000; // 12 ชม.
     function getRwEcAt(ts) {
       if (rwHist.length === 0) return ecSource;
-      // ถ้าก่อน history → ใช้ค่าแรก, หลัง history → ใช้ค่าสุดท้าย
-      if (ts <= rwHist[0].ts) return rwHist[0].ec;
-      if (ts >= rwHist[rwHist.length-1].ts) return rwHist[rwHist.length-1].ec;
+      if (ts <= rwHist[0].ts) {
+        return (rwHist[0].ts - ts > HIST_GAP_LIMIT) ? ecSource : rwHist[0].ec;
+      }
+      if (ts >= rwHist[rwHist.length-1].ts) {
+        return (ts - rwHist[rwHist.length-1].ts > HIST_GAP_LIMIT) ? ecSource : rwHist[rwHist.length-1].ec;
+      }
       // interpolate
       for (let i = 1; i < rwHist.length; i++) {
         if (rwHist[i].ts >= ts) {
@@ -15711,14 +15725,18 @@ function submitFeedback(){
       });
 
       // Build history for charts
-      // rev22: clear แทน reassign เพื่อรักษา reference ที่ window._mkRawWaterHistory ชี้อยู่
-      Object.keys(_mkHistory).forEach(k => delete _mkHistory[k]);
-      // rev21: ดึง history จาก API records
+      // rev29.1: ไม่ลบ history เก่าแล้ว — append จาก API เหมือนฝั่ง Samle
+      //          เพื่อรักษา Firebase history ที่สะสมไว้ (จำเป็นสำหรับ ttRoot 100+ ชม.)
       records.forEach(r => {
         const sid = r.stn_id;
         if (!MK_STATIONS[sid]) return;
+        if (r.conducted == null || r.conducted <= 0) return;
         if (!_mkHistory[sid]) _mkHistory[sid] = [];
-        _mkHistory[sid].push({ ec: r.conducted, ts: new Date(r.datetimes).getTime() });
+        const ts = new Date(r.datetimes).getTime();
+        if (!ts || isNaN(ts)) return;
+        if (!_mkHistory[sid].find(h => h.ts === ts)) {
+          _mkHistory[sid].push({ ec: r.conducted, ts });
+        }
       });
 
       console.log(`[MaeKlong] ✅ ${Object.keys(latest).length} stations updated`);
@@ -15757,7 +15775,7 @@ function submitFeedback(){
     // rev22: โหลด Firebase history แม้ API ล้มเหลว + pre-seed จาก fallback
     try {
       if (window._fbReady && window._fb && window._fbGet && window._fbRef) {
-        const sevenDaysAgo = Date.now() - 168 * 3600000;
+        const tenDaysAgo = Date.now() - 240 * 3600000; // rev29.1: ขยายเป็น 10 วัน (240 ชม.) ครอบคลุม ttRoot สูงสุด 116.5 ชม. + HIST_WIN 24 ชม.
         for (const sid of Object.keys(MK_STATIONS)) {
           try {
             const fbPath = `history/rawmk_${sid.replace(/\//g,'-')}`;
@@ -15768,7 +15786,7 @@ function submitFeedback(){
               Object.values(val).forEach(rec => {
                 if (!rec || rec.ec == null || rec.ec <= 0) return;
                 const ts = rec.ts || 0;
-                if (ts < sevenDaysAgo) return;
+                if (ts < tenDaysAgo) return;
                 if (!_mkHistory[sid].find(h => h.ts === ts)) {
                   _mkHistory[sid].push({ ec: rec.ec, ts });
                 }
@@ -15779,7 +15797,7 @@ function submitFeedback(){
         // Sort & limit
         Object.keys(_mkHistory).forEach(sid => {
           _mkHistory[sid].sort((a,b) => a.ts - b.ts);
-          if (_mkHistory[sid].length > 1008) _mkHistory[sid] = _mkHistory[sid].slice(-1008);
+          if (_mkHistory[sid].length > 1440) _mkHistory[sid] = _mkHistory[sid].slice(-1440); // rev29.1: 10 วัน × 144/วัน
         });
         console.log('[MaeKlong] ✅ Firebase history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
       }
