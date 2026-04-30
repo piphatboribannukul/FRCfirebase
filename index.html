@@ -14809,9 +14809,7 @@ function submitFeedback(){
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
       const records = json.data || [];
-      // rev29.1: เก็บ records ทั้งหมดไว้ให้ fetchMkData ใช้ (API เดียวกัน ไม่ต้อง fetch ซ้ำ)
-      window._allRawRecords = records;
-      console.log(`[RawWater] API returned ${records.length} records total`);
+      console.log(`[RawWater] API returned ${records.length} records`);
 
       // หาค่าล่าสุดของแต่ละสถานี
       const latest = {};
@@ -15210,7 +15208,7 @@ function submitFeedback(){
   };
 
   // ── 2. API endpoint (เดียวกับที่ให้มา) ────────────────────────────
-  const MK_API = 'https://bigdata.mwa.co.th/data-service/internal/big-data/api/v1/783f543c-666c-35b4-795b-40dd2446b291/720721b3-cdaa-199d-9286-52f97cf00dfb/data?token=y0pBvoNbZSQWULB88PXeHBn2dHEgzaFyxSeH3V7a9jgWwn9VAmuGLhqkwrHLpdRm7wNn4DJsYLUT81JpZTwFqZkawNqdq2Osi1igZmYMlD37sKnU8Sy3aLgAQjKoHcdN';
+  const MK_API = 'https://bigdata.mwa.co.th/data-service/internal/big-data/api/v1/783f543c-666c-35b4-795b-40dd2446b291/7e911fa9-0a52-970a-eef5-2170851f3530/data?token=3XSOeKch6WiCXcw37EWhVX0Z0mPLncwmwTY6fgkm6tVCaIuNU11IiRRydPCUadnFGvfV2mPPrLc6hUk87JtA6rJSPVKNEr0HhJOuRPQ0CR3v3kaFIzk71Bm1N8uqST2b';
 
   // ── 3. State ────────────────────────────────────────────────────────
   let _mkLayerGroup = null;
@@ -15693,33 +15691,16 @@ function submitFeedback(){
     const MAX_RETRY = 3;
     for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
     try {
-      // rev29.1: ใช้ records จาก fetchRawWaterData (API เดียวกัน) แทน fetch ซ้ำ
-      let records;
-      if (window._allRawRecords && window._allRawRecords.length > 0) {
-        records = window._allRawRecords;
-        console.log(`[MaeKlong] Using shared records from RawWater (${records.length} total)`);
-      } else {
-        // รอ _allRawRecords จาก fetchRawWaterData (ถ้ายังไม่พร้อม รอสูงสุด 30 วินาที)
-        console.log('[MaeKlong] Waiting for RawWater API data...');
-        for (let w = 0; w < 30; w++) {
-          await new Promise(r => setTimeout(r, 1000));
-          if (window._allRawRecords && window._allRawRecords.length > 0) break;
-        }
-        if (window._allRawRecords && window._allRawRecords.length > 0) {
-          records = window._allRawRecords;
-          console.log(`[MaeKlong] Got shared records (${records.length} total) after waiting`);
-        } else {
-          // Fallback: fetch เอง
-          console.log(`[MaeKlong] Fetching API directly... (attempt ${attempt}/${MAX_RETRY})`);
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000);
-          const resp = await fetch(MK_API, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const json = await resp.json();
-          records = json.data || [];
-        }
-      }
+      // rev29.1: MK_API เป็น endpoint แยกจาก RAW_WATER_API (คนละ UUID)
+      console.log(`[MaeKlong] Fetching MK API... (attempt ${attempt}/${MAX_RETRY})`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const resp = await fetch(MK_API, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      const records = json.data || [];
+      console.log(`[MaeKlong] API returned ${records.length} records`);
 
       // หาค่าล่าสุดของแต่ละสถานี
       const latest = {};
