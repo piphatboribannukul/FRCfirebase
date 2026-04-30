@@ -16298,10 +16298,16 @@ function submitFeedback(){
             </div>
           </div>`;
 
-        // Add marker on map
+        // Add marker on map — ใช้ divIcon + pane เฉพาะเพื่อให้อยู่เหนือ contour canvas
         const mkColor = r._cl2 != null ? (r._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
-        const m = L.circleMarker([r._lat, r._lng], {
-          radius: 6, fillColor: mkColor, color: '#fff', weight: 2, fillOpacity: 0.9
+        const m = L.marker([r._lat, r._lng], {
+          pane: 'snpPane',
+          icon: L.divIcon({
+            className: '',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+            html: `<div style="width:14px;height:14px;border-radius:50%;background:${mkColor};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;"></div>`
+          })
         }).addTo(window.map);
 
         // Popup with full details
@@ -16393,6 +16399,12 @@ function submitFeedback(){
   // Listen for popup open events
   function hookPopups() {
     if (!window.map) { setTimeout(hookPopups, 500); return; }
+    // สร้าง pane เฉพาะสำหรับ SNP markers ให้อยู่เหนือ contour canvas (z-index 650+)
+    if (!window.map.getPane('snpPane')) {
+      window.map.createPane('snpPane');
+      window.map.getPane('snpPane').style.zIndex = 650;
+      window.map.getPane('snpPane').style.pointerEvents = 'auto';
+    }
     window.map.on('popupopen', (e) => {
       setTimeout(() => injectSnpButton(e.popup), 50);
     });
