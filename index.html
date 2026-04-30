@@ -15967,5 +15967,310 @@ function submitFeedback(){
   window._mkRawWaterStations = MK_STATIONS;
 
 })();
+
+// ══════════════════════════════════════════════════════════════════════════
+// rev29.1: 🔬 คุณภาพน้ำ สนป. (Lab sampling from Google Sheet)
+// ══════════════════════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  const SNP_SHEET_URL = 'https://docs.google.com/spreadsheets/d/17BLEtEo9HSpTH7sNiWYvkxZhiREkqQTkfHYGpA2NpvY/export?format=csv&gid=0';
+  const SNP_RADIUS_KM = 5;
+  let _snpData = [];       // parsed records
+  let _snpLoaded = false;
+  let _snpMarkers = [];    // current markers on map
+
+  // ── CSS ──
+  const snpCss = document.createElement('style');
+  snpCss.textContent = `
+    .snp-btn{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#6a1b9a;background:#f3e5f5;border:1px solid #ce93d8;border-radius:5px;cursor:pointer;padding:3px 8px;font-family:'Sarabun',sans-serif;font-weight:600;transition:background .2s;}
+    .snp-btn:hover{background:#e1bee7;}
+    .snp-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:10px;}
+    .snp-panel{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.25);}
+    .snp-header{padding:14px 18px 10px;border-bottom:1px solid #f0e0f0;display:flex;justify-content:space-between;align-items:center;}
+    .snp-header h3{margin:0;font-size:15px;color:#6a1b9a;font-family:'Sarabun',sans-serif;}
+    .snp-close{width:28px;height:28px;border-radius:50%;border:none;background:#f3e5f5;color:#6a1b9a;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .snp-close:hover{background:#e1bee7;}
+    .snp-body{overflow-y:auto;padding:10px 16px 16px;-webkit-overflow-scrolling:touch;}
+    .snp-summary{font-size:12px;color:#555;margin-bottom:10px;font-family:'Sarabun',sans-serif;line-height:1.5;}
+    .snp-card{border:1px solid #e8d8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#faf5ff;font-family:'Sarabun',sans-serif;}
+    .snp-card-head{display:flex;justify-content:space-between;align-items:start;margin-bottom:6px;}
+    .snp-card-name{font-size:12px;font-weight:700;color:#4a148c;line-height:1.3;}
+    .snp-card-dist{font-size:10px;color:#8e24aa;background:#f3e5f5;border-radius:10px;padding:1px 8px;white-space:nowrap;flex-shrink:0;margin-left:6px;}
+    .snp-card-meta{font-size:10px;color:#888;margin-bottom:6px;}
+    .snp-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;}
+    .snp-card-item{font-size:11px;color:#333;}
+    .snp-card-item b{color:#6a1b9a;}
+    .snp-card-item.good{color:#2e7d32;}
+    .snp-card-item.warn{color:#e65100;}
+    .snp-card-item.bad{color:#c62828;}
+    .snp-empty{text-align:center;padding:30px;color:#999;font-size:13px;font-family:'Sarabun',sans-serif;}
+    body.dark .snp-panel{background:#1e1e2e;border:1px solid #333;}
+    body.dark .snp-header{border-color:#333;}
+    body.dark .snp-header h3{color:#ce93d8;}
+    body.dark .snp-card{background:#2a2040;border-color:#3a2a50;}
+    body.dark .snp-card-name{color:#ce93d8;}
+    body.dark .snp-card-item{color:#ccc;}
+    body.dark .snp-summary{color:#aaa;}
+  `;
+  document.head.appendChild(snpCss);
+
+  // ── CSV Parser (simple, handles quoted fields) ──
+  function parseCsv(text) {
+    const lines = text.split('\n');
+    if (lines.length < 2) return [];
+    const headers = parseCsvLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = parseCsvLine(lines[i]);
+      const obj = {};
+      headers.forEach((h, j) => { obj[h.trim()] = (vals[j] || '').trim(); });
+      rows.push(obj);
+    }
+    return rows;
+  }
+  function parseCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i+1] === '"') { current += '"'; i++; }
+        else if (ch === '"') inQuotes = false;
+        else current += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { result.push(current); current = ''; }
+        else current += ch;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  // ── Load Google Sheet ──
+  async function loadSnpData() {
+    try {
+      console.log('[SNP] Loading Google Sheet...');
+      const resp = await fetch(SNP_SHEET_URL);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      const rows = parseCsv(text);
+      _snpData = rows.filter(r => {
+        if (!r['พิกัด']) return false;
+        const parts = r['พิกัด'].split(',');
+        if (parts.length !== 2) return false;
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (isNaN(lat) || isNaN(lng)) return false;
+        r._lat = lat;
+        r._lng = lng;
+        r._cl2 = parseFloat(r['คลอรีน']) || null;
+        r._turb = parseFloat(r['ความขุ่น']) || parseFloat(r['ความขุ่นจริง']) || null;
+        r._ec = parseFloat(r['ความนำไฟฟ้า']) || null;
+        r._ph = parseFloat(r['pH']) || null;
+        r._color = parseInt(r['สีปรากฎ']) || null;
+        return true;
+      });
+      _snpLoaded = true;
+      console.log(`[SNP] ✅ Loaded ${_snpData.length} records from Google Sheet`);
+    } catch(e) {
+      console.warn('[SNP] ⚠️ Failed to load:', e.message);
+    }
+  }
+
+  // ── Haversine distance (km) ──
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // ── Format date ──
+  function fmtDate(raw) {
+    if (!raw) return '—';
+    // Excel serial number or date string
+    const num = parseFloat(raw);
+    if (!isNaN(num) && num > 40000 && num < 50000) {
+      const d = new Date((num - 25569) * 86400000);
+      return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
+    }
+    // Try parsing as date string
+    try {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
+    } catch(e) {}
+    return raw;
+  }
+
+  // ── FRC status class ──
+  function cl2Class(v) {
+    if (v == null) return '';
+    if (v >= 0.2 && v <= 1.0) return 'good';
+    if (v > 1.0 || v < 0.1) return 'bad';
+    return 'warn';
+  }
+
+  // ── Clear markers ──
+  function clearSnpMarkers() {
+    _snpMarkers.forEach(m => { try { window.map.removeLayer(m); } catch(e){} });
+    _snpMarkers = [];
+  }
+
+  // ── Search & Display ──
+  window._snpSearch = function(lat, lng) {
+    if (!_snpLoaded || _snpData.length === 0) {
+      alert('กำลังโหลดข้อมูล สนป. กรุณารอสักครู่...');
+      return;
+    }
+
+    // Find records within radius
+    const nearby = _snpData.map(r => ({
+      ...r,
+      _dist: haversine(lat, lng, r._lat, r._lng)
+    })).filter(r => r._dist <= SNP_RADIUS_KM)
+      .sort((a, b) => a._dist - b._dist);
+
+    // Clear old markers
+    clearSnpMarkers();
+
+    // Build overlay panel
+    const overlay = document.createElement('div');
+    overlay.className = 'snp-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); } };
+
+    let cardsHtml = '';
+    if (nearby.length === 0) {
+      cardsHtml = `<div class="snp-empty">ไม่พบจุดตรวจ สนป. ในรัศมี ${SNP_RADIUS_KM} km<br><span style="font-size:11px;color:#bbb;">ลองคลิกที่ตำแหน่งอื่น</span></div>`;
+    } else {
+      // Group by date (latest first), show max 50 records
+      const shown = nearby.slice(0, 50);
+      shown.forEach(r => {
+        const distLabel = r._dist < 1 ? (r._dist * 1000).toFixed(0) + ' m' : r._dist.toFixed(1) + ' km';
+        const cl2Html = r._cl2 != null ? `<div class="snp-card-item ${cl2Class(r._cl2)}"><b>Cl₂</b> ${r._cl2.toFixed(2)} mg/L</div>` : '';
+        const turbHtml = r._turb != null ? `<div class="snp-card-item"><b>ขุ่น</b> ${r._turb.toFixed(2)} NTU</div>` : '';
+        const ecHtml = r._ec != null ? `<div class="snp-card-item"><b>EC</b> ${r._ec} μS/cm</div>` : '';
+        const phHtml = r._ph != null ? `<div class="snp-card-item"><b>pH</b> ${r._ph.toFixed(2)}</div>` : '';
+        const colorHtml = r._color != null ? `<div class="snp-card-item"><b>สี</b> ${r._color}</div>` : '';
+        const ecoliHtml = r['อีโคไล'] ? `<div class="snp-card-item"><b>E.coli</b> ${r['อีโคไล']}</div>` : '';
+
+        cardsHtml += `
+          <div class="snp-card" onclick="window.map.flyTo([${r._lat},${r._lng}],16);this.style.borderColor='#8e24aa';">
+            <div class="snp-card-head">
+              <div class="snp-card-name">${r['สถานที่'] || r['จุดเก็บ'] || '—'}</div>
+              <div class="snp-card-dist">📍 ${distLabel}</div>
+            </div>
+            <div class="snp-card-meta">
+              📅 ${fmtDate(r['วันที่'])} ⏰ ${r['เวลา'] || '—'}
+              · ${r['ถนน'] || ''} · ${r['สาขา'] || ''} · รับน้ำ: ${r['รับน้ำจาก'] || '—'}
+            </div>
+            <div class="snp-card-grid">
+              ${cl2Html}${turbHtml}${ecHtml}${phHtml}${colorHtml}${ecoliHtml}
+            </div>
+          </div>`;
+
+        // Add marker on map
+        const mkColor = r._cl2 != null ? (r._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
+        const m = L.circleMarker([r._lat, r._lng], {
+          radius: 5, fillColor: mkColor, color: '#fff', weight: 1.5, fillOpacity: 0.85
+        }).addTo(window.map);
+        m.bindTooltip(`<b>${(r['สถานที่']||'').substring(0,25)}</b><br>Cl₂: ${r._cl2!=null?r._cl2.toFixed(2):'—'} | EC: ${r._ec||'—'}`, {
+          className: 'snp-tip', direction: 'top', offset: [0, -6]
+        });
+        _snpMarkers.push(m);
+      });
+
+      // Draw radius circle
+      const circle = L.circle([lat, lng], {
+        radius: SNP_RADIUS_KM * 1000, color: '#8e24aa', weight: 1.5,
+        fillColor: '#ce93d8', fillOpacity: 0.08, dashArray: '6,4'
+      }).addTo(window.map);
+      _snpMarkers.push(circle);
+    }
+
+    // Unique dates
+    const uniqueDates = [...new Set(nearby.map(r => fmtDate(r['วันที่'])))];
+
+    overlay.innerHTML = `
+      <div class="snp-panel">
+        <div class="snp-header">
+          <h3>🔬 คุณภาพน้ำ สนป. ในรัศมี ${SNP_RADIUS_KM} km</h3>
+          <button class="snp-close" onclick="this.closest('.snp-overlay').remove()">✕</button>
+        </div>
+        <div class="snp-body">
+          <div class="snp-summary">
+            📍 จุดค้นหา: ${lat.toFixed(5)}, ${lng.toFixed(5)}<br>
+            📊 พบ <b>${nearby.length}</b> จุดตรวจ จาก <b>${uniqueDates.length}</b> วันที่ (ข้อมูลทั้งหมด ${_snpData.length} records)
+            ${nearby.length > 0 ? `<br>
+            <button class="snp-btn" style="margin-top:6px;" onclick="(function(){window._snpClearMarkers();this.closest('.snp-overlay').remove();}.bind(this))()">🗑 ลบหมุด สนป.</button>` : ''}
+          </div>
+          ${cardsHtml}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  };
+
+  window._snpClearMarkers = clearSnpMarkers;
+
+  // ── Inject button into popups ──
+  // Hook into Leaflet popup open event to add SNP button
+  function injectSnpButton(popup) {
+    if (!popup || !popup._contentNode) return;
+    const content = popup._contentNode;
+    // Don't add twice
+    if (content.querySelector('.snp-btn')) return;
+    // Find lat/lon from popup content or from the source layer
+    let lat, lng;
+    const src = popup._source;
+    if (src && src.getLatLng) {
+      const ll = src.getLatLng();
+      lat = ll.lat; lng = ll.lng;
+    } else if (src && src._msdLat != null) {
+      lat = src._msdLat; lng = src._msdLon;
+    }
+    if (lat == null || lng == null) return;
+
+    // Find insertion point — look for button rows or end of content
+    const btnContainer = content.querySelector('div[style*="border-top"]') || content.querySelector('.lpop') || content.lastElementChild;
+    if (!btnContainer) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'snp-btn';
+    btn.innerHTML = '🔬 คุณภาพน้ำ สนป. ใน 5 km';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      window._snpSearch(lat, lng);
+    };
+
+    // Add with some spacing
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-top:8px;padding-top:6px;border-top:1px solid #e8d8f0;';
+    wrapper.appendChild(btn);
+
+    if (btnContainer.classList && btnContainer.classList.contains('lpop')) {
+      btnContainer.appendChild(wrapper);
+    } else {
+      btnContainer.parentNode.insertBefore(wrapper, btnContainer.nextSibling);
+    }
+  }
+
+  // Listen for popup open events
+  function hookPopups() {
+    if (!window.map) { setTimeout(hookPopups, 500); return; }
+    window.map.on('popupopen', (e) => {
+      setTimeout(() => injectSnpButton(e.popup), 50);
+    });
+    console.log('[SNP] ✅ Popup hook installed');
+  }
+
+  // ── Init ──
+  setTimeout(loadSnpData, 5000);  // Load after main data
+  setTimeout(hookPopups, 3000);
+
+})();
 </script>
 </body></html>
