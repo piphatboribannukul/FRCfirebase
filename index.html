@@ -16007,6 +16007,10 @@ function submitFeedback(){
     .snp-card-item.warn{color:#e65100;}
     .snp-card-item.bad{color:#c62828;}
     .snp-empty{text-align:center;padding:30px;color:#999;font-size:13px;font-family:'Sarabun',sans-serif;}
+    .snp-popup{min-width:250px;max-width:320px;}
+    .snp-pop-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11.5px;}
+    .snp-pop-label{color:#888;flex-shrink:0;margin-right:8px;}
+    .snp-pop-val{color:#333;font-weight:500;text-align:right;}
     body.dark .snp-panel{background:#1e1e2e;border:1px solid #333;}
     body.dark .snp-header{border-color:#333;}
     body.dark .snp-header h3{color:#ce93d8;}
@@ -16014,6 +16018,8 @@ function submitFeedback(){
     body.dark .snp-card-name{color:#ce93d8;}
     body.dark .snp-card-item{color:#ccc;}
     body.dark .snp-summary{color:#aaa;}
+    body.dark .snp-pop-row .snp-pop-label{color:#999;}
+    body.dark .snp-pop-row .snp-pop-val{color:#ddd;}
   `;
   document.head.appendChild(snpCss);
 
@@ -16139,6 +16145,100 @@ function submitFeedback(){
     if (v > 1.0 || v < 0.1) return 'bad';
     return 'warn';
   }
+  function cl2Status(v) {
+    if (v == null) return '';
+    if (v >= 0.2) return '✓ ผ่าน (≥0.2)';
+    return '✗ ไม่ผ่าน (<0.2)';
+  }
+  function cl2StatusColor(v) {
+    if (v == null) return '#999';
+    return v >= 0.2 ? '#2e7d32' : '#c62828';
+  }
+
+  // ── Build popup HTML for SNP marker ──
+  function buildSnpPopup(r, distLabel) {
+    const esc = (s) => (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Status bar color
+    const statusColor = r._cl2 != null ? (r._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
+
+    // Build parameter rows
+    let paramRows = '';
+    if (r._cl2 != null) {
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">Cl₂ คลอรีนอิสระคงเหลือ</span>
+        <span class="snp-pop-val" style="color:${cl2StatusColor(r._cl2)}">${r._cl2.toFixed(2)} mg/L</span>
+      </div>
+      <div class="snp-pop-row">
+        <span class="snp-pop-label">สถานะ</span>
+        <span class="snp-pop-val" style="color:${cl2StatusColor(r._cl2)};font-weight:600">${cl2Status(r._cl2)}</span>
+      </div>`;
+    }
+    if (r._turb != null) {
+      const turbOk = r._turb <= 4;
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">ขุ่น</span>
+        <span class="snp-pop-val">${r._turb.toFixed(2)} NTU</span>
+      </div>`;
+    }
+    if (r._ec != null) {
+      const ecStatus = (r._ec >= 200 && r._ec <= 500) ? 'ผ่านมาตรฐาน (200–500)' : (r._ec < 200 ? 'ต่ำกว่ามาตรฐาน' : 'เกินมาตรฐาน');
+      const ecColor = (r._ec >= 200 && r._ec <= 500) ? '#1565c0' : '#e65100';
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">EC ความนำไฟฟ้า</span>
+        <span class="snp-pop-val" style="color:${ecColor}">${r._ec} μS/cm</span>
+      </div>`;
+    }
+    if (r._ph != null) {
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">pH</span>
+        <span class="snp-pop-val">${r._ph.toFixed(2)}</span>
+      </div>`;
+    }
+    if (r._color != null) {
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">สี</span>
+        <span class="snp-pop-val">${r._color}</span>
+      </div>`;
+    }
+    if (r._ecoli) {
+      const ecoliColor = (r._ecoli === 'ไม่พบ' || r._ecoli === 'น้อยกว่า 1') ? '#2e7d32' : '#c62828';
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">E.coli</span>
+        <span class="snp-pop-val" style="color:${ecoliColor}">${esc(r._ecoli)}</span>
+      </div>`;
+    }
+
+    return `<div class="snp-popup" style="font-family:'Sarabun',sans-serif;">
+      <div style="background:${statusColor};color:#fff;padding:6px 12px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
+        🔬 ${esc(r._place)}
+      </div>
+      <div style="padding:10px 12px;">
+        <div class="snp-pop-row">
+          <span class="snp-pop-label">📅 วันที่</span>
+          <span class="snp-pop-val">${fmtDate(r._date)} · ${r._time || '—'}</span>
+        </div>
+        <div class="snp-pop-row">
+          <span class="snp-pop-label">📍 พิกัด</span>
+          <span class="snp-pop-val" style="font-family:'JetBrains Mono',monospace;font-size:10px;">${r._lat.toFixed(5)}, ${r._lng.toFixed(5)}</span>
+        </div>
+        <div class="snp-pop-row">
+          <span class="snp-pop-label">🏢 สาขา</span>
+          <span class="snp-pop-val">${esc(r._branch)}</span>
+        </div>
+        <div class="snp-pop-row">
+          <span class="snp-pop-label">💧 รับน้ำจาก</span>
+          <span class="snp-pop-val">${esc(r._source)}</span>
+        </div>
+        ${r._road ? `<div class="snp-pop-row">
+          <span class="snp-pop-label">🛣 ถนน</span>
+          <span class="snp-pop-val">${esc(r._road)}</span>
+        </div>` : ''}
+        <div style="border-top:1px solid #e8d8f0;margin:8px 0 6px;"></div>
+        ${paramRows}
+      </div>
+    </div>`;
+  }
 
   // ── Clear markers ──
   function clearSnpMarkers() {
@@ -16201,8 +16301,15 @@ function submitFeedback(){
         // Add marker on map
         const mkColor = r._cl2 != null ? (r._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
         const m = L.circleMarker([r._lat, r._lng], {
-          radius: 5, fillColor: mkColor, color: '#fff', weight: 1.5, fillOpacity: 0.85
+          radius: 6, fillColor: mkColor, color: '#fff', weight: 2, fillOpacity: 0.9
         }).addTo(window.map);
+
+        // Popup with full details
+        const popupHtml = buildSnpPopup(r, distLabel);
+        m.bindPopup(popupHtml, {
+          className: 'pk-pop', maxWidth: 340, minWidth: 280,
+          autoPan: true, autoPanPaddingTopLeft: [10, 80], autoPanPaddingBottomRight: [10, 40]
+        });
         m.bindTooltip(`<b>${(r._place||'').substring(0,25)}</b><br>Cl₂: ${r._cl2!=null?r._cl2.toFixed(2):'—'} | EC: ${r._ec||'—'}`, {
           className: 'snp-tip', direction: 'top', offset: [0, -6]
         });
