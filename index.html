@@ -15759,8 +15759,8 @@ function submitFeedback(){
           try {
             const snap = await window._fbGet(window._fbRef(window._fb, `rawmk/${sid}`));
             const val = snap.val ? snap.val() : snap;
-            if (val && val.ec > 0 && val.ts && (Date.now() - val.ts) < 3600000) {
-              // ค่าไม่เก่าเกิน 1 ชม.
+            if (val && val.ec > 0 && val.ts && (Date.now() - val.ts) < 21600000) {
+              // rev29.1: ค่าไม่เก่าเกิน 6 ชม. (เดิม 1 ชม. — เข้มเกินไป ถ้า Railway server ไม่ได้ run ตลอด)
               _mkData[sid] = {
                 ec: val.ec, temp: val.temp, ph: val.ph,
                 turbid: val.turbid, deo: val.deo,
@@ -15816,6 +15816,21 @@ function submitFeedback(){
           if (_mkHistory[sid].length > 1440) _mkHistory[sid] = _mkHistory[sid].slice(-1440); // rev29.1: 10 วัน × 144/วัน
         });
         console.log('[MaeKlong] ✅ Firebase history loaded:', Object.entries(_mkHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
+
+        // rev29.1: อัปเดต _mkData ด้วยค่าล่าสุดจาก Firebase history
+        //          กรณี API fail → _mkData ยังเป็น fallback → ต้องใช้ค่า history ที่ใหม่กว่า
+        Object.keys(_mkHistory).forEach(sid => {
+          const hist = _mkHistory[sid];
+          if (!hist || hist.length === 0) return;
+          const latest = hist[hist.length - 1]; // sorted แล้ว → ตัวสุดท้ายคือใหม่สุด
+          const curTime = _mkData[sid] && _mkData[sid].time ? new Date(_mkData[sid].time).getTime() : 0;
+          if (latest.ts > curTime) {
+            // history มีค่าใหม่กว่า _mkData (fallback) → อัปเดต
+            _mkData[sid] = Object.assign(_mkData[sid] || {}, { ec: latest.ec, time: new Date(latest.ts).toISOString() });
+            _mkApiFetched = true; // ถือว่าได้ข้อมูลจริงจาก Firebase history
+            console.log(`[MaeKlong] 📊 Updated ${sid} from history: EC=${latest.ec} (${new Date(latest.ts).toLocaleString('th-TH')})`);
+          }
+        });
       }
 
       // Pre-seed: ถ้า _mkHistory ยังว่าง ใส่ค่า current จาก _mkData เป็น 1 จุด
