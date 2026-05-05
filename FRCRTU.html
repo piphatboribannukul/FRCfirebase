@@ -16565,11 +16565,36 @@ function submitFeedback(){
       if (resp.ok) {
         const data = await resp.json();
         if (data.features && data.features.length > 100) {
+          // Debug: แสดง property keys ของ feature แรก
+          console.log('[V30] BKK sample properties:', JSON.stringify(Object.keys(data.features[0].properties)));
+          console.log('[V30] BKK sample values:', JSON.stringify(data.features[0].properties));
           data.features.forEach(f => {
             const p = f.properties;
             // Normalize field names to tam_th / amp_th / pro_th
-            if (!p.tam_th) p.tam_th = p.Subdistrct || p.KHWAENG || p.khwaeng_t || p.SubDist || '';
-            if (!p.amp_th) p.amp_th = p.District || p.KHET || p.khet_t || p.Dist || '';
+            // ลอง match หลาย pattern
+            if (!p.tam_th) {
+              p.tam_th = p.Subdistrct || p.KHWAENG || p.khwaeng_t || p.SubDist || p.Subdistric || p.sub_dist || p.kwang || p.KWANG || p.Khwaeng || '';
+              // ถ้ายังไม่ได้ → หาจาก key ที่มีคำว่า sub/khw/kwang/แขวง
+              if (!p.tam_th) {
+                for (const k of Object.keys(p)) {
+                  const lk = k.toLowerCase();
+                  if ((lk.includes('sub') || lk.includes('khw') || lk.includes('kwang') || lk.includes('แขวง') || lk.includes('tam')) && typeof p[k] === 'string' && p[k].length > 1) {
+                    p.tam_th = p[k]; break;
+                  }
+                }
+              }
+            }
+            if (!p.amp_th) {
+              p.amp_th = p.District || p.KHET || p.khet_t || p.Dist || p.district || p.Khet || p.DISTRICT || '';
+              if (!p.amp_th) {
+                for (const k of Object.keys(p)) {
+                  const lk = k.toLowerCase();
+                  if ((lk.includes('dist') || lk.includes('khet') || lk.includes('เขต') || lk.includes('amp')) && typeof p[k] === 'string' && p[k].length > 1) {
+                    p.amp_th = p[k]; break;
+                  }
+                }
+              }
+            }
             if (!p.pro_th) p.pro_th = 'กรุงเทพมหานคร';
           });
           allFeatures = allFeatures.concat(data.features);
