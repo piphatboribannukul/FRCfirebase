@@ -16544,36 +16544,70 @@ function submitFeedback(){
 
   const MWA_PROVINCES = ['กรุงเทพมหานคร','นนทบุรี','สมุทรปราการ'];
   // GeoJSON ขอบเขตเขต/อำเภอ + ตำบล/แขวง
-  // districts: chingchai (ตรวจแล้ว 50 เขต กทม. ✅ + นนทบุรี 6 + สมุทรปราการ 6 ✅)
-  // subdistricts: GISTDA ArcGIS REST (กรมการปกครอง — ครบ 180 แขวง กทม.)
+  // districts: chingchai (ตรวจแล้ว 50 เขต กทม. ✅)
+  // subdistricts: ArcGIS Online (180 แขวง กทม.) + GISTDA (นนทบุรี+สมุทรปราการ) + chingchai fallback
   const DIST_URL = 'https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson';
-  // GISTDA Tambon MapServer — query GeoJSON เฉพาะ 3 จังหวัด
+  const BMA_SUB_URL = 'https://services-ap1.arcgis.com/Vj9ZE9MksIWwjR1o/ArcGIS/rest/services/Bangkok_Subdistrict_Boundaries_and_Data/FeatureServer/0/query';
   const GISTDA_TAMBON = 'https://gistdaportal.gistda.or.th/data/rest/services/opendata/Tambon/MapServer/0/query';
+  const CHINGCHAI_SUB = 'https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/subdistricts.geojson';
 
-  async function fetchGistdaSubdistricts() {
-    // Query ทีละจังหวัด (maxRecordCount=1000 ต่อ request)
-    const provQueries = [
-      "pro_th LIKE '%กรุงเทพ%'",
-      "pro_th LIKE '%นนทบุรี%'",
-      "pro_th LIKE '%สมุทรปราการ%'"
-    ];
+  async function fetchAllSubdistricts() {
     let allFeatures = [];
-    for (const where of provQueries) {
+    
+    // 1) กทม. 180 แขวง จาก ArcGIS Online (ความละเอียดสูง)
+    try {
+      console.log('[V30] Fetching BKK 180 khwaeng from ArcGIS Online...');
+      const params = new URLSearchParams({
+        where: '1=1', outFields: '*', f: 'geojson',
+        returnGeometry: 'true', outSR: '4326', resultRecordCount: '2000'
+      });
+      const resp = await fetch(`${BMA_SUB_URL}?${params}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.features && data.features.length > 100) {
+          data.features.forEach(f => {
+            const p = f.properties;
+            // Normalize field names to tam_th / amp_th / pro_th
+            if (!p.tam_th) p.tam_th = p.Subdistrct || p.KHWAENG || p.khwaeng_t || p.SubDist || '';
+            if (!p.amp_th) p.amp_th = p.District || p.KHET || p.khet_t || p.Dist || '';
+            if (!p.pro_th) p.pro_th = 'กรุงเทพมหานคร';
+          });
+          allFeatures = allFeatures.concat(data.features);
+          console.log(`[V30] ✅ BKK: ${data.features.length} khwaeng from ArcGIS Online`);
+        }
+      }
+    } catch(e) { console.warn('[V30] ArcGIS Online BKK failed:', e.message); }
+    
+    // 2) นนทบุรี + สมุทรปราการ จาก GISTDA
+    for (const prov of ['นนทบุรี','สมุทรปราการ']) {
       try {
         const params = new URLSearchParams({
-          where: where,
-          outFields: 'tam_th,amp_th,pro_th,tam_en,amp_en,pro_en',
-          f: 'geojson',
-          returnGeometry: 'true',
-          outSR: '4326'
+          where: `pro_th LIKE '%${prov}%'`, outFields: 'tam_th,amp_th,pro_th',
+          f: 'geojson', returnGeometry: 'true', outSR: '4326'
         });
         const resp = await fetch(`${GISTDA_TAMBON}?${params}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        if (data.features) allFeatures = allFeatures.concat(data.features);
-      } catch(e) {
-        console.warn('[V30] GISTDA query failed for:', where, e.message);
-      }
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.features) {
+            allFeatures = allFeatures.concat(data.features);
+            console.log(`[V30] ✅ ${prov}: ${data.features.length} tambon from GISTDA`);
+          }
+        }
+      } catch(e) { console.warn(`[V30] GISTDA ${prov} failed:`, e.message); }
+    }
+
+    // 3) Fallback: ถ้าได้น้อย ใช้ chingchai
+    if (allFeatures.length < 50) {
+      console.warn(`[V30] ⚠️ Only ${allFeatures.length} subdistricts — fallback to chingchai`);
+      try {
+        const resp = await fetch(CHINGCHAI_SUB);
+        const json = await resp.json();
+        allFeatures = json.features.filter(f => {
+          const prov = gp(f.properties,'pro_th');
+          return MWA_PROVINCES.some(p => prov.includes(p) || p.includes(prov));
+        });
+        console.log(`[V30] Fallback: ${allFeatures.length} subdistricts from chingchai`);
+      } catch(e2) { console.error('[V30] All sources failed:', e2); }
     }
     return allFeatures;
   }
@@ -16676,9 +16710,8 @@ function submitFeedback(){
       });
       console.log(`[V30] ✅ ${_v30districts.length} districts loaded`);
 
-      // Subdistricts from GISTDA (กรมการปกครอง — ครบ 180 แขวง)
-      _v30subdistricts = await fetchGistdaSubdistricts();
-      console.log(`[V30] ✅ ${_v30subdistricts.length} subdistricts from GISTDA`);
+      // Subdistricts: ArcGIS Online (กทม.) + GISTDA (นนทบุรี+สมุทรปราการ) + chingchai fallback
+      _v30subdistricts = await fetchAllSubdistricts();
       
       // Count BKK khwaeng
       const bkkSub = _v30subdistricts.filter(f => {
@@ -16686,18 +16719,6 @@ function submitFeedback(){
         return prov.includes('กรุงเทพ');
       });
       console.log(`[V30] กทม. แขวง: ${bkkSub.length} (ต้อง=180)`);
-
-      // Fallback: if GISTDA failed, use chingchai
-      if (_v30subdistricts.length === 0) {
-        console.warn('[V30] ⚠️ GISTDA failed — falling back to chingchai subdistricts');
-        const sResp = await fetch('https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/subdistricts.geojson');
-        const sJson = await sResp.json();
-        _v30subdistricts = sJson.features.filter(f => {
-          const prov = gp(f.properties,'pro_th');
-          return MWA_PROVINCES.some(p => prov.includes(p) || p.includes(prov));
-        });
-        console.log(`[V30] Fallback: ${_v30subdistricts.length} subdistricts`);
-      }
 
       _v30loaded = true;
       populateProvinces();
