@@ -1869,6 +1869,88 @@ body.dark .msd-empty, body.dark .msd-spinner { color: #6060a0 !important; }
 .wif-btn.active{background:#185FA5;color:#fff;border-color:#185FA5;}
 .wif-reset{background:#f1efe8;color:#5f5e5a;border-color:#d3d1c7;}
 .wif-reset:hover{background:#888;color:#fff;}
+
+/* ── V30: Tab Bar Button + Panel ── */
+#v30-tab-btn{
+  position:absolute;top:50px;left:50%;transform:translateX(-50%);z-index:1050;
+  padding:5px 14px;border-radius:8px;
+  border:1.5px solid rgba(240,200,220,0.85);
+  background:rgba(255,255,255,0.97);color:#8a3060;
+  font-size:11.5px;font-weight:500;cursor:pointer;
+  font-family:'Sarabun',sans-serif;white-space:nowrap;
+  box-shadow:0 2px 10px rgba(180,0,80,.10);transition:all .2s;
+  display:flex;align-items:center;gap:4px;
+}
+#v30-tab-btn:hover{background:#fff0f5;border-color:#cc0055;color:#cc0055;}
+#v30-tab-btn.active{background:linear-gradient(135deg,#cc0055,#aa0044);color:#fff;border-color:#cc0055;box-shadow:0 2px 12px rgba(204,0,85,.2);}
+#v30-panel{
+  position:absolute;top:80px;left:50%;transform:translateX(-50%);z-index:1040;
+  width:320px;max-height:calc(100vh - 90px);
+  background:#fff;border:1px solid #e0d0e8;border-radius:12px;
+  box-shadow:0 4px 24px rgba(108,52,131,.15);
+  display:none;flex-direction:column;overflow:hidden;
+  font-family:'Sarabun',sans-serif;
+}
+#v30-panel.open{display:flex;}
+#v30-panel-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 14px;border-bottom:1px solid rgba(240,200,220,.5);background:#fff8fa;
+  border-radius:12px 12px 0 0;
+}
+#v30-panel-body{padding:10px 14px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
+.v30-dropdowns{display:flex;flex-direction:column;gap:4px;}
+.v30-dd-group{}
+.v30-lbl{display:block;font-size:10px;color:#888;margin:4px 0 2px;font-weight:500;}
+.v30-sel{
+  width:100%;padding:5px 10px;border:1.5px solid rgba(240,200,220,.6);border-radius:7px;
+  font-size:11px;font-family:'Sarabun';background:#fff;color:#333;
+  appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23cc0055' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;
+}
+.v30-sel:focus{outline:none;border-color:#cc0055;}
+.v30-sel:disabled{opacity:.5;cursor:default;}
+/* Scale section */
+.v30-scale-section{padding:6px 0;}
+.v30-scale-title{font-size:10px;font-weight:600;color:#555;margin-bottom:4px;}
+.v30-scale-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:10px;color:#555;}
+.v30-scale-row label{min-width:32px;font-weight:500;color:#666;}
+.v30-input{
+  width:58px;padding:3px 5px;border:1px solid rgba(240,200,220,.6);border-radius:5px;
+  font-size:10px;font-family:'Sarabun';text-align:center;color:#333;background:#fff;
+}
+.v30-input:focus{outline:none;border-color:#cc0055;}
+.v30-scale-bar{
+  height:12px;border-radius:3px;margin:4px 0;
+  border:1px solid rgba(240,200,220,.4);
+}
+.v30-apply-btn{
+  width:100%;padding:5px;border:1px solid rgba(240,200,220,.6);border-radius:5px;
+  background:#fff;color:#8a3060;font-size:10px;font-weight:500;
+  font-family:'Sarabun';cursor:pointer;transition:all .15s;
+}
+.v30-apply-btn:hover{background:#cc0055;color:#fff;border-color:#cc0055;}
+.v30-reset-btn{
+  width:100%;padding:5px;margin-top:6px;border:1px solid #ddd;border-radius:5px;
+  background:#fafafa;color:#666;font-size:10px;font-weight:500;
+  font-family:'Sarabun';cursor:pointer;transition:all .15s;
+}
+.v30-reset-btn:hover{background:#eee;}
+/* Dark mode */
+body.dark #v30-tab-btn{background:rgba(30,30,46,.95);color:#d090b0;border-color:rgba(233,69,96,.3);}
+body.dark #v30-tab-btn.active{background:linear-gradient(135deg,#e94560,#cc0055);color:#fff;}
+body.dark #v30-panel{background:#1e1e2e;border-color:#333;}
+body.dark #v30-panel-head{background:#2a2040;border-color:#333;}
+body.dark .v30-sel{background:#161b22;color:#c9d1d9;border-color:#333;}
+body.dark .v30-input{background:#161b22;color:#c9d1d9;border-color:#333;}
+body.dark .v30-scale-title{color:#ce93d8;}
+body.dark .v30-apply-btn{background:#2a2040;color:#ce93d8;border-color:#ce93d8;}
+body.dark .v30-reset-btn{background:#1e1e2e;color:#aaa;border-color:#444;}
+/* Mobile */
+@media(max-width:600px){
+  #v30-tab-btn{font-size:10px;padding:4px 10px;top:48px;}
+  #v30-panel{width:calc(100vw - 16px);top:76px;max-height:calc(100vh - 84px);}
+}
 </style>
 <script>
 if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-init');
@@ -2211,6 +2293,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <button id="gps-btn" onclick="goToMyLocation()" title="ตำแหน่งปัจจุบัน">📍</button>
   <div id="map-search-dropdown"></div>
 </div>
+<div id="v30-tab-btn" onclick="toggleV30Panel()">🔍 ค้นหาคุณภาพน้ำตามเขตการปกครอง</div>
 
 <!-- Zone Influence Editor Button — ซ่อน ย้ายเข้า hamburger แล้ว -->
 <button id="zone-editor-btn" onclick="toggleZoneEditor()" title="Zone Influence Editor" style="display:none !important;">🗺</button>
@@ -2358,6 +2441,32 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
   <button id="draw-cancel-btn">✕ ยกเลิก</button>
 </div>
 <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- V30: Slide-down panel -->
+<div id="v30-panel">
+  <div id="v30-panel-head">
+    <span style="font-weight:600;font-size:12px;color:#8a3060;">🗺️ คุณภาพน้ำตามเขตการปกครอง</span>
+    <button onclick="toggleV30Panel()" style="background:none;border:none;font-size:14px;cursor:pointer;color:#cc0055;padding:2px 6px;">✕</button>
+  </div>
+  <div id="v30-panel-body">
+    <div class="v30-dropdowns">
+      <div class="v30-dd-group">
+        <label class="v30-lbl">จังหวัด</label>
+        <select id="v30-province" class="v30-sel"><option value="">ทั้งหมด</option></select>
+      </div>
+      <div class="v30-dd-group">
+        <label class="v30-lbl">เขต / อำเภอ</label>
+        <select id="v30-district" class="v30-sel" disabled><option value="">ทั้งหมด</option></select>
+      </div>
+      <div class="v30-dd-group">
+        <label class="v30-lbl">แขวง / ตำบล</label>
+        <select id="v30-subdistrict" class="v30-sel" disabled><option value="">ทั้งหมด</option></select>
+      </div>
+    </div>
+    <div id="v30-stats" style="display:none;"></div>
+    <div id="v30-samples" style="max-height:280px;overflow-y:auto;"></div>
+  </div>
+</div>
 <div id="sidebar">
 <div id="sidebar-scroll">
   <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
@@ -2377,30 +2486,50 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <div class="toggle-row"><span>🗺️ EPANET Contour (FRC sim)</span><div class="tog off" id="t-epanet" onclick="toggleLayer('epanet')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🌊 น้ำดิบ EC (เจ้าพระยา)</span><div class="tog off" id="t-rawwater" onclick="toggleLayer('rawwater')"><div class="tok"></div></div></div>
     <div class="toggle-row"><span>🏔️ น้ำดิบ EC (แม่กลอง)</span><div class="tog off" id="t-rawwater-mk" onclick="toggleLayer('rawwater-mk')"><div class="tok"></div></div></div>
-    </div><!-- /sb-body ชั้นข้อมูล -->
-  </div>
-  <!-- V30: คุณภาพน้ำตามพื้นที่ -->
-  <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
-    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🗺️ คุณภาพน้ำตามพื้นที่ <span class="sb-arrow">▸</span></h3>
-    <div class="sb-body" style="display:none;">
-      <div style="font-size:10px;color:#6c3483;margin-bottom:8px;line-height:1.5;">
-        ดูข้อมูล สนป. ตาม จังหวัด → เขต/อำเภอ → แขวง/ตำบล
-      </div>
-      <label style="font-size:10px;color:#888;margin-bottom:2px;display:block;">จังหวัด</label>
-      <select id="v30-province" style="width:100%;padding:5px 8px;border:1.5px solid #d1c4e9;border-radius:6px;font-size:11px;font-family:'Sarabun';margin-bottom:6px;">
-        <option value="">— เลือกจังหวัด —</option>
-      </select>
-      <label style="font-size:10px;color:#888;margin-bottom:2px;display:block;">เขต / อำเภอ</label>
-      <select id="v30-district" disabled style="width:100%;padding:5px 8px;border:1.5px solid #d1c4e9;border-radius:6px;font-size:11px;font-family:'Sarabun';margin-bottom:6px;">
-        <option value="">— เลือกจังหวัดก่อน —</option>
-      </select>
-      <label style="font-size:10px;color:#888;margin-bottom:2px;display:block;">แขวง / ตำบล</label>
-      <select id="v30-subdistrict" disabled style="width:100%;padding:5px 8px;border:1.5px solid #d1c4e9;border-radius:6px;font-size:11px;font-family:'Sarabun';margin-bottom:6px;">
-        <option value="">— เลือกเขตก่อน —</option>
-      </select>
-      <div id="v30-stats" style="display:none;"></div>
-      <div id="v30-samples" style="max-height:250px;overflow-y:auto;margin-top:6px;"></div>
+    <!-- V30: Color Scale Controls (collapsible) -->
+    <div style="border-top:1px solid #f0d8e8;margin:8px 0 4px;"></div>
+    <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:2px 0;" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.sb-arrow').textContent=b.style.display==='none'?'▸':'▾';">
+      <span style="font-size:11px;font-weight:600;color:#555;">🎨 ปรับมาตราสี Contour</span>
+      <span class="sb-arrow" style="font-size:10px;color:#888;">▸</span>
     </div>
+    <div style="display:none;margin-top:4px;">
+    <div class="v30-scale-section">
+      <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px;">💧 FRC Scale</div>
+      <div class="v30-scale-row">
+        <label>Min</label>
+        <input type="number" id="frc-scale-min" value="0" step="0.1" min="0" max="3" class="v30-input">
+        <label>Max</label>
+        <input type="number" id="frc-scale-max" value="2.0" step="0.1" min="0.5" max="5" class="v30-input">
+      </div>
+      <div class="v30-scale-row">
+        <label>เตือน</label>
+        <input type="number" id="frc-scale-warn" value="0.2" step="0.05" min="0" max="1" class="v30-input">
+        <label>ดี</label>
+        <input type="number" id="frc-scale-good" value="0.5" step="0.1" min="0.1" max="2" class="v30-input">
+      </div>
+      <div id="frc-scale-preview" class="v30-scale-bar"></div>
+      <button class="v30-apply-btn" onclick="applyFrcScale()">✅ Apply FRC</button>
+    </div>
+    <div class="v30-scale-section" style="margin-top:8px;">
+      <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:4px;">⚡ EC Scale</div>
+      <div class="v30-scale-row">
+        <label>Min</label>
+        <input type="number" id="ec-scale-min" value="0" step="50" min="0" max="500" class="v30-input">
+        <label>Max</label>
+        <input type="number" id="ec-scale-max" value="1200" step="50" min="200" max="3000" class="v30-input">
+      </div>
+      <div class="v30-scale-row">
+        <label>ปกติ</label>
+        <input type="number" id="ec-scale-lo" value="200" step="10" min="0" max="500" class="v30-input">
+        <label>สูง</label>
+        <input type="number" id="ec-scale-hi" value="500" step="10" min="200" max="2000" class="v30-input">
+      </div>
+      <div id="ec-scale-preview" class="v30-scale-bar"></div>
+      <button class="v30-apply-btn" onclick="applyEcScale()">✅ Apply EC</button>
+    </div>
+    <button class="v30-reset-btn" onclick="resetScales()" style="margin-top:6px;">🔄 Reset ค่าเริ่มต้น</button>
+    </div><!-- /collapsible scale -->
+    </div><!-- /sb-body ชั้นข้อมูล -->
   </div>
   <!-- Zone Influence -->
   <div class="sblock sb-menu" onclick="toggleSidebar();setTimeout(toggleZoneEditor,300);">
@@ -2417,40 +2546,6 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <div id="vc-config-list" style="max-height:320px;overflow-y:auto;"></div>
       <button class="ep-apply" onclick="applyVcConfig()" style="margin-top:8px;width:100%;background:#6c3483;color:#fff;border-color:#8e44ad;">
         ✅ Apply & Rebuild
-      </button>
-    </div>
-  </div>
-  <!-- rev16.0: What-If Chlorine Dosing -->
-  <div class="sblock sb-menu" onclick="toggleSbMenu(this)">
-    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">Cl₂ What-If จ่ายคลอรีน <span class="sb-arrow">▸</span></h3>
-    <div class="sb-body" style="display:none;">
-      <div style="font-size:10px;color:#185FA5;margin-bottom:8px;line-height:1.5;">
-        จำลองการปรับคลอรีนที่สถานีสูบจ่าย<br>ดูผลกระทบต่อ contour + สถานี monitor
-      </div>
-      <div style="margin-bottom:6px;">
-        <label style="font-size:10px;color:#888;">เลือกสถานีสูบจ่าย</label>
-        <select id="wif-station" style="width:100%;padding:5px 8px;border:1.5px solid #b5d4f4;border-radius:6px;font-size:11px;font-family:'Sarabun',sans-serif;margin-top:3px;" onchange="wifSelectStation()"></select>
-      </div>
-      <div style="margin-bottom:6px;">
-        <label style="font-size:10px;color:#888;">ปรับ FRC (mg/L)</label>
-        <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;" id="wif-buttons">
-          <button class="wif-btn" onclick="wifAdjust(-0.2)">-0.2</button>
-          <button class="wif-btn" onclick="wifAdjust(-0.1)">-0.1</button>
-          <button class="wif-btn wif-reset" onclick="wifAdjust(0)">Reset</button>
-          <button class="wif-btn" onclick="wifAdjust(+0.1)">+0.1</button>
-          <button class="wif-btn" onclick="wifAdjust(+0.2)">+0.2</button>
-          <button class="wif-btn" onclick="wifAdjust(+0.3)">+0.3</button>
-          <button class="wif-btn" onclick="wifAdjust(+0.4)">+0.4</button>
-          <button class="wif-btn" onclick="wifAdjust(+0.5)">+0.5</button>
-        </div>
-      </div>
-      <div id="wif-info" style="font-size:10px;color:#444;margin:6px 0;min-height:20px;"></div>
-      <div id="wif-impact" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
-      <button class="ep-apply" onclick="wifApply()" style="margin-top:6px;width:100%;background:#185FA5;color:#fff;border-color:#0C447C;">
-        Cl₂ จำลอง Contour
-      </button>
-      <button class="ep-apply" onclick="wifReset()" style="margin-top:4px;width:100%;background:#888;color:#fff;border-color:#666;">
-        ↩ คืนค่าเดิม
       </button>
     </div>
   </div>
@@ -16448,8 +16543,40 @@ function submitFeedback(){
   'use strict';
 
   const MWA_PROVINCES = ['กรุงเทพมหานคร','นนทบุรี','สมุทรปราการ'];
+  // GeoJSON ขอบเขตเขต/อำเภอ + ตำบล/แขวง
+  // districts: chingchai (ตรวจแล้ว 50 เขต กทม. ✅ + นนทบุรี 6 + สมุทรปราการ 6 ✅)
+  // subdistricts: GISTDA ArcGIS REST (กรมการปกครอง — ครบ 180 แขวง กทม.)
   const DIST_URL = 'https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson';
-  const SUBD_URL = 'https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/subdistricts.geojson';
+  // GISTDA Tambon MapServer — query GeoJSON เฉพาะ 3 จังหวัด
+  const GISTDA_TAMBON = 'https://gistdaportal.gistda.or.th/data/rest/services/opendata/Tambon/MapServer/0/query';
+
+  async function fetchGistdaSubdistricts() {
+    // Query ทีละจังหวัด (maxRecordCount=1000 ต่อ request)
+    const provQueries = [
+      "pro_th LIKE '%กรุงเทพ%'",
+      "pro_th LIKE '%นนทบุรี%'",
+      "pro_th LIKE '%สมุทรปราการ%'"
+    ];
+    let allFeatures = [];
+    for (const where of provQueries) {
+      try {
+        const params = new URLSearchParams({
+          where: where,
+          outFields: 'tam_th,amp_th,pro_th,tam_en,amp_en,pro_en',
+          f: 'geojson',
+          returnGeometry: 'true',
+          outSR: '4326'
+        });
+        const resp = await fetch(`${GISTDA_TAMBON}?${params}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (data.features) allFeatures = allFeatures.concat(data.features);
+      } catch(e) {
+        console.warn('[V30] GISTDA query failed for:', where, e.message);
+      }
+    }
+    return allFeatures;
+  }
 
   let _v30districts = [];
   let _v30subdistricts = [];
@@ -16513,30 +16640,65 @@ function submitFeedback(){
     return raw;
   }
 
-  // ── Get property helper ──
+  // ── Get property helper — supports chingchai + UNOCHA/mapthai property names ──
   function gp(props, ...keys) {
-    for (const k of keys) { if (props[k]) return props[k]; }
+    // Map shorthand to all possible field names
+    const aliases = {
+      'pro_th': ['pro_th','PRO_TH','PROVINCE','adm1_th','ADM1_TH'],
+      'amp_th': ['amp_th','AMP_TH','DISTRICT','adm2_th','ADM2_TH'],
+      'tam_th': ['tam_th','TAM_TH','SUBDISTRICT','adm3_th','ADM3_TH'],
+      'pro_en': ['pro_en','PRO_EN','adm1_en','ADM1_EN'],
+      'amp_en': ['amp_en','AMP_EN','adm2_en','ADM2_EN'],
+      'tam_en': ['tam_en','TAM_EN','adm3_en','ADM3_EN'],
+    };
+    for (const k of keys) {
+      if (props[k]) return props[k];
+      // Check aliases
+      const aliasGroup = aliases[k];
+      if (aliasGroup) {
+        for (const a of aliasGroup) { if (props[a]) return props[a]; }
+      }
+    }
     return '';
   }
 
   // ── Load GeoJSON ──
   async function loadV30() {
     try {
-      console.log('[V30] Loading districts + subdistricts...');
-      const [dResp, sResp] = await Promise.all([fetch(DIST_URL), fetch(SUBD_URL)]);
-      const [dJson, sJson] = await Promise.all([dResp.json(), sResp.json()]);
-
+      console.log('[V30] Loading districts + GISTDA subdistricts...');
+      
+      // Districts from chingchai (verified ✅)
+      const dResp = await fetch(DIST_URL);
+      const dJson = await dResp.json();
       _v30districts = dJson.features.filter(f => {
-        const prov = gp(f.properties,'pro_th','PRO_TH','PROVINCE');
+        const prov = gp(f.properties,'pro_th');
         return MWA_PROVINCES.some(p => prov.includes(p) || p.includes(prov));
       });
+      console.log(`[V30] ✅ ${_v30districts.length} districts loaded`);
 
-      _v30subdistricts = sJson.features.filter(f => {
-        const prov = gp(f.properties,'pro_th','PRO_TH','PROVINCE');
-        return MWA_PROVINCES.some(p => prov.includes(p) || p.includes(prov));
+      // Subdistricts from GISTDA (กรมการปกครอง — ครบ 180 แขวง)
+      _v30subdistricts = await fetchGistdaSubdistricts();
+      console.log(`[V30] ✅ ${_v30subdistricts.length} subdistricts from GISTDA`);
+      
+      // Count BKK khwaeng
+      const bkkSub = _v30subdistricts.filter(f => {
+        const prov = gp(f.properties,'pro_th');
+        return prov.includes('กรุงเทพ');
       });
+      console.log(`[V30] กทม. แขวง: ${bkkSub.length} (ต้อง=180)`);
 
-      console.log(`[V30] ✅ ${_v30districts.length} districts, ${_v30subdistricts.length} subdistricts`);
+      // Fallback: if GISTDA failed, use chingchai
+      if (_v30subdistricts.length === 0) {
+        console.warn('[V30] ⚠️ GISTDA failed — falling back to chingchai subdistricts');
+        const sResp = await fetch('https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/subdistricts.geojson');
+        const sJson = await sResp.json();
+        _v30subdistricts = sJson.features.filter(f => {
+          const prov = gp(f.properties,'pro_th');
+          return MWA_PROVINCES.some(p => prov.includes(p) || p.includes(prov));
+        });
+        console.log(`[V30] Fallback: ${_v30subdistricts.length} subdistricts`);
+      }
+
       _v30loaded = true;
       populateProvinces();
     } catch(e) {
@@ -16768,8 +16930,128 @@ function submitFeedback(){
   setTimeout(() => {
     bindV30Events();
     loadV30();
-  }, 6000); // Load after SNP data
+    updateScalePreview();
+  }, 6000);
 
 })();
+
+// ── V30 Panel Toggle ──
+function toggleV30Panel() {
+  const p = document.getElementById('v30-panel');
+  const b = document.getElementById('v30-tab-btn');
+  p.classList.toggle('open');
+  b.classList.toggle('active', p.classList.contains('open'));
+}
+
+// ── Color Scale Controls ──
+// Store custom scale params globally
+window._frcScale = { min: 0, max: 2.0, warn: 0.2, good: 0.5 };
+window._ecScale  = { min: 0, max: 1200, lo: 200, hi: 500 };
+
+function updateScalePreview() {
+  // FRC preview
+  const frcBar = document.getElementById('frc-scale-preview');
+  if (frcBar) {
+    const min = parseFloat(document.getElementById('frc-scale-min').value) || 0;
+    const max = parseFloat(document.getElementById('frc-scale-max').value) || 2;
+    let grad = '';
+    const steps = 20;
+    for (let i = 0; i <= steps; i++) {
+      const v = min + (max - min) * i / steps;
+      grad += (i > 0 ? ',' : '') + frcColor(v, 1);
+    }
+    frcBar.style.background = `linear-gradient(to right,${grad})`;
+  }
+  // EC preview
+  const ecBar = document.getElementById('ec-scale-preview');
+  if (ecBar) {
+    const min = parseFloat(document.getElementById('ec-scale-min').value) || 0;
+    const max = parseFloat(document.getElementById('ec-scale-max').value) || 1200;
+    let grad = '';
+    const steps = 20;
+    for (let i = 0; i <= steps; i++) {
+      const v = min + (max - min) * i / steps;
+      grad += (i > 0 ? ',' : '') + ecColorContour(v, 1);
+    }
+    ecBar.style.background = `linear-gradient(to right,${grad})`;
+  }
+}
+
+function applyFrcScale() {
+  const min = parseFloat(document.getElementById('frc-scale-min').value);
+  const max = parseFloat(document.getElementById('frc-scale-max').value);
+  const warn = parseFloat(document.getElementById('frc-scale-warn').value);
+  const good = parseFloat(document.getElementById('frc-scale-good').value);
+  window._frcScale = { min, max, warn, good };
+
+  // Patch frcColor to use new scale — override the clamp
+  const origFrcColor = window._origFrcColor || frcColor;
+  if (!window._origFrcColor) window._origFrcColor = frcColor;
+
+  window.frcColor = function(v, a) {
+    // Remap v from [min,max] to [0,2.0] for the original function
+    const mapped = (v - min) / (max - min) * 2.0;
+    return origFrcColor(mapped, a || 1);
+  };
+
+  // Rebuild contour
+  if (typeof redrawContour === 'function') redrawContour(0);
+  
+  updateScalePreview();
+  console.log('[V30] ✅ FRC scale applied:', window._frcScale);
+}
+
+function applyEcScale() {
+  const min = parseFloat(document.getElementById('ec-scale-min').value);
+  const max = parseFloat(document.getElementById('ec-scale-max').value);
+  const lo = parseFloat(document.getElementById('ec-scale-lo').value);
+  const hi = parseFloat(document.getElementById('ec-scale-hi').value);
+
+  // Update EC_CONFIG which controls the contour
+  if (typeof EC_CONFIG !== 'undefined') {
+    EC_CONFIG.lo = lo;
+    EC_CONFIG.hi = hi;
+    EC_CONFIG.yMax = max;
+    EC_CONFIG.yMin = min;
+  }
+  window._ecScale = { min, max, lo, hi };
+
+  // Rebuild contour
+  if (typeof redrawContour === 'function') redrawContour(0);
+  
+  updateScalePreview();
+  console.log('[V30] ✅ EC scale applied:', window._ecScale);
+}
+
+function resetScales() {
+  // Reset FRC
+  document.getElementById('frc-scale-min').value = 0;
+  document.getElementById('frc-scale-max').value = 2.0;
+  document.getElementById('frc-scale-warn').value = 0.2;
+  document.getElementById('frc-scale-good').value = 0.5;
+  if (window._origFrcColor) window.frcColor = window._origFrcColor;
+  window._frcScale = { min: 0, max: 2.0, warn: 0.2, good: 0.5 };
+
+  // Reset EC
+  document.getElementById('ec-scale-min').value = 0;
+  document.getElementById('ec-scale-max').value = 1200;
+  document.getElementById('ec-scale-lo').value = 200;
+  document.getElementById('ec-scale-hi').value = 500;
+  if (typeof EC_CONFIG !== 'undefined') {
+    EC_CONFIG.lo = 200; EC_CONFIG.hi = 500; EC_CONFIG.yMax = 400; EC_CONFIG.yMin = 0;
+  }
+  window._ecScale = { min: 0, max: 1200, lo: 200, hi: 500 };
+
+  // Rebuild
+  if (typeof redrawContour === 'function') redrawContour(0);
+  
+  updateScalePreview();
+  console.log('[V30] 🔄 Scales reset to default');
+}
+
+// Preview update on input change
+document.querySelectorAll('.v30-scale-section input').forEach(inp => {
+  inp.addEventListener('input', updateScalePreview);
+});
 </script>
 </body></html>
