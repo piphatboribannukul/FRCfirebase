@@ -16428,24 +16428,60 @@ function submitFeedback(){
           </div>`;
 
         // Add marker on map — ใช้ divIcon + pane เฉพาะเพื่อให้อยู่เหนือ contour canvas
-        const mkColor = r._cl2 != null ? (r._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
-        const m = L.marker([r._lat, r._lng], {
+        // (markers จะถูก group by พิกัดด้านล่าง)
+      });
+
+      // Group markers by พิกัด — รวม records ที่อยู่จุดเดียวกันเป็น popup เดียว
+      var locMap = {};
+      shown.forEach(function(r) {
+        var key = r._lat.toFixed(5) + ',' + r._lng.toFixed(5);
+        if (!locMap[key]) locMap[key] = { lat: r._lat, lng: r._lng, records: [] };
+        locMap[key].records.push(r);
+      });
+
+      Object.keys(locMap).forEach(function(key) {
+        var loc = locMap[key];
+        var recs = loc.records;
+        var latest = recs[0]; // records เรียงตามวันที่ล่าสุดแล้ว
+        var mkColor = latest._cl2 != null ? (latest._cl2 >= 0.2 ? '#7b1fa2' : '#c62828') : '#9e9e9e';
+        var m = L.marker([loc.lat, loc.lng], {
           pane: 'snpPane',
           icon: L.divIcon({
             className: '',
             iconSize: [14, 14],
             iconAnchor: [7, 7],
-            html: `<div style="width:14px;height:14px;border-radius:50%;background:${mkColor};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;"></div>`
+            html: '<div style="width:14px;height:14px;border-radius:50%;background:' + mkColor + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;"></div>'
           })
         }).addTo(window.map);
 
-        // Popup with full details
-        const popupHtml = buildSnpPopup(r, distLabel);
-        m.bindPopup(popupHtml, {
-          className: 'pk-pop', maxWidth: 340, minWidth: 280,
+        // Popup แสดงทุก record ที่พิกัดนี้
+        var popupContent = '<div style="font-family:Sarabun,sans-serif;max-height:350px;overflow-y:auto;">';
+        popupContent += '<div style="font-size:13px;font-weight:700;color:#6c3483;margin-bottom:6px;">🔬 ' + (latest._place || 'จุดตรวจ สนป.') + '</div>';
+        popupContent += '<div style="font-size:10px;color:#888;margin-bottom:8px;">📍 ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + ' | พบ ' + recs.length + ' ครั้ง</div>';
+        
+        recs.forEach(function(r, idx) {
+          var cl2Color = r._cl2 != null ? (r._cl2 >= 0.5 ? '#27ae60' : r._cl2 >= 0.2 ? '#e67e22' : '#c0392b') : '#999';
+          var cl2Status = r._cl2 != null ? (r._cl2 >= 0.2 ? '✓' : '✗') : '';
+          popupContent += '<div style="border-top:1px solid #f0e0f0;padding:6px 0;' + (idx === 0 ? 'background:#faf5ff;margin:0 -8px;padding:6px 8px;border-radius:6px;' : '') + '">';
+          popupContent += '<div style="font-size:10px;color:#888;">📅 ' + fmtDate(r._date) + ' ⏰ ' + (r._time || '—') + ' · ' + (r._branch || '') + '</div>';
+          popupContent += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">';
+          if (r._cl2 != null) popupContent += '<div style="font-size:11px;"><b>Cl₂</b> <span style="color:' + cl2Color + ';font-weight:700;">' + r._cl2.toFixed(2) + ' mg/L ' + cl2Status + '</span></div>';
+          if (r._turb != null) popupContent += '<div style="font-size:11px;"><b>ขุ่น</b> ' + r._turb.toFixed(2) + ' NTU</div>';
+          if (r._ec != null) popupContent += '<div style="font-size:11px;"><b>EC</b> ' + r._ec + ' μS/cm</div>';
+          if (r._ph != null) popupContent += '<div style="font-size:11px;"><b>pH</b> ' + r._ph.toFixed(2) + '</div>';
+          if (r._ecoli) popupContent += '<div style="font-size:11px;"><b>E.coli</b> ' + r._ecoli + '</div>';
+          popupContent += '</div>';
+          if (r._source) popupContent += '<div style="font-size:9px;color:#aaa;margin-top:2px;">💧 รับน้ำ: ' + r._source + '</div>';
+          popupContent += '</div>';
+        });
+        
+        popupContent += '</div>';
+
+        m.bindPopup(popupContent, {
+          className: 'pk-pop', maxWidth: 350, minWidth: 280,
           autoPan: true, autoPanPaddingTopLeft: [10, 80], autoPanPaddingBottomRight: [10, 40]
         });
-        m.bindTooltip(`<b>${(r._place||'').substring(0,25)}</b><br>Cl₂: ${r._cl2!=null?r._cl2.toFixed(2):'—'} | EC: ${r._ec||'—'}`, {
+        m.bindTooltip('<b>' + (latest._place || '').substring(0, 25) + '</b><br>Cl₂: ' + (latest._cl2 != null ? latest._cl2.toFixed(2) : '—') + ' | ' + recs.length + ' records', {
           className: 'snp-tip', direction: 'top', offset: [0, -6]
         });
         _snpMarkers.push(m);
