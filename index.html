@@ -16829,25 +16829,52 @@ function submitFeedback(){
         </div>
       </div>`;
 
-      // marker
-      const mc = r._cl2!=null?(r._cl2>=0.2?'#27ae60':'#e74c3c'):'#999';
-      const m = L.marker([r._lat, r._lng], {
+      // marker — จะ group by พิกัดด้านล่าง
+    });
+
+    // Group markers by พิกัด — รวม records ที่พิกัดเดียวกันเป็น popup เดียว
+    var locGrp = {};
+    shown.forEach(function(r) {
+      var lk = r._lat.toFixed(5) + ',' + r._lng.toFixed(5);
+      if (!locGrp[lk]) locGrp[lk] = { lat: r._lat, lng: r._lng, recs: [] };
+      locGrp[lk].recs.push(r);
+    });
+
+    Object.keys(locGrp).forEach(function(lk) {
+      var g = locGrp[lk];
+      var recs = g.recs;
+      var latest = recs[0];
+      var mc = latest._cl2 != null ? (latest._cl2 >= 0.2 ? '#27ae60' : '#e74c3c') : '#999';
+      var m = L.marker([g.lat, g.lng], {
         pane: 'snpPane',
         icon: L.divIcon({
           className:'', iconSize:[12,12], iconAnchor:[6,6],
-          html:`<div style="width:12px;height:12px;border-radius:50%;background:${mc};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;"></div>`
+          html:'<div style="width:12px;height:12px;border-radius:50%;background:' + mc + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;"></div>'
         })
       }).addTo(window.map);
-      m.bindPopup(`<div style="min-width:200px;font-family:'Sarabun';font-size:12px;">
-        <div style="font-weight:700;color:#6c3483;margin-bottom:4px;">🔬 ${r._place||'—'}</div>
-        <div style="font-size:10px;color:#888;margin-bottom:6px;">📅 ${fmtD(r._date)} · ${r._time||''} · ${r._branch||''}</div>
-        ${r._cl2!=null?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Cl₂</span><span style="color:${r._cl2>=0.2?'#27ae60':'#e74c3c'};font-weight:600;">${r._cl2.toFixed(2)} mg/L ${r._cl2>=0.2?'✓':'✗'}</span></div>`:''}
-        ${r._turb!=null?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>ขุ่น</span><span>${r._turb.toFixed(2)} NTU</span></div>`:''}
-        ${r._ec!=null?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>EC</span><span>${r._ec} μS/cm</span></div>`:''}
-        ${r._ph!=null?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>pH</span><span>${r._ph.toFixed(2)}</span></div>`:''}
-        ${r._ecoli?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>E.coli</span><span>${r._ecoli}</span></div>`:''}
-        <div style="margin-top:4px;font-size:9px;color:#aaa;">💧 รับน้ำ: ${r._source||'—'}</div>
-      </div>`, { maxWidth:300 });
+
+      var popHtml = '<div style="min-width:220px;max-height:350px;overflow-y:auto;font-family:Sarabun;font-size:12px;">';
+      popHtml += '<div style="font-weight:700;color:#6c3483;margin-bottom:4px;">🔬 ' + (latest._place || 'จุดตรวจ สนป.') + '</div>';
+      popHtml += '<div style="font-size:10px;color:#888;margin-bottom:6px;">📍 พบ ' + recs.length + ' ครั้ง</div>';
+      
+      recs.forEach(function(r, idx) {
+        var cl2Color = r._cl2 != null ? (r._cl2 >= 0.5 ? '#27ae60' : r._cl2 >= 0.2 ? '#e67e22' : '#c0392b') : '#999';
+        popHtml += '<div style="border-top:1px solid #f0e0f0;padding:5px 0;' + (idx === 0 ? 'background:#faf5ff;margin:0 -8px;padding:5px 8px;border-radius:4px;' : '') + '">';
+        popHtml += '<div style="font-size:10px;color:#888;">📅 ' + fmtD(r._date) + ' ⏰ ' + (r._time || '') + ' · ' + (r._branch || '') + '</div>';
+        popHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:3px;">';
+        if (r._cl2 != null) popHtml += '<span style="font-size:11px;"><b>Cl₂</b> <span style="color:' + cl2Color + ';font-weight:700;">' + r._cl2.toFixed(2) + ' ' + (r._cl2 >= 0.2 ? '✓' : '✗') + '</span></span>';
+        if (r._turb != null) popHtml += '<span style="font-size:11px;"><b>ขุ่น</b> ' + r._turb.toFixed(2) + '</span>';
+        if (r._ec != null) popHtml += '<span style="font-size:11px;"><b>EC</b> ' + r._ec + '</span>';
+        if (r._ph != null) popHtml += '<span style="font-size:11px;"><b>pH</b> ' + r._ph.toFixed(2) + '</span>';
+        if (r._ecoli) popHtml += '<span style="font-size:11px;"><b>E.coli</b> ' + r._ecoli + '</span>';
+        popHtml += '</div>';
+        if (r._source) popHtml += '<div style="font-size:9px;color:#aaa;margin-top:2px;">💧 ' + r._source + '</div>';
+        popHtml += '</div>';
+      });
+      popHtml += '</div>';
+
+      m.bindPopup(popHtml, { maxWidth: 340, minWidth: 240, autoPan: true });
+      m.bindTooltip('<b>' + (latest._place || '').substring(0, 25) + '</b><br>' + recs.length + ' records', { className: 'snp-tip', direction: 'top', offset: [0, -6] });
       _v30markers.push(m);
     });
 
