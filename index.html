@@ -2740,6 +2740,27 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </div>
     </div><!-- /sb-body -->
   </div>
+
+  <!-- Login / Logout -->
+  <div class="sblock" id="sb-auth">
+    <div id="auth-status" style="padding:8px 12px;font-size:11px;font-family:'Sarabun',sans-serif;">
+      <div id="auth-logged-out">
+        <div style="font-size:10px;color:#888;margin-bottom:6px;">🔐 เข้าสู่ระบบ (สำหรับ admin)</div>
+        <input type="email" id="auth-email" placeholder="Email" style="width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:5px;font-size:11px;font-family:'Sarabun';margin-bottom:4px;box-sizing:border-box;">
+        <input type="password" id="auth-pass" placeholder="Password" style="width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:5px;font-size:11px;font-family:'Sarabun';margin-bottom:6px;box-sizing:border-box;"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-login-btn').click();">
+        <button id="auth-login-btn" onclick="doAuthLogin()" style="width:100%;padding:6px;border:1px solid #6c3483;border-radius:5px;background:#6c3483;color:#fff;font-size:11px;font-weight:600;font-family:'Sarabun';cursor:pointer;">🔓 Login</button>
+        <div id="auth-error" style="display:none;color:#c0392b;font-size:10px;margin-top:4px;"></div>
+      </div>
+      <div id="auth-logged-in" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="color:#27ae60;font-size:11px;">✅ <span id="auth-user-email"></span></span>
+          <button onclick="doAuthLogout()" style="padding:3px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;color:#666;font-size:10px;font-family:'Sarabun';cursor:pointer;">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /sidebar-scroll -->
 </div><!-- /sidebar -->
 
@@ -3796,8 +3817,12 @@ const _CONTOUR_K_FB_PATH = 'settings/contour_k_override';
 async function _saveContourK() {
   // 1. localStorage (backup เสมอ)
   try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
-  // 2. Firebase (primary)
+  // 2. Firebase (primary) — ต้อง login
   if (window._fbReady && window._fb) {
+    if (!window._fbUser) {
+      alert('⚠️ กรุณา Login ก่อนบันทึกค่า K\n\nไปที่ ☰ → Login (ล่างสุด sidebar)');
+      return;
+    }
     try {
       await window._fbSet(window._fbRef(window._fb, _CONTOUR_K_FB_PATH), CONTOUR_K_OVERRIDE);
       console.log('[ContourK] ✅ saved to Firebase:', Object.keys(CONTOUR_K_OVERRIDE).length, 'stations');
@@ -9913,6 +9938,11 @@ function deleteZone(sid) {
 
 // ── Apply zones to contour ────────────────────────────────────────────
 function applyZonesToContour() {
+  // Auth check
+  if (!window._fbUser) {
+    alert('⚠️ กรุณา Login ก่อนบันทึก Zone\n\nไปที่ ☰ → Login (ล่างสุด sidebar)');
+    return;
+  }
   const count = Object.keys(window.CUSTOM_ZONES).length;
   const btn = document.querySelector('.zep-apply-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving & Rebuilding...'; }
@@ -16958,6 +16988,59 @@ function submitFeedback(){
     updateScalePreview();
   }, 6000);
 
+})();
+
+// ── Auth Login/Logout ──
+async function doAuthLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'กรุณากรอก email และ password'; errEl.style.display = 'block'; return; }
+  try {
+    const result = await window.fbAuthLogin(email, pass);
+    if (result && result.success) {
+      updateAuthUI();
+    } else {
+      errEl.textContent = (result && result.error) || 'Login ไม่สำเร็จ';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = e.message || 'เกิดข้อผิดพลาด';
+    errEl.style.display = 'block';
+  }
+}
+
+async function doAuthLogout() {
+  try {
+    if (window.fbAuthLogout) await window.fbAuthLogout();
+    else if (window._fbAuth) { const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js'); await signOut(window._fbAuth); }
+    window._fbUser = null;
+    updateAuthUI();
+  } catch(e) { console.warn('Logout error:', e); }
+}
+
+function updateAuthUI() {
+  const loggedIn = !!(window._fbUser);
+  const outEl = document.getElementById('auth-logged-out');
+  const inEl = document.getElementById('auth-logged-in');
+  const emailEl = document.getElementById('auth-user-email');
+  if (outEl) outEl.style.display = loggedIn ? 'none' : 'block';
+  if (inEl) inEl.style.display = loggedIn ? 'flex' : 'none';
+  if (emailEl && window._fbUser) emailEl.textContent = window._fbUser.email || 'admin';
+  // Clear password field
+  const passEl = document.getElementById('auth-pass');
+  if (passEl) passEl.value = '';
+}
+
+// Listen for auth state changes
+(function() {
+  const checkAuth = setInterval(function() {
+    if (window._fbAuth) {
+      clearInterval(checkAuth);
+      updateAuthUI();
+    }
+  }, 1000);
 })();
 
 // ── V30 Panel Toggle ──
