@@ -332,7 +332,7 @@ body.dark .sb-menu:hover{background:rgba(233,69,96,.03);}
 #forecast-bar.visible{display:flex;}
 #forecast-bar.visible ~ #disclaimer-bar, body.fc-open #disclaimer-bar { display:none !important; }
 #forecast-top{display:flex;align-items:center;gap:10px;}
-#forecast-time-label{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#cc0055;min-width:110px;}
+#forecast-time-label{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#cc0055;min-width:150px;}
 #forecast-slider{flex:1;accent-color:#cc0055;height:6px;cursor:pointer;border-radius:3px;}
 #forecast-controls{display:flex;gap:6px;align-items:center;}
 .fc-btn{border:1px solid #f0c0d8;background:#fff8fa;color:#cc0055;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .2s;}
@@ -3007,7 +3007,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl">
         <tr><th colspan="2">Forecast Animation</th></tr>
-        <tr><td>⏪ ย้อนหลัง</td><td>24 ชม. จาก localStorage (bin 30 นาที)</td></tr>
+        <tr><td>⏪ ย้อนหลัง</td><td>72 ชม. จาก localStorage (bin 30 นาที)</td></tr>
         <tr><td>⏩ ล่วงหน้า</td><td>6 ชม. blend formula</td></tr>
         <tr><td>ข้อมูลที่ใช้</td><td>frc จริง pump/plant ณ เวลานั้น</td></tr>
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
@@ -8295,11 +8295,11 @@ function tick(){document.getElementById('clock').textContent=new Date().toLocale
 
 
 // ── Unified Timeline (History + Forecast) ─────────────────────────────────
-// slider: 0-23 = ย้อนหลัง 24h, 24 = ปัจจุบัน, 25-30 = forecast +1h..+6h
-const FC_HIST_STEPS = 24;  // 0-23
-const FC_NOW_STEP   = 24;  // ปัจจุบัน
-const FC_FORE_STEPS = 6;   // 25-30
-const FC_TOTAL      = FC_HIST_STEPS + FC_FORE_STEPS; // max=30
+// slider: 0-71 = ย้อนหลัง 72h, 72 = ปัจจุบัน, 73-78 = forecast +1h..+6h
+const FC_HIST_STEPS = 72;  // 0-71
+const FC_NOW_STEP   = 72;  // ปัจจุบัน
+const FC_FORE_STEPS = 6;   // 73-78
+const FC_TOTAL      = FC_HIST_STEPS + FC_FORE_STEPS; // max=78
 
 let _unifiedFrames = []; // array of {ts, arr} รวม hist+fore
 let _unifiedLoaded = false;
@@ -8322,9 +8322,9 @@ async function loadUnifiedTimeline() {
 
   // ── HISTORY frames (ย้อนหลัง 24h ทุก 1h) ──
   const bins = getHistoryBins(); // {ts, snap, snapEc}[]
-  // resample เป็น 24 ช่อง (1 ช่อง/ชั่วโมง)
+  // resample เป็น 72 ช่อง (1 ช่อง/ชั่วโมง, ย้อนหลัง 72h)
   const nowMs = Date.now();
-  for (let h = 23; h >= 0; h--) {
+  for (let h = 71; h >= 0; h--) {
     const targetTs = nowMs - h * 3600000;
     // หา bin ที่ใกล้ที่สุด
     let closest = null, closestD = Infinity;
@@ -8348,7 +8348,7 @@ async function loadUnifiedTimeline() {
         : await buildSnapFrameAsync(()=>buildSnapFrame({}));
     }
     _unifiedFrames.push({ ts: targetTs, arr, isHistory: true });
-    if (lbl) lbl.textContent = `โหลด ${24-h}/24...`;
+    if (lbl) lbl.textContent = `โหลด ${72-h}/72...`;
     await new Promise(r => setTimeout(r, 0)); // yield
   }
 
@@ -8481,7 +8481,8 @@ function buildUnifiedTicks() {
 
   // แสดง tick เฉพาะ range ของ mode ปัจจุบัน
   const frames = _unifiedFrames.slice(minI, maxI + 1);
-  const showEvery = Math.ceil(frames.length / 6);
+  const maxTicks = frames.length > 30 ? 8 : 6;
+  const showEvery = Math.ceil(frames.length / maxTicks);
 
   frames.forEach((f, i) => {
     const idx = minI + i;
@@ -8489,7 +8490,11 @@ function buildUnifiedTicks() {
     const d = new Date(f.ts);
     const s = document.createElement('span');
     s.style.cssText = 'font-size:8px;color:' + (f.isNow ? '#ff6600' : f.isForecast ? '#88ccff' : '#aaa') + ';';
-    s.textContent = f.isNow ? '▼now' : `${String(d.getHours()).padStart(2,'0')}:00`;
+    // ถ้า history > 24h แสดง dd/MM HH:00
+    const tickLabel = f.isNow ? '▼now'
+      : (frames.length > 25 ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`
+      : `${String(d.getHours()).padStart(2,'0')}:00`);
+    s.textContent = tickLabel;
     el.appendChild(s);
   });
 }
@@ -8514,7 +8519,9 @@ function seekForecastUnified(idx) {
 
   // label
   const d = new Date(frame.ts);
-  const timeStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`;
+  const thDays = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const dayName = thDays[d.getDay()];
+  const timeStr = `${dayName} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`;
   if (lbl) lbl.textContent = frame.isNow ? '⬤ ปัจจุบัน' : timeStr;
   if (badge) {
     badge.textContent = frame.isForecast ? '⏩ คาดการณ์' : frame.isNow ? '⬤ Live' : '⏪ ย้อนหลัง';
@@ -8705,7 +8712,7 @@ function idwFc(lat, lon, arr) {
 // ── History: สร้าง snapshot จาก localStorage ─────────────────────────────────
 function getHistoryBins() {
   const hist = loadHistory();
-  const BIN = 30*60000, cutoff = Date.now()-24*3600000;
+  const BIN = 30*60000, cutoff = Date.now()-72*3600000;
   const binMap = {};
   for (const [code,pts] of Object.entries(hist)) {
     for (const p of pts) {
@@ -9224,7 +9231,7 @@ async function importTWQ(input) {
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
       <button class="fc-btn active" id="fc-play-btn" onclick="toggleForecast()">▶</button>
       <button class="fc-btn" onclick="resetForecast()" title="กลับปัจจุบัน">↩</button>
-      <button class="fc-btn active" id="fc-mode-hist" onclick="setFcMode('history')" style="font-size:9px;padding:2px 6px;">⏪ ย้อนหลัง</button>
+      <button class="fc-btn active" id="fc-mode-hist" onclick="setFcMode('history')" style="font-size:9px;padding:2px 6px;">⏪ ย้อนหลัง 72h</button>
       <button class="fc-btn" id="fc-mode-fore" onclick="setFcMode('forecast')" style="font-size:9px;padding:2px 6px;">⏩ คาดการณ์</button>
     </div>
     <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:2px;">
