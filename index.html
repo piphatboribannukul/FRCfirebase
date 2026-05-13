@@ -8472,32 +8472,65 @@ function buildUnifiedTicks() {
   const el = document.getElementById('forecast-ticks');
   if (!el || !_unifiedFrames.length) return;
   el.innerHTML = '';
-  el.style.display = 'flex';
-  el.style.justifyContent = 'space-between';
-  el.style.padding = '0 2px';
+  el.style.cssText = 'position:relative;height:14px;margin:0 2px;';
 
   const slider = document.getElementById('forecast-slider');
   const minI = parseInt(slider.min);
   const maxI = parseInt(slider.max);
+  const range = maxI - minI;
+  if (range <= 0) return;
 
   // แสดง tick เฉพาะ range ของ mode ปัจจุบัน
   const frames = _unifiedFrames.slice(minI, maxI + 1);
-  const maxTicks = frames.length > 30 ? 8 : 6;
-  const showEvery = Math.ceil(frames.length / maxTicks);
+  const maxTicks = frames.length > 100 ? 8 : frames.length > 30 ? 7 : 6;
 
-  frames.forEach((f, i) => {
-    const idx = minI + i;
-    if (i % showEvery !== 0 && !f.isNow && i !== frames.length - 1) return;
+  // เลือก tick indices ที่กระจายสม่ำเสมอ
+  const tickIndices = [0]; // เริ่มต้น
+  const step = (frames.length - 1) / (maxTicks - 1);
+  for (let t = 1; t < maxTicks - 1; t++) {
+    tickIndices.push(Math.round(t * step));
+  }
+  tickIndices.push(frames.length - 1); // สุดท้าย
+  // deduplicate
+  const uniqueTicks = [...new Set(tickIndices)].sort((a, b) => a - b);
+
+  uniqueTicks.forEach(i => {
+    const f = frames[i];
+    if (!f) return;
+    const pct = (i / range) * 100;
     const d = new Date(f.ts);
     const s = document.createElement('span');
-    s.style.cssText = 'font-size:8px;color:' + (f.isNow ? '#ff6600' : f.isForecast ? '#88ccff' : '#aaa') + ';';
-    // ถ้า history > 24h แสดง dd/MM HH:00
+    const isDark = document.body.classList.contains('dark');
+    s.style.cssText = 'position:absolute;font-size:9px;font-weight:600;transform:translateX(-50%);white-space:nowrap;color:'
+      + (f.isNow ? '#ff6600' : f.isForecast ? '#4499dd' : (isDark ? '#c0c0c0' : '#555')) + ';';
+    s.style.left = pct + '%';
+    // ป้องกันล้นซ้าย-ขวา
+    if (pct < 5) { s.style.transform = 'translateX(0)'; s.style.left = '0'; }
+    if (pct > 95) { s.style.transform = 'translateX(-100%)'; s.style.left = '100%'; }
     const tickLabel = f.isNow ? '▼now'
       : (frames.length > 25 ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`
       : `${String(d.getHours()).padStart(2,'0')}:00`);
     s.textContent = tickLabel;
     el.appendChild(s);
   });
+}
+
+function showSliderTooltip(slider) {
+  const tip = document.getElementById('fc-tooltip');
+  if (!tip || !_unifiedLoaded) return;
+  const idx = parseInt(slider.value);
+  const frame = _unifiedFrames[idx];
+  if (!frame) return;
+  const d = new Date(frame.ts);
+  const thDays = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const dayName = thDays[d.getDay()];
+  tip.textContent = frame.isNow ? '⬤ ปัจจุบัน'
+    : `${dayName} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`;
+  // position tooltip above thumb
+  const min = parseInt(slider.min), max = parseInt(slider.max);
+  const pct = ((idx - min) / (max - min)) * 100;
+  tip.style.left = pct + '%';
+  tip.style.display = 'block';
 }
 
 function seekForecastUnified(idx) {
@@ -9262,7 +9295,14 @@ async function importTWQ(input) {
         <span id="fc-range-label" style="font-size:9px;color:#aaa;flex-shrink:0;">-72h</span>
         <div style="position:relative;flex:1;">
           <input type="range" id="forecast-slider" min="0" max="30" step="1" value="24"
-            oninput="seekForecastUnified(this.value)" style="width:100%;">
+            oninput="seekForecastUnified(this.value);showSliderTooltip(this);"
+            onmousemove="showSliderTooltip(this);"
+            onmouseenter="document.getElementById('fc-tooltip').style.display='block';"
+            onmouseleave="document.getElementById('fc-tooltip').style.display='none';"
+            ontouchstart="document.getElementById('fc-tooltip').style.display='block';"
+            ontouchend="setTimeout(()=>document.getElementById('fc-tooltip').style.display='none',1500);"
+            style="width:100%;">
+          <div id="fc-tooltip" style="display:none;position:absolute;top:-28px;background:rgba(0,0,0,0.85);color:#fff;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;transform:translateX(-50%);z-index:10;"></div>
           <div id="fc-now-marker" style="position:absolute;top:0;bottom:0;width:2px;background:#ff6600;pointer-events:none;transform:translateX(-50%);border-radius:1px;opacity:0.8;"></div>
         </div>
         <span style="font-size:9px;color:#aaa;flex-shrink:0;">+6h</span>
