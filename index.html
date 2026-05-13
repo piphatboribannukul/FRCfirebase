@@ -60,7 +60,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour rev22.1</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour v32</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -1253,6 +1253,7 @@ body.dark .fc-btn{
 }
 body.dark .fc-btn:hover{background:rgba(233,69,96,.08) !important;}
 body.dark .fc-btn.active{background:var(--neon-pink) !important;color:#fff !important;box-shadow:0 0 14px var(--neon-pink-dim) !important;}
+body.dark #fc-hist-range{background:rgba(255,255,255,.06) !important;border-color:var(--glass-border) !important;color:var(--neon-pink) !important;}
 body.dark .fc-mode-btn{background:rgba(255,255,255,.04) !important;border-color:var(--glass-border) !important;color:var(--text-secondary) !important;}
 body.dark .fc-mode-btn.active{background:rgba(78,168,222,.2) !important;color:#fff !important;border-color:rgba(78,168,222,.4) !important;}
 /* Popup — glass */
@@ -3007,13 +3008,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl">
         <tr><th colspan="2">Forecast Animation</th></tr>
-        <tr><td>⏪ ย้อนหลัง</td><td>72 ชม. จาก localStorage (bin 30 นาที)</td></tr>
+        <tr><td>⏪ ย้อนหลัง</td><td>เลือกได้ 24h / 72h / 7 วัน จาก localStorage (bin 30 นาที)</td></tr>
         <tr><td>⏩ ล่วงหน้า</td><td>6 ชม. blend formula</td></tr>
         <tr><td>ข้อมูลที่ใช้</td><td>frc จริง pump/plant ณ เวลานั้น</td></tr>
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v32 · May 2026</div>
     </div>
 
     <!-- EC note -->
@@ -3065,7 +3066,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">rev22.1 · Apr 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v32 · May 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -8295,11 +8296,11 @@ function tick(){document.getElementById('clock').textContent=new Date().toLocale
 
 
 // ── Unified Timeline (History + Forecast) ─────────────────────────────────
-// slider: 0-71 = ย้อนหลัง 72h, 72 = ปัจจุบัน, 73-78 = forecast +1h..+6h
-const FC_HIST_STEPS = 72;  // 0-71
-const FC_NOW_STEP   = 72;  // ปัจจุบัน
-const FC_FORE_STEPS = 6;   // 73-78
-const FC_TOTAL      = FC_HIST_STEPS + FC_FORE_STEPS; // max=78
+// slider: 0-(N-1) = ย้อนหลัง Nh, N = ปัจจุบัน, N+1..N+6 = forecast
+let FC_HIST_STEPS = 72;  // default 72h (เปลี่ยนได้ 24/72/168)
+let FC_NOW_STEP   = 72;
+const FC_FORE_STEPS = 6;
+let FC_TOTAL      = FC_HIST_STEPS + FC_FORE_STEPS;
 
 let _unifiedFrames = []; // array of {ts, arr} รวม hist+fore
 let _unifiedLoaded = false;
@@ -8322,9 +8323,9 @@ async function loadUnifiedTimeline() {
 
   // ── HISTORY frames (ย้อนหลัง 24h ทุก 1h) ──
   const bins = getHistoryBins(); // {ts, snap, snapEc}[]
-  // resample เป็น 72 ช่อง (1 ช่อง/ชั่วโมง, ย้อนหลัง 72h)
+  // resample เป็น FC_HIST_STEPS ช่อง (1 ช่อง/ชั่วโมง)
   const nowMs = Date.now();
-  for (let h = 71; h >= 0; h--) {
+  for (let h = FC_HIST_STEPS - 1; h >= 0; h--) {
     const targetTs = nowMs - h * 3600000;
     // หา bin ที่ใกล้ที่สุด
     let closest = null, closestD = Infinity;
@@ -8348,7 +8349,7 @@ async function loadUnifiedTimeline() {
         : await buildSnapFrameAsync(()=>buildSnapFrame({}));
     }
     _unifiedFrames.push({ ts: targetTs, arr, isHistory: true });
-    if (lbl) lbl.textContent = `โหลด ${72-h}/72...`;
+    if (lbl) lbl.textContent = `โหลด ${FC_HIST_STEPS-h}/${FC_HIST_STEPS}...`;
     await new Promise(r => setTimeout(r, 0)); // yield
   }
 
@@ -8712,7 +8713,7 @@ function idwFc(lat, lon, arr) {
 // ── History: สร้าง snapshot จาก localStorage ─────────────────────────────────
 function getHistoryBins() {
   const hist = loadHistory();
-  const BIN = 30*60000, cutoff = Date.now()-72*3600000;
+  const BIN = 30*60000, cutoff = Date.now()-Math.max(FC_HIST_STEPS, 168)*3600000;
   const binMap = {};
   for (const [code,pts] of Object.entries(hist)) {
     for (const p of pts) {
@@ -8963,6 +8964,23 @@ function setFcMode(mode) {
     seekForecastUnified(parseInt(slider.value));
   } else {
     loadUnifiedTimeline().then(() => setFcMode(mode));
+  }
+}
+
+function changeHistRange(hours) {
+  hours = parseInt(hours);
+  FC_HIST_STEPS = hours;
+  FC_NOW_STEP   = hours;
+  FC_TOTAL      = FC_HIST_STEPS + FC_FORE_STEPS;
+  // update label
+  const rl = document.getElementById('fc-range-label');
+  if (rl) rl.textContent = hours >= 168 ? '-7d' : `-${hours}h`;
+  // force reload
+  _unifiedLoaded = false;
+  _unifiedFrames = [];
+  // ถ้าอยู่ใน history mode → โหลดใหม่ทันที
+  if (_fcMode === 'history') {
+    loadUnifiedTimeline().then(() => setFcMode('history'));
   }
 }
 
@@ -9231,12 +9249,17 @@ async function importTWQ(input) {
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
       <button class="fc-btn active" id="fc-play-btn" onclick="toggleForecast()">▶</button>
       <button class="fc-btn" onclick="resetForecast()" title="กลับปัจจุบัน">↩</button>
-      <button class="fc-btn active" id="fc-mode-hist" onclick="setFcMode('history')" style="font-size:9px;padding:2px 6px;">⏪ ย้อนหลัง 72h</button>
+      <button class="fc-btn active" id="fc-mode-hist" onclick="setFcMode('history')" style="font-size:9px;padding:2px 6px;">⏪ ย้อนหลัง</button>
+      <select id="fc-hist-range" onchange="changeHistRange(this.value)" style="font-size:9px;padding:2px 4px;border:1px solid #f0c0d8;border-radius:5px;background:#fff8fa;color:#cc0055;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;">
+        <option value="24">24 ชม.</option>
+        <option value="72" selected>72 ชม.</option>
+        <option value="168">7 วัน</option>
+      </select>
       <button class="fc-btn" id="fc-mode-fore" onclick="setFcMode('forecast')" style="font-size:9px;padding:2px 6px;">⏩ คาดการณ์</button>
     </div>
     <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:2px;">
       <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:9px;color:#aaa;flex-shrink:0;">-24h</span>
+        <span id="fc-range-label" style="font-size:9px;color:#aaa;flex-shrink:0;">-72h</span>
         <div style="position:relative;flex:1;">
           <input type="range" id="forecast-slider" min="0" max="30" step="1" value="24"
             oninput="seekForecastUnified(this.value)" style="width:100%;">
