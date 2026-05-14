@@ -8324,6 +8324,7 @@ let _unifiedLoading = false; // guard ป้องกันโหลดซ้อ
 async function loadUnifiedTimeline() {
   if (_unifiedLoading) { console.warn('[Timeline] skip — already loading'); return; }
   _unifiedLoading = true;
+  _pauseTick = true; // หยุด tick() ชั่วคราวกัน race condition
   const lbl  = document.getElementById('forecast-time-label');
   const badge = document.getElementById('fc-mode-badge');
   if (lbl) lbl.textContent = 'กำลังโหลด...';
@@ -8358,8 +8359,8 @@ async function loadUnifiedTimeline() {
         : await buildSnapFrameAsync(()=>buildSnapFrame({}));
     }
     _unifiedFrames.push({ ts: targetTs, arr, isHistory: true });
-    if (lbl) lbl.textContent = `โหลด ${FC_HIST_STEPS-h}/${FC_HIST_STEPS}...`;
-    await new Promise(r => setTimeout(r, 0)); // yield
+    if (lbl && (h % 10 === 0)) lbl.textContent = `โหลด ${FC_HIST_STEPS-h}/${FC_HIST_STEPS}...`;
+    if (h % 10 === 0) await new Promise(r => setTimeout(r, 0)); // yield ทุก 10 frames
   }
 
   // ── NOW frame ──
@@ -8389,7 +8390,29 @@ async function loadUnifiedTimeline() {
 
   _unifiedLoaded = true;
   _unifiedLoading = false;
-  console.log(`[Timeline] loaded ${_unifiedFrames.length} frames, first=${new Date(_unifiedFrames[0]?.ts).toLocaleString()}, last=${new Date(_unifiedFrames[_unifiedFrames.length-1]?.ts).toLocaleString()}`);
+  _pauseTick = false; // กลับมา tick() ปกติ
+  // debug: verify frame order
+  let orderOk = true;
+  for (let i = 1; i < _unifiedFrames.length; i++) {
+    if (_unifiedFrames[i].ts < _unifiedFrames[i-1].ts) {
+      console.error(`[Timeline] ORDER BUG at index ${i}: ${new Date(_unifiedFrames[i-1].ts).toLocaleString()} > ${new Date(_unifiedFrames[i].ts).toLocaleString()}`);
+      orderOk = false;
+    }
+  }
+  if (orderOk) {
+    console.log(`[Timeline] ✅ loaded ${_unifiedFrames.length} frames IN ORDER`);
+  } else {
+    console.error(`[Timeline] ❌ FRAMES NOT IN ORDER — sorting now`);
+    // emergency sort เพื่อให้ ticks ถูก
+    const nowFrame = _unifiedFrames.find(f => f.isNow);
+    const foreFrames = _unifiedFrames.filter(f => f.isForecast);
+    const histFrames = _unifiedFrames.filter(f => f.isHistory);
+    histFrames.sort((a,b) => a.ts - b.ts);
+    foreFrames.sort((a,b) => a.ts - b.ts);
+    _unifiedFrames = [...histFrames, ...(nowFrame ? [nowFrame] : []), ...foreFrames];
+    console.log(`[Timeline] sorted: first=${new Date(_unifiedFrames[0]?.ts).toLocaleString()}, last=${new Date(_unifiedFrames[_unifiedFrames.length-1]?.ts).toLocaleString()}`);
+  }
+  console.log(`[Timeline] first=${new Date(_unifiedFrames[0]?.ts).toLocaleString()}, last=${new Date(_unifiedFrames[_unifiedFrames.length-1]?.ts).toLocaleString()}`);
   const slider = document.getElementById('forecast-slider');
   if (slider) {
     const nowIdx = _unifiedFrames.findIndex(f => f.isNow);
@@ -8407,12 +8430,19 @@ async function loadUnifiedTimeline() {
 }
 
 function buildSnapFrameAsync(buildFn) {
+  // เมื่อ _pauseTick = true (ระหว่างโหลด timeline) → ทำ sync เลย ไม่ yield
+  if (_pauseTick) {
+    try {
+      const result = buildFn();
+      if (result instanceof Float32Array) return Promise.resolve(result);
+      if (_idwCache) return Promise.resolve(new Float32Array(_idwCache));
+      return Promise.resolve(null);
+    } catch(e) { return Promise.resolve(null); }
+  }
   return new Promise(resolve => {
     setTimeout(() => {
       try {
         const result = buildFn();
-        // buildSnapFrame/buildSnapFrameEc เปลี่ยน _idwCache โดยตรง ไม่ return Float32Array
-        // ต้อง copy ทันทีก่อน yield control
         if (result instanceof Float32Array) {
           resolve(result);
         } else if (_idwCache) {
@@ -8586,7 +8616,8 @@ function seekForecastUnified(idx) {
 
 // openForecastBar override merged into main function below
 
-setInterval(tick,1000); tick();
+let _pauseTick = false;
+setInterval(()=>{ if (!_pauseTick) tick(); },1000); tick();
 
 // Auto-open forecast bar disabled
 
