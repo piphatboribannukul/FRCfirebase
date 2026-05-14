@@ -8472,69 +8472,49 @@ function buildUnifiedTicks() {
   const el = document.getElementById('forecast-ticks');
   if (!el || !_unifiedFrames.length) return;
   el.innerHTML = '';
-  el.style.cssText = 'position:relative;height:14px;margin:0 2px;';
+  el.style.cssText = 'position:relative;height:16px;margin:0 2px;';
 
   const slider = document.getElementById('forecast-slider');
   const minI = parseInt(slider.min);
   const maxI = parseInt(slider.max);
-  const range = maxI - minI;
-  if (range <= 0) return;
+  const total = maxI - minI;
+  if (total <= 0) return;
 
-  // แสดง tick เฉพาะ range ของ mode ปัจจุบัน
-  const frames = _unifiedFrames.slice(minI, maxI + 1);
+  // จำนวน tick ที่ต้องการ (ไม่เกิน 8)
+  const numTicks = Math.min(8, total + 1);
+  const isDark = document.body.classList.contains('dark');
+  const histColor = isDark ? '#d0d0d0' : '#444';
 
-  // debug: verify order
-  console.log('[Ticks] frames:', frames.length, 'range:', minI, '-', maxI,
-    'first:', new Date(frames[0]?.ts).toLocaleString(),
-    'last:', new Date(frames[frames.length-1]?.ts).toLocaleString());
-
-  // ตรวจสอบว่า frames เรียงตาม ts ถูกต้อง
-  let sorted = true;
-  for (let i = 1; i < frames.length; i++) {
-    if (frames[i].ts < frames[i-1].ts) { sorted = false; break; }
-  }
-  if (!sorted) {
-    console.warn('[Ticks] frames not sorted by ts — fixing');
-    // สร้าง index map เพื่อ sort แล้ว remap
-    const indexed = frames.map((f, i) => ({ f, origI: i }));
-    indexed.sort((a, b) => a.f.ts - b.f.ts);
-    // ใช้ sorted frames สำหรับ ticks
-    var sortedFrames = indexed.map(x => x.f);
-    var sortedMap = indexed.map(x => x.origI); // origI → position on slider
-  }
-  const displayFrames = sorted ? frames : sortedFrames;
-
-  const maxTicks = displayFrames.length > 100 ? 8 : displayFrames.length > 30 ? 7 : 6;
-
-  // เลือก tick indices ที่กระจายสม่ำเสมอ
-  const tickIndices = [0];
-  const step = (displayFrames.length - 1) / (maxTicks - 1);
-  for (let t = 1; t < maxTicks - 1; t++) {
-    tickIndices.push(Math.round(t * step));
-  }
-  tickIndices.push(displayFrames.length - 1);
-  const uniqueTicks = [...new Set(tickIndices)].sort((a, b) => a - b);
-
-  uniqueTicks.forEach(i => {
-    const f = displayFrames[i];
-    if (!f) return;
-    // position: ถ้า sorted ใช้ i ตรงๆ, ถ้าไม่ ใช้ origI
-    const sliderPos = sorted ? i : sortedMap[i];
-    const pct = (sliderPos / range) * 100;
+  for (let t = 0; t < numTicks; t++) {
+    const frameIdx = minI + Math.round(t * total / (numTicks - 1));
+    const f = _unifiedFrames[frameIdx];
+    if (!f) continue;
+    const pct = ((frameIdx - minI) / total) * 100;
     const d = new Date(f.ts);
     const s = document.createElement('span');
-    const isDark = document.body.classList.contains('dark');
-    s.style.cssText = 'position:absolute;font-size:9px;font-weight:600;transform:translateX(-50%);white-space:nowrap;color:'
-      + (f.isNow ? '#ff6600' : f.isForecast ? '#4499dd' : (isDark ? '#c0c0c0' : '#555')) + ';';
-    s.style.left = pct + '%';
-    if (pct < 5) { s.style.transform = 'translateX(0)'; s.style.left = '0'; }
-    if (pct > 95) { s.style.transform = 'translateX(-100%)'; s.style.left = '100%'; }
-    const tickLabel = f.isNow ? '▼now'
-      : (displayFrames.length > 25 ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`
-      : `${String(d.getHours()).padStart(2,'0')}:00`);
-    s.textContent = tickLabel;
+    const color = f.isNow ? '#ff6600' : f.isForecast ? '#4499dd' : histColor;
+    s.style.cssText = `position:absolute;font-size:9px;font-weight:700;white-space:nowrap;color:${color};top:0;`;
+
+    // จัดตำแหน่ง: ซ้ายสุด align left, ขวาสุด align right, กลางๆ center
+    if (t === 0) {
+      s.style.left = '0';
+    } else if (t === numTicks - 1) {
+      s.style.right = '0';
+    } else {
+      s.style.left = pct + '%';
+      s.style.transform = 'translateX(-50%)';
+    }
+
+    if (f.isNow) {
+      s.textContent = '▼now';
+    } else {
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const hh = String(d.getHours()).padStart(2,'0');
+      s.textContent = total > 25 ? `${dd}/${mm} ${hh}:00` : `${hh}:00`;
+    }
     el.appendChild(s);
-  });
+  }
 }
 
 function showSliderTooltip(slider) {
