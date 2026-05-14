@@ -7664,18 +7664,24 @@ function saveHistory(hist) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(hist));
   } catch(e) {
-    console.warn('[History] localStorage full — trimming old data');
-    // ลด history ให้เหลือ 12 ชม. แล้วลองใหม่
-    const cutoff12 = Date.now() - 12 * 3600000;
-    for (const code of Object.keys(hist)) {
-      hist[code] = hist[code].filter(p => p.ts >= cutoff12);
-      if (hist[code].length === 0) delete hist[code];
+    console.warn('[History] localStorage full — trimming progressively');
+    // ลองทีละชั้น: 120h → 72h → 48h → 24h → 12h
+    const trimHours = [120, 72, 48, 24, 12];
+    let saved = false;
+    for (const th of trimHours) {
+      const cutoff = Date.now() - th * 3600000;
+      for (const code of Object.keys(hist)) {
+        hist[code] = hist[code].filter(p => p.ts >= cutoff);
+        if (hist[code].length === 0) delete hist[code];
+      }
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(hist));
+        console.log(`[History] saved after trim to ${th}h`);
+        saved = true;
+        break;
+      } catch(e2) { /* ยังเต็ม ลอง trim ต่อ */ }
     }
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(hist));
-      console.log('[History] saved after trim');
-    } catch(e2) {
-      // ยังเต็ม → clear ทั้งหมดแล้วเริ่มใหม่
+    if (!saved) {
       console.warn('[History] still full — clearing all');
       localStorage.removeItem(LS_KEY);
       try { localStorage.setItem(LS_KEY, JSON.stringify(hist)); } catch(e3) {}
@@ -8324,8 +8330,8 @@ async function loadUnifiedTimeline() {
   _unifiedFrames = [];
   _unifiedLoaded = false;
 
-  // ── HISTORY frames (ย้อนหลัง 24h ทุก 1h) ──
-  const bins = getHistoryBins(); // {ts, snap, snapEc}[]
+  // ── HISTORY frames (ย้อนหลัง ทุก 1h) ──
+  const bins = await getHistoryBins(); // {ts, snap, snapEc}[]
   // resample เป็น FC_HIST_STEPS ช่อง (1 ช่อง/ชั่วโมง)
   const nowMs = Date.now();
   for (let h = FC_HIST_STEPS - 1; h >= 0; h--) {
@@ -8758,8 +8764,23 @@ function idwFc(lat, lon, arr) {
 }
 
 // ── History: สร้าง snapshot จาก localStorage ─────────────────────────────────
-function getHistoryBins() {
-  const hist = loadHistory();
+async function getHistoryBins() {
+  // ดึงจาก Firebase เท่านั้น (เสถียรกว่า localStorage)
+  // fallback localStorage เฉพาะเมื่อ Firebase ไม่พร้อม
+  let hist = {};
+  if (window._fbReady && window._fb) {
+    try {
+      hist = await fbLoadHistory();
+      console.log('[HistBins] loaded from Firebase:', Object.keys(hist).length, 'stations');
+    } catch(e) {
+      console.warn('[HistBins] Firebase failed, fallback to localStorage:', e.message);
+      hist = loadHistory();
+    }
+  } else {
+    console.warn('[HistBins] Firebase not ready, fallback to localStorage');
+    hist = loadHistory();
+  }
+
   const BIN = 30*60000, cutoff = Date.now()-Math.max(FC_HIST_STEPS, 168)*3600000;
   const binMap = {};
   for (const [code,pts] of Object.entries(hist)) {
@@ -8771,7 +8792,9 @@ function getHistoryBins() {
       if (p.ec  != null) { if (!binMap[b]._ec) binMap[b]._ec={}; binMap[b]._ec[code] = p.ec; }
     }
   }
-  return Object.keys(binMap).sort().map(b=>({ts:parseInt(b), snap:binMap[b], snapEc:binMap[b]._ec||{}}));
+  const result = Object.keys(binMap).sort().map(b=>({ts:parseInt(b), snap:binMap[b], snapEc:binMap[b]._ec||{}}));
+  console.log(`[HistBins] ${result.length} bins, range: ${result.length ? new Date(result[0].ts).toLocaleString() + ' → ' + new Date(result[result.length-1].ts).toLocaleString() : 'empty'}`);
+  return result;
 }
 
 
@@ -9044,10 +9067,10 @@ function buildTicks() {
   }
 }
 
-function startLoadFc() {
+async function startLoadFc() {
   const lbl = document.getElementById('forecast-time-label');
   if (_fcMode==='history') {
-    const bins = getHistoryBins();
+    const bins = await getHistoryBins();
     if (!bins.length) { lbl.textContent='ไม่มีข้อมูลย้อนหลัง'; return; }
     lbl.textContent=`กำลังโหลด 0/${bins.length}...`;
     const tasks = bins.map(b=>({ ts:b.ts, build:()=> PARAM_MODE==='ec' ? buildSnapFrameEc(b.snapEc||{}) : buildSnapFrame(b.snap) }));
