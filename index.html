@@ -8314,7 +8314,10 @@ function _updateNowMarker() {
   marker.style.left = pct + '%';
 }
 
+let _unifiedLoading = false; // guard ป้องกันโหลดซ้อน
 async function loadUnifiedTimeline() {
+  if (_unifiedLoading) { console.warn('[Timeline] skip — already loading'); return; }
+  _unifiedLoading = true;
   const lbl  = document.getElementById('forecast-time-label');
   const badge = document.getElementById('fc-mode-badge');
   if (lbl) lbl.textContent = 'กำลังโหลด...';
@@ -8379,6 +8382,8 @@ async function loadUnifiedTimeline() {
   }
 
   _unifiedLoaded = true;
+  _unifiedLoading = false;
+  console.log(`[Timeline] loaded ${_unifiedFrames.length} frames, first=${new Date(_unifiedFrames[0]?.ts).toLocaleString()}, last=${new Date(_unifiedFrames[_unifiedFrames.length-1]?.ts).toLocaleString()}`);
   const slider = document.getElementById('forecast-slider');
   if (slider) {
     const nowIdx = _unifiedFrames.findIndex(f => f.isNow);
@@ -8400,8 +8405,15 @@ function buildSnapFrameAsync(buildFn) {
     setTimeout(() => {
       try {
         const result = buildFn();
-        // ใช้ return value จาก buildFn (Float32Array) ตรงๆ
-        resolve(result instanceof Float32Array ? result : (_idwCache ? new Float32Array(_idwCache) : null));
+        // buildSnapFrame/buildSnapFrameEc เปลี่ยน _idwCache โดยตรง ไม่ return Float32Array
+        // ต้อง copy ทันทีก่อน yield control
+        if (result instanceof Float32Array) {
+          resolve(result);
+        } else if (_idwCache) {
+          resolve(new Float32Array(_idwCache));
+        } else {
+          resolve(null);
+        }
       } catch(e) {
         resolve(null);
       }
@@ -9002,7 +9014,7 @@ function setFcMode(mode) {
   }
 }
 
-function changeHistRange(hours) {
+async function changeHistRange(hours) {
   hours = parseInt(hours);
   FC_HIST_STEPS = hours;
   FC_NOW_STEP   = hours;
@@ -9012,11 +9024,10 @@ function changeHistRange(hours) {
   if (rl) rl.textContent = hours >= 168 ? '-7d' : `-${hours}h`;
   // force reload
   _unifiedLoaded = false;
+  _unifiedLoading = false; // reset guard
   _unifiedFrames = [];
-  // ถ้าอยู่ใน history mode → โหลดใหม่ทันที
-  if (_fcMode === 'history') {
-    loadUnifiedTimeline().then(() => setFcMode('history'));
-  }
+  await loadUnifiedTimeline();
+  setFcMode(_fcMode || 'history');
 }
 
 function buildTicks() {
