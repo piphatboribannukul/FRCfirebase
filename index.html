@@ -3352,7 +3352,7 @@ function updateVcFrc() {
 
 // ── Load saved VC pair config ──
 try {
-  const saved = JSON.parse(localStorage.getItem('vc_pair_v13') || '{}');
+  const saved = JSON.parse(localStorage.getItem('vc_pair_v32') || '{}');
   Object.entries(saved).forEach(([id, cfg]) => {
     if (VC_PAIR[id]) Object.assign(VC_PAIR[id], cfg);
   });
@@ -14760,15 +14760,15 @@ function submitFeedback(){
       Object.entries(VC_PAIR).forEach(([id,c]) => { save[id] = {K:c.K}; });
       const vcSave = {};
       VC_STATIONS.forEach(v => { vcSave[v.id] = {valvePct:v.valvePct, sourceId:v.sourceId}; });
-      localStorage.setItem('vc_pair_v13', JSON.stringify(save));
-      localStorage.setItem('vc_stations_v13', JSON.stringify(vcSave));
+      localStorage.setItem('vc_pair_v32', JSON.stringify(save));
+      localStorage.setItem('vc_stations_v32', JSON.stringify(vcSave));
     } catch(e){}
     console.log('[VC] ✅ Applied');
   };
 
   // Load saved valve% overrides
   try {
-    const s = JSON.parse(localStorage.getItem('vc_stations_v13') || '{}');
+    const s = JSON.parse(localStorage.getItem('vc_stations_v32') || '{}');
     Object.entries(s).forEach(([id,cfg]) => {
       const vc = VC_STATIONS.find(v => v.id === id);
       if (vc && cfg.valvePct !== undefined) vc.valvePct = cfg.valvePct;
