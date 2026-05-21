@@ -9904,6 +9904,8 @@ function editZone() {
   refLabel._isEditRef = true;
 
   // ── 2. แสดง zone ข้างเคียง (สจ. อื่นที่มี zone แล้ว) ──
+  // สร้าง panel toggle สำหรับเปิด/ปิดแต่ละโซน
+  const adjList = [];
   for (const [adjSid, adjZone] of Object.entries(window.CUSTOM_ZONES)) {
     if (adjSid === sid) continue;
     const adjCoords = adjZone.coords || adjZone;
@@ -9912,31 +9914,53 @@ function editZone() {
 
     const adjPoly = L.polygon(adjCoords, {
       color: adjColor,
-      weight: 1.5,
-      dashArray: '4,4',
-      opacity: 0.5,
+      weight: 2.5,
+      dashArray: '6,4',
+      opacity: 0.8,
       fillColor: adjColor,
-      fillOpacity: 0.08,
+      fillOpacity: 0.15,
       interactive: false
     }).addTo(_zoneLayerGroup);
-    adjPoly._zoneStationId = sid + '_adj';
+    adjPoly._zoneStationId = sid + '_adj_' + adjSid;
     adjPoly._isEditRef = true;
 
     // Label ชื่อ สจ. ข้างเคียง
     const adjCenter = adjPoly.getBounds().getCenter();
-    // หาชื่อสถานี
     const adjStation = SENSORS.find(s => String(s.id) === adjSid);
     const adjName = adjStation
       ? (adjStation.name || adjSid).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('สถานีสูบส่งน้ำ','สจส.').replace('โรงงานผลิตน้ำ','รง.')
       : adjSid;
     const adjLabel = L.marker(adjCenter, {
       icon: L.divIcon({
-        html: `<div style="background:rgba(255,255,255,.7);color:${adjColor};font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;border:1px solid ${adjColor}80;white-space:nowrap;font-family:'Sarabun',sans-serif;">${adjName}</div>`,
+        html: `<div style="background:rgba(255,255,255,.85);color:${adjColor};font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;border:1.5px solid ${adjColor};white-space:nowrap;font-family:'Sarabun',sans-serif;">${adjName}</div>`,
         className: '', iconAnchor: [30, 8]
       }), interactive: false
     }).addTo(_zoneLayerGroup);
-    adjLabel._zoneStationId = sid + '_adj';
+    adjLabel._zoneStationId = sid + '_adj_' + adjSid;
     adjLabel._isEditRef = true;
+
+    adjList.push({ sid: adjSid, name: adjName, color: adjColor, visible: true });
+  }
+
+  // สร้าง toggle panel ใน zep-draw-hint
+  if (adjList.length > 0) {
+    const hintEl = document.getElementById('zep-draw-hint');
+    if (hintEl) {
+      let toggleHtml = `<div id="zep-adj-toggles" style="margin-top:8px;padding:8px;background:#f8f0f4;border-radius:8px;border:1px solid #e0c0d0;">
+        <div style="font-size:10px;font-weight:700;color:#cc0055;margin-bottom:6px;">👁 โซนข้างเคียง (${adjList.length})</div>`;
+      for (const adj of adjList) {
+        toggleHtml += `<label style="display:flex;align-items:center;gap:5px;font-size:10px;cursor:pointer;padding:2px 0;">
+          <input type="checkbox" checked onchange="toggleAdjZone('${sid}','${adj.sid}',this.checked)" style="accent-color:${adj.color};margin:0;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${adj.color};flex-shrink:0;"></span>
+          <span style="color:#555;">${adj.name}</span>
+        </label>`;
+      }
+      toggleHtml += `<div style="margin-top:4px;display:flex;gap:4px;">
+        <button onclick="toggleAllAdj('${sid}',true)" style="flex:1;font-size:9px;padding:2px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;">✅ ทั้งหมด</button>
+        <button onclick="toggleAllAdj('${sid}',false)" style="flex:1;font-size:9px;padding:2px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;">❌ ซ่อนทั้งหมด</button>
+      </div></div>`;
+      hintEl.insertAdjacentHTML('beforeend', toggleHtml);
+    }
   }
 
   // ── 3. ลบ zone data เดิมแล้วเริ่มวาดใหม่ ──
@@ -9945,7 +9969,7 @@ function editZone() {
   startDraw('polygon');
 
   showZepMsg(
-    '✏️ แก้ไขโซน — พื้นที่เดิมแสดงเป็นเส้นประ\nzone ข้างเคียงแสดงเป็นเส้นจาง',
+    '✏️ แก้ไขโซน — พื้นที่เดิมแสดงเป็นเส้นประ\nเปิด/ปิดโซนข้างเคียงได้ด้านล่าง',
     '#1a4080', '#f0f6ff', '#c0d8f8'
   );
 }
@@ -9967,6 +9991,44 @@ function clearCurrentZone() {
 function removeZoneLayerForStation(sid) {
   _zoneLayerGroup.eachLayer(l => {
     if (l._zoneStationId === sid) _zoneLayerGroup.removeLayer(l);
+  });
+}
+
+// toggle โซนข้างเคียงแต่ละอัน
+function toggleAdjZone(editSid, adjSid, show) {
+  const tag = editSid + '_adj_' + adjSid;
+  _zoneLayerGroup.eachLayer(l => {
+    if (l._zoneStationId === tag) {
+      if (show) {
+        l.setStyle && l.setStyle({ opacity: 0.8, fillOpacity: 0.15 });
+        l._icon && (l._icon.style.display = '');
+      } else {
+        l.setStyle && l.setStyle({ opacity: 0, fillOpacity: 0 });
+        l._icon && (l._icon.style.display = 'none');
+      }
+    }
+  });
+}
+
+// เปิด/ปิดทั้งหมด
+function toggleAllAdj(editSid, show) {
+  const panel = document.getElementById('zep-adj-toggles');
+  if (panel) {
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = show;
+      cb.onchange && cb.dispatchEvent(new Event('change'));
+    });
+  }
+  _zoneLayerGroup.eachLayer(l => {
+    if (l._zoneStationId && l._zoneStationId.includes(editSid + '_adj_')) {
+      if (show) {
+        l.setStyle && l.setStyle({ opacity: 0.8, fillOpacity: 0.15 });
+        l._icon && (l._icon.style.display = '');
+      } else {
+        l.setStyle && l.setStyle({ opacity: 0, fillOpacity: 0 });
+        l._icon && (l._icon.style.display = 'none');
+      }
+    }
   });
 }
 
