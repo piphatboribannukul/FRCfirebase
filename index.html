@@ -4136,15 +4136,37 @@ function _pip(lat, lon, coords) {
 }
 
 function idwZone(lat, lon) {
-  // rev16.0: VC zone — ใช้ค่า EC จาก source ตรงๆ (ไม่มีการสลายตัว)
+  // rev16.0: VC zone — ใช้ค่า EC จาก root source (น้ำดิบต้นทาง) ไม่มี decay
   if (typeof VC_STATIONS !== 'undefined') {
     for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES || {})) {
       if (!sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
       if (!_pip(lat, lon, zone.coords)) continue;
       const vc = VC_STATIONS.find(v => v.id === sid);
       if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+      // หา EC จาก source → ถ้า source มี ec ใช้เลย
       const src = SENSORS.find(x => String(x.id) === vc.sourceId);
-      if (src) return getParamVal(src);
+      if (src) {
+        const ecVal = getParamVal(src);
+        if (ecVal && ecVal !== 300) return ecVal; // มี EC จริง
+      }
+      // fallback: ดึง EC จากโรงผลิตต้นทาง (SP01/SP02/SP03 → บางเขน, SP11 → มหาสวัสดิ์)
+      const vcSourceMap = {
+        'SP01':'สถานีสูบส่งน้ำบางเขน 1', 'SP02':'สถานีสูบส่งน้ำบางเขน 2',
+        'SP03':'สถานีสูบส่งน้ำบางเขน 3', 'SP11':'สถานีสูบส่งน้ำมหาสวัสดิ์'
+      };
+      const pumpName = vcSourceMap[vc.sourceId];
+      if (pumpName) {
+        const pump = SENSORS.find(s => s.name && s.name.trim() === pumpName);
+        if (pump && pump.ec > 0) return pump.ec;
+        // fallback: ใช้โรงผลิตตรง
+        const plantMap = {'SP01':13,'SP02':13,'SP03':13,'SP11':14}; // 13=บางเขน, 14=มหาสวัสดิ์
+        const plantId = plantMap[vc.sourceId];
+        if (plantId) {
+          const plant = SENSORS.find(s => s.id === plantId);
+          if (plant && plant.ec > 0) return plant.ec;
+        }
+      }
+      return 300; // ultimate fallback
     }
   }
 
