@@ -14022,6 +14022,29 @@ function submitFeedback(){
       });
       let nearest = null, minD = Infinity, nearestDist = 0;
 
+      // 0. เช็ค VC zone ก่อน (VC อยู่ใน CUSTOM_ZONES แต่ไม่อยู่ใน SENSORS)
+      let _popupVcInfo = null; // เก็บข้อมูล VC สำหรับแสดง popup
+      try {
+        if (typeof VC_STATIONS !== 'undefined') {
+          var czones0 = Object.entries(window.CUSTOM_ZONES || {});
+          for (var vi = 0; vi < czones0.length; vi++) {
+            var vz = czones0[vi];
+            var vzSid = vz[0], vzData = vz[1];
+            if (!vzSid.startsWith('VC')) continue;
+            if (vzData && vzData.coords && pointInPoly(lat, lon, vzData.coords)) {
+              var vc = VC_STATIONS.find(function(v){ return v.id === vzSid; });
+              if (vc && vc.valvePct != null && vc.valvePct > 0) {
+                // สร้าง pseudo source จาก VC เพื่อแสดงใน popup
+                var vcPair = (typeof VC_PAIR !== 'undefined') ? VC_PAIR[vc.id] : null;
+                _popupVcInfo = { vcName: vc.name, vcId: vc.id, sourceId: vc.sourceId, tt: vcPair ? vcPair.tt : null };
+                nearest = { id: vc.id, name: vc.name, lat: vc.lat, lon: vc.lon, type: 'vc', frc: (typeof getVcFrc === 'function') ? getVcFrc(vc.id) : 0 };
+                break;
+              }
+            }
+          }
+        }
+      } catch(e0){}
+
       // 1. เช็ค CUSTOM_ZONES ก่อน
       try {
         var czones = Object.entries(window.CUSTOM_ZONES || {});
@@ -14105,12 +14128,29 @@ function submitFeedback(){
         } catch(e){}
 
         wqHtml += '<div style="margin-top:8px;padding-top:7px;border-top:1.5px solid rgba(200,100,150,0.3);">';
-        wqHtml += '<div style="font-size:9px;color:#e8a0c0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">🏭 สถานีต้นทาง</div>';
-        wqHtml += '<div style="font-size:11.5px;font-weight:600;color:#ffccdd;cursor:pointer;" onclick="(function(){var m=window.map;if(m)m.flyTo(['+nearest.lat+','+nearest.lon+'],15,{duration:0.6});})()">' + escapeHtml(nearest.name || String(nearest.id)) + ' ↗</div>';
-        wqHtml += '<div style="display:flex;gap:10px;margin-top:3px;font-size:10px;color:#c0a0b0;font-family:\'JetBrains Mono\',monospace;">';
-        wqHtml += '<span>📏 ' + nearestDist.toFixed(1) + ' km</span>';
-        if (ttHours != null) wqHtml += '<span>⏱ ~' + (ttHours < 1 ? Math.round(ttHours*60) + ' นาที' : ttHours.toFixed(1) + ' ชม.') + '</span>';
-        wqHtml += '</div>';
+
+        if (_popupVcInfo) {
+          // แสดงเป็นอิทธิพล VC
+          wqHtml += '<div style="font-size:9px;color:#d0a0ff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">🟣 อิทธิพล Valve Chamber</div>';
+          wqHtml += '<div style="font-size:11.5px;font-weight:600;color:#e0c0ff;cursor:pointer;" onclick="(function(){var m=window.map;if(m)m.flyTo(['+nearest.lat+','+nearest.lon+'],15,{duration:0.6});})()">'+escapeHtml(_popupVcInfo.vcName)+' ↗</div>';
+          if (_popupVcInfo.sourceId) {
+            var vcSrcStation = sources.find(function(s){ return String(s.id) === _popupVcInfo.sourceId; });
+            var vcSrcName = vcSrcStation ? (vcSrcStation.name || _popupVcInfo.sourceId) : _popupVcInfo.sourceId;
+            wqHtml += '<div style="font-size:9px;color:#c0a0b0;margin-top:3px;">← รับน้ำจาก '+escapeHtml(vcSrcName)+'</div>';
+          }
+          wqHtml += '<div style="display:flex;gap:10px;margin-top:3px;font-size:10px;color:#c0a0b0;font-family:\'JetBrains Mono\',monospace;">';
+          wqHtml += '<span>📏 '+nearestDist.toFixed(1)+' km</span>';
+          if (_popupVcInfo.tt != null) wqHtml += '<span>⏱ ~'+_popupVcInfo.tt+' ชม. (จากต้นทาง)</span>';
+          wqHtml += '</div>';
+        } else {
+          wqHtml += '<div style="font-size:9px;color:#e8a0c0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">🏭 สถานีต้นทาง</div>';
+          wqHtml += '<div style="font-size:11.5px;font-weight:600;color:#ffccdd;cursor:pointer;" onclick="(function(){var m=window.map;if(m)m.flyTo(['+nearest.lat+','+nearest.lon+'],15,{duration:0.6});})()">'+escapeHtml(nearest.name || String(nearest.id))+' ↗</div>';
+          wqHtml += '<div style="display:flex;gap:10px;margin-top:3px;font-size:10px;color:#c0a0b0;font-family:\'JetBrains Mono\',monospace;">';
+          wqHtml += '<span>📏 '+nearestDist.toFixed(1)+' km</span>';
+          if (ttHours != null) wqHtml += '<span>⏱ ~'+(ttHours < 1 ? Math.round(ttHours*60)+' นาที' : ttHours.toFixed(1)+' ชม.')+'</span>';
+          wqHtml += '</div>';
+        }
+
         if (zoneName) wqHtml += '<div style="margin-top:3px;font-size:10px;color:#90d0ff;">🗺️ สาขา ' + escapeHtml(zoneName) + '</div>';
         wqHtml += '</div>';
       }
