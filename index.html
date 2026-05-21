@@ -12703,7 +12703,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ rev28 — Hybrid K (Live Back-calc per Station) + EPANET Pipe-Aware Contour + KMZ Network + Zone Influence + VC Sim + Cl₂ What-If : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v32 — Hybrid K (Live Back-calc) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -14788,35 +14788,42 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">rev16.0 — April 2026 · M sandbox · 🔒 Security Upgrade</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">v32 — May 2026 · M sandbox · 🔒 Security Upgrade</p>
 
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ rev16.0 — What-If Chlorine Dosing</h3>
+<h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🆕 v32 — Playback 7 วัน + Zone Editor</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. What-If Simulation</b> — จำลองการปรับคลอรีนที่สถานีสูบจ่าย ดูผลกระทบต่อ contour + monitor<br>
+<b>A. Playback ย้อนหลัง 7 วัน</b> — เลือกได้ 24h / 72h / 7 วัน ดึงข้อมูลจาก Firebase (เสถียร ไม่หายเหมือน localStorage)<br>
+<b>B. Tooltip slider</b> — แสดงวัน+เวลาไทยเมื่อเลื่อน slider (เช่น พ 14/05 09:00)<br>
+<b>C. Zone Editor</b> — เวลาแก้ไขโซน เห็นโซนข้างเคียงชัดขึ้น + เปิด/ปิดรายโซนได้
+</p>
+
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 Hybrid K (Live Back-Calc)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. Hybrid K</b> — คำนวณ K real-time จาก sensor จริง: K = −ln(FRC_dest / FRC_src) / tt<br>
+<b>B. Auto-fit K</b> — Grid search K จากข้อมูลสะสม 24 ชม. + fit 3 เดือน (61 สถานี)<br>
+<b>C. ปรับ K รายสถานี</b> — Manual override ทีละสถานี (priority สูงสุด)
+</p>
+
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ What-If Simulation</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. What-If Dosing</b> — จำลองปรับคลอรีน ± ที่สถานีสูบจ่าย ดูผลต่อ contour + monitor (Zone Influence)<br>
 <b>B. ปรับ FRC ±0.1 ถึง ±0.5</b> — เห็นผลทันทีว่า monitor รอบๆ เปลี่ยนแค่ไหน<br>
 <b>C. Reset</b> — คืนค่าเดิมทุกสถานี
 </p>
 
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ rev16.0 — What-If + Performance</h3>
-<p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. What-If Dosing</b> — จำลองปรับคลอรีน ± ที่สถานีสูบจ่าย ดูผลต่อ contour + monitor (Zone Influence)<br>
-<b>B. Performance</b> — Pre-cache zone data + bbox reject → buildIdwCache เร็วขึ้น 3-5x<br>
-<b>C. Mobile UI</b> — ปุ่ม 3D / What-If / AI ออกมาด้านนอก ไม่ต้องเปิด sidebar
-</p>
-
-<h3 style="color:#6c3483;font-size:15px;margin:16px 0 6px;">🔗 rev14.0 — VC Zone Contour</h3>
+<h3 style="color:#6c3483;font-size:15px;margin:16px 0 6px;">🔗 VC Zone Contour</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
 <b>A. Valve Chamber (VC)</b> — 14 จุดควบคุมวาล์ว ค่า FRC simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)<br>
-<b>B. Valve %</b> — % การเปิดวาล์ว (0% = ปิด ไม่มีอิทธิพล, >0% = active มีผลต่อ contour)<br>
-<b>C. Source→VC Decay</b> — FRC<sub>sim</sub>@VC = FRC(source) × e<sup>(-K×TT)</sup> · ค่า simulate ไม่ใช่ค่าวัดจริง · valve% แค่บอกเปิด/ปิด<br>
+<b>B. Valve %</b> — 0% = ปิด ไม่มีอิทธิพล, >0% = active มีผลต่อ contour<br>
+<b>C. Source→VC Decay</b> — FRC<sub>sim</sub>@VC = FRC(source) × e<sup>(-K×TT)</sup><br>
 <b>D. VC Zone Contour</b> — วาดขอบเขต VC ใน Zone Editor → contour คำนวณ decay จาก VC ออก
 </p>
 
-<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 rev16.0 — VC Zone Contour</h3>
+<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 Security</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. Firebase Security Rules</b> — จำกัดการอ่าน/เขียนตาม path, validate ข้อมูลก่อนบันทึก, ปิด path admin ให้ authenticated only<br>
-<b>B. Firebase Authentication</b> — ย้ายระบบ login จาก hardcoded credentials ไปใช้ Firebase Auth (email/password)<br>
-<b>C. App Check + Domain Restriction</b> — ป้องกัน abuse จากแอปปลอม + จำกัด API key เฉพาะ domain ที่อนุญาต
+<b>A. Firebase Security Rules</b> — จำกัดการอ่าน/เขียนตาม path, validate ข้อมูลก่อนบันทึก<br>
+<b>B. Firebase Authentication</b> — email/password<br>
+<b>C. App Check + Domain Restriction</b> — ป้องกัน abuse + จำกัด API key เฉพาะ domain ที่อนุญาต
 </p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
@@ -14824,32 +14831,26 @@ function submitFeedback(){
 <div style="background:#f0f4ff;border-radius:8px;padding:10px;text-align:center;font-size:14px;font-weight:700;color:#1565c0;margin:8px 0;">FRC(t) = FRC₀ × e<sup>(-K × t)</sup></div>
 <table style="width:100%;font-size:11px;border-collapse:collapse;margin:8px 0;"><tr style="background:#cc0055;color:#fff;font-weight:700;"><th style="padding:6px 8px;text-align:left;">ตัวแปร</th><th style="padding:6px 8px;text-align:left;">ความหมาย</th></tr>
 <tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">FRC₀</td><td style="padding:5px 8px;color:#111;">ค่า FRC ที่สถานีต้นทาง</td></tr>
-<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">K</td><td style="padding:5px 8px;color:#111;">อัตราการสลายตัว (1/ชม.) — แต่ละสถานีต่างกัน, fit จากข้อมูลจริง 3 เดือน</td></tr>
+<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">K</td><td style="padding:5px 8px;color:#111;">อัตราการสลายตัว (1/ชม.) — Hybrid K (live) > Auto-fit > 3mo-fit > default</td></tr>
 <tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">t</td><td style="padding:5px 8px;color:#111;">เวลาเดินทางของน้ำ (Travel Time, ชม.)</td></tr></table>
 <p style="font-size:11px;color:#444;"><b>Blend Formula:</b> Forecast = fOld×(1-frac) + fNew×frac<br>fOld = decay จากค่าจริงปัจจุบัน, fNew = decay จาก source ย้อนหลัง</p>
 
 <h3 style="color:#1565c0;font-size:15px;margin:16px 0 6px;">⚡ EC Model — ค่าการนำไฟฟ้า</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">EC <b>ไม่สลายตัว</b>ระหว่างเดินทาง → ค่า EC ปลายทาง ≈ EC ต้นทาง (delay ตาม travel time)</p>
 
-<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">📊 ค่า K (Decay Rate)</h3>
+<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">📊 ค่า K (Decay Rate) — ลำดับ Priority</h3>
 <p style="font-size:11px;line-height:1.6;color:#111;">
-<b>ลำดับการใช้:</b> Auto-fit K (จาก user) → STATION_K_OVERRIDE (fit 3 เดือน 61 สถานี) → Default by zone → 0.008<br>
-<b>Auto-fit:</b> Grid search K=0.001–0.200 → เลือก MAE ต่ำสุด → บันทึกใน localStorage → มีผลทั้ง popup chart และ report
+<b>1. Manual override</b> (ปรับ K รายสถานี) → <b>2. Hybrid K</b> (live back-calc) → <b>3. Auto-fit K</b> (3mo-fit 61 สถานี) → <b>4. Default</b> by zone → 0.008
 </p>
 
 <h3 style="color:#333;font-size:14px;margin:16px 0 6px;">🗺️ เส้นทางน้ำ (Source Mapping)</h3>
 <p style="font-size:11px;line-height:1.8;color:#222;">
 <b style="color:#cc0055;">กลุ่มเจ้าพระยา (CP):</b><br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR1 → สจ.ลุมพินี (6ชม.), สจ.พหลโยธิน (5ชม.), สจ.สำโรง (7ชม.) → monitor<br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR2 → สจ.ลาดพร้าว (3ชม.), สจ.คลองเตย (4ชม.) → monitor<br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR3 → สจ.บางพลี (17ชม.), สจ.มีนบุรี (17ชม.), สจ.ลาดกระบัง (17ชม.) → monitor<br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → Dis1/Dis2 → monitor<br>
-&nbsp;&nbsp;• โรงงานผลิตน้ำธนบุรี → โรงพยาบาลศิริราช (2ชม.)<br>
-&nbsp;&nbsp;• โรงผลิตน้ำสามเสน 1-4 → monitor<br>
+&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR1/TR2/TR3 → สจ.สูบจ่าย → monitor (49 สถานี จับคู่แล้ว)<br>
+&nbsp;&nbsp;• โรงงานผลิตน้ำธนบุรี / สามเสน → monitor<br>
 <br>
 <b style="color:#1565c0;">กลุ่มแม่กลอง (MH):</b><br>
-&nbsp;&nbsp;• โรงผลิตน้ำมหาสวัสดิ์ → MTR (อุโมงค์) → MDIS (สถานีสูบจ่ายมหาสวัสดิ์) → monitor<br>
-&nbsp;&nbsp;• MDIS → สจ.ราษฎร์บูรณะ (7ชม.), สจ.เพชรเกษม (2ชม.), สจ.ท่าพระ (7ชม.) → monitor
+&nbsp;&nbsp;• โรงผลิตน้ำมหาสวัสดิ์ → MTR → MDIS → สจ.ราษฎร์บูรณะ / เพชรเกษม / ท่าพระ → monitor
 </p>
 
 <h3 style="color:#333;font-size:14px;margin:16px 0 6px;">⚠ ข้อจำกัด</h3>
@@ -14857,10 +14858,11 @@ function submitFeedback(){
 • FRC Model อาศัย K ที่ fit จากข้อมูลย้อนหลัง — ถ้าสภาพท่อเปลี่ยนต้อง re-fit<br>
 • EC Model สมมติไม่มีการเปลี่ยนแปลงระหว่างทาง<br>
 • Travel Time เป็นค่าประมาณ อาจต่างตามปริมาณน้ำใช้จริง<br>
-• Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต
+• Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต<br>
+• Playback 7 วัน แสดงข้อมูลเฉพาะช่วงที่เปิด FRCContour ไว้เท่านั้น (Firebase บันทึก history 168 ชม.)
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour rev20.0 · M sandbox · Water Quality Division · April 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v32 · M sandbox · Water Quality Division · May 2026 · 🔒 Security Upgrade</div>
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
