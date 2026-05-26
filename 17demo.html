@@ -2270,7 +2270,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V33+validate</span>
+  <span id="v2-badge">⬡ V34+RTU</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -8298,6 +8298,16 @@ function injectRtuPressureToSensors() {
     if (nearP > 0) injected++;
   }
   console.log('[v34-rtulive] injectRtuPressureToSensors: ' + injected + '/' + SENSORS.length + ' sensors got RTU pressure');
+  // อัปเดต v2-badge แสดงสถานะ RTU
+  const _v2b = document.getElementById('v2-badge');
+  if (_v2b) {
+    if (injected > 0) {
+      _v2b.textContent = '⬡ V34+RTU.P';
+      _v2b.title = `RTU pressure injected: ${injected}/${SENSORS.length} sensors, P_nominal=${window._rtuPNominal?.toFixed(1)} mwc`;
+    } else {
+      _v2b.textContent = '⬡ V34+hybrid.K';
+    }
+  }
 }
 
 // ── fetchAndUpdate: ดึง API แล้ว redraw ทั้งหมด ───────────────────────────
