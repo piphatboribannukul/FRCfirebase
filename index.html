@@ -60,7 +60,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour v32</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour v34 rtulive</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2270,7 +2270,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V31+hybrid.K</span>
+  <span id="v2-badge">⬡ V34+RTU</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2698,6 +2698,16 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </label>
       <div id="twq-import-msg" style="display:none;margin-top:5px;font-size:9px;font-family:'JetBrains Mono',monospace;border-radius:5px;padding:5px 7px;border:1px solid #ccc;"></div>
     </div>
+    <!-- V33 Validate K (Field) -->
+    <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #d0b0f0;">
+      <button class="ep-apply" onclick="openValidateK()" style="width:100%;font-size:10px;background:linear-gradient(135deg,#7b2d8e,#4a1259);color:#f0d0ff;border-color:#9040b0;text-align:center;cursor:pointer;font-weight:700;">
+        📋 Validate K (Field) — V33
+      </button>
+      <div style="font-size:9px;color:#a060c0;margin-top:4px;line-height:1.4;">
+        Calibrate K จากค่าจริงภาคสนาม (paste จากตาราง)<br>
+        K_new = K_now − ln(จริง/contour) / tt
+      </div>
+    </div>
     <pre id="hist-result" style="display:none;margin-top:6px;font-size:8px;color:#604080;background:#f8f0ff;border:1px solid #d0b0f0;border-radius:5px;padding:6px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;"></pre>
     </div><!-- /sb-body -->
   </div>
@@ -3014,7 +3024,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v32 · May 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
     </div>
 
     <!-- EC note -->
@@ -3066,7 +3076,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v32 · May 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -3906,23 +3916,26 @@ function renderStationKList() {
   el.innerHTML = html;
 }
 
-function epanetDecay(dKm, sensor, lat, lon) {
-  const L_m = dKm * 1000;
-  // rev25: adjust velocity based on nearest RTU live pressure
+function epanetDecay(dKm, sensor, lat, lon, distMult) {
+  // v34-rtulive: single pressure layer with automatic source selection.
+  //   1) s.rtuPressure — pre-injected per-sensor nearest RTU pressure (fastest, avoids O(N) scan per pixel)
+  //   2) _pressureGrid fallback — passed in as distMult by callers that have (j,i),
+  //      used when RTU live is unavailable (e.g. GitHub Pages / CORS / mixed-content)
+  //   Only ONE source is ever applied → no double-counting.
+  let L_m = dKm * 1000;
   let v_adj = EPANET.v;
-  if (window._rtuLive && window._rtuLive.length > 0 && lat != null && lon != null) {
-    let minD2 = Infinity, nearP = 0;
-    for (const rtu of window._rtuLive) {
-      const d2 = (rtu.lt - lat)**2 + (rtu.ln - lon)**2;
-      if (d2 < minD2) { minD2 = d2; nearP = rtu.lP; }
-    }
-    if (nearP > 0 && window._rtuPNominal > 0) {
-      // v ∝ √P (Bernoulli) → clamp factor 0.5–2.0
-      const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(nearP / window._rtuPNominal)));
-      v_adj = EPANET.v * pFactor;
-    }
+  let rtuApplied = false;
+  // v34: use pre-injected rtuPressure on sensor (set by injectRtuPressureToSensors after each fetch)
+  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+    const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
+    v_adj = EPANET.v * pFactor;
+    rtuApplied = true;
   }
-  const t   = L_m / v_adj;  // travel time [s] — pressure-adjusted
+  // Fallback: static _pressureGrid factor (distMult) ONLY if RTU live not applied
+  if (!rtuApplied && distMult != null && distMult > 0) {
+    L_m *= distMult;
+  }
+  const t   = L_m / v_adj;  // travel time [s] — pressure-adjusted (single source)
 
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
@@ -4225,6 +4238,329 @@ function _ensureFrcSources() {
   return _frcZoneSources;
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// V33 — Validate K (Field Calibration)
+// Calibrate ค่า K แต่ละโซนจากค่าจริงภาคสนาม
+// สูตร: K_new = K_now − ln(FRC_จริง / FRC_contour) / tt
+// ══════════════════════════════════════════════════════════════════════════
+
+// resolve source station + travel time (ชม.) สำหรับจุด (lat,lon)
+function _v33ResolvePoint(lat, lon) {
+  // ใช้ logic เดียวกับ frcZone หา nearest source
+  const sources = _ensureFrcSources();
+  if (!sources.length) return null;
+  let nearest = null;
+
+  // 1. CUSTOM_ZONES polygon
+  if (window.CUSTOM_ZONES) {
+    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+      if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+      if (!_pip(lat, lon, zone.coords)) continue;
+      const src = sources.find(s => String(s.id) === sid);
+      if (src) { nearest = src; break; }
+    }
+  }
+  // 2. MDIS zone
+  if (!nearest && typeof _inMdisZone === 'function' && _inMdisZone(lat, lon)) {
+    nearest = sources.find(s => s.name?.trim() === 'สถานีสูบจ่ายน้ำมหาสวัสดิ์' || s.id === 'SP12' || s.id === 12);
+  }
+  // 3. nearest zone centroid
+  if (!nearest && window.CUSTOM_ZONES) {
+    let minDist = Infinity;
+    for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+      if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+      const cx = zone.coords.reduce((a,c)=>a+c[0],0)/zone.coords.length;
+      const cy = zone.coords.reduce((a,c)=>a+c[1],0)/zone.coords.length;
+      const d = (cx-lat)**2+(cy-lon)**2;
+      if (d < minDist) {
+        const src = sources.find(s => String(s.id) === sid);
+        if (src) { minDist = d; nearest = src; }
+      }
+    }
+  }
+  // 4. nearest source
+  if (!nearest) {
+    let minDist = Infinity;
+    for (const s of sources) {
+      const anch = (typeof getAnchorLatLon === 'function') ? getAnchorLatLon(s) : {lat:s.lat, lon:s.lon};
+      const d = (anch.lat - lat)**2 + (anch.lon - lon)**2;
+      if (d < minDist) { minDist = d; nearest = s; }
+    }
+  }
+  if (!nearest) return null;
+
+  // travel time (ชม.) = ระยะทาง / ความเร็ว
+  const dKm = Math.sqrt((nearest.lat - lat)**2 + (nearest.lon - lon)**2) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
+  const L_m = dKm * 1000;
+  const tt_sec = L_m / EPANET.v;
+  const tt_hr = tt_sec / 3600;
+
+  // K ปัจจุบันของสถานีนี้ (1/hr)
+  const sid = String(nearest.id);
+  let kNow = K_total; // fallback
+  if (typeof CONTOUR_K_OVERRIDE !== 'undefined' && CONTOUR_K_OVERRIDE[sid] != null) kNow = CONTOUR_K_OVERRIDE[sid];
+  else if (typeof HYBRID_K !== 'undefined' && HYBRID_K[sid] != null) kNow = HYBRID_K[sid];
+  else if (typeof STATION_K_OVERRIDE !== 'undefined' && STATION_K_OVERRIDE[sid] != null) kNow = STATION_K_OVERRIDE[sid];
+
+  return { source: nearest, sid, dKm, tt_hr, kNow,
+    sourceName: (nearest.name || sid).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.') };
+}
+
+// เปิด modal
+function openValidateK() {
+  let modal = document.getElementById('v33-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'v33-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+        <div style="position:sticky;top:0;background:linear-gradient(135deg,#7b2d8e,#4a1259);color:#fff;padding:14px 18px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:16px;font-weight:700;">📋 Validate K — Field Calibration (V33)</div>
+          <div style="font-size:10px;opacity:0.85;margin-top:2px;">Calibrate K แต่ละโซนจากค่าจริงภาคสนาม</div></div>
+          <button onclick="document.getElementById('v33-modal').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:8px;cursor:pointer;">×</button>
+        </div>
+        <div style="padding:18px;">
+          <div style="font-size:12px;color:#555;line-height:1.6;margin-bottom:10px;">
+            <b>วิธีใช้:</b> Copy แถวข้อมูลจากตาราง Google Sheets (ทั้งแถว) → paste ลงช่องด้านล่าง<br>
+            ระบบจะดึง <b>พิกัด (column Z)</b>, <b>คลอรีนจริง (column I)</b>, <b>contour (column AA)</b> อัตโนมัติ<br>
+            <span style="color:#7b2d8e;font-weight:600;">สูตร: K_new = K_now − ln(จริง / contour) / travel_time</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button onclick="fetchValidateFromSheets()" id="v33-fetch-btn" style="flex:1;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;padding:10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">📊 ดึงจาก Google Sheets</button>
+            <input id="v33-sheets-id" value="17BLEtEo9HSpTH7sNiWYvkxZhiREkqQTkfHYGpA2NpvY" placeholder="Google Sheets ID" style="flex:1;font-size:9px;padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div style="font-size:9px;color:#888;margin-bottom:6px;">หรือ paste ข้อมูลเองด้านล่าง:</div>
+          <textarea id="v33-input" placeholder="paste ข้อมูลจากตารางที่นี่ (รวม header หรือไม่ก็ได้)..." style="width:100%;height:120px;font-family:'JetBrains Mono',monospace;font-size:10px;border:1.5px solid #d0b0f0;border-radius:8px;padding:10px;box-sizing:border-box;resize:vertical;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="runValidateK()" style="flex:1;background:linear-gradient(135deg,#7b2d8e,#4a1259);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🔬 คำนวณ Calibrate</button>
+            <button onclick="document.getElementById('v33-result').innerHTML='';document.getElementById('v33-input').value='';" style="background:#eee;border:none;padding:10px 16px;border-radius:8px;font-size:12px;cursor:pointer;">ล้าง</button>
+          </div>
+          <div id="v33-result" style="margin-top:14px;"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+}
+
+// ดึงข้อมูลจาก Google Sheets (public, anyone with link)
+async function fetchValidateFromSheets() {
+  const btn = document.getElementById('v33-fetch-btn');
+  const input = document.getElementById('v33-input');
+  const sheetId = document.getElementById('v33-sheets-id').value.trim();
+  if (!sheetId) { alert('กรุณาใส่ Google Sheets ID'); return; }
+
+  btn.textContent = '⏳ กำลังดึง...';
+  btn.disabled = true;
+
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=tsv&gid=0`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const tsv = await res.text();
+    const lines = tsv.split('\n');
+
+    // กรองเฉพาะแถวที่มีพิกัดและค่าคลอรีน
+    let validLines = [];
+    let headerLine = '';
+    for (const line of lines) {
+      // เช็คว่ามีพิกัด (13.xx, 100.xx)
+      if (/1[0-9]\.\d{4,}\s*,\s*\d{2,3}\.\d{4,}/.test(line)) {
+        validLines.push(line);
+      } else if (/พิกัด|คลอรีน|สถานที่|contour/i.test(line)) {
+        headerLine = line; // header row
+      }
+    }
+
+    if (validLines.length === 0) {
+      input.value = '❌ ไม่พบข้อมูลที่มีพิกัด — ตรวจสอบว่า Sheets เป็น public (Anyone with link)';
+    } else {
+      input.value = (headerLine ? headerLine + '\n' : '') + validLines.join('\n');
+      input.scrollTop = 0;
+      btn.textContent = `✅ ดึงได้ ${validLines.length} แถว — กด "🔬 คำนวณ Calibrate"`;
+    }
+  } catch(e) {
+    input.value = `❌ ดึงไม่ได้: ${e.message}\nตรวจสอบว่า Sheets เป็น public (Anyone with link) และ ID ถูกต้อง`;
+    btn.textContent = '📊 ดึงจาก Google Sheets';
+  }
+  btn.disabled = false;
+  setTimeout(() => { btn.textContent = '📊 ดึงจาก Google Sheets'; }, 5000);
+}
+
+// parse + calibrate
+function runValidateK() {
+  const raw = document.getElementById('v33-input').value.trim();
+  const resultEl = document.getElementById('v33-result');
+  if (!raw) { resultEl.innerHTML = '<div style="color:#c00;font-size:12px;">⚠ กรุณา paste ข้อมูลก่อน</div>'; return; }
+
+  const lines = raw.split('\n').filter(l => l.trim());
+  const points = [];
+  let skipped = 0;
+
+  // auto-detect column positions from header or first data row
+  let colCoord = -1, colFrc = -1, colContour = -1, colSource = -1;
+  for (const line of lines) {
+    const cols = line.split('\t');
+    for (let i = 0; i < cols.length; i++) {
+      const c = (cols[i]||'').trim().toLowerCase();
+      if (c.includes('พิกัด') || c.includes('coord')) colCoord = i;
+      if (c === 'คลอรีน' || c === 'frc' || c.includes('คลอรีน')) { if (colFrc < 0) colFrc = i; }
+      if (c.includes('contour') || c.includes('จาก contour') || c.includes('จา่ก contour')) colContour = i;
+      if (c.includes('รับน้ำ') || c.includes('source')) colSource = i;
+    }
+    if (colCoord >= 0) break; // found header
+  }
+
+  for (const line of lines) {
+    const cols = line.split('\t');
+    let lat=null, lon=null, frcReal=null, frcContour=null, sourceName='';
+
+    // 1. หาพิกัด — ลอง colCoord ก่อน แล้ว scan ทุก column
+    const tryCoord = (s) => {
+      const m = (s||'').match(/(1[0-9]\.\d{3,})\s*,\s*(\d{2,3}\.\d{3,})/);
+      if (m) { lat = parseFloat(m[1]); lon = parseFloat(m[2]); return true; }
+      return false;
+    };
+    if (colCoord >= 0) tryCoord(cols[colCoord]);
+    if (lat == null) { for (const c of cols) { if (tryCoord(c)) break; } }
+    if (lat == null) { skipped++; continue; }
+
+    // 2. หาค่าคลอรีนจริง — ลอง colFrc ก่อน แล้ว scan หาตัวเลข 0-2 mg/L ก่อนพิกัด
+    if (colFrc >= 0) frcReal = parseFloat(cols[colFrc]);
+    if (isNaN(frcReal) || frcReal == null) {
+      // scan: หาตัวเลข 0.01-3.0 ในคอลัมน์ก่อนพิกัด
+      const coordIdx = cols.findIndex(c => /1[0-9]\.\d{3,}\s*,\s*\d{2,3}\.\d{3,}/.test(c||''));
+      for (let i = coordIdx - 1; i >= 0; i--) {
+        const v = parseFloat(cols[i]);
+        if (!isNaN(v) && v >= 0.01 && v <= 3.0) { frcReal = v; break; }
+      }
+    }
+
+    // 3. หาค่า contour — ลอง colContour ก่อน แล้วคอลัมน์หลังพิกัด
+    if (colContour >= 0) frcContour = parseFloat(cols[colContour]);
+    if (isNaN(frcContour) || frcContour == null) {
+      // scan: หาตัวเลข 0.01-3.0 ในคอลัมน์หลังพิกัด
+      const coordIdx = cols.findIndex(c => /1[0-9]\.\d{3,}\s*,\s*\d{2,3}\.\d{3,}/.test(c||''));
+      for (let i = coordIdx + 1; i < cols.length; i++) {
+        const v = parseFloat(cols[i]);
+        if (!isNaN(v) && v >= 0.01 && v <= 3.0) { frcContour = v; break; }
+      }
+    }
+
+    // 4. หา source name
+    if (colSource >= 0) sourceName = (cols[colSource]||'').trim();
+
+    if (isNaN(frcReal) || isNaN(frcContour)) { skipped++; continue; }
+    if (frcReal <= 0 || frcContour <= 0) { skipped++; continue; }
+
+    // resolve โซน
+    const r = _v33ResolvePoint(lat, lon);
+    if (!r) { skipped++; continue; }
+
+    // K_new = K_now − ln(จริง/contour) / tt
+    const kNew = (r.tt_hr > 0.05) ? (r.kNow - Math.log(frcReal / frcContour) / r.tt_hr) : r.kNow;
+
+    points.push({ lat, lon, frcReal, frcContour, ...r, kNew: Math.max(0, kNew) });
+  }
+
+  if (!points.length) {
+    resultEl.innerHTML = `<div style="color:#c00;font-size:12px;">⚠ ไม่พบข้อมูลที่ใช้ได้ (ข้าม ${skipped} แถว)<br>ตรวจสอบว่ามีพิกัด, คลอรีนจริง (I), และ contour (AA)</div>`;
+    return;
+  }
+
+  // จัดกลุ่มตามโซน
+  const zones = {};
+  for (const p of points) {
+    if (!zones[p.sid]) zones[p.sid] = { name: p.sourceName, sid: p.sid, kNow: p.kNow, pts: [] };
+    zones[p.sid].pts.push(p);
+  }
+
+  // calibrate แต่ละโซน (≥3 จุด)
+  window._v33Calibrated = {};
+  let html = `<div style="font-size:12px;color:#333;margin-bottom:8px;">✅ ใช้ได้ <b>${points.length}</b> จุด | ข้าม ${skipped} | <b>${Object.keys(zones).length}</b> โซน</div>`;
+
+  const calibratable = [];
+  for (const z of Object.values(zones)) {
+    const n = z.pts.length;
+    const kNews = z.pts.map(p => p.kNew);
+    const kAvg = kNews.reduce((a,b)=>a+b,0) / n;
+    const errsBefore = z.pts.map(p => Math.abs(p.frcReal - p.frcContour));
+    const maeBefore = errsBefore.reduce((a,b)=>a+b,0) / n;
+    // คำนวณ error หลัง calibrate
+    const errsAfter = z.pts.map(p => {
+      const frcPredicted = p.source.frc * Math.exp(-(kAvg/3600) * (p.tt_hr*3600));
+      // ใช้ frcContour เป็น proxy: ค่าใหม่ = contour × e^(-(kAvg-kNow)*tt)
+      const frcNew = p.frcContour * Math.exp(-((kAvg - p.kNow)/3600) * (p.tt_hr*3600));
+      return Math.abs(p.frcReal - frcNew);
+    });
+    const maeAfter = errsAfter.reduce((a,b)=>a+b,0) / n;
+    const canCal = n >= 3;
+    if (canCal) { window._v33Calibrated[z.sid] = kAvg; calibratable.push(z.sid); }
+
+    const color = canCal ? '#7b2d8e' : '#999';
+    const bg = canCal ? '#faf5ff' : '#f5f5f5';
+    html += `<div style="border:1.5px solid ${canCal?'#d0b0f0':'#ddd'};border-radius:10px;padding:10px 12px;margin-bottom:8px;background:${bg};">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:700;color:${color};">${z.name} <span style="font-size:10px;font-weight:400;color:#888;">(${z.sid})</span></div>
+        <div style="font-size:10px;color:${canCal?'#7b2d8e':'#c00'};font-weight:600;">${canCal ? '✅ Calibrate ได้' : `⚠ ข้อมูลน้อย (${n} จุด)`}</div>
+      </div>
+      <div style="font-size:11px;color:#555;margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;font-family:'JetBrains Mono',monospace;">
+        <span>จุดข้อมูล: <b>${n}</b></span>
+        <span>K ปัจจุบัน: <b>${z.kNow.toFixed(4)}</b>/hr</span>
+        <span>K calibrate: <b style="color:${color};">${kAvg.toFixed(4)}</b>/hr</span>
+        <span>ΔK: <b>${(kAvg-z.kNow>=0?'+':'')}${(kAvg-z.kNow).toFixed(4)}</b></span>
+        <span>MAE ก่อน: <b>${maeBefore.toFixed(3)}</b></span>
+        <span>MAE หลัง: <b style="color:${maeAfter<maeBefore?'#2a8':'#c00'};">${maeAfter.toFixed(3)}</b></span>
+      </div>`;
+    // รายละเอียดจุด
+    html += `<details style="margin-top:6px;"><summary style="font-size:10px;color:#888;cursor:pointer;">ดูรายจุด (${n})</summary>
+      <table style="width:100%;font-size:9px;margin-top:4px;border-collapse:collapse;">
+        <tr style="color:#999;border-bottom:1px solid #eee;"><th style="text-align:left;padding:2px;">จริง</th><th style="text-align:left;">contour</th><th style="text-align:left;">tt(ชม)</th><th style="text-align:left;">K_new</th></tr>`;
+    for (const p of z.pts) {
+      html += `<tr><td style="padding:2px;">${p.frcReal.toFixed(2)}</td><td>${p.frcContour.toFixed(2)}</td><td>${p.tt_hr.toFixed(1)}</td><td>${p.kNew.toFixed(4)}</td></tr>`;
+    }
+    html += `</table></details></div>`;
+  }
+
+  if (calibratable.length > 0) {
+    html += `<button onclick="applyValidateK()" style="width:100%;background:linear-gradient(135deg,#2a8a4a,#176030);color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;">
+      ✅ Apply K calibrate (${calibratable.length} โซน) → บันทึกลงระบบ</button>`;
+  } else {
+    html += `<div style="text-align:center;color:#c00;font-size:12px;padding:8px;">ไม่มีโซนที่มีข้อมูลพอ (ต้อง ≥3 จุด/โซน)</div>`;
+  }
+
+  resultEl.innerHTML = html;
+}
+
+// apply calibrated K → STATION_K + CONTOUR_K_OVERRIDE
+function applyValidateK() {
+  if (!window._v33Calibrated || !Object.keys(window._v33Calibrated).length) return;
+  let applied = 0;
+  for (const [sid, k] of Object.entries(window._v33Calibrated)) {
+    STATION_K[sid] = k;
+    if (typeof CONTOUR_K_OVERRIDE !== 'undefined') CONTOUR_K_OVERRIDE[sid] = k;
+    // mark source = field validate
+    if (typeof STATION_K_SOURCE !== 'undefined') STATION_K_SOURCE[sid] = 'field-validate';
+    applied++;
+  }
+  // persist
+  try {
+    const stored = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    Object.assign(stored, window._v33Calibrated);
+    localStorage.setItem(LS_KEY, JSON.stringify(stored));
+  } catch(e){}
+  // save to Firebase ถ้ามี
+  try { if (typeof saveStationKToFirebase === 'function') saveStationKToFirebase(); } catch(e){}
+  // rebuild contour
+  try { if (typeof buildIdwCache === 'function') { buildIdwCache(); redrawContour && redrawContour(0); } } catch(e){}
+  try { if (typeof renderKTuner === 'function') renderKTuner(); } catch(e){}
+
+  document.getElementById('v33-result').insertAdjacentHTML('afterbegin',
+    `<div style="background:#e8f5e9;border:1.5px solid #2a8a4a;border-radius:8px;padding:10px;margin-bottom:10px;color:#176030;font-size:12px;font-weight:600;">
+      ✅ บันทึก K calibrate สำเร็จ ${applied} โซน → contour อัปเดตแล้ว</div>`);
+}
+
 function frcZone(lat, lon) {
   // rev16.1: Zone Influence — ใช้ CUSTOM_ZONES polygon เป็นตัวกำหนดโซน
   // Priority: 1) VC zone  2) CUSTOM_ZONES polygon  3) MDIS hardcoded  4) nearest fallback
@@ -4382,8 +4718,10 @@ function _pipeAwareFrc(lat, lon, j, i) {
   // v6: dist_km = equivalent pipe distance from Dijkstra on real pipe network
   // Use epanetDecay() so sensor-specific K (CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE)
   // is applied consistently — same formula as Zone path
-  const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-  return sensor.frc * epanetDecay(pd.dist_km * pFactor, sensor, lat, lon);
+  // v33-fix: pass _pressureGrid factor as distMult — applied ONLY if RTU live is
+  //          unavailable (single pressure layer, no double-counting).
+  const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+  return sensor.frc * epanetDecay(pd.dist_km, sensor, lat, lon, pGrid);
 }
 
 function buildIdwCache() {
@@ -4469,8 +4807,9 @@ function buildIdwCache() {
               if (pd && String(pd.sensorId) === String(sid)) {
                 // v6: pipe grid ชี้ไปที่ sensor เดียวกับ zone → ใช้ pipe distance
                 // epanetDecay() ใช้ K จาก CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE
-                const pFactor = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-                zoneVal = src.frc * epanetDecay(pd.dist_km * pFactor, src, lat, lon);
+                // v33-fix: pass _pressureGrid factor as distMult (fallback when no RTU live)
+                const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+                zoneVal = src.frc * epanetDecay(pd.dist_km, src, lat, lon, pGrid);
               } else {
                 // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean × EUCLID_PIPE_FACTOR
                 zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src, lat, lon);
@@ -5019,7 +5358,16 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       if (!online.length) return 15;
       return online.reduce((s,r) => s + r.lP, 0) / online.length;
     })();
-    console.log('RTU live pressure: ' + window._rtuLive.length + ' stations, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc')
+    console.log('RTU live pressure: ' + window._rtuLive.length + ' stations, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc');
+    // v34-rtulive: inject RTU pressure into SENSORS after B64 init
+    // ใช้ setTimeout เพื่อรอให้ SENSORS โหลดเสร็จก่อน (fetchAndUpdate อาจยังไม่ run)
+    setTimeout(() => {
+      if (typeof injectRtuPressureToSensors === 'function' && typeof SENSORS !== 'undefined' && SENSORS.length > 0) {
+        injectRtuPressureToSensors();
+        if (typeof buildIdwCache === 'function') buildIdwCache();
+        if (typeof redrawContour === 'function') redrawContour();
+      }
+    }, 3000);
     
     // RTU comparison data from EPANET simulation
     const _rtuCompB64 = 'H4sIAKXV1GkC/51c26pmSVJ+l33dbDIiMg7Zd75BI4rQIoI0gqCi6J0IM4M4o+iVI02PII6DjKMIKt246232oxhr/X9mRqzef+619tAUVTVVFd+KjMMXh8zf/ounP/jq6fOn3ywFnj57+j3/6evLz15f/vf15cevLz98ffmv/cdvXj/9zf7zf/U/9Id//vQ50LNWbK1U//Uf+69Lea5ayBp99vQnT58jP5fPnv706XMq/v/4T3//6fPy3PCzp6/+zP80GLTtd//oq+2v8jP85WcDCNhlII21mQYkhXmHweUOgycMeEaUGw62UjsMfZYAAvEqiNYaNqQAAvxfabDjqB2HRhyk9YajoXUYYs86cHxRqlzFYYZqEwURa7F8JuFA+H4iTXUcSG1ZFfUiBFeqmHGwDIZNEy2rIh0JkN6AmMnQBdMzRyDt8pmo1XgiLrLWJYq7OkR1opCoji+LH+tVHFI3e5x+UqsuUBToZ1J4OAm62WYUfBWFm2gAIdWWIOx+INoAO4pWjiCum6f7d0BB7e6pb6O4HwcTDD+tGKPFhsGuu0iJHiJYKGOgpAm9RwuF2x/Yz0PacwswQN6A8ekHry8/cgxTdAMmgSlb3Fd4eQx0NwYQIOjSsT5TcIxgkP+yi/7V68t3u/SfvL784vXl29eXv4/hcgt7NZ6ClWJNcpDAFLjLPVK5IxeYSojm4L51CQYJmUjMHyZua3UBQ+vdKN1ReVgl6LOFkMlwBYawqzg4p2MyxYyBI4buFyASNMEharsmpm/+4w7BLfE/dsnBFhS1RsnVuNghUvvvx89v/RSoNpn5s6VjgHpCuIBwsEP2mASLj65290RXextfTckHCsgZwW5sbBytzx0M6uHDNdOGzhv8bw4XdIdJaaqc0jlaIYlUQYUNbt9O3QUta727IFGjLt1CFPqi0PRAl/myu73/5JevL/+z/+SnG5BPfxfUIFqi/pEaPkrSTHfdF6WRpEkTAMZTh06s0dShHula+GwZYtmGr6GEyOPfLRe/m0Wwuutj/PbmvwWlPkLipPKOpFkbeYAKBbd362tnNKD+Ldji+WMjp4sPQ7A7vNzFu5HqVIQfQHR51DPizf0uyuZj5uFs99Qtj1WHv1eO0f9Lt/xTh++ULEUbwrqQLdreiHONo8430aeCDRpnY5eVwhnuIdZ1bGWed6ZhWE6FGzeZxHoYLYuu6avHRxOOj1Y6Sj511gjmsQVapMFFqmpd6b1nOHcJGSEeW+Y8GMjGIth5wKJEOw0XkjvNgeoReRy4ayFJBjvlZnthMbXe4KD1nNgE+S67OZkJbDPSf3qD/v9sDzQebr7eSd6PQxHi8RVTnK9q/DDFOdWsd2cz593D1yxTi3IeggcqFGxCJXg8ARIT6cOoyyPRishINlVDhv/Co/YlTQBXjUbIUFd6gLselGcNJJAzvV4CgK3cqo1ZGnuNaod6EBIM6scBSqMK2vJQsEau5RoQRY7BwMvSVfFRpkXY0ERL1HuDYFcgND/XCAEAcAVhMB/weDAzgKU6jCuUa3qgFnk3eVBaFUD17p3GM/16wR69c8MAlxRRUpuiFmn4OEQ4iN478sMYfuGWcdADXsPg4bixZBwEDe/F0IND0bs+/K9q8JCDOugSFD/fDEPr8kh6sPawGNPEQR18zU/dOCNFgK08XSiCOjN1g7RZjlBMVrFP8c9eeW0wPv2VSw9yt/oz8gMpu+s9aCO6ouvdFsgpzcjSEmMDBI94IFabkuf5GBqtwW6VDyoReHYy1PXe2ixA3Q5DePQE+u4ns3kJB7FFZkwM+LD4Ba9d7nWIh0YKZhdYaGQmj77aeSAm+t28EG+6qLqtC/bMMfulBJmFUmggPzxo9YohHjRWsYWBid4NjPywRhI4dMK8EHhXMBWLPIz3c3wodq+K7v3h6eCYqS+V9r6FOfMFjJK1evy3FefvDBScJgcWFmQjtPc/GBEJkmm3Pfk9dma5RzWVOvsa/meDMyO/b9lk/j9K2mbnYqsmF8u9r+HRWEKBS9Gf4fuVpv/48z2UfXswcS8npQYIUp0CsS5Yj9POzvwbz5mAJQx4AQOzy8Rk7HXdWGoDgkf/GdOT/qte0ILTVaix2QheENRFh2lrPdOo+mZuazHGOGc6j6E2jTGOy8EC3+owetEyvt5aOgCq50V7MvOqI0Z39nBvK98z6M7nnGBGd69IagRhF0AUiwFP2Crdek1Q3i7CqHddvLSehC+1OD3B2BVDNIUW0rqUVtuyEmxbDrxxbwyJPaeaesUZNrIHKelsp8PfJ3yh6zb6rF7HzlYvJH94q//00BbR3ACyOQLiwSVTO8BGs5ecpIRmb4mKwPMYCHjjrxODFs+usmoIGEvvCECNVC/55GA7n364id6GHt+8vvz73vD+LgYF3JpvMSw5meDWVnFpWIMfRbAGjK4ZelDvICAtmKpRXTWeG+BoecuchkEaRIV2yDvCG7k4k9R8VDlSPswzwV79YBj/QAwJXxaZ5OcdBO56QlF+ZX0cFLkzL3Tc4+xLZiJyWvfV/8EQCTwgUpVzDUg30iFfjx8vZ8/eKkI6/O9lhIenX0frW46ff/b0vVzL4neS8Fi6jeJbKoajL1l8Oy2+ljQUv/WGLsqvevh8gNPap5pdj0kvax8OvF+gnY49mHqxzWqFlfwx7UOePBxTGnL5eDryyNY0Tv1YD8ZrBxjhv8z1CEmTXwdQz9tfqrz8WAWuG2BNdOR87PPIg5oGL1BXQwCPfaMjymHYms1/9jne+/oGqSLxEhp4aX5j5ixgb8+cN/l6Vj60aH5uUtxWibeVXutTCZPebVUnAPjdX/+t3zgJQK1YTepXWveZ7ubXiGbmUcyZf1LBrzfe8ekne5fH2cd/7tXZD/af/3WcClhLRnisCDL7oEGJSeKGUMz9YeJ+FsOW9RIhZC8VGi+QqA5CGBrTVXJHOCTiIX89kTSoGHeVKjg5tWWh3HqhPHkppFWlLwuH9t85ncjWiERL6Zma6mpAqH1SBmaBHaEcwdSrYEy3ZYyawCyhSBsjHLFJVdK8EMtlQ8G2cQSLONzjy6F6wfK2zVZuHPoJEqu41ClzT/3v108/uq3rpKaoQlGxEo+lufnWulrUkCZDGXNk3zAeSxydLhFINWRO63SN4D7D4bdVwGN4L07wRzXNMXNg7syuAKj5vxNjZxMEOCwMQR7iinUEXmSNQ6jJHsKW5foQELbJuca6yZ30uCuUa7e+sCIwZ8gWUzcinbUBV3+JqxPqTK7y0QbyrhJ1BCYzfTLk2rGcR0A1Bge1jb0vvl/6iIBcUZG8pH6SnD2A6p+MGA8AjGWZOnqX3kucGSm1xAWS2Exa26CbgBeAcWvNQ71Xz1Xa0hNhrBLMhTHMi6VfwqF3vdBDabViSyhKxWU3Rfr6CrSw2wq5gt8w4FlVmEpM4W7gRW25zIG1q6HEKjo1tjYIdBYCVWKKGIr6SayqKYGBgefoROWohXrWI6B5dNfY5C2t6Kq/p31whwgyIHA9auGsTbIwpdQgFW6BcqGFHhX8xKYW4KiF89kJPYjEJq/XWOsJw1iixFjUw/e00M5qQSGttDaUsqpqhGoPTG404xRKGqGFZY9/ukt/+dudzPmP/7cTh7hW63btZJ6SWzp3oFVfh230NgDiaD0G6HIJh0fE2yx9dteY2nG7LM0yxbpbwKRNhzQZptpnQDQvLC02/j17bUwoE4bc+N8rkVvLd3a5Mo/EME0+A6M6S0n7hs5EsJW2OBOBHq69MJ/T1XQiYcv0DAoiZ7+x/e1lVxNeLV1gDxMe5uYILrJHDA34M+ZJ7qINoiqEiABWCw+1TwLEmUfQRSQwfM0wMF2SccsEXIzEaq9/qzIEk4ibaM754JqDpFqLGRFW81/ove82i0/MDTiHcFEL+455qCd0ORbtq2lOwCyMoDlDuOYaW0chNaGBl3oA7csvhMMW8laiY9BLNlla6gVJhdUu1Fi5qM7n37wy5TXKRZ9wJ4+TCKcQDZcgsIx2eJmb2Kg5WE41fLP/9/W+8/JybMe4HYB5BkodIXxjOjpPYeyDVQh7wHkghSela0oTDLyo5zw89+raZh8UUyggOi1YJEum65Lj8IXPSqYaQ2Bttlx921shN5uf87/tklr86HLizo2XX16rpo0ELdvm8iEfJumtjBFo6D3m3r/zp1PixSCuVbHTs6qyysZvSy+WSqc3FszeuHDkX2ppBeC+WTXuOrQU8zsbUQlLsJWSYGlnBCMmVkiVVytd+0rSrdUdxmyuntTqPqVv4+1yXGwZbZteqza3Wi+VZd6CxJrX2M5oe1vrikF1O/tFQBGFsd5EoRaIfapyRtnamkanJqyrOAp9pKxGIZ3EsRLHxH4ba/9yd2j/7x/2i1Wf9l7dt/FaHQcMhqNB8qgm7btdToRszjbzbUuQN1Z831B8K8nBR1vgwYGPbOZVwDC2vFwMckr1XounebYpKy9FWxdNs/7Lbam01PDzXflf75q/5dXb0r3/+ItQhZVtvIapQ1ak0KoQrB0KiTPdjiUt3WNYNT9nBdKqV+ZNg++bgyt+ym1xM7yOTb/tTnkY9tQQeBQ+oBjGfBW5ipT20Cm3ywp9uRQYJvGOM3dHQh85InKrrIc+qhjiw+vZdQSIEq6It5wHlK9jYQEvVLnWWLcT11IeX0OjNiy3TA6IlhWjv/YBNCgeAWu03u12knPS42LKRLNr7XY32ObCHuTVhG1S8IGD8sBF0YC3PlOTVVuHZVzboNlnZM6xTMtHjqrxtsmXem1WV3uzm2drb7Hg7Coo56pFy0cCDSo2jUbsv2Nl2frbb7ndyrhwt8Y4N7206Ae0Y2LF4qDKvRsbL7UzGlBUQELP5XBY9gE42+YgxNrO/VtleVjUl3ycIc1XMcSOcNoHDmtbHEimI+1GUR4rB1vfMsd5VpwGvo4G4CNujkYlxRyujWxlOtj3oZ0xz0GWZ86sHPiAm7NrQpkiHA8X31uJyfME6g9m1Br2MzWRJwxrqv+2S/3pvYe6rQb4L38ZWwEous8PZhx2imCLvsx4KmNbH8E4gU71oJ3GoB6XsFLsY7tuGsnqJZdxAcVw7mxXyO2pcl4PzsQoHca2sV5ktZk3unRzNdPychTEIeu7EAjjgEuw2WoNAMdVED/CuZe5DRszAr1gDA1TK3+1H+UIxnags9h5T4EPAEKd+C4AxjRR0SLLdszYjg0vlWDLKTjeGH3XEs3ifpYnuqbvryc5kcYhXvK1gXreBFW85pGY97fJO5blpnQbtxT9sMK7CHFTmvg8BlbbXqmxRD7KNt9YD7bmKyGTyW+2mHpT7YI7mh+qpoFKxfWzNbWbo4UFELB0c1VL3M75bm8XvdkrAoq7WkosK86+PyJzG6KUOVVL0wuocFJ0KeQeXWMl5aFgyShab5u4A8+sQIeZAZ8DoJ6iKyb56tX00gznExESyXBe1WQqZ3VQ47UNdZ60fKagb0i79HlnaesTH6TTSekesizuWuz9isc5uY1FA6j69ntem/R61vTSloEzBKGldBhDZaEauHbJ4vW0+cWrakZrfiQ9C7nNFgvD3IN0O2l7lK7MqIGsR7m9g4A0W+Ig6TrkJr6dFH/baRniW59aPqq65sfjbFdiORgenIw6ihifa1DT5X70Pum/V1nzcrZZmpAxF7nYQnHmo/HWkBXU423gAyvt51ArTUV4Jj609OhqS0+sxQdLdLsQtDII64MqxDav7df0fEUhuvpYDief8Nq34Eod3BccnFOGS7qUHs36wJM9JZKDuj0tskRhfdXD88ejq5xCV9dVuXBShhffUpcsrT/xV+cDYpofcmMueNU0WpOaNuK2tZ6VafTHq9xZZr/XcyRnIHa14Vg1LaaJiS6DFvfnDAjqfF6GNXcj4gXyM6+ZFU2vLnrk0PV7BqXvy3rsCG9h5sI2jjzOoHD6E7eqa+FGtILRr3g0DiNNzcV+nHO9z+A3/ccSQuqgTg+euBg7zBxumWC+135yT9GLNtwWIw/tKTJarZZ3eyhhH6ll9gLxqcNT9mD7fkd40KHa8qpFv3u69RpnJq35lcE4DjpplXEw5GZJx5cV+H2r5I1J/87/A7aaHjcrVgAA';
@@ -5196,6 +5544,9 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       : 15;
     
     console.log('[RTU-Refresh] ✅ Updated: ' + online.length + ' online, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc');
+    
+    // v34-rtulive: re-inject RTU pressure into SENSORS after live update
+    if (typeof injectRtuPressureToSensors === 'function') injectRtuPressureToSensors();
     
     // Redraw FRC contour with new pressure data
     if (typeof buildIdwCache === 'function') buildIdwCache();
@@ -7929,6 +8280,36 @@ function updateHistBadge(hist) {
   renderKTuner();
 }
 
+// ── v34-rtulive: inject RTU pressure into each SENSOR (nearest RTU by lat/lon) ──
+// เรียกหลัง SENSORS.push เสร็จ และหลัง refreshRtu() อัปเดต _rtuLive
+// ผล: sensor.rtuPressure = lP ของ RTU ที่ใกล้ที่สุด
+//     epanetDecay() อ่านค่านี้ได้เลย ไม่ต้อง scan _rtuLive ทุก pixel (O(1) แทน O(N))
+function injectRtuPressureToSensors() {
+  const rtus = window._rtuLive;
+  if (!rtus || rtus.length === 0) return;
+  let injected = 0;
+  for (const s of SENSORS) {
+    let minD2 = Infinity, nearP = 0;
+    for (const r of rtus) {
+      const d2 = (r.lt - s.lat)**2 + (r.ln - s.lon)**2;
+      if (d2 < minD2) { minD2 = d2; nearP = r.lP; }
+    }
+    s.rtuPressure = nearP > 0 ? nearP : 0;
+    if (nearP > 0) injected++;
+  }
+  console.log('[v34-rtulive] injectRtuPressureToSensors: ' + injected + '/' + SENSORS.length + ' sensors got RTU pressure');
+  // อัปเดต v2-badge แสดงสถานะ RTU
+  const _v2b = document.getElementById('v2-badge');
+  if (_v2b) {
+    if (injected > 0) {
+      _v2b.textContent = '⬡ V34+RTU.P';
+      _v2b.title = `RTU pressure injected: ${injected}/${SENSORS.length} sensors, P_nominal=${window._rtuPNominal?.toFixed(1)} mwc`;
+    } else {
+      _v2b.textContent = '⬡ V34+hybrid.K';
+    }
+  }
+}
+
 // ── fetchAndUpdate: ดึง API แล้ว redraw ทั้งหมด ───────────────────────────
 let apiStatus = 'loading'; // 'loading' | 'live' | 'fallback'
 
@@ -7990,6 +8371,8 @@ async function fetchAndUpdate() {
   _histCache = null; // invalidate history cache after new data
   buildMarkers();
   buildIdwCache();   // rebuild cache หลังได้ข้อมูล sensor ใหม่
+  // v34-rtulive: re-inject after buildIdwCache so contour uses fresh RTU pressure
+  injectRtuPressureToSensors();
   redrawContour();
   updateStats();
   renderTab();
@@ -12725,7 +13108,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v32 — Hybrid K (Live Back-calc) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v33 — Field Validate K + Hybrid K (Live Back-calc) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -14850,7 +15233,32 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">v32 — May 2026 · M sandbox · 🔒 Security Upgrade</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">v33 — May 2026 · M sandbox · 🔒 Security Upgrade</p>
+
+<h3 style="color:#7b2d8e;font-size:15px;margin:16px 0 6px;">📋 V33 — Validate K (Field Calibration)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+Calibrate ค่า K ของแต่ละโซนจาก<b>ค่าคลอรีนจริงภาคสนาม</b> เทียบกับค่า contour ที่ระบบคำนวณ (เวลา/พิกัดเดียวกัน)
+</p>
+<div style="background:#faf5ff;border:1px solid #d0b0f0;border-radius:8px;padding:10px;margin:8px 0;">
+<div style="font-size:11px;color:#7b2d8e;font-weight:700;margin-bottom:6px;">หลักการคำนวณ:</div>
+<p style="font-size:11px;line-height:1.6;color:#333;margin:0;">
+ทั้งค่าจริง (I) และ contour (AA) มาจากแหล่งจ่ายเดียวกัน ต่างกันแค่ค่า K:<br>
+&nbsp;&nbsp;• contour: <b>AA = FRC<sub>src</sub> × e<sup>(−K<sub>now</sub> × tt)</sup></b><br>
+&nbsp;&nbsp;• ค่าจริง: <b>I = FRC<sub>src</sub> × e<sup>(−K<sub>new</sub> × tt)</sup></b><br>
+หารกันแล้วแก้สมการ →
+</p>
+<div style="background:#7b2d8e;color:#fff;border-radius:6px;padding:8px;text-align:center;font-size:13px;font-weight:700;margin:8px 0;">K<sub>new</sub> = K<sub>now</sub> − ln(I / AA) / tt</div>
+<p style="font-size:11px;line-height:1.6;color:#333;margin:0;">
+<b>ตัวอย่าง:</b> I=0.75, AA=0.65, K<sub>now</sub>=0.05, tt=4 ชม.<br>
+K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → contour สูงขึ้น → ตรงค่าจริง
+</p>
+</div>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. จัดกลุ่มตามโซน</b> — แต่ละจุดเช็คพิกัดว่าอยู่ในอิทธิพลโรงสูบไหน (point-in-polygon)<br>
+<b>B. Calibrate เฉพาะโซน ≥3 จุด</b> — เฉลี่ย K<sub>new</sub> ทุกจุดในโซน (โซน &lt;3 จุดข้าม กัน overfit)<br>
+<b>C. Apply</b> — บันทึก K ลง STATION_K + Firebase (source = field-validate) → contour อัปเดตทันที<br>
+<b>D. วิธีใช้</b> — เมนู AUTO-FIT K → ปุ่ม "📋 Validate K (Field)" → paste แถวจาก Google Sheets (ดึง column Z=พิกัด, I=จริง, AA=contour อัตโนมัติ)
+</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🆕 v32 — Playback 7 วัน + Zone Editor</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
@@ -14924,7 +15332,7 @@ function submitFeedback(){
 • Playback 7 วัน แสดงข้อมูลเฉพาะช่วงที่เปิด FRCContour ไว้เท่านั้น (Firebase บันทึก history 168 ชม.)
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v32 · M sandbox · Water Quality Division · May 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v33 · M sandbox · Water Quality Division · May 2026 · 🔒 Security Upgrade</div>
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
