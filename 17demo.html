@@ -60,7 +60,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour v33 validate</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour v34 rtulive</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -3024,7 +3024,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v33 · May 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
     </div>
 
     <!-- EC note -->
@@ -3076,7 +3076,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v33 · May 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -3916,23 +3916,26 @@ function renderStationKList() {
   el.innerHTML = html;
 }
 
-function epanetDecay(dKm, sensor, lat, lon) {
-  const L_m = dKm * 1000;
-  // rev25: adjust velocity based on nearest RTU live pressure
+function epanetDecay(dKm, sensor, lat, lon, distMult) {
+  // v34-rtulive: single pressure layer with automatic source selection.
+  //   1) s.rtuPressure — pre-injected per-sensor nearest RTU pressure (fastest, avoids O(N) scan per pixel)
+  //   2) _pressureGrid fallback — passed in as distMult by callers that have (j,i),
+  //      used when RTU live is unavailable (e.g. GitHub Pages / CORS / mixed-content)
+  //   Only ONE source is ever applied → no double-counting.
+  let L_m = dKm * 1000;
   let v_adj = EPANET.v;
-  if (window._rtuLive && window._rtuLive.length > 0 && lat != null && lon != null) {
-    let minD2 = Infinity, nearP = 0;
-    for (const rtu of window._rtuLive) {
-      const d2 = (rtu.lt - lat)**2 + (rtu.ln - lon)**2;
-      if (d2 < minD2) { minD2 = d2; nearP = rtu.lP; }
-    }
-    if (nearP > 0 && window._rtuPNominal > 0) {
-      // v ∝ √P (Bernoulli) → clamp factor 0.5–2.0
-      const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(nearP / window._rtuPNominal)));
-      v_adj = EPANET.v * pFactor;
-    }
+  let rtuApplied = false;
+  // v34: use pre-injected rtuPressure on sensor (set by injectRtuPressureToSensors after each fetch)
+  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+    const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
+    v_adj = EPANET.v * pFactor;
+    rtuApplied = true;
   }
-  const t   = L_m / v_adj;  // travel time [s] — pressure-adjusted
+  // Fallback: static _pressureGrid factor (distMult) ONLY if RTU live not applied
+  if (!rtuApplied && distMult != null && distMult > 0) {
+    L_m *= distMult;
+  }
+  const t   = L_m / v_adj;  // travel time [s] — pressure-adjusted (single source)
 
   if (sensor && sensor.id != null) {
     const sid = String(sensor.id);
@@ -4715,9 +4718,10 @@ function _pipeAwareFrc(lat, lon, j, i) {
   // v6: dist_km = equivalent pipe distance from Dijkstra on real pipe network
   // Use epanetDecay() so sensor-specific K (CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE)
   // is applied consistently — same formula as Zone path
-  // v33-fix: pressure handled ONLY via RTU live inside epanetDecay() (single layer).
-  //          _pressureGrid multiplication removed to avoid double-counting pressure.
-  return sensor.frc * epanetDecay(pd.dist_km, sensor, lat, lon);
+  // v33-fix: pass _pressureGrid factor as distMult — applied ONLY if RTU live is
+  //          unavailable (single pressure layer, no double-counting).
+  const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+  return sensor.frc * epanetDecay(pd.dist_km, sensor, lat, lon, pGrid);
 }
 
 function buildIdwCache() {
@@ -4803,8 +4807,9 @@ function buildIdwCache() {
               if (pd && String(pd.sensorId) === String(sid)) {
                 // v6: pipe grid ชี้ไปที่ sensor เดียวกับ zone → ใช้ pipe distance
                 // epanetDecay() ใช้ K จาก CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE
-                // v33-fix: pressure handled ONLY via RTU live inside epanetDecay() (single layer)
-                zoneVal = src.frc * epanetDecay(pd.dist_km, src, lat, lon);
+                // v33-fix: pass _pressureGrid factor as distMult (fallback when no RTU live)
+                const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+                zoneVal = src.frc * epanetDecay(pd.dist_km, src, lat, lon, pGrid);
               } else {
                 // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean × EUCLID_PIPE_FACTOR
                 zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src, lat, lon);
@@ -5530,6 +5535,9 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       : 15;
     
     console.log('[RTU-Refresh] ✅ Updated: ' + online.length + ' online, P_nominal=' + window._rtuPNominal.toFixed(1) + ' mwc');
+    
+    // v34-rtulive: re-inject RTU pressure into SENSORS after live update
+    if (typeof injectRtuPressureToSensors === 'function') injectRtuPressureToSensors();
     
     // Redraw FRC contour with new pressure data
     if (typeof buildIdwCache === 'function') buildIdwCache();
@@ -8263,6 +8271,26 @@ function updateHistBadge(hist) {
   renderKTuner();
 }
 
+// ── v34-rtulive: inject RTU pressure into each SENSOR (nearest RTU by lat/lon) ──
+// เรียกหลัง SENSORS.push เสร็จ และหลัง refreshRtu() อัปเดต _rtuLive
+// ผล: sensor.rtuPressure = lP ของ RTU ที่ใกล้ที่สุด
+//     epanetDecay() อ่านค่านี้ได้เลย ไม่ต้อง scan _rtuLive ทุก pixel (O(1) แทน O(N))
+function injectRtuPressureToSensors() {
+  const rtus = window._rtuLive;
+  if (!rtus || rtus.length === 0) return;
+  let injected = 0;
+  for (const s of SENSORS) {
+    let minD2 = Infinity, nearP = 0;
+    for (const r of rtus) {
+      const d2 = (r.lt - s.lat)**2 + (r.ln - s.lon)**2;
+      if (d2 < minD2) { minD2 = d2; nearP = r.lP; }
+    }
+    s.rtuPressure = nearP > 0 ? nearP : 0;
+    if (nearP > 0) injected++;
+  }
+  console.log('[v34-rtulive] injectRtuPressureToSensors: ' + injected + '/' + SENSORS.length + ' sensors got RTU pressure');
+}
+
 // ── fetchAndUpdate: ดึง API แล้ว redraw ทั้งหมด ───────────────────────────
 let apiStatus = 'loading'; // 'loading' | 'live' | 'fallback'
 
@@ -8284,6 +8312,8 @@ async function fetchAndUpdate() {
     });
     SENSORS.length = 0;
     merged.forEach(s => SENSORS.push(s));
+    // v34-rtulive: inject nearest RTU pressure into each sensor for epanetDecay
+    injectRtuPressureToSensors();
 
     // บันทึกประวัติ (ไม่ fit k อัตโนมัติ — ใช้ K Default จาก Firebase)
     const hist = recordHistory(SENSORS);
