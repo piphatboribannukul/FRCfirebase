@@ -5483,7 +5483,25 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       // Fetch live query (pressure/flow) — flat object [{P019_P, P019_F, P019_C, ...}]
       const qResp = await fetch(RTU_API_QUERY + '?ts=' + Date.now(), { signal: ctrl.signal });
       const qText = await qResp.text();
-      const qData = JSON.parse(qText.replaceAll("'", '"'));
+      // rtu_query2.php ส่ง single-quoted JSON
+      // แปลงแบบ token-based: เฉพาะ quote ที่เป็น key/value delimiter เท่านั้น
+      const _fixSingleQuoteJson = (s) => {
+        let out = '', i = 0;
+        while (i < s.length) {
+          const ch = s[i];
+          if (ch === "'") {
+            // หา closing single quote
+            let j = i + 1;
+            while (j < s.length && s[j] !== "'") j++;
+            out += '"' + s.slice(i+1, j) + '"';
+            i = j + 1;
+          } else {
+            out += ch; i++;
+          }
+        }
+        return out;
+      };
+      const qData = JSON.parse(_fixSingleQuoteJson(qText));
       clearTimeout(timer);
 
       // Parse flat live map: {"P019_P":"3.45","P019_F":"-1000.00","P019_C":"#FF0000",...}
