@@ -5482,7 +5482,8 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
       
       // Fetch live query (pressure/flow) — flat object [{P019_P, P019_F, P019_C, ...}]
       const qResp = await fetch(RTU_API_QUERY + '?ts=' + Date.now(), { signal: ctrl.signal });
-      const qData = await qResp.json();
+      const qText = await qResp.text();
+      const qData = JSON.parse(qText.replace(/'/g, '"'));
       clearTimeout(timer);
 
       // Parse flat live map: {"P019_P":"3.45","P019_F":"-1000.00","P019_C":"#FF0000",...}
