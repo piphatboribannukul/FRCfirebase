@@ -5501,7 +5501,9 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
         }
         return out;
       };
-      const qData = JSON.parse(_fixSingleQuoteJson(qText));
+      // ลบ trailing comma ก่อน } หรือ ] ที่ทำให้ JSON.parse พัง
+      const qCleaned = _fixSingleQuoteJson(qText).replace(/,\s*([}\]])/g, '$1');
+      const qData = JSON.parse(qCleaned);
       clearTimeout(timer);
 
       // Parse flat live map: {"P019_P":"3.45","P019_F":"-1000.00","P019_C":"#FF0000",...}
