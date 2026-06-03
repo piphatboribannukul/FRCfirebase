@@ -16950,6 +16950,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
           r._branch = getCol('สาขา');
           r._source = getCol('รับน้ำจาก');
           r._ecoli = getCol('อีโคไล') || getCol('อี.โค.ไล');
+          r._coliform = getCol('โคลิฟอร์มแบคทีเรีย') || getCol('Coliform');
           return true;
         });
         _snpLoaded = true;
@@ -17059,6 +17060,13 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
         <span class="snp-pop-val" style="color:${ecoliColor}">${esc(r._ecoli)}</span>
       </div>`;
     }
+    if (r._coliform) {
+      const coliformColor = (r._coliform === 'ไม่พบ' || r._coliform === 'น้อยกว่า 1' || r._coliform === '<1' || r._coliform === '0') ? '#2e7d32' : '#c62828';
+      paramRows += `<div class="snp-pop-row">
+        <span class="snp-pop-label">Coliform</span>
+        <span class="snp-pop-val" style="color:${coliformColor}">${esc(r._coliform)}</span>
+      </div>`;
+    }
 
     return `<div class="snp-popup" style="font-family:'Sarabun',sans-serif;">
       <div style="background:${statusColor};color:#fff;padding:6px 12px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
@@ -17133,6 +17141,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
         const phHtml = r._ph != null ? `<div class="snp-card-item"><b>pH</b> ${r._ph.toFixed(2)}</div>` : '';
         const colorHtml = r._color != null ? `<div class="snp-card-item"><b>สี</b> ${r._color}</div>` : '';
         const ecoliHtml = r._ecoli ? `<div class="snp-card-item"><b>E.coli</b> ${r._ecoli}</div>` : '';
+        const coliformHtml = r._coliform ? `<div class="snp-card-item"><b>Coliform</b> ${r._coliform}</div>` : '';
 
         cardsHtml += `
           <div class="snp-card" onclick="window.map.flyTo([${r._lat},${r._lng}],16);this.style.borderColor='#8e24aa';">
@@ -17145,7 +17154,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
               · ${r._road || ''} · ${r._branch || ''} · รับน้ำ: ${r._source || '—'}
             </div>
             <div class="snp-card-grid">
-              ${cl2Html}${turbHtml}${ecHtml}${phHtml}${colorHtml}${ecoliHtml}
+              ${cl2Html}${turbHtml}${ecHtml}${phHtml}${colorHtml}${ecoliHtml}${coliformHtml}
             </div>
           </div>`;
 
@@ -17192,6 +17201,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
           if (r._ec != null) popupContent += '<div style="font-size:11px;"><b>EC</b> ' + r._ec + ' μS/cm</div>';
           if (r._ph != null) popupContent += '<div style="font-size:11px;"><b>pH</b> ' + r._ph.toFixed(2) + '</div>';
           if (r._ecoli) popupContent += '<div style="font-size:11px;"><b>E.coli</b> ' + r._ecoli + '</div>';
+          if (r._coliform) popupContent += '<div style="font-size:11px;"><b>Coliform</b> ' + r._coliform + '</div>';
           popupContent += '</div>';
           if (r._source) popupContent += '<div style="font-size:9px;color:#aaa;margin-top:2px;">💧 รับน้ำ: ' + r._source + '</div>';
           popupContent += '</div>';
@@ -17487,12 +17497,22 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
     const cl2s = samples.filter(s=>s._cl2!=null).map(s=>s._cl2);
     const ecs = samples.filter(s=>s._ec!=null).map(s=>s._ec);
     const turbs = samples.filter(s=>s._turb!=null).map(s=>s._turb);
+    const phs = samples.filter(s=>s._ph!=null).map(s=>s._ph);
+    const ecoliSamples = samples.filter(s=>s._ecoli);
+    const ecoliPass = ecoliSamples.filter(s=>s._ecoli==='ไม่พบ'||s._ecoli==='น้อยกว่า 1'||s._ecoli==='<1'||s._ecoli==='0').length;
+    const coliformSamples = samples.filter(s=>s._coliform);
+    const coliformPass = coliformSamples.filter(s=>s._coliform==='ไม่พบ'||s._coliform==='น้อยกว่า 1'||s._coliform==='<1'||s._coliform==='0').length;
     const passN = cl2s.filter(v=>v>=0.2).length;
     const passR = cl2s.length>0 ? (passN/cl2s.length*100).toFixed(0) : '—';
     const avgCl = cl2s.length>0 ? (cl2s.reduce((a,b)=>a+b,0)/cl2s.length).toFixed(2) : '—';
     const avgEc = ecs.length>0 ? (ecs.reduce((a,b)=>a+b,0)/ecs.length).toFixed(0) : '—';
     const avgT = turbs.length>0 ? (turbs.reduce((a,b)=>a+b,0)/turbs.length).toFixed(2) : '—';
+    const avgPh = phs.length>0 ? (phs.reduce((a,b)=>a+b,0)/phs.length).toFixed(2) : '—';
+    const ecoliTxt = ecoliSamples.length>0 ? `${ecoliPass}/${ecoliSamples.length}` : '—';
+    const coliformTxt = coliformSamples.length>0 ? `${coliformPass}/${coliformSamples.length}` : '—';
     const pCls = passR==='—'?'info':(parseFloat(passR)>=80?'good':parseFloat(passR)>=50?'warn':'bad');
+    const ecoliCls = ecoliSamples.length===0?'info':(ecoliPass===ecoliSamples.length?'good':ecoliPass/ecoliSamples.length>=0.8?'warn':'bad');
+    const coliformCls = coliformSamples.length===0?'info':(coliformPass===coliformSamples.length?'good':coliformPass/coliformSamples.length>=0.8?'warn':'bad');
 
     const statsEl = document.getElementById('v30-stats');
     statsEl.style.display = 'block';
@@ -17503,6 +17523,9 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
         <div class="v30-sc info"><div class="v30-sc-val">${avgCl}</div><div class="v30-sc-lbl">Cl₂ เฉลี่ย</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgEc}</div><div class="v30-sc-lbl">EC เฉลี่ย</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgT}</div><div class="v30-sc-lbl">ขุ่นเฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgPh}</div><div class="v30-sc-lbl">pH เฉลี่ย</div></div>
+        <div class="v30-sc ${ecoliCls}"><div class="v30-sc-val">${ecoliTxt}</div><div class="v30-sc-lbl">E.coli ผ่าน</div></div>
+        <div class="v30-sc ${coliformCls}"><div class="v30-sc-val">${coliformTxt}</div><div class="v30-sc-lbl">Coliform ผ่าน</div></div>
       </div>
     </div>`;
 
@@ -17518,6 +17541,9 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
           ${r._cl2!=null?`<span class="${c}">Cl₂ ${r._cl2.toFixed(2)}</span>`:''}
           ${r._turb!=null?`<span>ขุ่น ${r._turb.toFixed(2)}</span>`:''}
           ${r._ec!=null?`<span>EC ${r._ec}</span>`:''}
+          ${r._ph!=null?`<span>pH ${r._ph.toFixed(2)}</span>`:''}
+          ${r._ecoli?`<span class="${(r._ecoli==='ไม่พบ'||r._ecoli==='น้อยกว่า 1'||r._ecoli==='<1'||r._ecoli==='0')?'ok':'ng'}">E.coli ${r._ecoli}</span>`:''}
+          ${r._coliform?`<span class="${(r._coliform==='ไม่พบ'||r._coliform==='น้อยกว่า 1'||r._coliform==='<1'||r._coliform==='0')?'ok':'ng'}">Coliform ${r._coliform}</span>`:''}
         </div>
       </div>`;
 
@@ -17559,6 +17585,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
         if (r._ec != null) popHtml += '<span style="font-size:11px;"><b>EC</b> ' + r._ec + '</span>';
         if (r._ph != null) popHtml += '<span style="font-size:11px;"><b>pH</b> ' + r._ph.toFixed(2) + '</span>';
         if (r._ecoli) popHtml += '<span style="font-size:11px;"><b>E.coli</b> ' + r._ecoli + '</span>';
+        if (r._coliform) popHtml += '<span style="font-size:11px;"><b>Coliform</b> ' + r._coliform + '</span>';
         popHtml += '</div>';
         if (r._source) popHtml += '<div style="font-size:9px;color:#aaa;margin-top:2px;">💧 ' + r._source + '</div>';
         popHtml += '</div>';
