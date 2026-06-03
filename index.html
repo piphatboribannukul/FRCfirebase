@@ -16956,6 +16956,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
         _snpLoaded = true;
         window._snpAllData = _snpData; // V30: expose globally
         console.log(`[SNP] ✅ Loaded ${_snpData.length} records from Google Sheet`);
+        if (typeof window.showV30AllStats === 'function') window.showV30AllStats();
         return; // สำเร็จ
       } catch(e) {
         console.warn('[SNP] ⚠️ Failed:', e.message);
@@ -17601,6 +17602,52 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
     document.getElementById('v30-samples').innerHTML = html;
   }
 
+  // ── Show all-data stats (before province selection) ──
+  function showV30AllStats() {
+    const samples = window._snpAllData || [];
+    if (samples.length === 0) {
+      document.getElementById('v30-stats').style.display = 'none';
+      document.getElementById('v30-samples').innerHTML = '<div style="text-align:center;padding:12px;font-size:11px;color:#999;">กำลังโหลดข้อมูล...</div>';
+      return;
+    }
+    const cl2s = samples.filter(s=>s._cl2!=null).map(s=>s._cl2);
+    const ecs = samples.filter(s=>s._ec!=null).map(s=>s._ec);
+    const turbs = samples.filter(s=>s._turb!=null).map(s=>s._turb);
+    const phs = samples.filter(s=>s._ph!=null).map(s=>s._ph);
+    const ecoliSamples = samples.filter(s=>s._ecoli);
+    const ecoliPass = ecoliSamples.filter(s=>s._ecoli==='ไม่พบ'||s._ecoli==='น้อยกว่า 1'||s._ecoli==='<1'||s._ecoli==='0').length;
+    const coliformSamples = samples.filter(s=>s._coliform);
+    const coliformPass = coliformSamples.filter(s=>s._coliform==='ไม่พบ'||s._coliform==='น้อยกว่า 1'||s._coliform==='<1'||s._coliform==='0').length;
+    const passN = cl2s.filter(v=>v>=0.2).length;
+    const passR = cl2s.length>0 ? (passN/cl2s.length*100).toFixed(0) : '—';
+    const avgCl = cl2s.length>0 ? (cl2s.reduce((a,b)=>a+b,0)/cl2s.length).toFixed(2) : '—';
+    const avgEc = ecs.length>0 ? (ecs.reduce((a,b)=>a+b,0)/ecs.length).toFixed(0) : '—';
+    const avgT = turbs.length>0 ? (turbs.reduce((a,b)=>a+b,0)/turbs.length).toFixed(2) : '—';
+    const avgPh = phs.length>0 ? (phs.reduce((a,b)=>a+b,0)/phs.length).toFixed(2) : '—';
+    const ecoliTxt = ecoliSamples.length>0 ? `${ecoliPass}/${ecoliSamples.length}` : '—';
+    const coliformTxt = coliformSamples.length>0 ? `${coliformPass}/${coliformSamples.length}` : '—';
+    const pCls = passR==='—'?'info':(parseFloat(passR)>=80?'good':parseFloat(passR)>=50?'warn':'bad');
+    const ecoliCls = ecoliSamples.length===0?'info':(ecoliPass===ecoliSamples.length?'good':ecoliPass/ecoliSamples.length>=0.8?'warn':'bad');
+    const coliformCls = coliformSamples.length===0?'info':(coliformPass===coliformSamples.length?'good':coliformPass/coliformSamples.length>=0.8?'warn':'bad');
+
+    const statsEl = document.getElementById('v30-stats');
+    statsEl.style.display = 'block';
+    statsEl.innerHTML = `<div class="v30-stat">
+      <div class="v30-stat-title">📊 ข้อมูลทั้งหมด — ${samples.length} จุดตรวจ</div>
+      <div class="v30-stat-grid">
+        <div class="v30-sc ${pCls}"><div class="v30-sc-val">${passR}%</div><div class="v30-sc-lbl">FRC ผ่าน (≥0.2)</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgCl}</div><div class="v30-sc-lbl">Cl₂ เฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgEc}</div><div class="v30-sc-lbl">EC เฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgT}</div><div class="v30-sc-lbl">ขุ่นเฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgPh}</div><div class="v30-sc-lbl">pH เฉลี่ย</div></div>
+        <div class="v30-sc ${ecoliCls}"><div class="v30-sc-val">${ecoliTxt}</div><div class="v30-sc-lbl">E.coli ผ่าน</div></div>
+        <div class="v30-sc ${coliformCls}"><div class="v30-sc-val">${coliformTxt}</div><div class="v30-sc-lbl">Coliform ผ่าน</div></div>
+      </div>
+    </div>`;
+    document.getElementById('v30-samples').innerHTML = '<div style="text-align:center;padding:8px;font-size:10px;color:#999;">เลือกจังหวัด/เขต เพื่อดูรายจุดตรวจ</div>';
+  }
+  window.showV30AllStats = showV30AllStats; // expose for SNP loader
+
   function clearV30Markers() {
     _v30markers.forEach(m => { try { window.map.removeLayer(m); } catch(e){} });
     _v30markers = [];
@@ -17618,7 +17665,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
     document.getElementById('v30-samples').innerHTML = '';
     clearV30();
 
-    if (!prov) { selD.disabled = true; return; }
+    if (!prov) { selD.disabled = true; showV30AllStats(); return; }
     selD.disabled = false;
 
     const dists = _v30districts.filter(f => gp(f.properties,'pro_th','PRO_TH','PROVINCE') === prov);
