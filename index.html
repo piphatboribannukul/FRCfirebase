@@ -2465,6 +2465,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
     </div>
     <div id="v30-stats" style="display:none;"></div>
+    <div style="margin:8px 0;">
+      <input id="v30-search" type="text" placeholder="🔍 ค้นหาสถานที่จากการเก็บตัวอย่างน้ำ สนป." 
+        oninput="searchV30Snp(this.value)"
+        style="width:100%;padding:7px 10px;font-size:12px;font-family:'Sarabun',sans-serif;border:1.5px solid #CE93D8;border-radius:8px;outline:none;box-sizing:border-box;"
+        onfocus="this.style.borderColor='#8E24AA';this.style.boxShadow='0 0 0 2px rgba(142,36,170,.15)'"
+        onblur="this.style.borderColor='#CE93D8';this.style.boxShadow='none'">
+    </div>
     <div id="v30-samples" style="max-height:280px;overflow-y:auto;"></div>
     <div style="margin-top:12px;padding-top:8px;border-top:1px solid rgba(200,180,210,.3);font-size:9px;color:#aaa;line-height:1.5;">
       <b style="color:#999;">📌 ที่มาข้อมูลเขตการปกครอง</b><br>
@@ -17660,6 +17667,53 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
   }
   window.showV30AllStats = showV30AllStats; // expose for SNP loader
 
+  // ── Search SNP stations by name ──
+  let _searchTimeout = null;
+  function searchV30Snp(query) {
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(() => _doSearchV30(query), 250); // debounce 250ms
+  }
+  function _doSearchV30(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (q.length < 2) {
+      // ถ้าว่างหรือสั้นเกิน → กลับไปแสดงตามที่เลือกอยู่
+      const prov = document.getElementById('v30-province').value;
+      if (!prov) {
+        showV30AllStats();
+      } else {
+        // trigger re-render ตาม dropdown ปัจจุบัน
+        const sub = document.getElementById('v30-subdistrict').value;
+        const dist = document.getElementById('v30-district').value;
+        if (sub) onV30Subdistrict();
+        else if (dist) onV30District();
+        else onV30Province();
+      }
+      return;
+    }
+    const snp = window._snpAllData || [];
+    if (!snp.length) return;
+
+    // search ทุก field ที่เกี่ยวข้อง: สถานที่, ถนน, สาขา
+    const results = snp.filter(r => {
+      const place = (r._place || '').toLowerCase();
+      const road = (r._road || '').toLowerCase();
+      const branch = (r._branch || '').toLowerCase();
+      return place.includes(q) || road.includes(q) || branch.includes(q);
+    });
+
+    // แสดง stats สำหรับผลค้นหา
+    if (results.length > 0) {
+      showV30Samples(`ผลค้นหา "${query.trim()}"`, results);
+    } else {
+      document.getElementById('v30-stats').style.display = 'none';
+      document.getElementById('v30-samples').innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">
+        ไม่พบสถานที่ที่ตรงกับ "${query.trim()}"<br>
+        <span style="font-size:10px;">ลองค้นหาด้วยคำอื่น เช่น ชื่อโรงเรียน, วัด, สถานี</span>
+      </div>`;
+    }
+  }
+  window.searchV30Snp = searchV30Snp; // expose for HTML oninput
+
   function clearV30Markers() {
     _v30markers.forEach(m => { try { window.map.removeLayer(m); } catch(e){} });
     _v30markers = [];
@@ -17667,6 +17721,8 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
 
   // ── Province change ──
   function onV30Province() {
+    const searchEl = document.getElementById('v30-search');
+    if (searchEl) searchEl.value = '';
     const prov = document.getElementById('v30-province').value;
     const selD = document.getElementById('v30-district');
     const selS = document.getElementById('v30-subdistrict');
