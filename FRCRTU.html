@@ -2465,6 +2465,13 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
     </div>
     <div id="v30-stats" style="display:none;"></div>
+    <div style="margin:8px 0;">
+      <input id="v30-search" type="text" placeholder="🔍 ค้นหาสถานที่จากการเก็บตัวอย่างน้ำ สนป." 
+        oninput="searchV30Snp(this.value)"
+        style="width:100%;padding:7px 10px;font-size:12px;font-family:'Sarabun',sans-serif;border:1.5px solid #CE93D8;border-radius:8px;outline:none;box-sizing:border-box;"
+        onfocus="this.style.borderColor='#8E24AA';this.style.boxShadow='0 0 0 2px rgba(142,36,170,.15)'"
+        onblur="this.style.borderColor='#CE93D8';this.style.boxShadow='none'">
+    </div>
     <div id="v30-samples" style="max-height:280px;overflow-y:auto;"></div>
     <div style="margin-top:12px;padding-top:8px;border-top:1px solid rgba(200,180,210,.3);font-size:9px;color:#aaa;line-height:1.5;">
       <b style="color:#999;">📌 ที่มาข้อมูลเขตการปกครอง</b><br>
@@ -2664,6 +2671,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
       <button class="ep-apply" onclick="applyStationK()" style="margin-top:4px;width:100%;font-size:10px;padding:4px;">✅ Apply K สถานีนี้ & Rebuild</button>
       <button onclick="resetStationK()" style="margin-top:3px;width:100%;font-size:9px;padding:3px;background:#fff0f5;color:#a06080;border:1px solid #e0c0d0;border-radius:4px;cursor:pointer;">↩ Reset เป็นค่า default</button>
+      <button onclick="applyResearchK()" style="margin-top:3px;width:100%;font-size:9px;padding:4px;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:4px;cursor:pointer;font-weight:600;">📚 Auto K จากงานวิจัย ม.เกษตร (First-order)</button>
+      <div id="research-k-info" style="display:none;margin-top:4px;font-size:8px;color:#1565C0;background:#E3F2FD;padding:4px 6px;border-radius:4px;line-height:1.4;"></div>
     </div>
     <div id="ep-station-k-list" style="margin-top:8px;font-size:8.5px;max-height:200px;overflow-y:auto;"></div>
     </div><!-- /sb-body EPANET -->
@@ -3820,6 +3829,57 @@ function resetStationK() {
   renderStationKList();
   buildIdwCache();
   redrawContour();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📚 Auto K จากงานวิจัย ม.เกษตรศาสตร์ (First-order Kb)
+// อ้างอิง: โครงการ กนว. 32/2566 — EPANET-MSX Chlorine Loss Assessment
+// Kb(BK) = 0.778/day, Kb(MH) = 0.400/day, Kw = 0.1/day, D = 0.2m
+// k_total = Kb + 4×Kw/D = Kb + 2.0/day → แปลงเป็น /hr
+// ══════════════════════════════════════════════════════════════════════════════
+function applyResearchK() {
+  const Kb_BK = 0.778;  // /day — Bangkhen (จากการทดลอง 60 ตัวอย่าง)
+  const Kb_MH = 0.400;  // /day — Mahasawat (จากการทดลอง)
+  const Kw = 0.1;       // /day — Wall decay coefficient
+  const D  = 0.2;       // m    — Average pipe diameter (equivalent)
+  const wall_term = 4 * Kw / D; // = 2.0/day
+
+  const k_BK = (Kb_BK + wall_term) / 24; // 2.778/day = 0.1158/hr
+  const k_MH = (Kb_MH + wall_term) / 24; // 2.400/day = 0.1000/hr
+
+  // สถานีฝั่ง MH: SP06(ธนบุรี), SP11(MH สูบส่ง), SP12(MH สูบจ่าย),
+  //                SW08(ราษฎร์บูรณะ), SW09(เพชรเกษม), SW10(ท่าพระ)
+  const MH_STATIONS = new Set(['SP06','SP11','SP12','SW08','SW09','SW10']);
+
+  // สถานี Sensor ทั้งหมด
+  const allIds = SENSORS.map(s => s.id).filter(id => id.startsWith('SP') || id.startsWith('SW'));
+  
+  let applied = { bk: [], mh: [] };
+  allIds.forEach(sid => {
+    const isMH = MH_STATIONS.has(sid);
+    const k = isMH ? k_MH : k_BK;
+    CONTOUR_K_OVERRIDE[sid] = parseFloat(k.toFixed(4));
+    (isMH ? applied.mh : applied.bk).push(sid);
+  });
+
+  _saveContourK();
+  onStationKSelect();
+  renderStationKList();
+  buildIdwCache();
+  redrawContour();
+
+  // แสดงข้อมูล
+  const info = document.getElementById('research-k-info');
+  info.style.display = 'block';
+  info.innerHTML = `
+    <b>📚 ใช้ค่า Kb จากงานวิจัย ม.เกษตร (กนว.32/2566)</b><br>
+    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี)<br>
+    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี)<br>
+    ▸ Kw=${Kw}/day, D=${D}m, wall=${wall_term.toFixed(1)}/day<br>
+    <span style="color:#888;">สูตร: k_total = Kb + 4×Kw/D</span>
+  `;
+
+  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')})`);
 }
 
 // ── Firebase + localStorage save/load ────────────────────────────────────
@@ -16950,12 +17010,13 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
           r._branch = getCol('สาขา');
           r._source = getCol('รับน้ำจาก');
           r._ecoli = getCol('อีโคไล') || getCol('อี.โค.ไล');
-          r._coliform = getCol('โคลิฟอร์ม') || getCol('Coliform') || getCol('โคลิฟอร์มแบคทีเรีย');
+          r._coliform = getCol('โคลิฟอร์มแบคทีเรีย');
           return true;
         });
         _snpLoaded = true;
         window._snpAllData = _snpData; // V30: expose globally
         console.log(`[SNP] ✅ Loaded ${_snpData.length} records from Google Sheet`);
+        if (typeof window.showV30AllStats === 'function') window.showV30AllStats();
         return; // สำเร็จ
       } catch(e) {
         console.warn('[SNP] ⚠️ Failed:', e.message);
@@ -17516,16 +17577,17 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
 
     const statsEl = document.getElementById('v30-stats');
     statsEl.style.display = 'block';
+    const fyLabel = getFiscalYearLabel();
     statsEl.innerHTML = `<div class="v30-stat">
-      <div class="v30-stat-title">📊 ${areaName} — ${samples.length} จุดตรวจ</div>
+      <div class="v30-stat-title">📊 ${areaName} — ${samples.length} จุดตรวจ<br><span style="font-size:10px;font-weight:400;color:#888;">${fyLabel}</span></div>
       <div class="v30-stat-grid">
         <div class="v30-sc ${pCls}"><div class="v30-sc-val">${passR}%</div><div class="v30-sc-lbl">FRC ผ่าน (≥0.2)</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgCl}</div><div class="v30-sc-lbl">Cl₂ เฉลี่ย</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgEc}</div><div class="v30-sc-lbl">EC เฉลี่ย</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgT}</div><div class="v30-sc-lbl">ขุ่นเฉลี่ย</div></div>
         <div class="v30-sc info"><div class="v30-sc-val">${avgPh}</div><div class="v30-sc-lbl">pH เฉลี่ย</div></div>
-        <div class="v30-sc ${ecoliCls}"><div class="v30-sc-val">${ecoliTxt}</div><div class="v30-sc-lbl">E.coli ผ่าน</div></div>
-        <div class="v30-sc ${coliformCls}"><div class="v30-sc-val">${coliformTxt}</div><div class="v30-sc-lbl">Coliform ผ่าน</div></div>
+        <div class="v30-sc ${ecoliCls}"><div class="v30-sc-val">${ecoliTxt}</div><div class="v30-sc-lbl">E.coli ตัวอย่างที่ผ่าน/ทั้งหมด</div></div>
+        <div class="v30-sc ${coliformCls}"><div class="v30-sc-val">${coliformTxt}</div><div class="v30-sc-lbl">Coliform ตัวอย่างที่ผ่าน/ทั้งหมด</div></div>
       </div>
     </div>`;
 
@@ -17601,6 +17663,110 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
     document.getElementById('v30-samples').innerHTML = html;
   }
 
+  // ── Fiscal year helper ──
+  function getFiscalYearLabel() {
+    const now = new Date();
+    const m = now.getMonth(); // 0-11
+    const y = now.getFullYear();
+    const fyBE = (m >= 9 ? y + 1 : y) + 543; // ต.ค.=month 9
+    const startBE = fyBE - 1;
+    return `ปีงบ ${fyBE} (1 ต.ค.${String(startBE).slice(-2)}-ปัจจุบัน)`;
+  }
+
+  // ── Show all-data stats (before province selection) ──
+  function showV30AllStats() {
+    const samples = window._snpAllData || [];
+    if (samples.length === 0) {
+      document.getElementById('v30-stats').style.display = 'none';
+      document.getElementById('v30-samples').innerHTML = '<div style="text-align:center;padding:12px;font-size:11px;color:#999;">กำลังโหลดข้อมูล...</div>';
+      return;
+    }
+    const cl2s = samples.filter(s=>s._cl2!=null).map(s=>s._cl2);
+    const ecs = samples.filter(s=>s._ec!=null).map(s=>s._ec);
+    const turbs = samples.filter(s=>s._turb!=null).map(s=>s._turb);
+    const phs = samples.filter(s=>s._ph!=null).map(s=>s._ph);
+    const ecoliSamples = samples.filter(s=>s._ecoli);
+    const ecoliPass = ecoliSamples.filter(s=>s._ecoli==='ไม่พบ'||s._ecoli==='น้อยกว่า 1'||s._ecoli==='<1'||s._ecoli==='0').length;
+    const coliformSamples = samples.filter(s=>s._coliform);
+    const coliformPass = coliformSamples.filter(s=>s._coliform==='ไม่พบ'||s._coliform==='น้อยกว่า 1'||s._coliform==='<1'||s._coliform==='0').length;
+    const passN = cl2s.filter(v=>v>=0.2).length;
+    const passR = cl2s.length>0 ? (passN/cl2s.length*100).toFixed(0) : '—';
+    const avgCl = cl2s.length>0 ? (cl2s.reduce((a,b)=>a+b,0)/cl2s.length).toFixed(2) : '—';
+    const avgEc = ecs.length>0 ? (ecs.reduce((a,b)=>a+b,0)/ecs.length).toFixed(0) : '—';
+    const avgT = turbs.length>0 ? (turbs.reduce((a,b)=>a+b,0)/turbs.length).toFixed(2) : '—';
+    const avgPh = phs.length>0 ? (phs.reduce((a,b)=>a+b,0)/phs.length).toFixed(2) : '—';
+    const ecoliTxt = ecoliSamples.length>0 ? `${ecoliPass}/${ecoliSamples.length}` : '—';
+    const coliformTxt = coliformSamples.length>0 ? `${coliformPass}/${coliformSamples.length}` : '—';
+    const pCls = passR==='—'?'info':(parseFloat(passR)>=80?'good':parseFloat(passR)>=50?'warn':'bad');
+    const ecoliCls = ecoliSamples.length===0?'info':(ecoliPass===ecoliSamples.length?'good':ecoliPass/ecoliSamples.length>=0.8?'warn':'bad');
+    const coliformCls = coliformSamples.length===0?'info':(coliformPass===coliformSamples.length?'good':coliformPass/coliformSamples.length>=0.8?'warn':'bad');
+    const fyLabel = getFiscalYearLabel();
+
+    const statsEl = document.getElementById('v30-stats');
+    statsEl.style.display = 'block';
+    statsEl.innerHTML = `<div class="v30-stat">
+      <div class="v30-stat-title">📊 ข้อมูลทั้งหมด — ${samples.length} จุดตรวจ<br><span style="font-size:10px;font-weight:400;color:#888;">${fyLabel}</span></div>
+      <div class="v30-stat-grid">
+        <div class="v30-sc ${pCls}"><div class="v30-sc-val">${passR}%</div><div class="v30-sc-lbl">FRC ผ่าน (≥0.2)</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgCl}</div><div class="v30-sc-lbl">Cl₂ เฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgEc}</div><div class="v30-sc-lbl">EC เฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgT}</div><div class="v30-sc-lbl">ขุ่นเฉลี่ย</div></div>
+        <div class="v30-sc info"><div class="v30-sc-val">${avgPh}</div><div class="v30-sc-lbl">pH เฉลี่ย</div></div>
+        <div class="v30-sc ${ecoliCls}"><div class="v30-sc-val">${ecoliTxt}</div><div class="v30-sc-lbl">E.coli ตัวอย่างที่ผ่าน/ทั้งหมด</div></div>
+        <div class="v30-sc ${coliformCls}"><div class="v30-sc-val">${coliformTxt}</div><div class="v30-sc-lbl">Coliform ตัวอย่างที่ผ่าน/ทั้งหมด</div></div>
+      </div>
+    </div>`;
+    document.getElementById('v30-samples').innerHTML = '<div style="text-align:center;padding:8px;font-size:10px;color:#999;">เลือกจังหวัด/เขต เพื่อดูรายจุดตรวจ</div>';
+  }
+  window.showV30AllStats = showV30AllStats; // expose for SNP loader
+
+  // ── Search SNP stations by name ──
+  let _searchTimeout = null;
+  function searchV30Snp(query) {
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(() => _doSearchV30(query), 250); // debounce 250ms
+  }
+  function _doSearchV30(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (q.length < 2) {
+      // ถ้าว่างหรือสั้นเกิน → กลับไปแสดงตามที่เลือกอยู่
+      const prov = document.getElementById('v30-province').value;
+      if (!prov) {
+        showV30AllStats();
+      } else {
+        // trigger re-render ตาม dropdown ปัจจุบัน
+        const sub = document.getElementById('v30-subdistrict').value;
+        const dist = document.getElementById('v30-district').value;
+        if (sub) onV30Subdistrict();
+        else if (dist) onV30District();
+        else onV30Province();
+      }
+      return;
+    }
+    const snp = window._snpAllData || [];
+    if (!snp.length) return;
+
+    // search ทุก field ที่เกี่ยวข้อง: สถานที่, ถนน, สาขา
+    const results = snp.filter(r => {
+      const place = (r._place || '').toLowerCase();
+      const road = (r._road || '').toLowerCase();
+      const branch = (r._branch || '').toLowerCase();
+      return place.includes(q) || road.includes(q) || branch.includes(q);
+    });
+
+    // แสดง stats สำหรับผลค้นหา
+    if (results.length > 0) {
+      showV30Samples(`ผลค้นหา "${query.trim()}"`, results);
+    } else {
+      document.getElementById('v30-stats').style.display = 'none';
+      document.getElementById('v30-samples').innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">
+        ไม่พบสถานที่ที่ตรงกับ "${query.trim()}"<br>
+        <span style="font-size:10px;">ลองค้นหาด้วยคำอื่น เช่น ชื่อโรงเรียน, วัด, สถานี</span>
+      </div>`;
+    }
+  }
+  window.searchV30Snp = searchV30Snp; // expose for HTML oninput
+
   function clearV30Markers() {
     _v30markers.forEach(m => { try { window.map.removeLayer(m); } catch(e){} });
     _v30markers = [];
@@ -17608,6 +17774,8 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
 
   // ── Province change ──
   function onV30Province() {
+    const searchEl = document.getElementById('v30-search');
+    if (searchEl) searchEl.value = '';
     const prov = document.getElementById('v30-province').value;
     const selD = document.getElementById('v30-district');
     const selS = document.getElementById('v30-subdistrict');
@@ -17618,7 +17786,7 @@ K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → c
     document.getElementById('v30-samples').innerHTML = '';
     clearV30();
 
-    if (!prov) { selD.disabled = true; return; }
+    if (!prov) { selD.disabled = true; showV30AllStats(); return; }
     selD.disabled = false;
 
     const dists = _v30districts.filter(f => gp(f.properties,'pro_th','PRO_TH','PROVINCE') === prov);
