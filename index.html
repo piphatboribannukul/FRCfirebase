@@ -2672,6 +2672,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       <button class="ep-apply" onclick="applyStationK()" style="margin-top:4px;width:100%;font-size:10px;padding:4px;">✅ Apply K สถานีนี้ & Rebuild</button>
       <button onclick="resetStationK()" style="margin-top:3px;width:100%;font-size:9px;padding:3px;background:#fff0f5;color:#a06080;border:1px solid #e0c0d0;border-radius:4px;cursor:pointer;">↩ Reset เป็นค่า default</button>
     </div>
+    <button onclick="applyResearchK()" style="margin-top:6px;width:100%;font-size:10px;padding:5px;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:4px;cursor:pointer;font-weight:600;">📚 Auto K จากงานวิจัย ม.เกษตร (First-order)</button>
+    <div id="research-k-info" style="display:none;margin-top:4px;font-size:8px;color:#1565C0;background:#E3F2FD;padding:4px 6px;border-radius:4px;line-height:1.4;"></div>
     <div id="ep-station-k-list" style="margin-top:8px;font-size:8.5px;max-height:200px;overflow-y:auto;"></div>
     </div><!-- /sb-body EPANET -->
   </div>
@@ -3827,6 +3829,57 @@ function resetStationK() {
   renderStationKList();
   buildIdwCache();
   redrawContour();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📚 Auto K จากงานวิจัย ม.เกษตรศาสตร์ (First-order Kb)
+// อ้างอิง: โครงการ กนว. 32/2566 — EPANET-MSX Chlorine Loss Assessment
+// Kb(BK) = 0.778/day, Kb(MH) = 0.400/day, Kw = 0.1/day, D = 0.2m
+// k_total = Kb + 4×Kw/D = Kb + 2.0/day → แปลงเป็น /hr
+// ══════════════════════════════════════════════════════════════════════════════
+function applyResearchK() {
+  const Kb_BK = 0.778;  // /day — Bangkhen (จากการทดลอง 60 ตัวอย่าง)
+  const Kb_MH = 0.400;  // /day — Mahasawat (จากการทดลอง)
+  const Kw = 0.1;       // /day — Wall decay coefficient
+  const D  = 0.2;       // m    — Average pipe diameter (equivalent)
+  const wall_term = 4 * Kw / D; // = 2.0/day
+
+  const k_BK = (Kb_BK + wall_term) / 24; // 2.778/day = 0.1158/hr
+  const k_MH = (Kb_MH + wall_term) / 24; // 2.400/day = 0.1000/hr
+
+  // สถานีฝั่ง MH: SP06(ธนบุรี), SP11(MH สูบส่ง), SP12(MH สูบจ่าย),
+  //                SW08(ราษฎร์บูรณะ), SW09(เพชรเกษม), SW10(ท่าพระ)
+  const MH_STATIONS = new Set(['SP06','SP11','SP12','SW08','SW09','SW10']);
+
+  // สถานี Sensor ทั้งหมด
+  const allIds = SENSORS.map(s => s.id).filter(id => id.startsWith('SP') || id.startsWith('SW'));
+  
+  let applied = { bk: [], mh: [] };
+  allIds.forEach(sid => {
+    const isMH = MH_STATIONS.has(sid);
+    const k = isMH ? k_MH : k_BK;
+    CONTOUR_K_OVERRIDE[sid] = parseFloat(k.toFixed(4));
+    (isMH ? applied.mh : applied.bk).push(sid);
+  });
+
+  _saveContourK();
+  onStationKSelect();
+  renderStationKList();
+  buildIdwCache();
+  redrawContour();
+
+  // แสดงข้อมูล
+  const info = document.getElementById('research-k-info');
+  info.style.display = 'block';
+  info.innerHTML = `
+    <b>📚 ใช้ค่า Kb จากงานวิจัย ม.เกษตร (กนว.32/2566)</b><br>
+    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี)<br>
+    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี)<br>
+    ▸ Kw=${Kw}/day, D=${D}m, wall=${wall_term.toFixed(1)}/day<br>
+    <span style="color:#888;">สูตร: k_total = Kb + 4×Kw/D</span>
+  `;
+
+  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')})`);
 }
 
 // ── Firebase + localStorage save/load ────────────────────────────────────
