@@ -2907,6 +2907,27 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 </div>
 
 <div id="map-wrap">
+  <!-- ═══ Data Source Status Bar ═══ -->
+  <div id="data-status-bar" style="position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;
+    display:flex;gap:6px;padding:4px 10px;background:rgba(26,0,37,0.88);border-radius:20px;
+    box-shadow:0 2px 12px rgba(0,0,0,.3);font-size:10px;font-family:'Sarabun',sans-serif;backdrop-filter:blur(6px);
+    border:1px solid rgba(206,147,216,0.2);">
+    <span id="ds-frc" title="FRC Sensors (Firebase)" style="display:flex;align-items:center;gap:3px;color:#aaa;cursor:pointer;" onclick="showStatusDetail()">
+      <span id="ds-frc-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>FRC</span>
+    </span>
+    <span style="color:#555;">|</span>
+    <span id="ds-rtu" title="RTU Pressure Live" style="display:flex;align-items:center;gap:3px;color:#aaa;">
+      <span id="ds-rtu-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>RTU</span>
+    </span>
+    <span style="color:#555;">|</span>
+    <span id="ds-dma" title="DMA Flow/Pressure" style="display:flex;align-items:center;gap:3px;color:#aaa;">
+      <span id="ds-dma-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>DMA</span>
+    </span>
+    <span id="ds-time" style="color:#666;font-size:8px;margin-left:4px;"></span>
+  </div>
   <div id="map"></div>
   <div id="legend-panel">
     <h4 id="lg-title" style="flex:1;">มาตราส่วนสี</h4>
@@ -18075,5 +18096,106 @@ function resetScales() {
 document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   inp.addEventListener('input', updateScalePreview);
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Data Source Status Bar — แสดงสถานะ FRC / RTU / DMA
+// ══════════════════════════════════════════════════════════════════════════════
+(function(){
+  const STATUS_FRESH = 15 * 60 * 1000;  // 15 นาที = fresh
+  const STATUS_STALE = 30 * 60 * 1000;  // 30 นาที = stale
+
+  window._dsStatus = { frc: null, rtu: null, dma: null };
+
+  function setDot(id, state) {
+    const dot = document.getElementById(id + '-dot');
+    const label = document.getElementById(id);
+    if (!dot || !label) return;
+    const colors = { live: '#4CAF50', stale: '#FFC107', offline: '#666' };
+    dot.style.background = colors[state] || colors.offline;
+    // pulse animation for live
+    dot.style.animation = state === 'live' ? 'pulse 2s infinite' : 'none';
+  }
+
+  function updateStatusBar() {
+    const now = Date.now();
+
+    // FRC Sensors
+    if (window.SENSORS && window.SENSORS.some(s => s.frc > 0)) {
+      window._dsStatus.frc = now;
+      setDot('ds-frc', 'live');
+    }
+
+    // RTU
+    if (window._rtuLive && window._rtuLive.length > 0) {
+      window._dsStatus.rtu = now;
+      setDot('ds-rtu', 'live');
+    }
+
+    // DMA — check freshness from Firebase timestamp
+    if (window._dmaTimestamp) {
+      const age = now - new Date(window._dmaTimestamp).getTime();
+      if (age < STATUS_FRESH) setDot('ds-dma', 'live');
+      else if (age < STATUS_STALE) setDot('ds-dma', 'stale');
+      else setDot('ds-dma', 'offline');
+    }
+
+    // Update time
+    const timeEl = document.getElementById('ds-time');
+    if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  // Poll status every 30 seconds
+  setInterval(updateStatusBar, 30000);
+  // Initial update after 5 seconds
+  setTimeout(updateStatusBar, 5000);
+
+  // ── DMA from Firebase listener ──
+  function initDmaListener() {
+    if (typeof firebase === 'undefined' && typeof window._fbDb === 'undefined') {
+      // Try again later
+      setTimeout(initDmaListener, 5000);
+      return;
+    }
+    try {
+      // Use existing Firebase database reference
+      const dbRef = window._fbDb || (typeof firebase !== 'undefined' ? firebase.database() : null);
+      if (!dbRef) { setTimeout(initDmaListener, 5000); return; }
+
+      dbRef.ref('dma_realtime').on('value', snap => {
+        const val = snap.val();
+        if (!val || !val.data) return;
+        window._dmaData = val.data;
+        window._dmaTimestamp = val.timestamp;
+        window._dmaCount = val.count || Object.keys(val.data).length;
+        console.log(`[DMA] Firebase update: ${window._dmaCount} points, ts: ${val.timestamp}`);
+        updateStatusBar();
+      });
+      console.log('[DMA] Firebase listener started');
+    } catch(e) {
+      console.warn('[DMA] Firebase listener error:', e.message);
+      setTimeout(initDmaListener, 10000);
+    }
+  }
+  setTimeout(initDmaListener, 3000);
+
+  // ── Status detail popup ──
+  window.showStatusDetail = function() {
+    const frc = window.SENSORS ? window.SENSORS.filter(s => s.frc > 0).length : 0;
+    const rtu = window._rtuLive ? window._rtuLive.length : 0;
+    const dma = window._dmaCount || 0;
+    const dmaTs = window._dmaTimestamp ? new Date(window._dmaTimestamp).toLocaleString('th-TH') : 'ไม่มีข้อมูล';
+    const dmaAge = window._dmaTimestamp ? Math.round((Date.now() - new Date(window._dmaTimestamp).getTime()) / 60000) : -1;
+    const dmaStatus = dmaAge < 0 ? '❌ Offline' : dmaAge < 15 ? '🟢 Live' : dmaAge < 30 ? '🟡 Stale' : '🔴 Offline';
+
+    alert(
+      `📊 Data Source Status\n\n` +
+      `🟣 FRC Sensors: ${frc}/61 สถานี (Firebase real-time)\n` +
+      `🔵 RTU Pressure: ${rtu} สถานี (Live ทุก 5 นาที)\n` +
+      `🟢 DMA Flow/P: ${dma} จุด ${dmaStatus}\n` +
+      `    อัปเดตล่าสุด: ${dmaTs}${dmaAge >= 0 ? ' (' + dmaAge + ' นาทีที่แล้ว)' : ''}\n\n` +
+      `🔗 DMA Relay: เปิด DMA_Relay.html บน PC ภายใน กปน.`
+    );
+  };
+})();
 </script>
 </body></html>
