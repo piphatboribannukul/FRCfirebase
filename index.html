@@ -3336,23 +3336,24 @@ const VC_STATIONS = [
 // VC_PAIR: K (decay rate 1/hr) สำหรับ pair source→VC (ปรับได้จาก UI)
 // Travel time คำนวณจากระยะทางจริงใน EPANET (ไม่ใช้ค่าคงที่)
 const VC_PAIR = {
-  // rev22: K ปรับตาม zone — ฝั่งตะวันตก 0.07, ฝั่งตะวันออก 0.08
-  // West (TR1 + MTR): K = 0.07 /hr
-  "VC01": { K:0.0700, tt:2 },   // ประชานุกูล ← TR1 (West)
-  "VC02": { K:0.0700, tt:2 },   // เฉลิมพันธ์ ← TR1 (West)
-  "VC03": { K:0.0700, tt:2 },   // ประดิพัทธ์ ← TR1 (West, ปิด)
-  "VC04": { K:0.0700, tt:3 },   // สามเสน ← TR1 (West)
-  "VC05": { K:0.0700, tt:6 },   // สี่พระยา ← TR1 (West)
-  "VC06": { K:0.0700, tt:6 },   // เจริญนคร 2 (ลาดหญ้า) ← TR1 (West)
-  "VC07": { K:0.0700, tt:7 },   // เจริญนคร 34 (ราษฎร์บูรณะ) ← TR1 (West)
-  "VC08": { K:0.0700, tt:3 },   // กัลปพฤกษ์ ← MTR (West, ปิด)
-  "VC09": { K:0.0700, tt:6 },   // ลุมพินี ← TR1 (West)
-  "VC10": { K:0.0700, tt:7 },   // คลองเตย (สุนทรโกษา) ← TR2 (West)
-  // East (TR2 east + TR3): K = 0.08 /hr
-  "VC11": { K:0.0800, tt:7 },   // พระราม 9 ← TR2 (East)
-  "VC12": { K:0.0800, tt:4 },   // นวมินทร์ ← TR3 (East)
-  "VC13": { K:0.0800, tt:3 },   // มัยลาภ ← TR3 (East)
-  "VC14": { K:0.0800, tt:11 },  // วงแหวนตะวันออก ← TR3 (East)
+  // ════ ฝั่งเจ้าพระยา (BK) — K จากงานวิจัย ม.เกษตร: Kb=0.778/day ════
+  // k_total = (0.778 + 2.0) / 24 = 0.1158 /hr
+  "VC01": { K:0.1158, tt:2 },   // วงศ์สว่าง (ประชานุกูล) ← TR1
+  "VC02": { K:0.1158, tt:2 },   // เฉลิมพันธ์ ← TR1
+  "VC03": { K:0.1158, tt:2 },   // ประดิพัทธ์ ← TR1
+  "VC04": { K:0.1158, tt:3 },   // สามเสน ← TR1
+  "VC05": { K:0.1158, tt:6 },   // สี่พระยา ← TR1
+  "VC06": { K:0.1158, tt:6 },   // เจริญนคร 2 (ลาดหญ้า) ← TR1
+  "VC09": { K:0.1158, tt:6 },   // ลุมพินี (พระราม 4) ← TR1
+  "VC10": { K:0.1158, tt:7 },   // คลองเตย (สุนทรโกษา) ← TR2
+  "VC11": { K:0.1158, tt:7 },   // พระราม 9 ← TR2
+  "VC12": { K:0.1158, tt:4 },   // นวมินทร์ (ประเสริฐมนูกิจ) ← TR3
+  "VC13": { K:0.1158, tt:3 },   // มัยลาภ ← TR3
+  "VC14": { K:0.1158, tt:11 },  // วงแหวนตะวันออก ← TR3
+  // ════ ฝั่งมหาสวัสดิ์ (MH) — K จากงานวิจัย ม.เกษตร: Kb=0.400/day ════
+  // k_total = (0.400 + 2.0) / 24 = 0.1000 /hr
+  "VC07": { K:0.1000, tt:7 },   // เจริญนคร 34 (ราษฎร์บูรณะ) ← MTR
+  "VC08": { K:0.1000, tt:3 },   // ราชมนตรี (กัลปพฤกษ์) ← MTR
 };
 
 // ── VC helper functions ──────────────────────────────────────────────
@@ -3842,8 +3843,8 @@ function resetStationK() {
   delete CONTOUR_K_OVERRIDE[sid];
   // rev22: reset VC_PAIR.K กลับเป็นค่า default ตามฝั่ง
   if (sid.startsWith('VC') && typeof VC_PAIR !== 'undefined' && VC_PAIR[sid]) {
-    const eastVCs = new Set(['VC11','VC12','VC13','VC14']);
-    VC_PAIR[sid].K = eastVCs.has(sid) ? 0.0800 : 0.0700;
+    const mhVCs = new Set(['VC07','VC08']);
+    VC_PAIR[sid].K = mhVCs.has(sid) ? 0.1000 : 0.1158;
   }
   _saveContourK();
   onStationKSelect(); // refresh display
@@ -3883,6 +3884,15 @@ function applyResearchK() {
     (isMH ? applied.mh : applied.bk).push(sid);
   });
 
+  // VC stations — ฝั่งเจ้าพระยา (BK) vs ฝั่งมหาสวัสดิ์ (MH)
+  const MH_VCS = new Set(['VC07','VC08']); // เจริญนคร 34, ราชมนตรี
+  let vcApplied = { bk: [], mh: [] };
+  Object.keys(VC_PAIR).forEach(vcId => {
+    const isMH = MH_VCS.has(vcId);
+    VC_PAIR[vcId].K = isMH ? parseFloat(k_MH.toFixed(4)) : parseFloat(k_BK.toFixed(4));
+    (isMH ? vcApplied.mh : vcApplied.bk).push(vcId);
+  });
+
   _saveContourK();
   onStationKSelect();
   renderStationKList();
@@ -3894,13 +3904,13 @@ function applyResearchK() {
   info.style.display = 'block';
   info.innerHTML = `
     <b>📚 ใช้ค่า Kb จากงานวิจัย ม.เกษตร (กนว.32/2566)</b><br>
-    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี)<br>
-    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี)<br>
+    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี + ${vcApplied.bk.length} VC)<br>
+    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี + ${vcApplied.mh.length} VC)<br>
     ▸ Kw=${Kw}/day, D=${D}m, wall=${wall_term.toFixed(1)}/day<br>
     <span style="color:#888;">สูตร: k_total = Kb + 4×Kw/D</span>
   `;
 
-  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')})`);
+  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')} + VC:${vcApplied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')} + VC:${vcApplied.mh.join(',')})`);
 }
 
 // ── Firebase + localStorage save/load ────────────────────────────────────
@@ -18120,9 +18130,13 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
     const now = Date.now();
 
     // FRC Sensors
-    if (window.SENSORS && window.SENSORS.some(s => s.frc > 0)) {
-      window._dsStatus.frc = now;
-      setDot('ds-frc', 'live');
+    if (window.SENSORS && window.SENSORS.length > 0) {
+      const frcCount = window.SENSORS.filter(s => s.frc !== null && s.frc !== undefined && Number(s.frc) > 0).length;
+      if (frcCount > 0) {
+        window._dsStatus.frc = now;
+        window._dsFrcCount = frcCount;
+        setDot('ds-frc', 'live');
+      }
     }
 
     // RTU
@@ -18146,8 +18160,10 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
   // Poll status every 30 seconds
   setInterval(updateStatusBar, 30000);
-  // Initial update after 5 seconds
-  setTimeout(updateStatusBar, 5000);
+  // Initial update after 10 seconds (wait for SENSORS to load)
+  setTimeout(updateStatusBar, 10000);
+  // Update again after 30 seconds for safe measure
+  setTimeout(updateStatusBar, 30000);
 
   // ── DMA from Firebase listener ──
   function initDmaListener() {
@@ -18180,7 +18196,8 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
   // ── Status detail popup ──
   window.showStatusDetail = function() {
-    const frc = window.SENSORS ? window.SENSORS.filter(s => s.frc > 0).length : 0;
+    const frc = window._dsFrcCount || (window.SENSORS ? window.SENSORS.filter(s => Number(s.frc) > 0).length : 0);
+    const total = window.SENSORS ? window.SENSORS.length : 61;
     const rtu = window._rtuLive ? window._rtuLive.length : 0;
     const dma = window._dmaCount || 0;
     const dmaTs = window._dmaTimestamp ? new Date(window._dmaTimestamp).toLocaleString('th-TH') : 'ไม่มีข้อมูล';
@@ -18189,7 +18206,7 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
     alert(
       `📊 Data Source Status\n\n` +
-      `🟣 FRC Sensors: ${frc}/61 สถานี (Firebase real-time)\n` +
+      `🟣 FRC Sensors: ${frc}/${total} สถานี (Firebase real-time)\n` +
       `🔵 RTU Pressure: ${rtu} สถานี (Live ทุก 5 นาที)\n` +
       `🟢 DMA Flow/P: ${dma} จุด ${dmaStatus}\n` +
       `    อัปเดตล่าสุด: ${dmaTs}${dmaAge >= 0 ? ' (' + dmaAge + ' นาทีที่แล้ว)' : ''}\n\n` +
