@@ -18167,23 +18167,18 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
   // ── DMA from Firebase listener ──
   function initDmaListener() {
-    if (typeof firebase === 'undefined' && typeof window._fbDb === 'undefined') {
-      // Try again later
+    if (!window._fbReady || !window._fb || !window._fbRef || !window._fbOnValue) {
       setTimeout(initDmaListener, 5000);
       return;
     }
     try {
-      // Use existing Firebase database reference
-      const dbRef = window._fbDb || (typeof firebase !== 'undefined' ? firebase.database() : null);
-      if (!dbRef) { setTimeout(initDmaListener, 5000); return; }
-
-      dbRef.ref('dma_realtime').on('value', snap => {
-        const val = snap.val();
+      _fbOnValue(_fbRef(_fb, 'dma_realtime'), function(snap) {
+        var val = snap.val();
         if (!val || !val.data) return;
         window._dmaData = val.data;
         window._dmaTimestamp = val.timestamp;
         window._dmaCount = val.count || Object.keys(val.data).length;
-        console.log(`[DMA] Firebase update: ${window._dmaCount} points, ts: ${val.timestamp}`);
+        console.log('[DMA] Firebase update: ' + window._dmaCount + ' points, ts: ' + val.timestamp);
         updateStatusBar();
       });
       console.log('[DMA] Firebase listener started');
