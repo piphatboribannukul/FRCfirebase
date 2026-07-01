@@ -1389,7 +1389,7 @@ body.dark .leaflet-marker-pane{filter:none !important;}
 body.dark .leaflet-popup-pane{filter:none !important;}
 body.dark .leaflet-tooltip-pane{filter:none !important;}
 /* K Tuner / History blocks */
-body.dark #ktuner-block, body.dark #hist-block{color:var(--text-secondary) !important;}
+body.dark #ktuner-block{color:var(--text-secondary) !important;}
 body.dark #ktuner-block input[type="range"]{accent-color:var(--neon-pink) !important;}
 body.dark #hist-result{background:rgba(255,255,255,.03) !important;border-color:var(--glass-border) !important;color:#a080c0 !important;}
 /* Leaflet controls */
@@ -2671,9 +2671,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
       <button class="ep-apply" onclick="applyStationK()" style="margin-top:4px;width:100%;font-size:10px;padding:4px;">✅ Apply K สถานีนี้ & Rebuild</button>
       <button onclick="resetStationK()" style="margin-top:3px;width:100%;font-size:9px;padding:3px;background:#fff0f5;color:#a06080;border:1px solid #e0c0d0;border-radius:4px;cursor:pointer;">↩ Reset เป็นค่า default</button>
-      <button onclick="applyResearchK()" style="margin-top:3px;width:100%;font-size:9px;padding:4px;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:4px;cursor:pointer;font-weight:600;">📚 Auto K จากงานวิจัย ม.เกษตร (First-order)</button>
-      <div id="research-k-info" style="display:none;margin-top:4px;font-size:8px;color:#1565C0;background:#E3F2FD;padding:4px 6px;border-radius:4px;line-height:1.4;"></div>
     </div>
+    <button onclick="applyResearchK()" style="margin-top:6px;width:100%;font-size:10px;padding:5px;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:4px;cursor:pointer;font-weight:600;">📚 Auto K จากงานวิจัย ม.เกษตร (First-order)</button>
+    <div id="research-k-info" style="display:none;margin-top:4px;font-size:8px;color:#1565C0;background:#E3F2FD;padding:4px 6px;border-radius:4px;line-height:1.4;"></div>
     <div id="ep-station-k-list" style="margin-top:8px;font-size:8.5px;max-height:200px;overflow-y:auto;"></div>
     </div><!-- /sb-body EPANET -->
   </div>
@@ -2721,26 +2721,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     </div><!-- /sb-body -->
   </div>
 
-  <!-- V27 Hybrid K Panel -->
-  <div class="sblock sb-menu" onclick="toggleSbMenu(this)" id="hybridk-block">
-    <h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
-      🔬 Hybrid K (Live Back-calc)
-      <span id="hybrid-k-badge" style="display:none;font-size:9px;font-weight:600;background:linear-gradient(135deg,#00796b,#004d40);color:#fff;padding:2px 7px;border-radius:10px;margin-left:6px;"></span>
-      <span class="sb-arrow">▸</span>
-    </h3>
-    <div class="sb-body" style="display:none;">
-      <div style="font-size:10px;color:#006060;margin-bottom:8px;line-height:1.6;background:#e8f5e9;border-radius:6px;padding:6px 8px;">
-        <b>V27 Hybrid K</b> — back-calculate K ต่อสถานีจาก live FRC จริง<br>
-        สูตร: <code>K = −ln(FRC_dest / FRC_src) / tt</code><br>
-        Priority: Manual override &gt; <b>Hybrid K</b> &gt; 3mo-fit &gt; fallback<br>
-        🟢 &lt;5% err &nbsp;🟡 5–15% &nbsp;🔴 &gt;15%
-      </div>
-      <div id="hybridk-list" style="max-height:300px;overflow-y:auto;font-size:10px;"></div>
-      <div style="display:flex;gap:6px;margin-top:8px;">
-        <button class="ep-apply" onclick="renderHybridKPanel()" style="flex:1;font-size:10px;">🔄 Refresh</button>
-        <button class="ep-apply" onclick="(()=>{Object.keys(HYBRID_K).forEach(k=>delete HYBRID_K[k]);Object.keys(HYBRID_K_META).forEach(k=>delete HYBRID_K_META[k]);renderHybridKPanel();buildIdwCache();redrawContour();alert('ล้าง Hybrid K แล้ว — จะ back-calc ใหม่รอบถัดไป');})();" style="flex:1;font-size:10px;background:#600;color:#fdd;border-color:#900;">🗑 ล้าง</button>
-      </div>
-    </div><!-- /sb-body hybridk -->
+  <!-- Hybrid K removed (v35 cleaning) -->
   </div>
 
   <!-- K Tuner -->
@@ -2907,6 +2888,27 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 </div>
 
 <div id="map-wrap">
+  <!-- ═══ Data Source Status Bar ═══ -->
+  <div id="data-status-bar" style="position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;
+    display:flex;gap:6px;padding:4px 10px;background:rgba(26,0,37,0.88);border-radius:20px;
+    box-shadow:0 2px 12px rgba(0,0,0,.3);font-size:10px;font-family:'Sarabun',sans-serif;backdrop-filter:blur(6px);
+    border:1px solid rgba(206,147,216,0.2);">
+    <span id="ds-frc" title="FRC Sensors (Firebase)" style="display:flex;align-items:center;gap:3px;color:#aaa;cursor:pointer;" onclick="showStatusDetail()">
+      <span id="ds-frc-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>FRC</span>
+    </span>
+    <span style="color:#555;">|</span>
+    <span id="ds-rtu" title="RTU Pressure Live" style="display:flex;align-items:center;gap:3px;color:#aaa;">
+      <span id="ds-rtu-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>RTU</span>
+    </span>
+    <span style="color:#555;">|</span>
+    <span id="ds-dma" title="DMA Flow/Pressure" style="display:flex;align-items:center;gap:3px;color:#aaa;">
+      <span id="ds-dma-dot" style="width:7px;height:7px;border-radius:50%;background:#666;"></span>
+      <span>DMA</span>
+    </span>
+    <span id="ds-time" style="color:#666;font-size:8px;margin-left:4px;"></span>
+  </div>
   <div id="map"></div>
   <div id="legend-panel">
     <h4 id="lg-title" style="flex:1;">มาตราส่วนสี</h4>
@@ -3315,23 +3317,24 @@ const VC_STATIONS = [
 // VC_PAIR: K (decay rate 1/hr) สำหรับ pair source→VC (ปรับได้จาก UI)
 // Travel time คำนวณจากระยะทางจริงใน EPANET (ไม่ใช้ค่าคงที่)
 const VC_PAIR = {
-  // rev22: K ปรับตาม zone — ฝั่งตะวันตก 0.07, ฝั่งตะวันออก 0.08
-  // West (TR1 + MTR): K = 0.07 /hr
-  "VC01": { K:0.0700, tt:2 },   // ประชานุกูล ← TR1 (West)
-  "VC02": { K:0.0700, tt:2 },   // เฉลิมพันธ์ ← TR1 (West)
-  "VC03": { K:0.0700, tt:2 },   // ประดิพัทธ์ ← TR1 (West, ปิด)
-  "VC04": { K:0.0700, tt:3 },   // สามเสน ← TR1 (West)
-  "VC05": { K:0.0700, tt:6 },   // สี่พระยา ← TR1 (West)
-  "VC06": { K:0.0700, tt:6 },   // เจริญนคร 2 (ลาดหญ้า) ← TR1 (West)
-  "VC07": { K:0.0700, tt:7 },   // เจริญนคร 34 (ราษฎร์บูรณะ) ← TR1 (West)
-  "VC08": { K:0.0700, tt:3 },   // กัลปพฤกษ์ ← MTR (West, ปิด)
-  "VC09": { K:0.0700, tt:6 },   // ลุมพินี ← TR1 (West)
-  "VC10": { K:0.0700, tt:7 },   // คลองเตย (สุนทรโกษา) ← TR2 (West)
-  // East (TR2 east + TR3): K = 0.08 /hr
-  "VC11": { K:0.0800, tt:7 },   // พระราม 9 ← TR2 (East)
-  "VC12": { K:0.0800, tt:4 },   // นวมินทร์ ← TR3 (East)
-  "VC13": { K:0.0800, tt:3 },   // มัยลาภ ← TR3 (East)
-  "VC14": { K:0.0800, tt:11 },  // วงแหวนตะวันออก ← TR3 (East)
+  // ════ ฝั่งเจ้าพระยา (BK) — K จากงานวิจัย ม.เกษตร: Kb=0.778/day ════
+  // k_total = (0.778 + 2.0) / 24 = 0.1158 /hr
+  "VC01": { K:0.1158, tt:2 },   // วงศ์สว่าง (ประชานุกูล) ← TR1
+  "VC02": { K:0.1158, tt:2 },   // เฉลิมพันธ์ ← TR1
+  "VC03": { K:0.1158, tt:2 },   // ประดิพัทธ์ ← TR1
+  "VC04": { K:0.1158, tt:3 },   // สามเสน ← TR1
+  "VC05": { K:0.1158, tt:6 },   // สี่พระยา ← TR1
+  "VC06": { K:0.1158, tt:6 },   // เจริญนคร 2 (ลาดหญ้า) ← TR1
+  "VC09": { K:0.1158, tt:6 },   // ลุมพินี (พระราม 4) ← TR1
+  "VC10": { K:0.1158, tt:7 },   // คลองเตย (สุนทรโกษา) ← TR2
+  "VC11": { K:0.1158, tt:7 },   // พระราม 9 ← TR2
+  "VC12": { K:0.1158, tt:4 },   // นวมินทร์ (ประเสริฐมนูกิจ) ← TR3
+  "VC13": { K:0.1158, tt:3 },   // มัยลาภ ← TR3
+  "VC14": { K:0.1158, tt:11 },  // วงแหวนตะวันออก ← TR3
+  // ════ ฝั่งมหาสวัสดิ์ (MH) — K จากงานวิจัย ม.เกษตร: Kb=0.400/day ════
+  // k_total = (0.400 + 2.0) / 24 = 0.1000 /hr
+  "VC07": { K:0.1000, tt:7 },   // เจริญนคร 34 (ราษฎร์บูรณะ) ← MTR
+  "VC08": { K:0.1000, tt:3 },   // ราชมนตรี (กัลปพฤกษ์) ← MTR
 };
 
 // ── VC helper functions ──────────────────────────────────────────────
@@ -3521,211 +3524,15 @@ const CONTOUR_K_OVERRIDE = {
 // V27 HYBRID K — back-calculate K ต่อสถานีจาก live FRC sensor จริง
 // วิธี: K_hybrid = -ln(FRC_dest / FRC_src) / travel_time
 // อัปเดตทุกรอบ live data (~30 วิ) ผ่าน updateHybridK()
-// Priority: CONTOUR_K_OVERRIDE > HYBRID_K > STATION_K_OVERRIDE > K_total
+// Priority: CONTOUR_K_OVERRIDE > STATION_K_OVERRIDE > K_total
 // ══════════════════════════════════════════════════════════════════════════════
-const HYBRID_K = {};           // { destId: k_hr } — back-calc จาก live sensor
-const HYBRID_K_META = {};      // { destId: {src, frc_src, frc_dest, tt, ts, quality} }
-const HYBRID_K_MIN = 0.002;    // lower cap: half-life ~347 hr
-const HYBRID_K_MAX = 0.06;     // upper cap: half-life ~11.6 hr (เข้มขึ้นจาก 0.15)
-const HYBRID_K_ALPHA = 0.25;   // EWA smoothing: ใหม่ 25% เก่า 75% (กัน spike)
 
-// คู่ src→dest เดียวกับ PAIR_TT_GLOBAL ใน fitAllK
-// ใช้ live FRC แทน historical
-const HYBRID_PAIRS = [
-  // tt มาจาก TRAVEL_TIME ในโค้ด (ค่ากลางของช่วง)
-  // ── Dis1 (SP04) ──────────────────────────────────────────────────────────
-  { src:'SP04', dest:'SM01', tt:4.5  }, // Dis1 → นนทบุรี          '4.5'
-  { src:'SP04', dest:'S003', tt:5    }, // Dis1 → กองพัน            '5'
-  { src:'SP04', dest:'S002', tt:6    }, // Dis1 → ทหารขนส่ง         '5-7'→6
-  { src:'SP04', dest:'S001', tt:11.5 }, // Dis1 → เตรียมอุดมฯ       '11-12'→11.5
-  // ── Dis2 (SP05) ──────────────────────────────────────────────────────────
-  { src:'SP05', dest:'S004', tt:3.5  }, // Dis2 → ภูมิพล            '3.5'
-  { src:'SP05', dest:'S005', tt:10   }, // Dis2 → ซีจีเอช            '10'
-  // ── สจ.ลุมพินี (SW01) ────────────────────────────────────────────────────
-  { src:'SW01', dest:'SM02', tt:1    }, // ลุมพินี → ทุ่งมหาเมฆ      '1'
-  // ── สจ.ลาดพร้าว (SW02) ───────────────────────────────────────────────────
-  { src:'SW02', dest:'S008', tt:1.5  }, // ลาดพร้าว → โอสถสภา        '1-2'→1.5
-  { src:'SW02', dest:'S009', tt:5    }, // ลาดพร้าว → เกร็ดตระการ    '5'
-  // ── สจ.คลองเตย (SW03) ────────────────────────────────────────────────────
-  { src:'SW03', dest:'SM03', tt:2.5  }, // คลองเตย → สุขุมวิท        '2-3'→2.5
-  { src:'SW03', dest:'S010', tt:5    }, // คลองเตย → ท้องฟ้าจำลอง    '5'
-  // ── สจ.สำโรง (SW04) ──────────────────────────────────────────────────────
-  { src:'SW04', dest:'SM04', tt:2.5  }, // สำโรง → สมุทรปราการ       '2-3'→2.5
-  { src:'SW04', dest:'S011', tt:4.5  }, // สำโรง → ศิครินทร์         '4-5'→4.5
-  { src:'SW04', dest:'S012', tt:6.5  }, // สำโรง → หาดอมรา           '6-7'→6.5
-  { src:'SW04', dest:'S013', tt:3.5  }, // สำโรง → เอจีซี            '3-4'→3.5
-  { src:'SW04', dest:'S014', tt:4    }, // สำโรง → โรงไฟฟ้า          '3-5'→4
-  // ── สจ.มีนบุรี (SW05) ────────────────────────────────────────────────────
-  { src:'SW05', dest:'SM05', tt:2.5  }, // มีนบุรี → สาขามีนบุรี     '2-3'→2.5
-  { src:'SW05', dest:'S016', tt:1.5  }, // มีนบุรี → บางชัน          '1-2'→1.5
-  { src:'SW05', dest:'S017', tt:4.5  }, // มีนบุรี → ไตเทียม         '4-5'→4.5
-  { src:'SW05', dest:'S015', tt:15   }, // มีนบุรี → มหาจักร         '15'
-  // ── สจ.ลาดกระบัง (SW06) ──────────────────────────────────────────────────
-  { src:'SW06', dest:'S018', tt:5    }, // ลาดกระบัง → นิคมลาดกระบัง '5'
-  { src:'SW06', dest:'S019', tt:5    }, // ลาดกระบัง → สุวรรณภูมิ    '5'
-  { src:'SW06', dest:'S020', tt:6    }, // ลาดกระบัง → หัวเฉียว      '5-7'→6
-  // ── สจ.บางพลี (SW07) ─────────────────────────────────────────────────────
-  { src:'SW07', dest:'S021', tt:5    }, // บางพลี → นิคมบางพลี       '4-6'→5
-  { src:'SW07', dest:'S023', tt:7    }, // บางพลี → บางปู            '6-8'→7
-  { src:'SW07', dest:'S022', tt:17   }, // บางพลี → คลองด่าน         '17'
-  // ── สจ.ราษฎร์บูรณะ (SW08) ───────────────────────────────────────────────
-  { src:'SW08', dest:'S025', tt:3.5  }, // ราษฎร์บูรณะ → ศูนย์กีฬา  '3-4'→3.5
-  { src:'SW08', dest:'S026', tt:9.5  }, // ราษฎร์บูรณะ → มจธ         '8-11'→9.5
-  // ── สจ.เพชรเกษม (SW09) ───────────────────────────────────────────────────
-  { src:'SW09', dest:'S027', tt:6.5  }, // เพชรเกษม → เอเชียอาคเนย์  '6-7'→6.5
-  { src:'SW09', dest:'S028', tt:5.5  }, // เพชรเกษม → เรือนจำธนบุรี  '5-6'→5.5
-  // ── สจ.ท่าพระ (SW10) ─────────────────────────────────────────────────────
-  { src:'SW10', dest:'S024', tt:3.5  }, // ท่าพระ → บางแค            '3-4'→3.5
-  // ── MDIS/มหาสวัสดิ์ (SP12) ───────────────────────────────────────────────
-  { src:'SP12', dest:'S029', tt:4.5  }, // MDIS → บดินทรเดชา         '4.5'
-  { src:'SP12', dest:'SM06', tt:10.5 }, // MDIS → บางบัวทอง          '10.5'
-  { src:'SP12', dest:'S030', tt:12   }, // MDIS → ราชวินิต           '12'
-  { src:'SP12', dest:'S031', tt:16.5 }, // MDIS → ไทรน้อย            '16.5'
-  { src:'SP12', dest:'S032', tt:6.5  }, // MDIS → ตั้งพิรุฬห์ธรรม    '6-7'→6.5
-  // ── สามเสน 3 (SP09) ──────────────────────────────────────────────────────
-  { src:'SP09', dest:'S006', tt:1    }, // สามเสน3 → จิตรลดา         '1'
-  // ── ธนบุรี (SP06) ────────────────────────────────────────────────────────
-  { src:'SP06', dest:'S007', tt:2    }, // ธนบุรี → ศิริราช           '2'
-  // ── พหลโยธิน (SW11) ──────────────────────────────────────────────────────
-  { src:'SW11', dest:'S002', tt:6    }, // พหลโยธิน → ทหารขนส่ง      '5-7'→6
-];
 
-/**
- * updateHybridK() — เรียกทุกรอบที่ได้ live data ใหม่
- * ใช้ FRC live ของ src และ dest (ณ ปัจจุบัน) + travel time
- * back-calculate K แล้ว smooth ด้วย EWA
- */
-function updateHybridK() {
-  if (!SENSORS || SENSORS.length === 0) return;
 
-  // build lookup id → sensor (live frc) — รองรับ string id เช่น 'SP04', 'SM01'
-  const byId = {};
-  for (const s of SENSORS) {
-    if (s.id != null) byId[String(s.id)] = s;
-  }
-
-  let updated = 0;
-  let skipped = 0;
-  for (const pair of HYBRID_PAIRS) {
-    const src  = byId[pair.src];
-    const dest = byId[pair.dest];
-    if (!src || !dest) { skipped++; continue; }
-
-    const fSrc  = src.frc;
-    const fDest = dest.frc;
-    if (!fSrc  || fSrc  <= 0) continue;
-    if (!fDest || fDest <= 0) continue;
-    // sanity: ปลายทางต้องไม่สูงกว่าต้นทางเกิน 20%
-    if (fDest > fSrc * 1.20) continue;
-    // sanity: ถ้า decay เกือบ 0 คงเกิด sensor error
-    if (fDest < fSrc * 0.01) continue;
-
-    const ratio = fDest / fSrc;
-    const kRaw  = -Math.log(ratio) / pair.tt; // k_per_hour
-
-    if (kRaw < HYBRID_K_MIN || kRaw > HYBRID_K_MAX) continue;
-
-    // EWA smoothing
-    const kPrev = HYBRID_K[pair.dest];
-    const kNew  = kPrev != null
-      ? kPrev * (1 - HYBRID_K_ALPHA) + kRaw * HYBRID_K_ALPHA
-      : kRaw;
-
-    HYBRID_K[pair.dest] = kNew;
-
-    // quality flag
-    const diffPct = Math.abs(fDest - fSrc * Math.exp(-kNew * pair.tt)) / fSrc * 100;
-    const quality = diffPct < 5 ? '🟢' : diffPct < 15 ? '🟡' : '🔴';
-
-    HYBRID_K_META[pair.dest] = {
-      src: pair.src, srcName: src.name || pair.src,
-      frc_src: fSrc.toFixed(3), frc_dest: fDest.toFixed(3),
-      tt: pair.tt, kRaw: kRaw.toFixed(5), kSmooth: kNew.toFixed(5),
-      quality, ts: Date.now()
-    };
-
-    // propagate K ไปยัง src ด้วย (ถ้ายังไม่มี)
-    if (HYBRID_K[pair.src] == null) HYBRID_K[pair.src] = kNew;
-
-    updated++;
-  }
-
-  console.log(`[HybridK] updated=${updated} skipped=${skipped} total_pairs=${HYBRID_PAIRS.length}`, HYBRID_K);
-  if (updated > 0) _updateHybridBadge(updated);
-}
-
-function _updateHybridBadge(n) {
-  const el = document.getElementById('hybrid-k-badge');
-  if (el) {
-    el.textContent = `🔬 Hybrid K: ${n} สถานี`;
-    el.style.display = 'inline-block';
-  }
-}
 
 /**
  * renderHybridKPanel() — แสดงตาราง Hybrid K ใน sidebar
  */
-function renderHybridKPanel() {
-  const container = document.getElementById('hybridk-list');
-  if (!container) return;
-
-  const pairs = Object.keys(HYBRID_K_META);
-  if (pairs.length === 0) {
-    container.innerHTML = '<div style="color:#a0a0a0;text-align:center;padding:12px;">รอ live data รอบถัดไป...</div>';
-    return;
-  }
-
-  // หา sensor name จาก id
-  const byId = {};
-  for (const s of SENSORS) if (s.id != null) byId[String(s.id)] = s.name || s.id;
-
-  let html = `<table style="width:100%;border-collapse:collapse;font-size:9.5px;">
-    <thead><tr style="background:#b2dfdb;color:#004d40;text-align:center;">
-      <th style="padding:3px 4px;">สถานี</th>
-      <th>Src→Dest FRC</th>
-      <th>K hybrid</th>
-      <th>HL</th>
-      <th>Q</th>
-    </tr></thead><tbody>`;
-
-  // เรียงตาม dest id
-  const sorted = pairs.slice().sort((a,b) => {
-    const ma = HYBRID_K_META[a], mb = HYBRID_K_META[b];
-    return (ma.quality < mb.quality ? -1 : ma.quality > mb.quality ? 1 : 0);
-  });
-
-  for (const destId of sorted) {
-    const m = HYBRID_K_META[destId];
-    const k = HYBRID_K[destId];
-    const hl = k > 0 ? (0.693 / k).toFixed(1) : '∞';
-    const destName = (byId[destId] || destId).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.').substring(0,14);
-    const srcName  = (byId[m.src] || m.src).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.').substring(0,10);
-    const rowBg = m.quality === '🟢' ? '#f1f8e9' : m.quality === '🟡' ? '#fffde7' : '#fce4ec';
-    html += `<tr style="background:${rowBg};border-bottom:1px solid #e0e0e0;">
-      <td style="padding:3px 4px;font-weight:600;">${destName}</td>
-      <td style="text-align:center;color:#1565c0;">${m.frc_src}→${m.frc_dest}</td>
-      <td style="text-align:center;font-family:monospace;">${parseFloat(m.kSmooth).toFixed(4)}</td>
-      <td style="text-align:center;">${hl}h</td>
-      <td style="text-align:center;">${m.quality}</td>
-    </tr>`;
-  }
-
-  // สถานีที่ยังไม่มี Hybrid K
-  const allDests = new Set(HYBRID_PAIRS.map(p => p.dest));
-  const missing = [...allDests].filter(d => !HYBRID_K[d]);
-  if (missing.length > 0) {
-    html += `<tr><td colspan="5" style="color:#999;padding:4px 4px;font-size:9px;">
-      ⏳ รอข้อมูล: ${missing.map(d => byId[d] || d).join(', ').substring(0,80)}
-    </td></tr>`;
-  }
-
-  html += `</tbody></table>
-    <div style="margin-top:6px;font-size:9px;color:#555;text-align:right;">
-      อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')} | ${pairs.length}/${allDests.size} สถานี
-    </div>`;
-
-  container.innerHTML = html;
-}
 
 // Source stations สำหรับ dropdown (pump + plant ที่มี zone)
 const _EP_PUMP_STATIONS = [];
@@ -3821,8 +3628,8 @@ function resetStationK() {
   delete CONTOUR_K_OVERRIDE[sid];
   // rev22: reset VC_PAIR.K กลับเป็นค่า default ตามฝั่ง
   if (sid.startsWith('VC') && typeof VC_PAIR !== 'undefined' && VC_PAIR[sid]) {
-    const eastVCs = new Set(['VC11','VC12','VC13','VC14']);
-    VC_PAIR[sid].K = eastVCs.has(sid) ? 0.0800 : 0.0700;
+    const mhVCs = new Set(['VC07','VC08']);
+    VC_PAIR[sid].K = mhVCs.has(sid) ? 0.1000 : 0.1158;
   }
   _saveContourK();
   onStationKSelect(); // refresh display
@@ -3862,6 +3669,15 @@ function applyResearchK() {
     (isMH ? applied.mh : applied.bk).push(sid);
   });
 
+  // VC stations — ฝั่งเจ้าพระยา (BK) vs ฝั่งมหาสวัสดิ์ (MH)
+  const MH_VCS = new Set(['VC07','VC08']); // เจริญนคร 34, ราชมนตรี
+  let vcApplied = { bk: [], mh: [] };
+  Object.keys(VC_PAIR).forEach(vcId => {
+    const isMH = MH_VCS.has(vcId);
+    VC_PAIR[vcId].K = isMH ? parseFloat(k_MH.toFixed(4)) : parseFloat(k_BK.toFixed(4));
+    (isMH ? vcApplied.mh : vcApplied.bk).push(vcId);
+  });
+
   _saveContourK();
   onStationKSelect();
   renderStationKList();
@@ -3873,13 +3689,13 @@ function applyResearchK() {
   info.style.display = 'block';
   info.innerHTML = `
     <b>📚 ใช้ค่า Kb จากงานวิจัย ม.เกษตร (กนว.32/2566)</b><br>
-    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี)<br>
-    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี)<br>
+    ▸ ฝั่ง BK: Kb=${Kb_BK}/day → k=${k_BK.toFixed(4)}/hr (${applied.bk.length} สถานี + ${vcApplied.bk.length} VC)<br>
+    ▸ ฝั่ง MH: Kb=${Kb_MH}/day → k=${k_MH.toFixed(4)}/hr (${applied.mh.length} สถานี + ${vcApplied.mh.length} VC)<br>
     ▸ Kw=${Kw}/day, D=${D}m, wall=${wall_term.toFixed(1)}/day<br>
     <span style="color:#888;">สูตร: k_total = Kb + 4×Kw/D</span>
   `;
 
-  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')})`);
+  console.log(`[ResearchK] ✅ Applied — BK: ${k_BK.toFixed(4)}/hr (${applied.bk.join(',')} + VC:${vcApplied.bk.join(',')}), MH: ${k_MH.toFixed(4)}/hr (${applied.mh.join(',')} + VC:${vcApplied.mh.join(',')})`);
 }
 
 // ── Firebase + localStorage save/load ────────────────────────────────────
@@ -3982,11 +3798,25 @@ function epanetDecay(dKm, sensor, lat, lon, distMult) {
   //   2) _pressureGrid fallback — passed in as distMult by callers that have (j,i),
   //      used when RTU live is unavailable (e.g. GitHub Pages / CORS / mixed-content)
   //   Only ONE source is ever applied → no double-counting.
+  //   3) DMA Flow velocity — when DMA data available from Firebase relay,
+  //      uses flow-derived velocity instead of Bernoulli approximation
   let L_m = dKm * 1000;
   let v_adj = EPANET.v;
   let rtuApplied = false;
-  // v34: use pre-injected rtuPressure on sensor (set by injectRtuPressureToSensors after each fetch)
-  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+
+  // v35-DMA: check if DMA-derived velocity is available for this sensor
+  // DMA velocity = average velocity from DMA flow meters in the sensor's zone
+  if (sensor && sensor._dmaVelocity > 0) {
+    // Use DMA flow-derived velocity as base, still modulated by RTU pressure ratio
+    v_adj = sensor._dmaVelocity;
+    if (sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+      const pFactor = Math.max(0.7, Math.min(1.5, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
+      v_adj *= pFactor;
+    }
+    rtuApplied = true;
+  }
+  // Fallback: v34 RTU Bernoulli (when DMA not available)
+  else if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
     const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
     v_adj = EPANET.v * pFactor;
     rtuApplied = true;
@@ -4005,11 +3835,7 @@ function epanetDecay(dKm, sensor, lat, lon, distMult) {
       return Math.exp(-(CONTOUR_K_OVERRIDE[sid] / 3600) * t);
     }
 
-    // Priority 2 (V27 Hybrid): HYBRID_K — back-calc จาก live FRC จริง
     // อัปเดตทุกรอบ live data เพื่อให้ K ตรงกับสภาพจริงปัจจุบัน
-    if (typeof HYBRID_K !== 'undefined' && HYBRID_K[sid] != null) {
-      return Math.exp(-(HYBRID_K[sid] / 3600) * t);
-    }
 
     // Priority 3: STATION_K_OVERRIDE — K fit จากข้อมูล 3 เดือน (hardcode)
     if (STATION_K_OVERRIDE[sid] != null) {
@@ -4359,7 +4185,6 @@ function _v33ResolvePoint(lat, lon) {
   const sid = String(nearest.id);
   let kNow = K_total; // fallback
   if (typeof CONTOUR_K_OVERRIDE !== 'undefined' && CONTOUR_K_OVERRIDE[sid] != null) kNow = CONTOUR_K_OVERRIDE[sid];
-  else if (typeof HYBRID_K !== 'undefined' && HYBRID_K[sid] != null) kNow = HYBRID_K[sid];
   else if (typeof STATION_K_OVERRIDE !== 'undefined' && STATION_K_OVERRIDE[sid] != null) kNow = STATION_K_OVERRIDE[sid];
 
   return { source: nearest, sid, dKm, tt_hr, kNow,
@@ -5495,7 +5320,7 @@ const rtuGroup = L.layerGroup(); // default: NOT added to map
         '<div class="popup-row"><span class="popup-label">Live Flow</span><span class="popup-val" style="color:'+(r.lA&&r.lA!=='black'?r.lA:'#94a3b8')+';font-weight:700">'+(r.lF!==0?r.lF.toLocaleString()+' m³/h':'—')+'</span></div>'+
         '<div class="popup-row"><span class="popup-label">ช่วงปกติ</span><span class="popup-val">'+(r.ptc||'—')+' mwc</span></div>'+
         (r.d > 0 ? '<div class="popup-row"><span class="popup-label">Diameter</span><span class="popup-val">'+r.d+' mm</span></div>' : '')+
-        (_rtuFrcMap[r.id] ? '<div class="popup-row"><span class="popup-label">FRC sim (EPANET)</span><span class="popup-val" style="color:'+(_rtuFrcMap[r.id].f>=1.0?'#22c55e':_rtuFrcMap[r.id].f>=0.5?'#eab308':'#ef4444')+'">'+_rtuFrcMap[r.id].f+' mg/L</span></div><div class="popup-row"><span class="popup-label">Dist from source</span><span class="popup-val">'+(_rtuFrcMap[r.id].ds/1000).toFixed(1)+' km</span></div>' : '')+(typeof HYBRID_K_META !== 'undefined' && HYBRID_K_META[r.id] ? '<div class="popup-row"><span class="popup-label">K source</span><span class="popup-val" style="color:#00897b;font-size:9px;">🔬 Hybrid Live '+HYBRID_K_META[r.id].quality+' (k='+parseFloat(HYBRID_K_META[r.id].kSmooth).toFixed(4)+'/hr)</span></div>' : '')+
+        (_rtuFrcMap[r.id] ? '<div class="popup-row"><span class="popup-label">FRC sim (EPANET)</span><span class="popup-val" style="color:'+(_rtuFrcMap[r.id].f>=1.0?'#22c55e':_rtuFrcMap[r.id].f>=0.5?'#eab308':'#ef4444')+'">'+_rtuFrcMap[r.id].f+' mg/L</span></div><div class="popup-row"><span class="popup-label">Dist from source</span><span class="popup-val">'+(_rtuFrcMap[r.id].ds/1000).toFixed(1)+' km</span></div>' : '')+
         '</div>';
       
       L.marker([r.lt, r.ln], {icon, zIndexOffset: isOnline ? 100 : -100})
@@ -7773,11 +7598,10 @@ const STATION_K_DEFAULT = {};
 })();
 
 function getStationKhr(stationCode) {
-  // priority: pending → K default (Firebase) → HYBRID_K (live) → hardcode override → default by zone → fallback
+  // priority: pending → K default (Firebase) → hardcode override → default by zone → fallback
   if (STATION_K_PENDING[stationCode] != null) return STATION_K_PENDING[stationCode];
   if (STATION_K[stationCode] != null) return STATION_K[stationCode];
   // V27 Hybrid: ใช้ K ที่ back-calc จาก live FRC (ถ้ามี)
-  if (typeof HYBRID_K !== 'undefined' && HYBRID_K[stationCode] != null) return HYBRID_K[stationCode];
   if (STATION_K_OVERRIDE[stationCode] != null) return STATION_K_OVERRIDE[stationCode];
   // หา sensor name จาก stationCode
   const s = SENSORS.find(x => x.id != null && x.id.toString() === stationCode.toString());
@@ -8445,7 +8269,7 @@ async function fetchAndUpdate() {
   }
 
   // V27 Hybrid K — back-calculate K จาก live FRC ก่อน rebuild cache
-  updateHybridK();
+  // updateHybridK() removed (v35)
   renderHybridKPanel();
 
   // redraw ทุก layer
@@ -11356,7 +11180,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     var k_hr=typeof getStationKhr==='function'?getStationKhr(key):0.05;
     var srcCode2=String(srcSensor.id).replace(/\/|\./g,'-');
     // debug: ดู K source + source history
-    var _kSrc = STATION_K_PENDING[key]!=null?'pending(auto-fit)':STATION_K[key]!=null?'K-default(Firebase)':(typeof HYBRID_K!=='undefined'&&HYBRID_K[key]!=null)?'HYBRID-live':STATION_K_OVERRIDE[key]!=null?'OVERRIDE(3mo-hardcode)':'fallback';
+    var _kSrc = STATION_K_PENDING[key]!=null?'pending(auto-fit)':STATION_K[key]!=null?'K-default(Firebase)':STATION_K_OVERRIDE[key]!=null?'OVERRIDE(3mo-hardcode)':'fallback';
     var _dbgHist = getHistCached();
     var _dbgSrcPts = (_dbgHist[srcCode2]||[]).length;
     var _dbgSample = _dbgSrcPts>0 ? (_dbgHist[srcCode2][_dbgSrcPts-1]) : null;
@@ -18075,5 +17899,230 @@ function resetScales() {
 document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   inp.addEventListener('input', updateScalePreview);
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Data Source Status Bar — แสดงสถานะ FRC / RTU / DMA
+// ══════════════════════════════════════════════════════════════════════════════
+(function(){
+  const STATUS_FRESH = 15 * 60 * 1000;  // 15 นาที = fresh
+  const STATUS_STALE = 30 * 60 * 1000;  // 30 นาที = stale
+
+  window._dsStatus = { frc: null, rtu: null, dma: null };
+
+  function setDot(id, state) {
+    const dot = document.getElementById(id + '-dot');
+    const label = document.getElementById(id);
+    if (!dot || !label) return;
+    const colors = { live: '#4CAF50', stale: '#FFC107', offline: '#666' };
+    dot.style.background = colors[state] || colors.offline;
+    // pulse animation for live
+    dot.style.animation = state === 'live' ? 'pulse 2s infinite' : 'none';
+  }
+
+  function updateStatusBar() {
+    const now = Date.now();
+
+    // FRC Sensors
+    if (window.SENSORS && window.SENSORS.length > 0) {
+      const frcCount = window.SENSORS.filter(s => s.frc !== null && s.frc !== undefined && Number(s.frc) > 0).length;
+      if (frcCount > 0) {
+        window._dsStatus.frc = now;
+        window._dsFrcCount = frcCount;
+        setDot('ds-frc', 'live');
+      }
+    }
+
+    // RTU
+    if (window._rtuLive && window._rtuLive.length > 0) {
+      window._dsStatus.rtu = now;
+      setDot('ds-rtu', 'live');
+    }
+
+    // DMA — check freshness from Firebase timestamp
+    if (window._dmaTimestamp) {
+      const age = now - new Date(window._dmaTimestamp).getTime();
+      if (age < STATUS_FRESH) setDot('ds-dma', 'live');
+      else if (age < STATUS_STALE) setDot('ds-dma', 'stale');
+      else setDot('ds-dma', 'offline');
+    }
+
+    // Update time
+    const timeEl = document.getElementById('ds-time');
+    if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  // Poll status every 30 seconds
+  setInterval(updateStatusBar, 30000);
+  // Initial update after 10 seconds (wait for SENSORS to load)
+  setTimeout(updateStatusBar, 10000);
+  // Update again after 30 seconds for safe measure
+  setTimeout(updateStatusBar, 30000);
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // DMA Engine v1 — 5 Features: Velocity, Pressure, Direction, Dead-end, Zone Map
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const SENSOR_BRANCH_MAP = {
+    'SP01':'01','SP02':'01','SP03':'01','SP04':'01','SP05':'01',
+    'SP06':'11','SP07':'04','SP08':'04','SP09':'04','SP10':'04',
+    'SP11':'54','SP12':'54',
+    'SW01':'05','SW02':'02','SW03':'05','SW04':'07','SW05':'06',
+    'SW06':'06','SW07':'56','SW08':'15','SW09':'13','SW10':'11','SW11':'02',
+    'SM01':'53','SM02':'05','SM03':'05','SM04':'55','SM05':'06','SM06':'54',
+  };
+  const DMA_PIPE_D = 0.3;
+
+  function flowToVelocity(F, D) {
+    const A = Math.PI * D * D / 4;
+    const Q = Math.abs(F) / 3600;
+    return Q / A;
+  }
+
+  function processDmaData() {
+    const data = window._dmaData;
+    if (!data || typeof data !== 'object') return;
+    const keys = Object.keys(data);
+    if (keys.length < 10) return;
+
+    const branchFlow = {}, branchPressure = {};
+    const deadEnds = [];
+    let flowInCount = 0, flowOutCount = 0;
+    const allVelocities = [];
+
+    keys.forEach(key => {
+      const d = data[key];
+      const F = d.F || d.f || 0;
+      const P = d.P || d.p || 0;
+      const match = key.match(/^DM[_-]?(\d{2})/);
+      const bc = match ? match[1] : null;
+
+      if (F > 0) flowInCount++;
+      else if (F < 0) flowOutCount++;
+
+      if (Math.abs(F) < 10 && Math.abs(F) > 0) {
+        deadEnds.push({ key, F, P, branch: bc });
+      }
+
+      if (bc && Math.abs(F) > 0.01) {
+        const v = flowToVelocity(F, DMA_PIPE_D);
+        if (v > 0 && v < 10) {
+          if (!branchFlow[bc]) branchFlow[bc] = [];
+          branchFlow[bc].push(v);
+          allVelocities.push(v);
+        }
+      }
+      if (bc && P > 0) {
+        if (!branchPressure[bc]) branchPressure[bc] = [];
+        branchPressure[bc].push(P);
+      }
+    });
+
+    const branchVelocityAvg = {};
+    Object.keys(branchFlow).forEach(bc => {
+      const arr = branchFlow[bc];
+      branchVelocityAvg[bc] = arr.reduce((a,b) => a+b, 0) / arr.length;
+    });
+
+    const branchPressureAvg = {};
+    Object.keys(branchPressure).forEach(bc => {
+      const arr = branchPressure[bc];
+      branchPressureAvg[bc] = arr.reduce((a,b) => a+b, 0) / arr.length;
+    });
+
+    const globalVAvg = allVelocities.length > 0
+      ? allVelocities.reduce((a,b) => a+b, 0) / allVelocities.length : 0;
+
+    if (window.SENSORS) {
+      window.SENSORS.forEach(s => {
+        const sid = String(s.id);
+        const bc = SENSOR_BRANCH_MAP[sid];
+        if (bc && branchVelocityAvg[bc]) {
+          s._dmaVelocity = branchVelocityAvg[bc];
+          s._dmaBranch = bc;
+        } else if (globalVAvg > 0) {
+          s._dmaVelocity = globalVAvg;
+          s._dmaBranch = 'avg';
+        }
+        if (bc && branchPressureAvg[bc] && (!s.rtuPressure || s.rtuPressure <= 0)) {
+          s._dmaPressure = branchPressureAvg[bc];
+        }
+      });
+    }
+
+    window._dmaProcessed = {
+      branchVelocity: branchVelocityAvg,
+      branchPressure: branchPressureAvg,
+      globalVAvg, globalVMin: allVelocities.length ? Math.min(...allVelocities) : 0,
+      globalVMax: allVelocities.length ? Math.max(...allVelocities) : 0,
+      deadEnds, flowIn: flowInCount, flowOut: flowOutCount,
+      totalAnalyzed: allVelocities.length, branches: Object.keys(branchVelocityAvg).length
+    };
+
+    console.log(`[DMA Engine] ✅ V avg=${globalVAvg.toFixed(3)} m/s, ${Object.keys(branchVelocityAvg).length} branches, ${deadEnds.length} dead-ends, IN:${flowInCount} OUT:${flowOutCount}`);
+
+    try {
+      if (typeof buildIdwCache === 'function') buildIdwCache();
+      if (typeof redrawContour === 'function') redrawContour();
+      console.log('[DMA Engine] ✅ Contour rebuilt with DMA velocity');
+    } catch(e) { console.warn('[DMA Engine] rebuild:', e.message); }
+  }
+
+  function initDmaListener() {
+    if (!window._fbReady || !window._fb || !window._fbRef || !window._fbOnValue) {
+      setTimeout(initDmaListener, 5000);
+      return;
+    }
+    try {
+      _fbOnValue(_fbRef(_fb, 'dma_realtime'), function(snap) {
+        const val = snap.val();
+        if (!val || !val.data) return;
+        window._dmaData = val.data;
+        window._dmaTimestamp = val.timestamp;
+        window._dmaCount = val.count || Object.keys(val.data).length;
+        console.log('[DMA] Firebase update: ' + window._dmaCount + ' points, ts: ' + val.timestamp);
+        processDmaData();
+        updateStatusBar();
+      });
+      console.log('[DMA] Firebase listener started');
+    } catch(e) {
+      console.warn('[DMA] Firebase listener error:', e.message);
+      setTimeout(initDmaListener, 10000);
+    }
+  }
+  setTimeout(initDmaListener, 3000);
+
+  window.showStatusDetail = function() {
+    const frc = window._dsFrcCount || (window.SENSORS ? window.SENSORS.filter(s => Number(s.frc) > 0).length : 0);
+    const total = window.SENSORS ? window.SENSORS.length : 61;
+    const rtu = window._rtuLive ? window._rtuLive.length : 0;
+    const dma = window._dmaCount || 0;
+    const dmaTs = window._dmaTimestamp ? new Date(window._dmaTimestamp).toLocaleString('th-TH') : 'ไม่มีข้อมูล';
+    const dmaAge = window._dmaTimestamp ? Math.round((Date.now() - new Date(window._dmaTimestamp).getTime()) / 60000) : -1;
+    const dmaStatus = dmaAge < 0 ? '❌ Offline' : dmaAge < 15 ? '🟢 Live' : dmaAge < 30 ? '🟡 Stale' : '🔴 Offline';
+
+    let dmaInfo = '';
+    const p = window._dmaProcessed;
+    if (p) {
+      dmaInfo = `\n── DMA Engine (5 Features) ──\n` +
+        `⚡ Velocity: avg ${p.globalVAvg.toFixed(3)} m/s (เดิม 0.45)\n` +
+        `   range: ${p.globalVMin.toFixed(3)} - ${p.globalVMax.toFixed(3)} m/s\n` +
+        `   ${p.branches} zones (per-branch)\n` +
+        `📊 Pressure: ${Object.keys(p.branchPressure||{}).length} branches\n` +
+        `🧭 Direction: IN=${p.flowIn} OUT=${p.flowOut}\n` +
+        `⚠️ Dead-ends: ${p.deadEnds.length} จุด (F<10)\n` +
+        `📈 Total analyzed: ${p.totalAnalyzed} จุด`;
+    }
+
+    alert(
+      `📊 Data Source Status\n\n` +
+      `🟣 FRC Sensors: ${frc}/${total} สถานี (Firebase real-time)\n` +
+      `🔵 RTU Pressure: ${rtu} สถานี (Live ทุก 5 นาที)\n` +
+      `🟢 DMA Flow/P: ${dma} จุด ${dmaStatus}\n` +
+      `    อัปเดตล่าสุด: ${dmaTs}${dmaAge >= 0 ? ' (' + dmaAge + ' นาทีที่แล้ว)' : ''}` +
+      dmaInfo + `\n\n` +
+      `🔗 DMA Relay: รัน script ใน SmartMap Console`
+    );
+  };
+})();
 </script>
 </body></html>
