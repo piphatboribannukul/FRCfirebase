@@ -13031,7 +13031,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.1-b2 (build: DMA-diag) — Field Validate K + DMA Spatial IDW Velocity Field + DMA Live Layer + _dmaDiag() console tool + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.2 (build: DMA-staleness) — Field Validate K + DMA Spatial IDW Velocity Field (staleness-filtered >60min) + DMA Live Layer + _dmaDiag() console tool + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -18010,22 +18010,42 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
   // Join live F values (from Firebase dma_realtime) onto the static point index.
   // Called every time new DMA data arrives — cheap (just value assignment, no rebuild of buckets).
+  const DMA_MAX_AGE_MS = 60 * 60 * 1000; // ข้อมูลเก่ากว่า 60 นาที = ไม่น่าเชื่อถือ ตัดออกจาก IDW
+
   function updateDmaVelocities() {
     const data = window._dmaData;
     if (!data || !_dmaPointByKey) return 0;
-    let matched = 0;
+    let matched = 0, stale = 0;
+    const now = Date.now();
     Object.keys(data).forEach(key => {
       const pt = _dmaPointByKey.get(key);
       if (!pt) return; // meter not in static coords table
       const d = data[key];
       const F = d.F || d.f || 0;
+
+      // v35.2: staleness check — relay ส่ง log_dt มาด้วย (field 't') ใช้กรองข้อมูลค้าง
+      let ageMin = null;
+      if (d.t) {
+        const ts = Date.parse(String(d.t).replace(/\//g, '-'));
+        if (!isNaN(ts)) ageMin = (now - ts) / 60000;
+      }
+      pt.ageMin = ageMin;
+      if (ageMin != null && ageMin * 60000 > DMA_MAX_AGE_MS) {
+        pt.v = 0;        // ข้อมูลเก่าเกินไป — ตัดออกจาก IDW (เหมือนไม่มีข้อมูล)
+        pt.stale = true;
+        stale++;
+        matched++;
+        return;
+      }
+      pt.stale = false;
       const v = flowToVelocity(F, DMA_PIPE_D);
       pt.v = (v > 0 && v < 10) ? v : 0;
       matched++;
     });
     window._dmaSpatialReady = matched > 0;
     window._dmaSpatialMatched = matched;
-    console.log('[DMA Spatial] velocities updated:', matched, '/', _dmaPointByKey.size, 'matched');
+    window._dmaSpatialStale = stale;
+    console.log('[DMA Spatial] velocities updated:', matched, '/', _dmaPointByKey.size, 'matched,', stale, 'stale (excluded, >60min)');
     return matched;
   }
 
@@ -18100,22 +18120,33 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   // Usage in browser console: _dmaDiag(13.64932, 100.77891)
   window._dmaDiag = function(lat, lon) {
     console.log('═══ DMA Diagnostic @', lat, lon, '═══');
-    console.log('_dmaSpatialReady:', window._dmaSpatialReady, '| matched:', window._dmaSpatialMatched);
+    console.log('_dmaSpatialReady:', window._dmaSpatialReady, '| matched:', window._dmaSpatialMatched, '| stale (excluded):', window._dmaSpatialStale);
     const bj0 = Math.floor(lat / DMA_BUCKET_SIZE), bi0 = Math.floor(lon / DMA_BUCKET_SIZE);
-    let pts = [];
-    for (let r = 1; r <= 6 && pts.length < 3; r++) {
-      pts = [];
+    let allPts = [], validPts = [];
+    for (let r = 1; r <= 6 && validPts.length < 3; r++) {
+      allPts = []; validPts = [];
       for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
         const arr = _dmaPointIndex.get((bj0+dj)+'_'+(bi0+di));
-        if (arr) for (const p of arr) if (p.v > 0) pts.push(p);
+        if (arr) for (const p of arr) {
+          allPts.push(p);
+          if (p.v > 0) validPts.push(p);
+        }
       }
-      if (pts.length >= 3) { console.log('search radius used:', r, 'buckets'); break; }
+      if (validPts.length >= 3) { console.log('search radius used:', r, 'buckets'); break; }
     }
-    if (!pts.length) { console.log('❌ ไม่พบจุด DMA ที่มี v>0 ใกล้พิกัดนี้เลย (แม้ขยาย radius ถึง 6 buckets ~13km) → epanetDecay() จะ fallback ไปใช้ sensor._dmaVelocity/RTU/static แทน'); return; }
-    console.log('พบจุด DMA', pts.length, 'จุดใกล้ๆ:');
-    pts.forEach(p => {
+    const staleNearby = allPts.filter(p => p.stale);
+    if (staleNearby.length) {
+      console.log('⚠️ พบจุดข้อมูลเก่า (stale, >60min) ใกล้ๆ', staleNearby.length, 'จุด — ถูกตัดออกจาก IDW แล้ว:');
+      staleNearby.forEach(p => {
+        const dKm = Math.sqrt((p.lat-lat)**2+(p.lon-lon)**2) * 111;
+        console.log('  ', p.key, '| อายุข้อมูล ' + (p.ageMin!=null ? p.ageMin.toFixed(0)+' นาที' : '?') + ' | ห่าง ' + dKm.toFixed(2) + ' km');
+      });
+    }
+    if (!validPts.length) { console.log('❌ ไม่พบจุด DMA ที่มีข้อมูลสดใกล้พิกัดนี้เลย (แม้ขยาย radius ถึง 6 buckets ~13km) → epanetDecay() จะ fallback ไปใช้ sensor._dmaVelocity/RTU/static แทน'); return; }
+    console.log('พบจุด DMA ที่ใช้ได้', validPts.length, 'จุดใกล้ๆ:');
+    validPts.forEach(p => {
       const dKm = Math.sqrt((p.lat-lat)**2+(p.lon-lon)**2) * 111;
-      console.log(' ', p.key, '| v=' + p.v.toFixed(4) + ' m/s | ห่าง ' + dKm.toFixed(2) + ' km');
+      console.log(' ', p.key, '| v=' + p.v.toFixed(4) + ' m/s | ห่าง ' + dKm.toFixed(2) + ' km | อายุข้อมูล ' + (p.ageMin!=null ? p.ageMin.toFixed(0)+' นาที' : '?'));
     });
     const v = window._dmaVelocityAt(lat, lon);
     console.log('→ IDW velocity ที่ใช้จริง:', v ? v.toFixed(4) + ' m/s' : 'null');
