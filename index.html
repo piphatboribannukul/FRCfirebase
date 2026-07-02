@@ -13031,7 +13031,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.1 — Field Validate K + DMA Spatial IDW Velocity Field + DMA Live Layer + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.1-b2 (build: DMA-diag) — Field Validate K + DMA Spatial IDW Velocity Field + DMA Live Layer + _dmaDiag() console tool + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -18093,6 +18093,34 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   window.renderDmaLayer = renderDmaLayer;
   window._dmaGroup = dmaGroup;
   window.updateDmaVelocities = updateDmaVelocities;
+  window._dmaPointByKey = _dmaPointByKey;   // diagnostics only
+  window._dmaPointIndex = _dmaPointIndex;   // diagnostics only
+
+  // ── Diagnostic helper: dump everything about DMA velocity at one point ──────
+  // Usage in browser console: _dmaDiag(13.64932, 100.77891)
+  window._dmaDiag = function(lat, lon) {
+    console.log('═══ DMA Diagnostic @', lat, lon, '═══');
+    console.log('_dmaSpatialReady:', window._dmaSpatialReady, '| matched:', window._dmaSpatialMatched);
+    const bj0 = Math.floor(lat / DMA_BUCKET_SIZE), bi0 = Math.floor(lon / DMA_BUCKET_SIZE);
+    let pts = [];
+    for (let r = 1; r <= 6 && pts.length < 3; r++) {
+      pts = [];
+      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        const arr = _dmaPointIndex.get((bj0+dj)+'_'+(bi0+di));
+        if (arr) for (const p of arr) if (p.v > 0) pts.push(p);
+      }
+      if (pts.length >= 3) { console.log('search radius used:', r, 'buckets'); break; }
+    }
+    if (!pts.length) { console.log('❌ ไม่พบจุด DMA ที่มี v>0 ใกล้พิกัดนี้เลย (แม้ขยาย radius ถึง 6 buckets ~13km) → epanetDecay() จะ fallback ไปใช้ sensor._dmaVelocity/RTU/static แทน'); return; }
+    console.log('พบจุด DMA', pts.length, 'จุดใกล้ๆ:');
+    pts.forEach(p => {
+      const dKm = Math.sqrt((p.lat-lat)**2+(p.lon-lon)**2) * 111;
+      console.log(' ', p.key, '| v=' + p.v.toFixed(4) + ' m/s | ห่าง ' + dKm.toFixed(2) + ' km');
+    });
+    const v = window._dmaVelocityAt(lat, lon);
+    console.log('→ IDW velocity ที่ใช้จริง:', v ? v.toFixed(4) + ' m/s' : 'null');
+    if (v && v < 0.05) console.log('⚠️ velocity ต่ำมาก (<0.05 m/s) — เวลาเดินทางจะยาวมาก ทำให้ decay สูง/FRC ต่ำ');
+  };
 
 
   // ══════════════════════════════════════════════════════════════════════════════
