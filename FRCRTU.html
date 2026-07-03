@@ -13127,7 +13127,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.5 (build: DMA-diameter-fix) — Field Validate K + DMA Spatial IDW Velocity Field (D=201mm, ท่อจริง 22,636 เส้น) + DMA Live Layer (hover tooltip) + _dmaDiag() + _frcDiag() console tools + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.6 (build: DMA-click-popup) — Field Validate K + DMA Spatial IDW Velocity Field (D=201mm) + DMA Live Layer (hover tooltip + click popup with F/P) + _dmaDiag() + _frcDiag() console tools + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -18118,6 +18118,9 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
       if (!pt) return; // meter not in static coords table
       const d = data[key];
       const F = d.F || d.f || 0;
+      const P = d.P || d.p || 0;
+      pt.F = F;   // v35.6: เก็บค่าดิบไว้โชว์ตอนคลิก
+      pt.P = P;
 
       // v35.2: staleness check — relay ส่ง log_dt มาด้วย (field 't') ใช้กรองข้อมูลค้าง
       let ageMin = null;
@@ -18203,6 +18206,32 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
       '</div>';
   }
 
+  // v35.6: popup แบบเต็ม โชว์ตอนคลิก — มีค่า F/P ดิบด้วย ไม่ใช่แค่ velocity ที่แปลงแล้ว
+  function _dmaPopupHtml(pt) {
+    let statusHtml, statusColor;
+    if (pt.stale) {
+      statusHtml = '🔴 ข้อมูลเก่า — ตัดออกจากการคำนวณ';
+      statusColor = '#dc2626';
+    } else if (pt.v > 0) {
+      statusHtml = '🟢 สด — ใช้ในการคำนวณ';
+      statusColor = '#16a34a';
+    } else {
+      statusHtml = '⚪ ยังไม่มีข้อมูล live';
+      statusColor = '#6b7280';
+    }
+    const fVal = (pt.F != null) ? pt.F.toFixed(2) : '—';
+    const pVal = (pt.P != null) ? pt.P.toFixed(2) : '—';
+    const ageVal = (pt.ageMin != null) ? pt.ageMin.toFixed(0) + ' นาทีที่แล้ว' : 'ไม่ทราบ';
+    return '<div style="min-width:190px">' +
+      '<div class="popup-title">💧 ' + pt.key + '</div>' +
+      '<div class="popup-row"><span class="popup-label">สถานะ</span><span class="popup-val" style="color:' + statusColor + ';font-weight:600">' + statusHtml + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Flow (F)</span><span class="popup-val">' + fVal + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Pressure (P)</span><span class="popup-val">' + pVal + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Velocity คำนวณได้</span><span class="popup-val">' + (pt.v > 0 ? pt.v.toFixed(4) + ' m/s' : '—') + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">อัปเดตล่าสุด</span><span class="popup-val">' + ageVal + '</span></div>' +
+      '</div>';
+  }
+
   function renderDmaLayer() {
     if (!_dmaPointByKey) return;
     dmaGroup.clearLayers();
@@ -18213,6 +18242,7 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
         renderer: _dmaCanvasRenderer
       })
       .bindTooltip(() => _dmaTooltipHtml(pt), { sticky: true, direction: 'top', opacity: 0.95 })
+      .bindPopup(() => _dmaPopupHtml(pt), { maxWidth: 260 })
       .addTo(dmaGroup);
     });
     console.log('[DMA Layer] rendered', _dmaPointByKey.size, 'points');
