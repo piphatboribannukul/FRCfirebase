@@ -13127,7 +13127,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.4 (build: FRC-chain-diag) — Field Validate K + DMA Spatial IDW Velocity Field (staleness-filtered) + DMA Live Layer (hover tooltip) + _dmaDiag() + _frcDiag() console tools + Auto K (ม.เกษตร) + 7-Day Playback (Firebase) + Zone Influence Editor + VC Sim + Cl₂ What-If + EPANET Pipe-Aware Contour + Pipe Interpolation (Pressure/EC) + KMZ Network : 🔒 Firebase Auth + App Check</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.8 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) ·  Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%)· Live sources - FRC Live 61 สถานี · DMA Flow Live 1,602 จุด · RTU Live 236 สถานี ·</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -15249,109 +15249,100 @@ function submitFeedback(){
 
 <button id="about-btn" onclick="document.getElementById('about-panel').style.display='flex'" style="position:fixed;bottom:50px;right:12px;z-index:999999;background:rgba(204,0,85,.9);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(204,0,85,.4);transition:transform .2s;" title="เกี่ยวกับ Model" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'">❓</button>
 <div id="about-panel" style="display:none;position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-<div style="background:#fff;border-radius:16px;max-width:700px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
+<div style="background:#fff;border-radius:16px;max-width:760px;width:95%;max-height:88vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">v33 — May 2026 · M sandbox · 🔒 Security Upgrade</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">v35.8 — Jul 2026 · M sandbox · Water Quality Division · 🔒 Security Upgrade</p>
 
-<h3 style="color:#7b2d8e;font-size:15px;margin:16px 0 6px;">📋 V33 — Validate K (Field Calibration)</h3>
+<h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 Real-time FRC Contour ทำงานยังไง</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-Calibrate ค่า K ของแต่ละโซนจาก<b>ค่าคลอรีนจริงภาคสนาม</b> เทียบกับค่า contour ที่ระบบคำนวณ (เวลา/พิกัดเดียวกัน)
+FRCContour ใช้หลัก <b>EPANET Simplified</b> — คำนวณคลอรีนคงเหลือ ณ ทุกพิกเซล ผ่านสูตร First-Order Decay ที่ได้จากงานวิจัย EPANET-MSX ผสานกับข้อมูล live จากภาคสนาม:<br>
+<b>A.</b> ค่า FRC จริงจาก sensor เป็นจุดเริ่มต้น (C₀)<br>
+<b>B.</b> ระยะทางจาก sensor ไปแต่ละพิกเซล คำนวณจาก pipe network จริง (Dijkstra)<br>
+<b>C.</b> ความเร็วน้ำ (velocity) จากข้อมูล live (DMA/RTU) → คำนวณเวลาเดินทาง (travel time)<br>
+<b>D.</b> ใช้สมการ First-Order Decay: <b>C = C₀ · exp(−K · t)</b> คำนวณ FRC ณ พิกเซลนั้น
 </p>
-<div style="background:#faf5ff;border:1px solid #d0b0f0;border-radius:8px;padding:10px;margin:8px 0;">
-<div style="font-size:11px;color:#7b2d8e;font-weight:700;margin-bottom:6px;">หลักการคำนวณ:</div>
+<div style="background:#fff3f5;border:1px solid #f0d0d8;border-radius:8px;padding:10px;margin:8px 0;">
+<div style="font-size:11px;color:#cc0055;font-weight:700;margin-bottom:6px;">Priority Chain (ต่อพิกเซล):</div>
 <p style="font-size:11px;line-height:1.6;color:#333;margin:0;">
-ทั้งค่าจริง (I) และ contour (AA) มาจากแหล่งจ่ายเดียวกัน ต่างกันแค่ค่า K:<br>
-&nbsp;&nbsp;• contour: <b>AA = FRC<sub>src</sub> × e<sup>(−K<sub>now</sub> × tt)</sup></b><br>
-&nbsp;&nbsp;• ค่าจริง: <b>I = FRC<sub>src</sub> × e<sup>(−K<sub>new</sub> × tt)</sup></b><br>
-หารกันแล้วแก้สมการ →
+<b>1.</b> VC zone override (Valve Chamber active) →<br>
+<b>2.</b> CUSTOM_ZONES polygon (โซนสถานีสูบจ่าย กำหนดเอง) →<br>
+<b>3.</b> Pipe-network Dijkstra (หาสถานีต้นทาง+ระยะทางตามท่อจริง) →<br>
+<b>4.</b> Fallback geographic IDW (จุดที่ pipe grid ไม่ครอบคลุม)
+</p>
+</div>
+
+<h3 style="color:#7b2d8e;font-size:15px;margin:16px 0 6px;">🧪 ค่า K (Decay Rate) มาจากไหน</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+K แบ่งเป็น 2 องค์ประกอบตามหลัก EPANET-MSX:<br>
+<b>K_total = Kb + Kw × (4/D)</b> [1/day]<br><br>
+<b>Kb (Bulk decay)</b> — ปฏิกิริยาในน้ำเอง อ้างอิงงานวิจัย <b>ม.เกษตร กนว.32/2566</b>:<br>
+&nbsp;&nbsp;• บางเขน (บข.) = <b>0.778/day</b> (half-life 21 ชม.)<br>
+&nbsp;&nbsp;• มหาสวัสดิ์ (มส.) = <b>0.400/day</b> (half-life 42 ชม.)<br>
+<b>Kw (Wall decay)</b> — ปฏิกิริยากับผนังท่อ ค่า default = 0.05/day<br>
+<b>D</b> — เส้นผ่านศูนย์กลางท่อเฉลี่ย
+</p>
+
+<h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">💧 Live Data Sources</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. FRC Live (61 สถานี)</b> — Firebase Realtime Database<br>
+&nbsp;&nbsp;• SP01-12 (สถานีสูบจ่าย), SW01-11 (สถานีจ่ายน้ำ), SM01-06 (สถานี MDIS)<br>
+&nbsp;&nbsp;• VC01-14 (Valve Chamber — ค่า sim จาก EPANET ไม่ใช่วัดจริง)<br><br>
+<b>B. RTU Live (236 สถานี)</b> — จาก SmartMap intranet<br>
+&nbsp;&nbsp;• pressure ที่สถานี → คำนวณ velocity ผ่าน Bernoulli: <b>v ∝ √(P/P_nominal)</b><br>
+&nbsp;&nbsp;• match กับ 61 FRC sensor โดย nearest Euclidean → pFactor per-sensor<br><br>
+<b>C. DMA Flow Live (1,602 จุด)</b> — Relay from SmartMap → Firebase (ทุก 5 นาที)<br>
+&nbsp;&nbsp;• Flow → velocity: <b>v = Q/A</b> (A = πD²/4, D=0.201m ท่อแขนงเฉลี่ย)<br>
+&nbsp;&nbsp;• Spatial IDW field — ทุกพิกเซล sample velocity จากจุด DMA ใกล้ตัวเอง<br>
+&nbsp;&nbsp;• กรองข้อมูลเก่า >60 นาที (staleness filter) — 🔴 ไม่นำมาคำนวณ<br>
+&nbsp;&nbsp;• คลิกจุดใน "DMA Live" layer เพื่อดู F, P, velocity, สถานะ per-meter
+</p>
+
+<h3 style="color:#f59e0b;font-size:15px;margin:16px 0 6px;">📊 Velocity Priority Chain</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>1.</b> DMA Spatial IDW (ณ พิกัดพิกเซลจริง) — สูงสุด<br>
+<b>2.</b> Sensor branch-level DMA velocity (branch เฉลี่ย)<br>
+<b>3.</b> RTU Bernoulli (v ∝ √P) — pFactor clamp 0.5–2.0<br>
+<b>4.</b> Static pressure grid factor (fallback)<br>
+<b>5.</b> EPANET default velocity — ต่ำสุด
+</p>
+
+<h3 style="color:#7b2d8e;font-size:15px;margin:16px 0 6px;">🎯 Zone Influence (การกระจาย contour)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. Custom Polygon</b> — วาดขอบเขต "โซนอิทธิพล" ของแต่ละสถานีสูบจ่ายด้วยมือ (Zone Editor)<br>
+<b>B. Point-in-polygon</b> — ทุกพิกเซลเช็คว่าอยู่ใน polygon ใด → assign สถานีต้นทาง<br>
+<b>C. Pipe-aware distance</b> — ถ้ามี pipe grid ครอบคลุม ใช้ระยะจริงตามท่อ (Dijkstra) แทน Euclidean<br>
+<b>D. VC Simulation</b> — Valve Chamber ที่ active (Valve% > 0) จะ override zone ของสถานีปกติ
+</p>
+
+<h3 style="color:#7b2d8e;font-size:15px;margin:16px 0 6px;">🔧 Validate K (Field Calibration)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+Calibrate ค่า K จาก<b>ค่าคลอรีนจริงภาคสนาม</b> เทียบกับค่า contour ที่ระบบคำนวณ:
 </p>
 <div style="background:#7b2d8e;color:#fff;border-radius:6px;padding:8px;text-align:center;font-size:13px;font-weight:700;margin:8px 0;">K<sub>new</sub> = K<sub>now</sub> − ln(I / AA) / tt</div>
 <p style="font-size:11px;line-height:1.6;color:#333;margin:0;">
-<b>ตัวอย่าง:</b> I=0.75, AA=0.65, K<sub>now</sub>=0.05, tt=4 ชม.<br>
-K<sub>new</sub> = 0.05 − ln(0.75/0.65)/4 = <b>0.0143</b>/hr → K ลด → contour สูงขึ้น → ตรงค่าจริง
-</p>
-</div>
-<p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. จัดกลุ่มตามโซน</b> — แต่ละจุดเช็คพิกัดว่าอยู่ในอิทธิพลโรงสูบไหน (point-in-polygon)<br>
-<b>B. Calibrate เฉพาะโซน ≥3 จุด</b> — เฉลี่ย K<sub>new</sub> ทุกจุดในโซน (โซน &lt;3 จุดข้าม กัน overfit)<br>
-<b>C. Apply</b> — บันทึก K ลง STATION_K + Firebase (source = field-validate) → contour อัปเดตทันที<br>
-<b>D. วิธีใช้</b> — เมนู AUTO-FIT K → ปุ่ม "📋 Validate K (Field)" → paste แถวจาก Google Sheets (ดึง column Z=พิกัด, I=จริง, AA=contour อัตโนมัติ)
+I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
+<b>วิธีใช้:</b> AUTO-FIT K → "📋 Validate K (Field)" → paste แถวจาก Google Sheets
 </p>
 
-<h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🆕 v32 — Playback 7 วัน + Zone Editor</h3>
+<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🔮 Cl₂ What-If Simulation</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. Playback ย้อนหลัง 7 วัน</b> — เลือกได้ 24h / 72h / 7 วัน ดึงข้อมูลจาก Firebase (เสถียร ไม่หายเหมือน localStorage)<br>
-<b>B. Tooltip slider</b> — แสดงวัน+เวลาไทยเมื่อเลื่อน slider (เช่น พ 14/05 09:00)<br>
-<b>C. Zone Editor</b> — เวลาแก้ไขโซน เห็นโซนข้างเคียงชัดขึ้น + เปิด/ปิดรายโซนได้
+ปรับ FRC ที่สถานีสูบจ่าย ± 0.1–0.5 mg/L → ดูผลต่อ contour + monitor stations ทันที
 </p>
 
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">🧪 Hybrid K (Live Back-Calc)</h3>
+<h3 style="color:#6c3483;font-size:15px;margin:16px 0 6px;">🕐 Playback ย้อนหลัง 7 วัน</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. Hybrid K</b> — คำนวณ K real-time จาก sensor จริง: K = −ln(FRC_dest / FRC_src) / tt<br>
-<b>B. Auto-fit K</b> — Grid search K จากข้อมูลสะสม 24 ชม. + fit 3 เดือน (61 สถานี)<br>
-<b>C. ปรับ K รายสถานี</b> — Manual override ทีละสถานี (priority สูงสุด)
-</p>
-
-<h3 style="color:#185FA5;font-size:15px;margin:16px 0 6px;">Cl₂ What-If Simulation</h3>
-<p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. What-If Dosing</b> — จำลองปรับคลอรีน ± ที่สถานีสูบจ่าย ดูผลต่อ contour + monitor (Zone Influence)<br>
-<b>B. ปรับ FRC ±0.1 ถึง ±0.5</b> — เห็นผลทันทีว่า monitor รอบๆ เปลี่ยนแค่ไหน<br>
-<b>C. Reset</b> — คืนค่าเดิมทุกสถานี
-</p>
-
-<h3 style="color:#6c3483;font-size:15px;margin:16px 0 6px;">🔗 VC Zone Contour</h3>
-<p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. Valve Chamber (VC)</b> — 14 จุดควบคุมวาล์ว ค่า FRC simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)<br>
-<b>B. Valve %</b> — 0% = ปิด ไม่มีอิทธิพล, >0% = active มีผลต่อ contour<br>
-<b>C. Source→VC Decay</b> — FRC<sub>sim</sub>@VC = FRC(source) × e<sup>(-K×TT)</sup><br>
-<b>D. VC Zone Contour</b> — วาดขอบเขต VC ใน Zone Editor → contour คำนวณ decay จาก VC ออก
+ดึงข้อมูลจาก Firebase (24h / 72h / 7 วัน) — เสถียร ไม่หายเหมือน localStorage
 </p>
 
 <h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">🔒 Security</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
-<b>A. Firebase Security Rules</b> — จำกัดการอ่าน/เขียนตาม path, validate ข้อมูลก่อนบันทึก<br>
-<b>B. Firebase Authentication</b> — email/password<br>
-<b>C. App Check + Domain Restriction</b> — ป้องกัน abuse + จำกัด API key เฉพาะ domain ที่อนุญาต
+<b>A.</b> Firebase Security Rules + validate ก่อนบันทึก<br>
+<b>B.</b> Firebase Authentication (email/password)<br>
+<b>C.</b> App Check + Domain Restriction — จำกัด API key เฉพาะ domain ที่อนุญาต
 </p>
 
-<h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 FRC Model — คลอรีนอิสระคงเหลือ</h3>
-<p style="font-size:12px;line-height:1.7;color:#111;">FRC สลายตัวตามเวลาที่น้ำเดินทางในท่อ ใช้สมการ <b>First-Order Decay</b>:</p>
-<div style="background:#f0f4ff;border-radius:8px;padding:10px;text-align:center;font-size:14px;font-weight:700;color:#1565c0;margin:8px 0;">FRC(t) = FRC₀ × e<sup>(-K × t)</sup></div>
-<table style="width:100%;font-size:11px;border-collapse:collapse;margin:8px 0;"><tr style="background:#cc0055;color:#fff;font-weight:700;"><th style="padding:6px 8px;text-align:left;">ตัวแปร</th><th style="padding:6px 8px;text-align:left;">ความหมาย</th></tr>
-<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">FRC₀</td><td style="padding:5px 8px;color:#111;">ค่า FRC ที่สถานีต้นทาง</td></tr>
-<tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:5px 8px;font-weight:600;color:#111;">K</td><td style="padding:5px 8px;color:#111;">อัตราการสลายตัว (1/ชม.) — Hybrid K (live) > Auto-fit > 3mo-fit > default</td></tr>
-<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 8px;font-weight:600;color:#111;">t</td><td style="padding:5px 8px;color:#111;">เวลาเดินทางของน้ำ (Travel Time, ชม.)</td></tr></table>
-<p style="font-size:11px;color:#444;"><b>Blend Formula:</b> Forecast = fOld×(1-frac) + fNew×frac<br>fOld = decay จากค่าจริงปัจจุบัน, fNew = decay จาก source ย้อนหลัง</p>
-
-<h3 style="color:#1565c0;font-size:15px;margin:16px 0 6px;">⚡ EC Model — ค่าการนำไฟฟ้า</h3>
-<p style="font-size:12px;line-height:1.7;color:#111;">EC <b>ไม่สลายตัว</b>ระหว่างเดินทาง → ค่า EC ปลายทาง ≈ EC ต้นทาง (delay ตาม travel time)</p>
-
-<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">📊 ค่า K (Decay Rate) — ลำดับ Priority</h3>
-<p style="font-size:11px;line-height:1.6;color:#111;">
-<b>1. Manual override</b> (ปรับ K รายสถานี) → <b>2. Hybrid K</b> (live back-calc) → <b>3. Auto-fit K</b> (3mo-fit 61 สถานี) → <b>4. Default</b> by zone → 0.008
-</p>
-
-<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">🗺️ เส้นทางน้ำ (Source Mapping)</h3>
-<p style="font-size:11px;line-height:1.8;color:#222;">
-<b style="color:#cc0055;">กลุ่มเจ้าพระยา (CP):</b><br>
-&nbsp;&nbsp;• โรงผลิตน้ำบางเขน → TR1/TR2/TR3 → สจ.สูบจ่าย → monitor (49 สถานี จับคู่แล้ว)<br>
-&nbsp;&nbsp;• โรงงานผลิตน้ำธนบุรี / สามเสน → monitor<br>
-<br>
-<b style="color:#1565c0;">กลุ่มแม่กลอง (MH):</b><br>
-&nbsp;&nbsp;• โรงผลิตน้ำมหาสวัสดิ์ → MTR → MDIS → สจ.ราษฎร์บูรณะ / เพชรเกษม / ท่าพระ → monitor
-</p>
-
-<h3 style="color:#333;font-size:14px;margin:16px 0 6px;">⚠ ข้อจำกัด</h3>
-<p style="font-size:11px;line-height:1.6;color:#444;">
-• FRC Model อาศัย K ที่ fit จากข้อมูลย้อนหลัง — ถ้าสภาพท่อเปลี่ยนต้อง re-fit<br>
-• EC Model สมมติไม่มีการเปลี่ยนแปลงระหว่างทาง<br>
-• Travel Time เป็นค่าประมาณ อาจต่างตามปริมาณน้ำใช้จริง<br>
-• Source Mapping เป็น static — ถ้าเปลี่ยนเส้นทางจ่ายน้ำต้องอัปเดต<br>
-• Playback 7 วัน แสดงข้อมูลเฉพาะช่วงที่เปิด FRCContour ไว้เท่านั้น (Firebase บันทึก history 168 ชม.)
-</p>
-
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v33 · M sandbox · Water Quality Division · May 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v35.8 · M sandbox · Water Quality Division · Jul 2026 · 🔒 Security Upgrade</div>
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
@@ -18118,6 +18109,9 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
       if (!pt) return; // meter not in static coords table
       const d = data[key];
       const F = d.F || d.f || 0;
+      const P = d.P || d.p || 0;
+      pt.F = F;   // v35.6: เก็บค่าดิบไว้โชว์ตอนคลิก
+      pt.P = P;
 
       // v35.2: staleness check — relay ส่ง log_dt มาด้วย (field 't') ใช้กรองข้อมูลค้าง
       let ageMin = null;
@@ -18172,7 +18166,15 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   }
 
   // ── DMA Live Layer — visual overlay of all 1,602 meter points on the map ──────
-  const _dmaCanvasRenderer = L.canvas({ padding: 0.5 });
+  // v35.8: contour canvas วางทับ pane เริ่มต้นของ Leaflet อยู่ ทำให้คลิกจุด DMA
+  // ไม่โดน (คลิกทะลุไปโดน contour แทน) — สร้าง pane เฉพาะให้อยู่เหนือ contour
+  // (เทคนิคเดียวกับที่ใช้กับ SNP markers ที่ z-index 650)
+  if (!map.getPane('dmaPane')) {
+    map.createPane('dmaPane');
+    map.getPane('dmaPane').style.zIndex = 650;
+    map.getPane('dmaPane').style.pointerEvents = 'auto';
+  }
+  const _dmaCanvasRenderer = L.canvas({ padding: 0.5, pane: 'dmaPane' });
   const dmaGroup = L.layerGroup(); // default: NOT added to map (toggle via 'dma')
 
   function dmaVelocityColor(v) {
@@ -18203,6 +18205,32 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
       '</div>';
   }
 
+  // v35.6: popup แบบเต็ม โชว์ตอนคลิก — มีค่า F/P ดิบด้วย ไม่ใช่แค่ velocity ที่แปลงแล้ว
+  function _dmaPopupHtml(pt) {
+    let statusHtml, statusColor;
+    if (pt.stale) {
+      statusHtml = '🔴 ข้อมูลเก่า — ตัดออกจากการคำนวณ';
+      statusColor = '#dc2626';
+    } else if (pt.v > 0) {
+      statusHtml = '🟢 สด — ใช้ในการคำนวณ';
+      statusColor = '#16a34a';
+    } else {
+      statusHtml = '⚪ ยังไม่มีข้อมูล live';
+      statusColor = '#6b7280';
+    }
+    const fVal = (pt.F != null) ? pt.F.toFixed(2) : '—';
+    const pVal = (pt.P != null) ? pt.P.toFixed(2) : '—';
+    const ageVal = (pt.ageMin != null) ? pt.ageMin.toFixed(0) + ' นาทีที่แล้ว' : 'ไม่ทราบ';
+    return '<div style="min-width:190px">' +
+      '<div class="popup-title">💧 ' + pt.key + '</div>' +
+      '<div class="popup-row"><span class="popup-label">สถานะ</span><span class="popup-val" style="color:' + statusColor + ';font-weight:600">' + statusHtml + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Flow (F)</span><span class="popup-val">' + fVal + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Pressure (P)</span><span class="popup-val">' + pVal + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">Velocity คำนวณได้</span><span class="popup-val">' + (pt.v > 0 ? pt.v.toFixed(4) + ' m/s' : '—') + '</span></div>' +
+      '<div class="popup-row"><span class="popup-label">อัปเดตล่าสุด</span><span class="popup-val">' + ageVal + '</span></div>' +
+      '</div>';
+  }
+
   function renderDmaLayer() {
     if (!_dmaPointByKey) return;
     dmaGroup.clearLayers();
@@ -18213,6 +18241,7 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
         renderer: _dmaCanvasRenderer
       })
       .bindTooltip(() => _dmaTooltipHtml(pt), { sticky: true, direction: 'top', opacity: 0.95 })
+      .bindPopup(() => _dmaPopupHtml(pt), { maxWidth: 260 })
       .addTo(dmaGroup);
     });
     console.log('[DMA Layer] rendered', _dmaPointByKey.size, 'points');
@@ -18277,7 +18306,11 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
     'SW06':'06','SW07':'56','SW08':'15','SW09':'13','SW10':'11','SW11':'02',
     'SM01':'53','SM02':'05','SM03':'05','SM04':'55','SM05':'06','SM06':'54',
   };
-  const DMA_PIPE_D = 0.3;
+  // v35.5: อัปเดตจาก 0.3m (ค่าสมมติเดิม) → 0.201m
+  // อ้างอิงจากข้อมูลท่อจริง 22,636 เส้น (Trunkmain.net + 68 ไฟล์ DMA*.net, ม.เกษตร/MWA)
+  // ความยาวรวม 545.6 กม. — ท่อแขนง DMA (21,628 เส้น, 394.7 กม.) length-weighted avg diameter = 201.0mm
+  // (ท่อประธาน/Trunk แยกต่างหาก เฉลี่ย 1,012.8mm แต่ DMA flow meters ส่วนใหญ่อยู่บนท่อแขนง ไม่ใช่ท่อประธาน)
+  const DMA_PIPE_D = 0.201;
 
   function flowToVelocity(F, D) {
     const A = Math.PI * D * D / 4;
