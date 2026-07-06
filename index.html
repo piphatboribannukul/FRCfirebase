@@ -13127,7 +13127,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.8 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) ·  Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%)· Live sources - FRC Live 61 สถานี · DMA Flow Live 1,602 จุด · RTU Live 236 สถานี ·</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.10 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) ·  Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%)· Live sources - FRC Live 61 สถานี · DMA Flow Live 1,602 จุด · RTU Live 236 สถานี ·</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
@@ -18306,11 +18306,13 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
     'SW06':'06','SW07':'56','SW08':'15','SW09':'13','SW10':'11','SW11':'02',
     'SM01':'53','SM02':'05','SM03':'05','SM04':'55','SM05':'06','SM06':'54',
   };
-  // v35.5: อัปเดตจาก 0.3m (ค่าสมมติเดิม) → 0.201m
-  // อ้างอิงจากข้อมูลท่อจริง 22,636 เส้น (Trunkmain.net + 68 ไฟล์ DMA*.net, ม.เกษตร/MWA)
-  // ความยาวรวม 545.6 กม. — ท่อแขนง DMA (21,628 เส้น, 394.7 กม.) length-weighted avg diameter = 201.0mm
-  // (ท่อประธาน/Trunk แยกต่างหาก เฉลี่ย 1,012.8mm แต่ DMA flow meters ส่วนใหญ่อยู่บนท่อแขนง ไม่ใช่ท่อประธาน)
-  const DMA_PIPE_D = 0.201;
+  // v35.9: Rollback D=0.201 → 0.3m
+  // การใช้ D=0.201m (length-weighted avg ท่อแขนงจริง 22,636 เส้น) ทำให้ contour สูงเกินจริง
+  // เทียบ sensor: ประปาสมุทรปราการ 0.480→0.883 (×1.84), ธนบุรี 0.230→0.731 (×3.18)
+  // สาเหตุ: DMA meter ส่วนใหญ่ติดบนท่อประธานเข้าโซน (transmission mains) ไม่ใช่ท่อจ่ายทั่วไป
+  //         ค่าเฉลี่ยทั้งเครือข่าย != ค่าที่ตำแหน่ง meter จริงติดตั้ง
+  // กลับใช้ 0.3m ตามเดิมก่อนจนกว่าจะมีข้อมูล diameter รายจุดที่แม่นกว่านี้
+  const DMA_PIPE_D = 0.3;
 
   function flowToVelocity(F, D) {
     const A = Math.PI * D * D / 4;
@@ -18406,11 +18408,20 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
 
     console.log(`[DMA Engine] ✅ V avg=${globalVAvg.toFixed(3)} m/s, ${Object.keys(branchVelocityAvg).length} branches, ${deadEnds.length} dead-ends, IN:${flowInCount} OUT:${flowOutCount}`);
 
-    try {
-      if (typeof buildIdwCache === 'function') buildIdwCache();
-      if (typeof redrawContour === 'function') redrawContour();
-      console.log('[DMA Engine] ✅ Contour rebuilt with DMA velocity');
-    } catch(e) { console.warn('[DMA Engine] rebuild:', e.message); }
+    // v35.10: skip first-render — รอบแรกตอนโหลดหน้า contour ถูก build ไปแล้ว
+    //   จาก sensor + K (ค่า K ไม่เปลี่ยน) — ไม่ต้อง rebuild ซ้ำเพราะ DMA มาถึง
+    //   ประหยัดเวลาโหลด ~500-2000ms รอบแรก
+    //   DMA velocity จะมีผลตอน user pan/zoom หรือมี update รอบถัดไป
+    if (window._dmaFirstLoadDone) {
+      try {
+        if (typeof buildIdwCache === 'function') buildIdwCache();
+        if (typeof redrawContour === 'function') redrawContour();
+        console.log('[DMA Engine] ✅ Contour rebuilt with DMA velocity');
+      } catch(e) { console.warn('[DMA Engine] rebuild:', e.message); }
+    } else {
+      window._dmaFirstLoadDone = true;
+      console.log('[DMA Engine] ⏭️ First DMA arrival — skip initial rebuild (contour already built from sensor+K). Next DMA update will trigger rebuild normally.');
+    }
   }
 
   function initDmaListener() {
