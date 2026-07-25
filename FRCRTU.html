@@ -8392,6 +8392,9 @@ async function fetchAndUpdate() {
     SENSORS.length = 0;
     merged.forEach(s => SENSORS.push(s));
 
+    // v36.1: อัปเดต temp factor ทันทีหลังได้ SENSORS (ย้ายขึ้นมากันโค้ดอื่น throw ตัดตอน)
+    try { updateTempFactor(SENSORS); } catch(e) { console.warn('[TempK] update fail:', e); }
+
     // บันทึกประวัติ (ไม่ fit k อัตโนมัติ — ใช้ K Default จาก Firebase)
     const hist = recordHistory(SENSORS);
     updateHistBadge(hist);
@@ -8428,8 +8431,8 @@ async function fetchAndUpdate() {
   renderHybridKPanel();
 
   // redraw ทุก layer
-  // v36: อัปเดตตัวคูณ K ตามอุณหภูมิระบบ (median tmp_6) ก่อน rebuild cache
-  updateTempFactor(SENSORS);
+  // v36.1: ครอบ fallback path ด้วย (ห่อกัน error ตัดตอน redraw)
+  try { updateTempFactor(SENSORS); } catch(e) { console.warn('[TempK] update fail:', e); }
 
   _histCache = null; // invalidate history cache after new data
   buildMarkers();
