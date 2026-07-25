@@ -3448,7 +3448,7 @@ const EUCLID_PIPE_FACTOR = 1.30;
 // ──────────────────────────────────────────────────────────────────────
 // K(T) = K × exp(−(E/R) × (1/(T+273.15) − 1/(T_REF+273.15)))
 //   E/R  = 8971 K   (Kongbuchakiat et al. 2025, Results in Engineering 28:108043, BKWTP)
-//   T_REF = 21.4°C  (อุณหภูมิโดยนัยของ Kb=0.778/day จาก กนว.32/2566)
+//   T_REF = อุณหภูมิ ณ ตอน calibrate K (default 32°C = สนาม เม.ย.69, ปรับผ่าน setTempRef)
 // System temp = median ของ value.tmp_6 (TWQMS) เฉพาะช่วง 28–34°C
 //   เหตุผล band filter (สำรวจจริง ก.ค.69, n=49):
 //   - กลุ่มใหญ่ n≈38 เกาะแน่น 31–32°C = ค่าจริงน้ำในท่อ กทม. (≈อุณหภูมิดิน)
@@ -3458,7 +3458,53 @@ const EUCLID_PIPE_FACTOR = 1.30;
 // ══════════════════════════════════════════════════════════════════════
 let TEMP_CORR_ON = false;
 try { TEMP_CORR_ON = localStorage.getItem('frc_temp_corr') === '1'; } catch(e){}
-const TEMP_REF_C = 21.4;
+// v36.2: T_REF = อุณหภูมิน้ำตอน calibrate K จริง — ไม่ใช่ 21.4 ของขวดแล็บ
+// เหตุผล: CONTOUR_K_OVERRIDE (0.065–0.10/hr ≈ 1.6–2.4/day) calibrate สนาม 5–12 เม.ย.69
+// กลางหน้าร้อน น้ำ ~32°C → ความร้อนถูกอบใน K แล้ว (1.92/day ≈ เส้น FO 30°C ของ กนว.)
+// ตั้ง ref=32 ทำให้ factor≈1 วันนี้ และกลายเป็นตัวปรับฤดูกาล: หนาว→K ลด, ร้อนจัด→K เพิ่ม
+let TEMP_REF_C = 32.0;
+// v36.3: Firebase = source of truth (ค่ากลางทั้งระบบ ทุกเครื่องตรงกัน)
+// localStorage = cache สำหรับตอน offline/ก่อน FB พร้อมเท่านั้น — บทเรียน K override Edge/Chrome
+try { const _tr = parseFloat(localStorage.getItem('frc_temp_ref')); if (isFinite(_tr) && _tr >= 20 && _tr <= 36) TEMP_REF_C = _tr; } catch(e){}
+
+function _applyTempRef(v, save) {
+  TEMP_REF_C = v;
+  try { localStorage.setItem('frc_temp_ref', String(v)); } catch(e){}
+  updateTempFactor(typeof SENSORS !== 'undefined' ? SENSORS : []);
+  if (typeof buildIdwCache === 'function') buildIdwCache();
+  if (typeof redrawContour === 'function') redrawContour();
+}
+
+async function setTempRef(t) {  // console: setTempRef(31) → บันทึก Firebase + ทุกเครื่อง sync
+  const v = parseFloat(t);
+  if (!isFinite(v) || v < 20 || v > 36) { console.warn('[TempK] ref ต้องอยู่ 20–36°C'); return; }
+  _applyTempRef(v);
+  if (window._fbReady && window._fb) {
+    try {
+      await window._fbSet(window._fbRef(window._fb, 'config/temp_ref_c'), { v: v, ts: Date.now() });
+      console.log('[TempK] TEMP_REF_C =', v, '°C → บันทึก Firebase แล้ว (ทุกเครื่องได้ค่านี้)');
+    } catch(e) { console.warn('[TempK] FB save fail (ใช้ local ไปก่อน):', e.message); }
+  } else {
+    console.warn('[TempK] Firebase ยังไม่พร้อม — ตั้งเฉพาะเครื่องนี้ก่อน');
+  }
+}
+window.setTempRef = setTempRef;
+
+// โหลดจาก Firebase + subscribe: ใครแก้ ref เครื่องอื่นเห็นทันที contour วาดใหม่เอง
+function _tempRefFbInit() {
+  if (!window._fbReady || !window._fb || !window._fbOnValue) { setTimeout(_tempRefFbInit, 2000); return; }
+  try {
+    window._fbOnValue(window._fbRef(window._fb, 'config/temp_ref_c'), snap => {
+      const d = snap.val();
+      const v = d && parseFloat(d.v);
+      if (isFinite(v) && v >= 20 && v <= 36 && Math.abs(v - TEMP_REF_C) > 0.001) {
+        console.log('[TempK] ref จาก Firebase:', v, '°C');
+        _applyTempRef(v);
+      }
+    });
+  } catch(e) { console.warn('[TempK] FB subscribe fail:', e.message); }
+}
+_tempRefFbInit();
 const TEMP_EOR   = 8971;   // E/R [K]
 window._sysTempC    = null; // median อุณหภูมิระบบล่าสุด (°C)
 window._tempKFactor = 1;    // ตัวคูณ K ที่ใช้จริง (=1 เมื่อปิด/ไม่มีข้อมูล)
@@ -3492,7 +3538,7 @@ function updateTempFactor(sensors) {
   console.log('[TempK] n=' + ts.length + ' (band=' + band.length + ') median=' + med.toFixed(2) +
               '°C → factor ×' + rawF.toFixed(2) + (TEMP_CORR_ON ? ' (ON)' : ' (OFF, ใช้ ×1)'));
   const el = document.getElementById('ep-tempcorr-info');
-  if (el) el.textContent = '🌡 ' + med.toFixed(1) + '°C → K ×' + rawF.toFixed(2) +
+  if (el) el.textContent = '🌡 ' + med.toFixed(1) + '°C (ref ' + TEMP_REF_C.toFixed(1) + ') → K ×' + rawF.toFixed(2) +
                            (TEMP_CORR_ON ? '' : ' (ปิดอยู่)');
 }
 
