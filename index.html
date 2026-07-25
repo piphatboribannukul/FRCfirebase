@@ -60,7 +60,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour v35 rtulive</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour v36 tempK</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2270,7 +2270,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V35.11+RTU</span>
+  <span id="v2-badge">⬡ V36+TEMP</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2650,6 +2650,10 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
     </div>
     <div id="ep-autofit-info" style="display:none;margin-top:4px;font-size:9px;color:#2a5a90;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
+    <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9.5px;color:#555;cursor:pointer;">
+      <input type="checkbox" id="ep-tempcorr" onchange="toggleTempCorr(this.checked)"> 🌡 Auto K ตามอุณหภูมิ (Arrhenius)
+    </label>
+    <div id="ep-tempcorr-info" style="margin-top:2px;font-size:9px;color:#a05010;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
 
     <!-- rev18: Per-Station K Editor -->
     <hr style="border:none;border-top:1px solid #f0d0e0;margin:10px 0 8px;">
@@ -3439,6 +3443,117 @@ const DEG_TO_KM = 111.0;
 // ใช้กับ zone-based decay ที่ไม่มี pipe grid data เท่านั้น
 const EUCLID_PIPE_FACTOR = 1.30;
 
+// ══════════════════════════════════════════════════════════════════════
+// v36: Temperature-corrected K — Arrhenius layer (toggle, default OFF)
+// ──────────────────────────────────────────────────────────────────────
+// K(T) = K × exp(−(E/R) × (1/(T+273.15) − 1/(T_REF+273.15)))
+//   E/R  = 8971 K   (Kongbuchakiat et al. 2025, Results in Engineering 28:108043, BKWTP)
+//   T_REF = อุณหภูมิ ณ ตอน calibrate K (default 32°C = สนาม เม.ย.69, ปรับผ่าน setTempRef)
+// System temp = median ของ value.tmp_6 (TWQMS) เฉพาะช่วง 28–34°C
+//   เหตุผล band filter (สำรวจจริง ก.ค.69, n=49):
+//   - กลุ่มใหญ่ n≈38 เกาะแน่น 31–32°C = ค่าจริงน้ำในท่อ กทม. (≈อุณหภูมิดิน)
+//   - SW01–SW10 อ่าน 24–27°C ต่ำเกินฟิสิกส์ (คาดวัดในอาคาร/offset) → ตัดทิ้ง
+//   - S026/S027/S030 อ่าน 34–35°C สูงผิดกลุ่ม → ตัดทิ้ง
+// สมการ FO เดิมไม่เปลี่ยน — เปลี่ยนเฉพาะค่า K ผ่านตัวคูณ dimensionless
+// ══════════════════════════════════════════════════════════════════════
+let TEMP_CORR_ON = false;
+try { TEMP_CORR_ON = localStorage.getItem('frc_temp_corr') === '1'; } catch(e){}
+// v36.2: T_REF = อุณหภูมิน้ำตอน calibrate K จริง — ไม่ใช่ 21.4 ของขวดแล็บ
+// เหตุผล: CONTOUR_K_OVERRIDE (0.065–0.10/hr ≈ 1.6–2.4/day) calibrate สนาม 5–12 เม.ย.69
+// กลางหน้าร้อน น้ำ ~32°C → ความร้อนถูกอบใน K แล้ว (1.92/day ≈ เส้น FO 30°C ของ กนว.)
+// ตั้ง ref=32 ทำให้ factor≈1 วันนี้ และกลายเป็นตัวปรับฤดูกาล: หนาว→K ลด, ร้อนจัด→K เพิ่ม
+let TEMP_REF_C = 32.0;
+// v36.3: Firebase = source of truth (ค่ากลางทั้งระบบ ทุกเครื่องตรงกัน)
+// localStorage = cache สำหรับตอน offline/ก่อน FB พร้อมเท่านั้น — บทเรียน K override Edge/Chrome
+try { const _tr = parseFloat(localStorage.getItem('frc_temp_ref')); if (isFinite(_tr) && _tr >= 20 && _tr <= 36) TEMP_REF_C = _tr; } catch(e){}
+
+function _applyTempRef(v, save) {
+  TEMP_REF_C = v;
+  try { localStorage.setItem('frc_temp_ref', String(v)); } catch(e){}
+  updateTempFactor(typeof SENSORS !== 'undefined' ? SENSORS : []);
+  if (typeof buildIdwCache === 'function') buildIdwCache();
+  if (typeof redrawContour === 'function') redrawContour();
+}
+
+async function setTempRef(t) {  // console: setTempRef(31) → บันทึก Firebase + ทุกเครื่อง sync
+  const v = parseFloat(t);
+  if (!isFinite(v) || v < 20 || v > 36) { console.warn('[TempK] ref ต้องอยู่ 20–36°C'); return; }
+  _applyTempRef(v);
+  if (window._fbReady && window._fb) {
+    try {
+      await window._fbSet(window._fbRef(window._fb, 'history/_temp_ref_c'), { v: v, ts: Date.now() });
+      console.log('[TempK] TEMP_REF_C =', v, '°C → บันทึก Firebase แล้ว (ทุกเครื่องได้ค่านี้)');
+    } catch(e) { console.warn('[TempK] FB save fail (ใช้ local ไปก่อน):', e.message); }
+  } else {
+    console.warn('[TempK] Firebase ยังไม่พร้อม — ตั้งเฉพาะเครื่องนี้ก่อน');
+  }
+}
+window.setTempRef = setTempRef;
+
+// โหลดจาก Firebase + subscribe: ใครแก้ ref เครื่องอื่นเห็นทันที contour วาดใหม่เอง
+function _tempRefFbInit() {
+  if (!window._fbReady || !window._fb || !window._fbOnValue) { setTimeout(_tempRefFbInit, 2000); return; }
+  try {
+    window._fbOnValue(window._fbRef(window._fb, 'history/_temp_ref_c'), snap => {
+      const d = snap.val();
+      const v = d && parseFloat(d.v);
+      if (isFinite(v) && v >= 20 && v <= 36 && Math.abs(v - TEMP_REF_C) > 0.001) {
+        console.log('[TempK] ref จาก Firebase:', v, '°C');
+        _applyTempRef(v);
+      }
+    });
+  } catch(e) { console.warn('[TempK] FB subscribe fail:', e.message); }
+}
+_tempRefFbInit();
+const TEMP_EOR   = 8971;   // E/R [K]
+window._sysTempC    = null; // median อุณหภูมิระบบล่าสุด (°C)
+window._tempKFactor = 1;    // ตัวคูณ K ที่ใช้จริง (=1 เมื่อปิด/ไม่มีข้อมูล)
+
+function _tempRawFactor(T) {
+  return Math.exp(-TEMP_EOR * (1/(T+273.15) - 1/(TEMP_REF_C+273.15)));
+}
+
+function updateTempFactor(sensors) {
+  const ts = [];
+  (sensors || []).forEach(s => {
+    const t = parseFloat(s.tempC);
+    if (isFinite(t) && t > 0) ts.push(t);
+  });
+  if (ts.length === 0) {
+    window._sysTempC = null;
+    window._tempKFactor = 1;
+    const el0 = document.getElementById('ep-tempcorr-info');
+    if (el0) el0.textContent = '🌡 ไม่มีข้อมูล tmp_6 — K ×1.00';
+    return;
+  }
+  // band filter 28–34°C (ตัด SW ต่ำเพี้ยน + ตัวสูงเพี้ยน) — fallback median รวมถ้าเหลือน้อย
+  let band = ts.filter(t => t >= 28 && t <= 34);
+  if (band.length < 5) band = ts.slice();
+  band.sort((a,b) => a - b);
+  const med = band[Math.floor(band.length / 2)];
+  const T = Math.min(35, Math.max(20, med)); // clamp กันค่าหลุด
+  window._sysTempC = T;
+  const rawF = _tempRawFactor(T);
+  window._tempKFactor = TEMP_CORR_ON ? rawF : 1;
+  console.log('[TempK] n=' + ts.length + ' (band=' + band.length + ') median=' + med.toFixed(2) +
+              '°C → factor ×' + rawF.toFixed(2) + (TEMP_CORR_ON ? ' (ON)' : ' (OFF, ใช้ ×1)'));
+  const el = document.getElementById('ep-tempcorr-info');
+  if (el) el.textContent = '🌡 ' + med.toFixed(1) + '°C (ref ' + TEMP_REF_C.toFixed(1) + ') → K ×' + rawF.toFixed(2) +
+                           (TEMP_CORR_ON ? '' : ' (ปิดอยู่)');
+}
+
+function toggleTempCorr(on) {
+  TEMP_CORR_ON = !!on;
+  try { localStorage.setItem('frc_temp_corr', TEMP_CORR_ON ? '1' : '0'); } catch(e){}
+  updateTempFactor(typeof SENSORS !== 'undefined' ? SENSORS : []);
+  if (typeof buildIdwCache === 'function') buildIdwCache();
+  if (typeof redrawContour === 'function') redrawContour();
+}
+try {
+  const _tcCb = document.getElementById('ep-tempcorr');
+  if (_tcCb) _tcCb.checked = TEMP_CORR_ON;
+} catch(e){}
+
 function applyEpanet() {
   EPANET.kb = parseFloat(document.getElementById('ep-kb').value) || 0.80;
   EPANET.kw = parseFloat(document.getElementById('ep-kw').value) || 0.10;
@@ -3816,18 +3931,18 @@ function epanetDecay(dKm, sensor, lat, lon, distMult) {
 
     // Priority 1: CONTOUR_K_OVERRIDE — user ปรับ K เฉพาะสถานี (สูงสุด)
     if (CONTOUR_K_OVERRIDE[sid] != null) {
-      return Math.exp(-(CONTOUR_K_OVERRIDE[sid] / 3600) * t);
+      return Math.exp(-(CONTOUR_K_OVERRIDE[sid] * window._tempKFactor / 3600) * t);
     }
 
     // อัปเดตทุกรอบ live data เพื่อให้ K ตรงกับสภาพจริงปัจจุบัน
 
     // Priority 3: STATION_K_OVERRIDE — K fit จากข้อมูล 3 เดือน (hardcode)
     if (STATION_K_OVERRIDE[sid] != null) {
-      return Math.exp(-(STATION_K_OVERRIDE[sid] / 3600) * t);
+      return Math.exp(-(STATION_K_OVERRIDE[sid] * window._tempKFactor / 3600) * t);
     }
   }
   // Fallback: K_total จาก EPANET sidebar (สำหรับสถานีที่ไม่มี K override)
-  return Math.exp(-K_total * t);
+  return Math.exp(-K_total * window._tempKFactor * t);
 }
 
 // ── Parameter helpers ────────────────────────────────────────────────────────
@@ -4743,6 +4858,11 @@ window._frcDiag = function(lat, lon) {
               (typeof STATION_K_OVERRIDE !== 'undefined' && STATION_K_OVERRIDE[sensor.id]) ||
               (typeof K_total !== 'undefined' ? K_total : '?');
     console.log('  K (decay rate):', K);
+    if (window._tempKFactor && window._tempKFactor !== 1) {
+      console.log('  🌡 temp corr ON: sysT=' + window._sysTempC + '°C → K ×' + window._tempKFactor.toFixed(2) + ' (K_eff=' + (typeof K === 'number' ? (K*window._tempKFactor).toFixed(4) : '?') + ')');
+    } else {
+      console.log('  🌡 temp corr: OFF (K ×1)' + (window._sysTempC ? ' | sysT=' + window._sysTempC + '°C พร้อมใช้' : ''));
+    }
     const decayFactor = epanetDecay(dKm, sensor, lat, lon, pGrid);
     const frc = sensor.frc * decayFactor;
     console.log('  decay factor:', decayFactor.toFixed(5), '→ FRC = C0 × decay =', frc.toFixed(4), 'mg/L');
@@ -7465,8 +7585,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour + KMZ Network + 1-Week Calibrated K · Firebase + github (M 12 เม.ย.69)</span>'
-      : '<span>⚠ rev22.1 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Calibrated K (1-week TWQMS) · Firebase + github (M 12 เม.ย.69)</span>';
+      ? '<span>⚠ v36 — EPANET Pipe-Aware Contour + KMZ Network + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6) · Firebase + github (M ก.ค.69)</span>'
+      : '<span>⚠ v36 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6) · Firebase + github (M ก.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -7521,6 +7641,9 @@ function mapApiData(raw) {
                   : (s.value && s.value.ec != null) ? s.value.ec
                   : (s.conductivity || s.ec || null);
       const ec = ecRaw != null ? parseFloat(ecRaw) : null;
+      // v36: อุณหภูมิน้ำในเส้นท่อจาก TWQMS (value.tmp_6) — ไม่ทุกสถานีมี
+      const tmpRaw = (s.value && s.value.tmp_6 != null) ? parseFloat(s.value.tmp_6) : NaN;
+      const tempC = (isFinite(tmpRaw) && tmpRaw > 0) ? tmpRaw : null;
       return {
         id     : s.stationCode || s.id || 0,
         name   : (s.stationName || "สถานี").trim(),
@@ -7530,6 +7653,7 @@ function mapApiData(raw) {
         lon    : parseFloat(s.longtitude || s.longitude),
         frc    : isNaN(frc) ? 0 : frc,
         ec,
+        tempC,
         type,
       };
     })
@@ -8314,6 +8438,9 @@ async function fetchAndUpdate() {
     SENSORS.length = 0;
     merged.forEach(s => SENSORS.push(s));
 
+    // v36.1: อัปเดต temp factor ทันทีหลังได้ SENSORS (ย้ายขึ้นมากันโค้ดอื่น throw ตัดตอน)
+    try { updateTempFactor(SENSORS); } catch(e) { console.warn('[TempK] update fail:', e); }
+
     // บันทึกประวัติ (ไม่ fit k อัตโนมัติ — ใช้ K Default จาก Firebase)
     const hist = recordHistory(SENSORS);
     updateHistBadge(hist);
@@ -8350,6 +8477,9 @@ async function fetchAndUpdate() {
   renderHybridKPanel();
 
   // redraw ทุก layer
+  // v36.1: ครอบ fallback path ด้วย (ห่อกัน error ตัดตอน redraw)
+  try { updateTempFactor(SENSORS); } catch(e) { console.warn('[TempK] update fail:', e); }
+
   _histCache = null; // invalidate history cache after new data
   buildMarkers();
   buildIdwCache();   // rebuild cache หลังได้ข้อมูล sensor ใหม่
