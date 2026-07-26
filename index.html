@@ -8410,10 +8410,10 @@ function injectRtuPressureToSensors() {
   const _v2b = document.getElementById('v2-badge');
   if (_v2b) {
     if (injected > 0) {
-      _v2b.textContent = '⬡ V34+RTU.P';
+      _v2b.textContent = '⬡ V36.3+TEMP·RTU';
       _v2b.title = `RTU pressure injected: ${injected}/${SENSORS.length} sensors, P_nominal=${window._rtuPNominal?.toFixed(1)} mwc`;
     } else {
-      _v2b.textContent = '⬡ V34+hybrid.K';
+      _v2b.textContent = '⬡ V36.3+TEMP';
     }
   }
 }
@@ -13222,7 +13222,7 @@ function submitFeedback(){
   setTimeout(function(){document.getElementById('fb-overlay').classList.remove('open');},1800);
 }
 </script>
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v35.11 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) · Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%) · Live sources - FRC Live 61 สถานี · RTU Live 236 สถานี ·</span></div></div>
+<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v36.3 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) · 🌡 Auto K อุณหภูมิ Arrhenius E/R=8971K (TWQMS tmp_6, ref 32°C sync Firebase) · Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%) · Live sources - FRC Live 61 สถานี · RTU Live 236 สถานี ·</span></div></div>
 <script>
 // Force disclaimer visible on iOS/iPad
 (function(){
