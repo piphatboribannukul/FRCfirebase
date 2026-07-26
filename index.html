@@ -60,7 +60,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>MWA FRCContour : Real-Time Chlorine Contour v36 tempK</title>
+<title>MWA FRCContour : Real-Time Chlorine Contour v36.3 tempK</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2270,7 +2270,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V36+TEMP</span>
+  <span id="v2-badge">⬡ V36.3+TEMP</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
@@ -2650,7 +2650,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
       </div>
     </div>
     <div id="ep-autofit-info" style="display:none;margin-top:4px;font-size:9px;color:#2a5a90;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
-    <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9.5px;color:#555;cursor:pointer;">
+    <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9.5px;color:#555;cursor:pointer;" title="ปรับ K ตามอุณหภูมิน้ำจริงด้วยสมการ Arrhenius (E/R = 8971 K, งานวิจัย ม.เกษตร/BKWTP)&#10;• ใช้ median ของ tmp_6 จาก TWQMS (กรองเฉพาะ 28–34°C ตัดสถานีที่วัดเพี้ยน)&#10;• เทียบกับ ref 32°C (อุณหภูมิตอน calibrate K ภาคสนาม เม.ย.69) → หน้าร้อน ×1.0, หน้าหนาว K ลด contour คงคลอรีนนานขึ้น&#10;• ref sync ผ่าน Firebase ทุกเครื่องตรงกัน — ปรับด้วย setTempRef(°C) ใน console">
       <input type="checkbox" id="ep-tempcorr" onchange="toggleTempCorr(this.checked)"> 🌡 Auto K ตามอุณหภูมิ (Arrhenius)
     </label>
     <div id="ep-tempcorr-info" style="margin-top:2px;font-size:9px;color:#a05010;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
@@ -3000,7 +3000,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 
       <table class="note-tbl">
         <tr><th colspan="2">EPANET Decay Parameters</th></tr>
-        <tr><td>พารามิเตอร์</td><td>k<sub>b</sub>=0.70 · k<sub>w</sub>=0.10 · D=0.20m · v=0.45m/s</td></tr>
+        <tr><td>k<sub>b</sub> (วิจัย)</td><td>บข. 0.778/day · มส. 0.400/day (ม.เกษตร กนว.32/2566)</td></tr>
+        <tr><td>พารามิเตอร์อื่น</td><td>k<sub>w</sub>=0.10 · D=0.20m · v=0.45m/s (ปรับได้จาก sidebar)</td></tr>
+        <tr><td>🌡 Auto K อุณหภูมิ</td><td>Arrhenius E/R=8971K · ref 32°C · median tmp_6 (TWQMS, 28–34°C) · sync Firebase</td></tr>
         <tr><td>k รายสถานี</td><td>fit 3 เดือน (ม.ค.–มี.ค. 2569) · 51 สถานี</td></tr>
         <tr><td>MH (เขื่อนแม่กลอง)</td><td>k=0.038/hr · half-life ~19h</td></tr>
         <tr><td>CP (เจ้าพระยา)</td><td>k=0.062/hr · half-life ~11h</td></tr>
@@ -3033,7 +3035,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>fallback</td><td>ไม่มีข้อมูล pump → ใช้ frc ปัจจุบัน</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
+      <div style="margin-top:4px;color:#c080a0;font-size:9px;text-align:right;">v36.3 tempK · Jul 2026</div>
     </div>
 
     <!-- EC note -->
@@ -3085,7 +3087,7 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
         <tr><td>◆ เก่า</td><td>บันทึกคาดการณ์เก่าเปรียบเทียบค่าจริง</td></tr>
       </table>
 
-      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v34 rtulive · May 2026</div>
+      <div style="margin-top:4px;color:#8090b0;font-size:9px;text-align:right;">v36.3 tempK · Jul 2026</div>
     </div>
   </div>
   <div id="tip">
@@ -7585,8 +7587,8 @@ function setParam(mode) {
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
     ticker.innerHTML = mode === 'ec'
-      ? '<span>⚠ v36 — EPANET Pipe-Aware Contour + KMZ Network + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6) · Firebase + github (M ก.ค.69)</span>'
-      : '<span>⚠ v36 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6) · Firebase + github (M ก.ค.69)</span>';
+      ? '<span>⚠ v36.3 — EPANET Pipe-Aware Contour + KMZ Network + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6, ref sync Firebase) · Firebase + github (M ก.ค.69)</span>'
+      : '<span>⚠ v36.3 — EPANET Pipe-Aware Contour (KMZ 21,909 segments) + Auto K อุณหภูมิ (Arrhenius/TWQMS tmp_6, ref sync Firebase) · Firebase + github (M ก.ค.69)</span>';
   }
   // ซ่อน EPANET panel ตอน EC mode (ไม่มี decay)
   document.getElementById('epanet-block').style.display = mode === 'ec' ? 'none' : '';
@@ -15345,7 +15347,7 @@ function submitFeedback(){
 <div style="background:#fff;border-radius:16px;max-width:760px;width:95%;max-height:88vh;overflow-y:auto;padding:24px 28px;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;font-family:'Sarabun',sans-serif;color:#111;text-decoration:none !important;">
 <button onclick="document.getElementById('about-panel').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
 <h2 style="color:#cc0055;margin:0 0 4px;font-size:20px;">FRCContour Model Summary</h2>
-<p style="color:#999;font-size:11px;margin:0 0 16px;">v35.8 — Jul 2026 · M sandbox · Water Quality Division · 🔒 Security Upgrade</p>
+<p style="color:#999;font-size:11px;margin:0 0 16px;">v36.3 — Jul 2026 · M sandbox · Water Quality Division · 🌡 Temp-Corrected K (Arrhenius)</p>
 
 <h3 style="color:#cc0055;font-size:15px;margin:16px 0 6px;">🌸 Real-time FRC Contour ทำงานยังไง</h3>
 <p style="font-size:12px;line-height:1.7;color:#111;">
@@ -15374,6 +15376,20 @@ K แบ่งเป็น 2 องค์ประกอบตามหลัก
 &nbsp;&nbsp;• มหาสวัสดิ์ (มส.) = <b>0.400/day</b> (half-life 42 ชม.)<br>
 <b>Kw (Wall decay)</b> — ปฏิกิริยากับผนังท่อ ค่า default = 0.05/day<br>
 <b>D</b> — เส้นผ่านศูนย์กลางท่อเฉลี่ย
+</p>
+
+<h3 style="color:#e07020;font-size:15px;margin:16px 0 6px;">🌡 Auto K ตามอุณหภูมิ — Arrhenius (v36)</h3>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+อัตราการสลายคลอรีนไวต่ออุณหภูมิมาก (K เพิ่ม ~3 เท่า จาก 20→30°C) — ระบบจึงปรับ K อัตโนมัติตามอุณหภูมิน้ำจริง:
+</p>
+<div style="background:#e07020;color:#fff;border-radius:6px;padding:8px;text-align:center;font-size:13px;font-weight:700;margin:8px 0;">K(T) = K × exp(−(E/R) × (1/(T+273) − 1/(T<sub>ref</sub>+273)))</div>
+<p style="font-size:12px;line-height:1.7;color:#111;">
+<b>A. E/R = 8971 K</b> — อ้างอิงงานวิจัย ม.เกษตร (Kongbuchakiat et al. 2025, Results in Engineering — โรงงานผลิตน้ำบางเขน)<br>
+<b>B. T<sub>ref</sub> = 32°C</b> — อุณหภูมิน้ำตอน calibrate K ภาคสนาม (เม.ย. 69) → หน้าร้อน factor ≈ ×1.0 และทำหน้าที่เป็น<b>ตัวปรับฤดูกาล</b><br>
+<b>C. T ระบบ</b> — median ของ tmp_6 (TWQMS) กรองเฉพาะช่วง 28–34°C ตัดสถานีที่วัดเพี้ยน (สำรวจจริง ก.ค.69, n=49)<br>
+<b>D. ตัวอย่างผล:</b> 32°C ×1.00 · 30°C ×0.82 · 28°C ×0.68 · 25°C ×0.50 — หน้าหนาว contour คงคลอรีนได้นานขึ้น (แก้ underestimate ช่วง ธ.ค.–ม.ค.)<br>
+<b>E. T<sub>ref</sub> sync ผ่าน Firebase</b> — ทุกเครื่องใช้ค่ากลางเดียวกัน ปรับด้วย <code>setTempRef(°C)</code> ใน console<br>
+<span style="color:#888;font-size:11px;">เปิด/ปิดได้จาก sidebar → "🌡 Auto K ตามอุณหภูมิ (Arrhenius)" · ตรวจสอบ chain ด้วย <code>_frcDiag(lat, lon)</code></span>
 </p>
 
 <h3 style="color:#22c55e;font-size:15px;margin:16px 0 6px;">💧 Live Data Sources</h3>
@@ -15428,7 +15444,7 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <b>C.</b> App Check + Domain Restriction — จำกัด API key เฉพาะ domain ที่อนุญาต
 </p>
 
-<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v35.8 · M sandbox · Water Quality Division · Jul 2026 · 🔒 Security Upgrade</div>
+<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #eee;color:#999;font-size:10px;">FRCContour v36.3 · M sandbox · Water Quality Division · Jul 2026 · 🌡 Temp-Corrected K</div>
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
