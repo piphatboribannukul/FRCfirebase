@@ -1700,6 +1700,58 @@ window._frcDiag = function(lat, lon) {
     cached != null ? cached.toFixed(4) : cached, 'mg/L');
 };
 
+// ── validateModel — วัดความแม่น contour เทียบสถานี monitor (RMSE/MAE/MAPE) ──
+// หลักการ: contour ใช้เฉพาะ pump/plant (SP/SW) เป็นต้นทาง — สถานี monitor ไม่ได้เป็น input
+// จึงเทียบ "ค่าที่แผนที่แสดง ณ พิกัด monitor" กับ "ค่าที่ monitor วัดจริง" ได้แบบ out-of-sample แท้
+// ใช้: validateModel()            → วัดจาก snapshot ปัจจุบัน
+//      validateModel({save:true}) → วัด + บันทึกผลลง Firebase (validation/) สะสมข้ามวัน
+window.validateModel = function(opts = {}) {
+  if (!_idwCache) { console.warn('validateModel: _idwCache ยังไม่พร้อม — รอ contour วาดเสร็จก่อน'); return null; }
+
+  // กันปนเปื้อน: ถ้า monitor ตัวไหนบังเอิญเป็น key ของ CUSTOM_ZONES (เป็น source เอง) ให้ตัดออก
+  const zoneSids = new Set(Object.keys(window.CUSTOM_ZONES || {}));
+  const targets = SENSORS.filter(s =>
+    s.type === 'monitor' && s.frc > 0 && isFinite(s.frc) && !zoneSids.has(String(s.id)));
+
+  const rows = [];
+  for (const m of targets) {
+    const pred = idw(m.lat, m.lon);
+    if (pred == null || !isFinite(pred) || pred <= 0) continue;
+    const err = pred - m.frc;
+    rows.push({
+      id: String(m.id), name: (m.name || '').slice(0, 28),
+      จริง: +m.frc.toFixed(2), ทาย: +pred.toFixed(2),
+      err: +err.toFixed(3), 'APE%': +(Math.abs(err) / m.frc * 100).toFixed(1)
+    });
+  }
+  const n = rows.length;
+  if (!n) { console.warn('validateModel: ไม่มีสถานี monitor ที่ใช้ได้'); return null; }
+
+  const rmse = Math.sqrt(rows.reduce((s, r) => s + r.err * r.err, 0) / n);
+  const mae  = rows.reduce((s, r) => s + Math.abs(r.err), 0) / n;
+  const mape = rows.reduce((s, r) => s + r['APE%'], 0) / n;
+  const bias = rows.reduce((s, r) => s + r.err, 0) / n;
+  rows.sort((a, b) => Math.abs(b.err) - Math.abs(a.err));
+
+  console.log('📊 validateModel — n=' + n + ' สถานี monitor · ' + new Date().toLocaleString('th-TH'));
+  console.log('RMSE = ' + rmse.toFixed(3) + ' mg/L | MAE = ' + mae.toFixed(3) + ' mg/L | MAPE = ' + mape.toFixed(1) + '% | bias = ' + (bias >= 0 ? '+' : '') + bias.toFixed(3) + ' (' + (bias > 0 ? 'contour ทายสูงกว่าจริง' : 'contour ทายต่ำกว่าจริง') + ')');
+  console.log('เกณฑ์เทียบ กนว.32/2566 (EPANET-MSX): RMSE 0.09–0.25 mg/L · MAPE 11–14%');
+  console.table(rows);
+  console.log('สถานีบนสุดของตาราง = พลาดมากสุด → จุดที่ควรตรวจ K / เส้นทางท่อ / zone ก่อน');
+
+  const result = { ts: Date.now(), n, rmse: +rmse.toFixed(3), mae: +mae.toFixed(3),
+                   mape: +mape.toFixed(1), bias: +bias.toFixed(3),
+                   tempFactor: window._tempKFactor || 1, apiStatus: (typeof apiStatus !== 'undefined' ? apiStatus : '?') };
+
+  if (opts.save && window._fbReady && window._fb) {
+    const key = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    window._fbSet(window._fbRef(window._fb, 'validation/' + key), Object.assign({}, result, { rows }))
+      .then(() => console.log('💾 บันทึกผลลง Firebase: validation/' + key))
+      .catch(e => console.warn('validateModel save error:', e.message));
+  }
+  return Object.assign({}, result, { rows });
+};
+
 // ── MAP ───────────────────────────────────────────────────────
 const map=L.map('map',{center:[13.81,100.58],zoom:10,zoomControl:false,attributionControl:false,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120,markerZoomAnimation:true});
 window.map = map; // expose for search bar & other external scripts
