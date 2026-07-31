@@ -1,10 +1,10 @@
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '37.0';
+const APP_VERSION = '37.1';
 function appBadge(suffix){ return '⬡ V' + APP_VERSION + (suffix ? '+' + suffix : ''); }
 
-// ── สารบัญ (ค้นหา "[N/11]" เพื่อกระโดดไป section) ──
+// ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
 //   [1/11] CORE ENGINE — map, contour, Dijkstra, K chain (3-priority), tempK Arrhenius, RTU, live poll, report
 //   [2/11] ZONES — zone store, DEFAULT_ZONES, zone editor, district boundaries
 //   [3/11] DISCLAIMER TICKER — โหมด FRC/EC
@@ -16,6 +16,7 @@ function appBadge(suffix){ return '⬡ V' + APP_VERSION + (suffix ? '+' + suffix
 //   [9/11] VC SIM — valve control simulation
 //   [10/11] RAW WATER EC — สีและ interpolation
 //   [11/11] RAW WATER STATIONS + ALERTS + BOOT — แม่กลอง/เจ้าพระยา, แจ้งเตือน, init สุดท้าย
+//   [12/12] DASHBOARD — GISTDA-style landing view, tab bar, zone cards
 
 // ═══════════ [1/11] CORE ENGINE — map, contour, Dijkstra, K chain (3-priority), tempK Arrhenius, RTU, live poll, report ═══════════
 // ── API Configuration ──────────────────────────────────────────────────────
@@ -1883,13 +1884,23 @@ function _drawOnCanvas() {
     mctx.fillRect(0,0,W,H);
     mctx.fillStyle='#fff';
     mctx.beginPath();
-    for(const poly of [...STA_POLYS,...MWA_POLYS]) {
-      let first=true;
-      for(const [la,lo] of poly.coords) {
-        const [x,y]=toXY(la,lo);
-        if(first){mctx.moveTo(x,y);first=false;} else mctx.lineTo(x,y);
+    if (window._dashClipCoords && window._dashClipCoords.length > 2) {
+      // v37.1: เลือกโซนจากแดชบอร์ด → contour เฉพาะในพื้นที่อิทธิพลนั้น (นอกกรอบ = แผนที่พื้น)
+      let first = true;
+      for (const [la, lo] of window._dashClipCoords) {
+        const [x, y] = toXY(la, lo);
+        if (first) { mctx.moveTo(x, y); first = false; } else mctx.lineTo(x, y);
       }
       mctx.closePath();
+    } else {
+      for(const poly of [...STA_POLYS,...MWA_POLYS]) {
+        let first=true;
+        for(const [la,lo] of poly.coords) {
+          const [x,y]=toXY(la,lo);
+          if(first){mctx.moveTo(x,y);first=false;} else mctx.lineTo(x,y);
+        }
+        mctx.closePath();
+      }
     }
     mctx.fill('nonzero');
     const maskData = mctx.getImageData(0,0,PW,PH).data;
@@ -4350,6 +4361,7 @@ function updateStats() {
     _css('s-total','color','#cc0055'); _css('s-avg','color','#cc0055');
     _css('s-hi','color','#cc0055'); _css('s-lo','color','#c08000');
   }
+  try { if (typeof buildDashboard === 'function') buildDashboard(); } catch(e) {}
 }
 
 function updateLegendPanel() {
@@ -4432,6 +4444,7 @@ function setParam(mode) {
   // reset unified timeline เมื่อเปลี่ยน mode (FRC/EC ใช้ frame ต่างกัน)
   _unifiedLoaded = false;
   _unifiedFrames = [];
+  try { if (typeof buildDashboard === 'function') { _dashClearSelect(); buildDashboard(); } } catch(e) {}
 }
 
 
@@ -14302,3 +14315,326 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
     );
   };
 })();
+
+// ═══════════ [12/12] DASHBOARD — GISTDA-style landing view (v37.1) ═══════════
+let DASH_GROUP = 'src';    // 'src' = ค่าต้นทางสถานีสูบจ่าย | 'avg' = เฉลี่ยพื้นที่อิทธิพล (ต้นทาง+ปลายทาง)
+let _dashChart = null;
+let _dashLastTab = 'dash';
+let _dashRows = [];
+let _dashHilite = null;
+let _dashSelKey = null;
+
+function setTab(tab) {
+  if (tab === 'forecast') {
+    if (document.body.classList.contains('dash-mode')) setTab('map');   // view สะอาดก่อน
+    setTimeout(() => { if (typeof openForecastBar === 'function') openForecastBar(); }, 260);
+    _flashTab('mtab-forecast'); return;
+  }
+  if (tab === 'report') {
+    if (typeof openReport === 'function') openReport();
+    _flashTab('mtab-report'); return;
+  }
+  _dashLastTab = tab;
+  document.body.classList.toggle('dash-mode', tab === 'dash');
+  document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('mtab-' + tab);
+  if (btn) btn.classList.add('active');
+  setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 160);
+  if (tab === 'dash') {
+    setTimeout(() => { try {
+      if (_dashHilite) map.fitBounds(_dashHilite.getBounds(), { padding: [24, 24] });
+      else map.fitBounds([[13.45, 100.25], [14.10, 100.97]]);
+    } catch (e) {} }, 220);
+    buildDashboard();
+  }
+}
+
+function dashOpenWhatIf() {
+  if (document.body.classList.contains('dash-mode')) setTab('map');    // Cl₂ จำลองบนแผนที่เต็ม
+  setTimeout(() => { if (typeof toggleWhatIfPanel === 'function') toggleWhatIfPanel(); }, 260);
+  _flashTab('mtab-cl2');
+}
+function dashOpen3D() {
+  if (typeof open3DTerrain === 'function') open3DTerrain();
+  _flashTab('mtab-3d');
+}
+function _flashTab(id) {
+  const b = document.getElementById(id); if (!b) return;
+  b.classList.add('active');
+  setTimeout(() => { b.classList.remove('active');
+    const cur = document.getElementById('mtab-' + _dashLastTab); if (cur) cur.classList.add('active'); }, 600);
+}
+function setDashGroup(g) {
+  DASH_GROUP = g;
+  document.getElementById('dash-grp-src').classList.toggle('on', g === 'src');
+  document.getElementById('dash-grp-avg').classList.toggle('on', g === 'avg');
+  buildDashboard();
+}
+
+// ── param helpers: แดชบอร์ดตามโหมด FRC / EC ──
+function _dIsEc() { return typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec'; }
+function _dVal(s) { return _dIsEc() ? (s.ec != null ? s.ec : null) : (s.frc != null ? s.frc : null); }
+function _dCol(v) {
+  if (!_dIsEc()) return frcColor(v);
+  return v >= 400 ? '#ef4444' : v >= 300 ? '#f97316' : v >= 250 ? '#eab308' : v >= 200 ? '#22c55e' : v >= 150 ? '#14b8a6' : '#3b82f6';
+}
+function _dUnit() { return _dIsEc() ? 'µS/cm' : 'mg/L'; }
+function _dFmt(v) { return _dIsEc() ? Math.round(v) : v.toFixed(2); }
+
+// ── Zone influence polygon ต่อสถานีสูบจ่าย: CUSTOM_ZONES → STA_POLYS ที่ครอบสถานี ──
+let _dashPolyMap = null;
+function _dashZonePoly(src) {
+  const sid = String(src.id);
+  const cz = window.CUSTOM_ZONES || {};
+  if (cz[sid] && cz[sid].coords && cz[sid].coords.length >= 3) return cz[sid].coords;
+  for (const k in cz) {
+    const z = cz[k];
+    if (k.startsWith('VC')) continue;
+    if (z.coords && z.coords.length >= 3 && _pip(src.lat, src.lon, z.coords)) return z.coords;
+  }
+  for (let i = 0; i < STA_POLYS.length; i++) {
+    if (_pip(src.lat, src.lon, STA_POLYS[i].coords)) return STA_POLYS[i].coords;
+  }
+  return null;
+}
+function _dashRebuildPolyMap() {
+  _dashPolyMap = {};
+  for (const src of _dashSources()) _dashPolyMap[String(src.id)] = _dashZonePoly(src);
+}
+
+// ── สังกัด: โซนอิทธิพล (polygon → ใกล้สุด) / สาขา (area → fallback lookup ตามชื่อ) ──
+function _dashZoneOf(m) {
+  if (!_dashPolyMap) _dashRebuildPolyMap();
+  const hits = [];
+  for (const [sid, poly] of Object.entries(_dashPolyMap)) {
+    if (poly && _pip(m.lat, m.lon, poly)) hits.push(sid);
+  }
+  const _d2 = sid => {
+    const s = SENSORS.find(x => String(x.id) === String(sid));
+    return s ? (s.lat - m.lat) ** 2 + (s.lon - m.lon) ** 2 : Infinity;
+  };
+  if (hits.length) return hits.sort((a, b) => _d2(a) - _d2(b))[0];  // polygon ซ้อน → ต้นทางใกล้สุด
+  const sources = _dashSources();
+  let best = null, bd = Infinity;
+  for (const s of sources) {
+    const d = (s.lat - m.lat) ** 2 + (s.lon - m.lon) ** 2;
+    if (d < bd) { bd = d; best = String(s.id); }
+  }
+  return best || '?';
+}
+
+function _dashKeyOf(m) { return _dashZoneOf(m); }
+function _dashMonitors() {
+  return SENSORS.filter(s => s.type === 'monitor' && _dVal(s) != null && isFinite(_dVal(s)));
+}
+function _dashAllStations() {   // ทุกสถานีที่มีค่า (monitor + pump/plant) — ใช้กับภาพรวม/เฝ้าระวัง
+  return SENSORS.filter(s => _dVal(s) != null && isFinite(_dVal(s)));
+}
+function _dashSources() {
+  return SENSORS.filter(s => _SOURCE_TYPES.has(s.type));
+}
+function _dashMembers(key) { return _dashMonitors().filter(m => _dashKeyOf(m) === key); }
+function _dashZoneName(sid) {
+  const s = SENSORS.find(x => String(x.id) === String(sid));
+  if (!s) return sid;
+  return String(s.name || sid).replace(/^สถานีสูบจ่ายน้ำ/, '').replace(/^สถานีสูบส่งน้ำ/, '').trim() || sid;
+}
+
+function _dashStats() {
+  _dashRebuildPolyMap();
+  const all = _dashAllStations();
+  const n = all.length;
+  const vals = all.map(_dVal).sort((a, b) => a - b);
+  const avg = n ? vals.reduce((a, b) => a + b, 0) / n : 0;
+  const med = n ? vals[Math.floor(n / 2)] : 0;
+  const isEc = _dIsEc();
+  const pass = all.filter(m => isEc ? _dVal(m) < 300 : _dVal(m) >= 0.2).length;
+  const watch = all.filter(m => isEc ? _dVal(m) >= 300 : _dVal(m) < 0.3)
+    .sort((a, b) => isEc ? _dVal(b) - _dVal(a) : _dVal(a) - _dVal(b));
+
+  // แถว = สถานีสูบจ่าย/โรงงานครบทุกแห่ง · เฉลี่ยพื้นที่ = ต้นทาง + สถานีรับน้ำ (ตามเจตนา: พื้นที่ข้างสถานีใช้ต้นทางเป็นตัวแทน)
+  const monitors = _dashMonitors();
+  const memberMap = {};
+  for (const m of monitors) { const k = _dashKeyOf(m); (memberMap[k] = memberMap[k] || []).push(m); }
+  const gRows = _dashSources().map(src => {
+    const key = String(src.id);
+    const mem = memberMap[key] || [];
+    const srcVal = _dVal(src);
+    const pool = (srcVal != null ? [srcVal] : []).concat(mem.map(_dVal));
+    const combAvg = pool.length ? pool.reduce((a, b) => a + b, 0) / pool.length : null;
+    const bar = DASH_GROUP === 'src' ? (srcVal != null ? srcVal : combAvg) : combAvg;
+    return { key, label: _dashZoneName(key), srcVal, avg: combAvg,
+      min: pool.length ? Math.min(...pool) : null, max: pool.length ? Math.max(...pool) : null,
+      n: mem.length, bar, lat: src.lat, lon: src.lon };
+  }).filter(r => r.bar != null && isFinite(r.bar));
+  gRows.sort((a, b) => _dIsEc() ? b.bar - a.bar : a.bar - b.bar);
+  return { n, pass, avg, med, watch, gRows };
+}
+
+function buildDashboard() {
+  if (!document.body.classList.contains('dash-mode')) return;
+  if (!SENSORS || !SENSORS.length) return;
+  const st = _dashStats();
+  _dashRows = st.gRows;
+  const isEc = _dIsEc();
+  const U = _dUnit();
+
+  // ── donut ──
+  const pct = st.n ? Math.round(st.pass / st.n * 100) : 0;
+  const R = 44, C = 2 * Math.PI * R;
+  const col = pct >= 95 ? '#16a34a' : pct >= 85 ? '#84cc16' : pct >= 70 ? '#f59e0b' : '#dc2626';
+  document.querySelector('#dash-summary h4').innerHTML = isEc ? '⚡ ภาพรวมความนำไฟฟ้า (EC)' : '💧 ภาพรวมคุณภาพน้ำ (FRC)';
+  document.getElementById('dash-donut').innerHTML =
+    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="#eef2f7" stroke-width="11"/>` +
+    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round"` +
+    ` stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 55 55)"/>` +
+    `<text x="55" y="51" text-anchor="middle" font-size="19" font-weight="800" fill="#1e3a5f" font-family="JetBrains Mono,monospace">${pct}%</text>` +
+    `<text x="55" y="68" text-anchor="middle" font-size="9" fill="#94a3b8">${isEc ? 'เกณฑ์ดี' : 'ผ่านเกณฑ์'}</text>`;
+  document.getElementById('dash-donut-stats').innerHTML = isEc
+    ? `EC &lt; 300 ${U}: <b>${st.pass}/${st.n}</b> สถานี<br>เฉลี่ยทั้งระบบ: <b>${Math.round(st.avg)}</b> ${U}<br>มัธยฐาน: <b>${Math.round(st.med)}</b> ${U}`
+    : `ผ่าน ≥0.2 ${U}: <b>${st.pass}/${st.n}</b> สถานี<br>เฉลี่ยทั้งระบบ: <b>${st.avg.toFixed(2)}</b> ${U}<br>มัธยฐาน: <b>${st.med.toFixed(2)}</b> ${U}`;
+
+  // ── watchlist ──
+  document.querySelector('#dash-watch h4').innerHTML =
+    `⚠️ สถานีเฝ้าระวัง <span class="dash-meta" id="dash-watch-meta"></span>`;
+  document.getElementById('dash-watch-meta').textContent =
+    (isEc ? 'EC ≥ 300 ' + U : 'FRC < 0.3 ' + U) + ' · ' + st.watch.length + ' สถานี';
+  const wl = document.getElementById('dash-watch-list');
+  wl.innerHTML = st.watch.length ? st.watch.map(m =>
+    `<div class="dw-item" onclick="dashGoto(${m.lat},${m.lon})">` +
+    `<span class="dw-name">${(m.name || m.id)}</span>` +
+    `<span class="dw-val" style="color:${_dCol(_dVal(m))}">${_dFmt(_dVal(m))}</span></div>`).join('')
+    : `<div class="dw-empty">✅ ทุกสถานีอยู่ในเกณฑ์ดี</div>`;
+
+  // ── system card ──
+  const rtuN = SENSORS.filter(s => s.rtuPressure > 0).length;
+  const tf = window._tempKFactor || 1;
+  document.getElementById('dash-model').innerHTML =
+    `<h4>🧪 สถานะระบบ</h4>` +
+    `<div style="font-size:11px;line-height:2;color:#475569;">` +
+    `สถานะข้อมูล: <b style="color:${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '#16a34a' : '#d97706'}">${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '● Live' : '⚠ ' + (typeof apiStatus !== 'undefined' ? apiStatus : '-')}</b>` +
+    ` · RTU→sensor: <b>${rtuN}/${SENSORS.length}</b><br>` +
+    `🌡 อุณหภูมิระบบ: <b>${window._sysTempC ? window._sysTempC + '°C' : '–'}</b> · K factor: <b>×${tf.toFixed(2)}</b>${tf === 1 ? ' (OFF)' : ''}<br>` +
+    `แหล่งจ่าย: Kb 0.778 บข. / 0.400 มส. (กนว.32/2566)</div>`;
+
+  // ── zone cards ──
+  document.getElementById('dash-zones').innerHTML = st.gRows.map(g => {
+    const v = g.bar;
+    const c = _dCol(v);
+    const frac = Math.min(isEc ? v / 500 : v / 1.5, 1);
+    const sub = DASH_GROUP === 'src'
+      ? (g.n ? `รับน้ำ ${g.n} สถานี · เฉลี่ยพื้นที่ ${_dFmt(g.avg)}` : 'ยังไม่มีจุดตรวจปลายทาง')
+      : (g.n ? `ต้นทาง ${g.srcVal != null ? _dFmt(g.srcVal) : '–'} · รับน้ำ ${g.n} สถานี` : `ใช้ค่าต้นทาง (ไม่มีจุดตรวจปลายทาง)`);
+    return `<div class="dz-card${String(g.key) === String(_dashSelKey) ? ' sel' : ''}" onclick="dashSelectZone('${String(g.key).replace(/'/g, "\\'")}')">` +
+      `<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="#eef2f7" stroke-width="5"/>` +
+      `<circle cx="17" cy="17" r="13" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(frac * 81.7).toFixed(1)} 81.7" transform="rotate(-90 17 17)"/></svg>` +
+      `<div class="dz-info"><div class="dz-name">${g.label}</div><div class="dz-sub">${sub}</div></div>` +
+      `<span class="dz-val" style="color:${c}">${_dFmt(v)}</span></div>`;
+  }).join('');
+
+  // ── bar chart ──
+  document.getElementById('dash-chart-title').textContent =
+    `📊 ${isEc ? 'EC' : 'FRC'} รายพื้นที่อิทธิพล — ${DASH_GROUP === 'src' ? 'ค่าต้นทางสถานีสูบจ่าย' : 'เฉลี่ยทั้งพื้นที่ (ต้นทาง+ปลายทาง)'} (${U})`;
+  document.getElementById('dash-updated').textContent =
+    'ปรับปรุงล่าสุด: ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  try {
+    const labels = st.gRows.map(g => g.label);
+    const data = st.gRows.map(g => +(isEc ? Math.round(g.bar) : g.bar.toFixed(2)));
+    const colors = st.gRows.map(g => _dCol(g.bar));
+    if (_dashChart) {
+      _dashChart.data.labels = labels; _dashChart.data.datasets[0].data = data;
+      _dashChart.data.datasets[0].backgroundColor = colors; _dashChart.update('none');
+    } else {
+      const ctx = document.getElementById('dash-chart').getContext('2d');
+      _dashChart = new Chart(ctx, { type: 'bar',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, maxBarThickness: 26 }] },
+        options: { responsive: true, maintainAspectRatio: false,
+          onClick: (e, els) => { if (els && els[0] != null && _dashRows[els[0].index]) dashSelectZone(_dashRows[els[0].index].key); },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' เฉลี่ย ' + c.parsed.y + ' ' + _dUnit() + ' (คลิกเพื่อดูรายละเอียด)' } } },
+          scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 30 } } } } });
+    }
+  } catch (e) { console.warn('[Dash] chart:', e.message); }
+}
+
+// ── เลือกโซน: กรอบพื้นที่อิทธิพล + การ์ดรายละเอียด (ต้นทาง + สถานีรับน้ำ) ──
+function dashSelectZone(key) {
+  if (String(key) === String(_dashSelKey)) { _dashClearSelect(); buildDashboard(); return; }  // กดซ้ำ = ยกเลิก
+  const row = _dashRows.find(r => String(r.key) === String(key));
+  if (!row) return;
+  _dashSelKey = key;
+  if (_dashHilite) { try { map.removeLayer(_dashHilite); } catch (e) {} _dashHilite = null; }
+  let bounds = null;
+  window._dashClipCoords = null;
+  if (!_dashPolyMap) _dashRebuildPolyMap();
+  const zonePoly = _dashPolyMap[String(key)];
+  if (zonePoly && zonePoly.length > 2) {
+    _dashHilite = L.polygon(zonePoly,
+      { color: '#1d4ed8', weight: 4, fillOpacity: 0, opacity: 1 }).addTo(map);   // เส้นทึบ ไม่ทับสี contour
+    bounds = _dashHilite.getBounds();
+    window._dashClipCoords = zonePoly;                     // contour เฉพาะในโซน
+  } else {
+    const members = _dashMembers(key);
+    const src = SENSORS.find(x => String(x.id) === String(key));
+    const pts = members.map(m => [m.lat, m.lon]);
+    if (src) pts.push([src.lat, src.lon]);
+    if (pts.length) {
+      bounds = L.latLngBounds(pts).pad(0.35);
+      _dashHilite = L.rectangle(bounds, { color: '#1d4ed8', weight: 4, fillOpacity: 0, opacity: 1 }).addTo(map);
+      const sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
+      window._dashClipCoords = [[sw.lat, sw.lng], [sw.lat, ne.lng], [ne.lat, ne.lng], [ne.lat, sw.lng]];
+    }
+  }
+  try { redrawContour(0); } catch (e) {}
+  if (bounds) { try { map.fitBounds(bounds, { padding: [28, 28] }); } catch (e) {} }
+  _dashRenderDetail(key, row);
+  buildDashboard(); // refresh .sel highlight บน card
+}
+function _dashClearSelect() {
+  _dashSelKey = null;
+  window._dashClipCoords = null;
+  try { redrawContour(0); } catch (e) {}
+  if (_dashHilite) { try { map.removeLayer(_dashHilite); } catch (e) {} _dashHilite = null; }
+  const d = document.getElementById('dash-detail');
+  if (d) d.classList.remove('show');
+  try { map.fitBounds([[13.45, 100.25], [14.10, 100.97]]); } catch (e) {}
+}
+function _dashRenderDetail(key, row) {
+  const d = document.getElementById('dash-detail');
+  if (!d) return;
+  const isEc = _dIsEc();
+  const members = _dashMembers(key).sort((a, b) => isEc ? _dVal(b) - _dVal(a) : _dVal(a) - _dVal(b));
+  let srcHtml = '';
+  {
+    const src = SENSORS.find(x => String(x.id) === String(key));
+    if (src) {
+      const sv = _dVal(src);
+      srcHtml = `<div class="dd-src"><div><div class="dd-src-name">🏭 ${src.name || key}</div>` +
+        `<div class="dash-meta">สถานีสูบจ่ายต้นทาง</div></div>` +
+        `<span class="dd-src-val" style="color:${sv != null ? _dCol(sv) : '#94a3b8'}">${sv != null ? _dFmt(sv) : '–'}</span></div>`;
+    }
+  }
+  d.innerHTML =
+    `<button class="dd-close" onclick="_dashClearSelect()">✕</button>` +
+    `<h4>📍 ${row.label}</h4>` + srcHtml +
+    `<div class="dd-note">▧ กรอบเส้นสีน้ำเงินบนแผนที่ = พื้นที่อิทธิพลสูบจ่าย (contour แสดงเฉพาะในกรอบ)</div>` +
+    `<div class="dash-meta" style="margin-bottom:4px;">${members.length ? 'สถานีรับน้ำ ' + members.length + ' แห่ง · เฉลี่ยพื้นที่ (รวมต้นทาง) ' + _dFmt(row.avg) + ' ' + _dUnit() : 'ยังไม่มีจุดตรวจปลายทางในพื้นที่นี้ — ใช้ค่าสถานีต้นทางเป็นตัวแทน'}</div>` +
+    members.map(m =>
+      `<div class="dw-item" onclick="dashGoto(${m.lat},${m.lon})">` +
+      `<span class="dw-name">${m.name || m.id}</span>` +
+      `<span class="dw-val" style="color:${_dCol(_dVal(m))}">${_dFmt(_dVal(m))}</span></div>`).join('');
+  d.classList.add('show');
+}
+
+function dashGoto(lat, lon) {
+  setTab('map');
+  setTimeout(() => { try { map.flyTo([lat, lon], 13.5); } catch (e) {} }, 200);
+}
+
+// ESC = ล้างการเลือกโซน
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _dashSelKey) { _dashClearSelect(); buildDashboard(); }
+});
+
+// boot: หน้าแรก = แดชบอร์ด
+setTimeout(() => { try { buildDashboard(); } catch (e) { console.warn('[Dash] boot:', e.message); } }, 1800);

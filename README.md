@@ -44,6 +44,15 @@ data/           ข้อมูล static — สร้างโดย extract_d
 | `validateModel()` | วัดความแม่น contour เทียบสถานี monitor 38 แห่ง (out-of-sample) → RMSE/MAE/MAPE/bias + ตารางรายสถานี |
 | `validateModel({save:true})` | วัด + บันทึกผลลง Firebase `validation/` สะสมข้ามวัน/ฤดู |
 
+## แดชบอร์ด (v37.1)
+
+หน้าแรก = แดชบอร์ดสไตล์ GISTDA: แผนที่ contour ในกรอบกลาง + การ์ดสรุปซ้าย/ขวา + กราฟแท่งล่าง
+- Tab bar: แดชบอร์ด / แผนที่ / คลอรีนเสริมปลายสาย (ลิงก์ sandbox/frc_deckgl.html) / คาดการณ์ / รายงาน / 3D / Cl₂ จำลอง — คาดการณ์และ Cl₂ สลับไปหน้าแผนที่ให้อัตโนมัติ
+- โซนอิทธิพล: แถว = สถานีสูบจ่าย/โรงงานครบ 23 แห่ง · polygon จาก CUSTOM_ZONES → STA_POLYS (chain เดียวกับ contour engine)
+- กดโซน → กรอบเส้นทึบน้ำเงิน + contour แสดงเฉพาะในกรอบ (mask engine) · เคลียร์ด้วย ✕ / กดซ้ำ / ESC
+- กราฟ 2 โหมด: "ต้นทาง (สถานีสูบจ่าย)" = ค่าสถานีเอง · "เฉลี่ยพื้นที่อิทธิพล" = เฉลี่ยรวมต้นทาง+สถานีรับน้ำ (โซนไร้จุดตรวจใช้ค่าต้นทาง)
+- รองรับทั้ง FRC และ Conductivity (เกณฑ์เฝ้าระวัง EC ≥ 300 µS/cm)
+
 ## Data sources
 
 - **TWQMS API** — FRC/EC/อุณหภูมิ 61 สถานี (poll 15 นาที)
@@ -64,4 +73,4 @@ GitHub Pages: Settings → Pages → Deploy from branch `main` / root
 อัปเดต = ทับไฟล์ที่แก้แล้ว commit (ผู้ใช้กด Ctrl+Shift+R ล้าง cache)
 
 ---
-v37.0 · Jul 2026 · แยกโครงจาก v36.3 (18K บรรทัดไฟล์เดียว → 3 ชั้น) + ซ่อม TDZ / dangling call
+v37.1 · Jul 2026 · แยกโครงจาก v36.3 (3 ชั้น) + ซ่อม TDZ/dangling call + แดชบอร์ด GISTDA-style + validateModel
