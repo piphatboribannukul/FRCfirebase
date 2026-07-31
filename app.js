@@ -411,9 +411,6 @@ const CONTOUR_K_OVERRIDE = {
 
 
 
-/**
- * renderHybridKPanel() — แสดงตาราง Hybrid K ใน sidebar
- */
 
 // Source stations สำหรับ dropdown (pump + plant ที่มี zone)
 const _EP_PUMP_STATIONS = [];
@@ -4076,11 +4073,14 @@ map.on('mousemove',e=>{
   // Throttle: ข้ามถ้ายังไม่ถึงเวลา (ทุก ~50ms)
   if (_tipThrottled) {
     const pt=map.latLngToContainerPoint(e.latlng);
-    tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px';
+    const _mr2 = map.getContainer().getBoundingClientRect();
+    const _pr2 = tip.offsetParent ? tip.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+    const _bx = _mr2.left - _pr2.left, _by = _mr2.top - _pr2.top;   // v38: offset กรอบแดชบอร์ด
+    tip.style.left=(_bx+pt.x+16)+'px'; tip.style.top=(_by+pt.y-22)+'px';
     // clamp ไม่ให้ตกขอบ
     var tipR=tip.getBoundingClientRect();
-    if(tipR.right>window.innerWidth) tip.style.left=Math.max(4,pt.x-tipR.width-8)+'px';
-    if(tipR.bottom>window.innerHeight) tip.style.top=Math.max(4,pt.y-tipR.height-8)+'px';
+    if(tipR.right>window.innerWidth) tip.style.left=Math.max(4,_bx+pt.x-tipR.width-8)+'px';
+    if(tipR.bottom>window.innerHeight) tip.style.top=Math.max(4,_by+pt.y-tipR.height-8)+'px';
     if(tipR.left<0) tip.style.left='4px';
     if(tipR.top<0) tip.style.top='4px';
     return;
@@ -4130,7 +4130,12 @@ map.on('mousemove',e=>{
       : (PARAM_MODE==='ec'?'ค่า EC จริง (API)':'ค่า FRC จริง (API)'))
     : (PARAM_MODE==='ec'?'ค่า EC Interpolated':'ค่า FRC Interpolated');
   const pt=map.latLngToContainerPoint(e.latlng);
-  tip.style.left=(pt.x+16)+'px'; tip.style.top=(pt.y-22)+'px'; tip.style.display='block';
+  // v38: แปลงพิกัด container → กรอบอ้างอิงของ tip (#map อาจถูกย้าย/ย่อในโหมดแดชบอร์ด)
+  const _mr = map.getContainer().getBoundingClientRect();
+  const _pr = tip.offsetParent ? tip.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+  tip.style.left=(_mr.left - _pr.left + pt.x + 16)+'px';
+  tip.style.top =(_mr.top  - _pr.top  + pt.y - 22)+'px';
+  tip.style.display='block';
 });
 map.on('mouseout',()=>{ _ensureTipEls(); if(_tipEl) _tipEl.style.display='none'; });
 
@@ -5294,7 +5299,6 @@ async function fetchAndUpdate() {
   }
 
   // V27 Hybrid K — back-calculate K จาก live FRC ก่อน rebuild cache
-  // (dangling renderHybridKPanel call removed in v37)
 
   // redraw ทุก layer
   // ครอบ fallback path ด้วย (ห่อกัน error ตัดตอน redraw)
