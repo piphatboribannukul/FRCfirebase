@@ -2267,7 +2267,8 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
 #header h1{color:#1e3a5f !important;text-shadow:none !important;font-size:13px !important;flex-shrink:1;min-width:0;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #header #clock{color:#64748b !important;}
 #header .live-dot{display:none !important;}
-#header h1{max-width:430px;}
+#header h1{max-width:none;flex-shrink:0;}
+#v2-badge{font-size:9.5px !important;padding:2px 8px !important;}
 #v2-badge{order:99;}
 #dark-toggle{order:98;}
 #clock{order:97;}
@@ -2378,7 +2379,7 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
     <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
   </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V38.0+TEMP</span>
+  <span id="v2-badge">⬡ V38</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>

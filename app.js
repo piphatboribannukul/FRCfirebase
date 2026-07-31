@@ -2,7 +2,7 @@
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
 const APP_VERSION = '38.0';
-function appBadge(suffix){ return '⬡ V' + APP_VERSION + (suffix ? '+' + suffix : ''); }
+function appBadge(){ return '⬡ V' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
 //   [1/11] CORE ENGINE — map, contour, Dijkstra, K chain (3-priority), tempK Arrhenius, RTU, live poll, report
@@ -5234,10 +5234,10 @@ function injectRtuPressureToSensors() {
   const _v2b = document.getElementById('v2-badge');
   if (_v2b) {
     if (injected > 0) {
-      _v2b.textContent = appBadge('TEMP·RTU');
+      _v2b.textContent = appBadge();
       _v2b.title = `RTU pressure injected: ${injected}/${SENSORS.length} sensors, P_nominal=${window._rtuPNominal?.toFixed(1)} mwc`;
     } else {
-      _v2b.textContent = appBadge('TEMP');
+      _v2b.textContent = appBadge();
     }
   }
 }
