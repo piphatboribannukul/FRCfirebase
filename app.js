@@ -1,7 +1,7 @@
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '37.1';
+const APP_VERSION = '38.0';
 function appBadge(suffix){ return '⬡ V' + APP_VERSION + (suffix ? '+' + suffix : ''); }
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
@@ -1885,7 +1885,7 @@ function _drawOnCanvas() {
     mctx.fillStyle='#fff';
     mctx.beginPath();
     if (window._dashClipCoords && window._dashClipCoords.length > 2) {
-      // v37.1: เลือกโซนจากแดชบอร์ด → contour เฉพาะในพื้นที่อิทธิพลนั้น (นอกกรอบ = แผนที่พื้น)
+      // v38.0: เลือกโซนจากแดชบอร์ด → contour เฉพาะในพื้นที่อิทธิพลนั้น (นอกกรอบ = แผนที่พื้น)
       let first = true;
       for (const [la, lo] of window._dashClipCoords) {
         const [x, y] = toXY(la, lo);
@@ -3628,7 +3628,7 @@ function buildMarkers() {
     // marker color: FRC ใช้ statusColor (solid #cc0055/#e05080/#b07000 เหมือนต้นฉบับ)
     //               EC  ใช้ ecColor (solid blue/orange)
     const c = PARAM_MODE === 'frc' ? statusColor(pv) : ecStatus(pv) === `เกินมาตรฐาน ⚠ (≥${EC_CONFIG.hi})` ? '#b32800' : pv >= EC_CONFIG.lo ? '#1565c0' : '#1a7ab0';
-    const sz=s.type==='plant'?22:s.type==='pump'?18:7;   // v37.1: icon ต้นทางใหญ่ชัดเป็นลำดับชั้น
+    const sz=s.type==='plant'?22:s.type==='pump'?18:7;   // v38.0: icon ต้นทางใหญ่ชัดเป็นลำดับชั้น
     const br=s.type==='monitor'?'50%':'3px';
     const tt = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name.replace(/\s+/g, ' ').trim()];
 
@@ -14325,7 +14325,7 @@ document.querySelectorAll('.v30-scale-section input').forEach(inp => {
   };
 })();
 
-// ═══════════ [12/12] DASHBOARD — GISTDA-style landing view (v37.1) ═══════════
+// ═══════════ [12/12] DASHBOARD — GISTDA-style landing view (v38.0) ═══════════
 let DASH_GROUP = 'src';    // 'src' = ค่าต้นทางสถานีสูบจ่าย | 'avg' = เฉลี่ยพื้นที่อิทธิพล (ต้นทาง+ปลายทาง)
 let _dashChart = null;
 let _dashLastTab = 'dash';
@@ -14659,6 +14659,18 @@ function dashGoto(lat, lon) {
   setTab('map');
   setTimeout(() => { try { map.flyTo([lat, lon], 13.5); } catch (e) {} }, 200);
 }
+
+// popup เปิดบนแดชบอร์ด → หุบบาร์ชาร์ต + ขยายแผนที่เต็มลงล่าง (ปิดแล้วคืน)
+map.on('popupopen', e => {
+  if (!document.body.classList.contains('dash-mode')) return;
+  document.body.classList.add('dash-popup');
+  setTimeout(() => { try { map.invalidateSize(); if (e.popup && e.popup.update) e.popup.update(); } catch (x) {} }, 80);
+});
+map.on('popupclose', () => {
+  if (!document.body.classList.contains('dash-popup')) return;
+  document.body.classList.remove('dash-popup');
+  setTimeout(() => { try { map.invalidateSize(); } catch (x) {} }, 80);
+});
 
 // ESC = ล้างการเลือกโซน
 document.addEventListener('keydown', e => {
