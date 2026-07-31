@@ -14665,5 +14665,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _dashSelKey) { _dashClearSelect(); buildDashboard(); }
 });
 
-// boot: หน้าแรก = แดชบอร์ด
-setTimeout(() => { try { buildDashboard(); } catch (e) { console.warn('[Dash] boot:', e.message); } }, 1800);
+// boot: หน้าแรก = แดชบอร์ด — ซูมเต็มกรอบตั้งแต่เปิด (ระดับเดียวกับกดแท็บ)
+setTimeout(() => { try {
+  buildDashboard();
+  if (document.body.classList.contains('dash-mode')) _dashFitHome();
+} catch (e) { console.warn('[Dash] boot:', e.message); } }, 1800);
