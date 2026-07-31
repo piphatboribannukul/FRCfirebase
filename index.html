@@ -2328,6 +2328,14 @@ body.dash-mode .dash-panel{display:flex;flex-direction:column;gap:10px;}
 #dash-chart-card{height:100%;display:flex;flex-direction:column;}
 #dash-chart-head{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;}
 #dash-chart-box{flex:1;min-height:0;position:relative;}
+/* ── legend ในกรอบแผนที่ ── */
+#dash-map-legend{left:336px;bottom:208px;z-index:860;background:rgba(255,255,255,.93);border-radius:10px;
+  box-shadow:0 2px 10px rgba(15,40,80,.18);padding:7px 10px 6px;font-size:9.5px;color:#334155;backdrop-filter:blur(3px);}
+#dash-map-legend .dl-title{font-weight:700;color:#1e3a5f;font-size:10px;margin-bottom:3px;}
+#dash-map-legend .dl-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;width:216px;}
+#dash-map-legend .dl-bar span{flex:1;}
+#dash-map-legend .dl-labels{display:flex;width:216px;font-size:8.5px;color:#64748b;margin-top:2px;}
+#dash-map-legend .dl-labels span{flex:1;text-align:center;}
 /* ── ซ่อน chrome โหมดแผนที่เมื่ออยู่แดชบอร์ด ── */
 body.dash-mode #ham-btn,body.dash-mode #map-search-wrap,body.dash-mode #v30-tab-btn,
 body.dash-mode #ai-insight-btn,body.dash-mode #flow-btn,body.dash-mode #legend-panel,
@@ -3632,6 +3640,7 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
      ══════════════════════════════════════════════════════════════════════ -->
 
 <!-- ═══ DASHBOARD OVERLAYS (v37.1) ═══ -->
+<div id="dash-map-legend" class="dash-panel"></div>
 <div id="dash-left" class="dash-panel">
   <div class="dash-card" id="dash-detail"></div>
   <div class="dash-card" id="dash-summary">

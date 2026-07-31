@@ -14324,6 +14324,12 @@ let _dashRows = [];
 let _dashHilite = null;
 let _dashSelKey = null;
 
+function _dashFitHome() {
+  try {
+    map.fitBounds([[13.45, 100.25], [14.10, 100.97]]);
+    setTimeout(() => { try { map.setZoom(map.getZoom() + 0.5); } catch (e) {} }, 60);   // เต็มกรอบ
+  } catch (e) {}
+}
 function setTab(tab) {
   if (tab === 'forecast') {
     if (document.body.classList.contains('dash-mode')) setTab('map');   // view สะอาดก่อน
@@ -14343,7 +14349,7 @@ function setTab(tab) {
   if (tab === 'dash') {
     setTimeout(() => { try {
       if (_dashHilite) map.fitBounds(_dashHilite.getBounds(), { padding: [24, 24] });
-      else map.fitBounds([[13.45, 100.25], [14.10, 100.97]]);
+      else _dashFitHome();
     } catch (e) {} }, 220);
     buildDashboard();
   }
@@ -14532,6 +14538,20 @@ function buildDashboard() {
       `<span class="dz-val" style="color:${c}">${_dFmt(v)}</span></div>`;
   }).join('');
 
+  // ── legend ในกรอบแผนที่ ──
+  try {
+    const lg = document.getElementById('dash-map-legend');
+    if (lg) {
+      const bands = isEc
+        ? [[100,'<150'],[175,'200'],[225,'250'],[275,'300'],[350,'400'],[450,'≥400']]
+        : [[0.1,'<0.2'],[0.25,'0.3'],[0.4,'0.5'],[0.65,'0.8'],[1.0,'1.2'],[1.35,'≥1.2']];
+      lg.innerHTML =
+        `<div class="dl-title">มาตราส่วนสี ${isEc ? 'EC (µS/cm)' : 'FRC (mg/L)'}</div>` +
+        `<div class="dl-bar">${bands.map(b => `<span style="background:${_dCol(b[0])}"></span>`).join('')}</div>` +
+        `<div class="dl-labels">${bands.map(b => `<span>${b[1]}</span>`).join('')}</div>`;
+    }
+  } catch (e) {}
+
   // ── bar chart ──
   document.getElementById('dash-chart-title').textContent =
     `📊 ${isEc ? 'EC' : 'FRC'} รายพื้นที่อิทธิพล — ${DASH_GROUP === 'src' ? 'ค่าต้นทางสถานีสูบจ่าย' : 'เฉลี่ยทั้งพื้นที่ (ต้นทาง+ปลายทาง)'} (${U})`;
@@ -14597,7 +14617,7 @@ function _dashClearSelect() {
   if (_dashHilite) { try { map.removeLayer(_dashHilite); } catch (e) {} _dashHilite = null; }
   const d = document.getElementById('dash-detail');
   if (d) d.classList.remove('show');
-  try { map.fitBounds([[13.45, 100.25], [14.10, 100.97]]); } catch (e) {}
+  if (document.body.classList.contains('dash-mode')) _dashFitHome();
 }
 function _dashRenderDetail(key, row) {
   const d = document.getElementById('dash-detail');
