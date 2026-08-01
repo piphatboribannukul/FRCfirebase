@@ -2350,12 +2350,35 @@ body.dash-mode.dash-popup #dash-map-legend{bottom:24px;}
 body.dash-mode #ham-btn,body.dash-mode #map-search-wrap,body.dash-mode #v30-tab-btn,
 body.dash-mode #ai-insight-btn,body.dash-mode #flow-btn,body.dash-mode #legend-panel,
 body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,body.dash-mode #whatif-btn{display:none !important;}
-@media (max-width:900px){
+@media (max-width:1100px) and (min-width:769px){
   #dash-left{width:248px;}#dash-right{width:238px;}
   body.dash-mode #map{left:270px;right:260px;}
   #dash-bottom{left:270px;right:260px;}
   #main-tabs{gap:3px;margin:0 3px;}.mtab{padding:5px 9px;font-size:11px;}
   #header h1{max-width:180px;}
+}
+/* ── มือถือ: แดชบอร์ดเรียงคอลัมน์เดียว เลื่อนลง ── */
+@media (max-width:768px){
+  #header{overflow-x:auto;overflow-y:hidden;gap:6px;}
+  #header h1{max-width:150px;flex-shrink:1;font-size:12px !important;}
+  #header > *{flex-shrink:0;}
+  #main-tabs{gap:3px;margin:0 3px;}
+  .mtab{padding:5px 9px;font-size:11px;}
+  body.dash-mode{overflow-y:auto !important;height:auto !important;background:#eef2f7;}
+  body.dash-mode #app{position:static !important;height:auto !important;min-height:0 !important;}
+  body.dash-mode #map-wrap{position:static !important;height:auto !important;}
+  body.dash-mode #map{position:relative !important;inset:auto !important;
+    width:calc(100% - 16px) !important;height:42vh !important;margin:6px 8px 2px;
+    border-radius:12px;}
+  body.dash-mode .dash-panel{position:static !important;inset:auto !important;
+    width:auto !important;height:auto !important;max-height:none !important;margin:0 8px 10px;}
+  body.dash-mode #dash-map-legend{margin-top:6px;width:fit-content;}
+  #dash-watch{max-height:250px;overflow-y:auto;flex:none;}
+  #dash-zones{max-height:none;flex:none;}
+  #dash-bottom{height:auto !important;min-width:0 !important;}
+  #dash-chart-card{height:250px;}
+  body.dash-mode.dash-popup #dash-bottom{display:flex !important;}
+  body.dash-mode.dash-popup #map{height:42vh !important;}
 }
 </style>
 

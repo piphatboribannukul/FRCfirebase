@@ -14676,6 +14676,13 @@ map.on('popupclose', () => {
   setTimeout(() => { try { map.invalidateSize(); } catch (x) {} }, 80);
 });
 
+// จอเปลี่ยนขนาด/หมุนจอ → คำนวณแผนที่ใหม่
+let _dashRszT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_dashRszT);
+  _dashRszT = setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 250);
+});
+
 // ESC = ล้างการเลือกโซน
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _dashSelKey) { _dashClearSelect(); buildDashboard(); }
