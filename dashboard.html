@@ -151,7 +151,7 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       <div class="crumb">หน้าแรก / <b>Dashboard</b></div>
       <div class="pagehead">
         <div><h1>Dashboard ภาพรวมคุณภาพน้ำ</h1>
-          <div class="meta">ข้อมูล ณ <b>21 ส.ค. 2569 08:53 น.</b> · ค่าเรียลไทม์จากเซนเซอร์ <b>61 สถานี</b> (ไม่ใช่ค่าเฉลี่ยรายวัน)</div></div>
+          <div class="meta">ข้อมูล ณ <b>21 ส.ค. 2569 08:53 น.</b> · ค่าเรียลไทม์จากเซนเซอร์ <b>61 สถานี</b> (ไม่ใช่ค่าเฉลี่ยรายวัน) <span class="badge warn" style="margin-left:6px;">🔶 หน้านี้ยังเป็นข้อมูลตัวอย่าง — รอต่อ Firebase</span></div></div>
         <div class="actions"><button class="chip-btn" onclick="go('daily',document.querySelectorAll('.sb-item')[1])">📄 สรุปประจำวัน</button><button class="chip-btn primary">🖨 พิมพ์</button></div>
       </div>
 
@@ -201,7 +201,7 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
         <div class="qf" id="r-p1"><label>วันที่ <b>*</b></label><input type="date" id="r-date" value="2026-08-20"></div>
         <div class="qf" id="r-p2" style="display:none;"><label>ถึงวันที่</label><input type="date" id="r-date2" value="2026-08-21"></div>
         <div class="qf"><label>สถานี <b>*</b></label>
-          <select id="r-sta"><option value="">— ทุกสถานี —</option><option>สถานีสูบส่งน้ำบางเขน 1 (TR1)</option><option>สถานีสูบจ่ายน้ำลุมพินี</option><option>สถานีสูบจ่ายน้ำมหาสวัสดิ์</option><option>สถานีสูบจ่ายน้ำบางพลี</option><option>นิคมอุตสาหกรรมบางปู</option></select></div>
+          <select id="r-sta"></select></div>
         <div class="qf"><label>พารามิเตอร์ <b>*</b></label>
           <select id="r-param"><option value="frc">คลอรีนอิสระคงเหลือ (mg/L)</option><option value="tur">ความขุ่น (NTU)</option><option value="ph">ความเป็นกรด–ด่าง</option><option value="ec">ความนำไฟฟ้า (µS/cm)</option><option value="tmp">อุณหภูมิน้ำ (°C)</option><option value="sal">ความเค็ม (g/L)</option><option value="cl">คลอไรด์ (mg/L)</option><option value="prs">แรงดันน้ำ (MPa)</option></select></div>
         <div class="qbtns"><button class="btn search" onclick="runReport()">🔍 ค้นหา</button><button class="btn clear" onclick="clearOut()">ล้างเงื่อนไข</button></div>
@@ -219,7 +219,7 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
         <div class="qf" id="g-p1"><label>วันที่ <b>*</b></label><input type="date" id="g-date" value="2026-08-20"></div>
         <div class="qf" id="g-p2" style="display:none;"><label>ถึงวันที่</label><input type="date" id="g-date2" value="2026-08-21"></div>
         <div class="qf"><label>สถานี <b>*</b></label>
-          <select id="g-sta"><option>สถานีสูบส่งน้ำบางเขน 1 (TR1)</option><option>สถานีสูบจ่ายน้ำลุมพินี</option><option>สถานีสูบจ่ายน้ำมหาสวัสดิ์</option><option>สถานีสูบจ่ายน้ำบางพลี</option></select></div>
+          <select id="g-sta"></select></div>
         <div class="qf"><label>พารามิเตอร์ <b>*</b></label>
           <select id="g-param"><option value="frc">คลอรีนอิสระคงเหลือ (mg/L)</option><option value="ec">ความนำไฟฟ้า (µS/cm)</option><option value="tur">ความขุ่น (NTU)</option></select></div>
         <div class="qbtns"><button class="btn search" onclick="runGraph()">📈 แสดงกราฟ</button><button class="btn clear" onclick="clearGraph()">ล้างเงื่อนไข</button></div>
@@ -283,47 +283,163 @@ function loadDaily(){
    +'<iframe class="daily" src="report_daily.html?date='+d+'"></iframe>';
 }
 function clearDaily(){document.getElementById('d-out').innerHTML='<div class="empty"><div class="ic">📄</div>เลือกวันที่ แล้วกด "เรียกดูรายงาน"</div>';}
-/* ── รายงาน ── */
-const PARAM_TH={frc:'คลอรีนอิสระคงเหลือ (mg/L)',tur:'ความขุ่น (NTU)',ph:'pH',ec:'ความนำไฟฟ้า (µS/cm)',tmp:'อุณหภูมิน้ำ (°C)',sal:'ความเค็ม (g/L)',cl:'คลอไรด์ (mg/L)',prs:'แรงดันน้ำ (MPa)'};
-const RANGE={frc:[0.4,1.9,2],tur:[0.2,1.2,2],ph:[7.0,7.9,2],ec:[220,300,0],tmp:[27,31,1],sal:[0.1,0.2,2],cl:[18,35,1],prs:[0.6,1.2,2]};
-function mock(p){const[a,b,d]=RANGE[p];return +(a+Math.random()*(b-a)).toFixed(d);}
-function runReport(){
-  const t=document.getElementById('r-type').value,p=document.getElementById('r-param').value;
-  const sta=document.getElementById('r-sta').value||'ทุกสถานี';
-  const rows=t==='d'?24:(t==='m'?30:(t==='y'?12:14));
-  let tr='',vals=[];
-  for(let i=1;i<=rows;i++){const v=mock(p);vals.push(v);
-    tr+='<tr><td>'+i+'</td><td>'+(t==='d'?String(i-1).padStart(2,'0')+':00':'ช่วงที่ '+i)+'</td><td>'+v+'</td></tr>';}
-  const avg=(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2);
-  document.getElementById('r-out').innerHTML=
-   '<div class="qcard" style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;align-items:center;">'
-   +'<span><b style="font-family:var(--disp);">สถานี:</b> '+sta+'</span>'
-   +'<span><b style="font-family:var(--disp);">พารามิเตอร์:</b> '+PARAM_TH[p]+'</span>'
-   +'<span><b style="font-family:var(--disp);">ค่าเฉลี่ย:</b> <b class="rv-info">'+avg+'</b></span>'
-   +'<span style="flex:1;"></span><button class="btn clear">⬇ Export CSV</button></div>'
-   +'<div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th style="width:50px;">No.</th><th>เวลา/ช่วง</th><th>'+PARAM_TH[p]+'</th></tr></thead><tbody>'+tr+'</tbody></table></div>';
+/* ════════════════════════════════════════════════════════════════
+   รายงาน + กราฟ — ดึงข้อมูลจริงจาก apiM.php (host บน 172.16.184.55)
+   ════════════════════════════════════════════════════════════════ */
+const API='/apiM.php';
+const STATIONS=[["SP01","สถานีสูบส่งน้ำบางเขน 1 (TR1)"],["SP02","สถานีสูบส่งน้ำบางเขน 2 (TR2)"],["SP03","สถานีสูบส่งน้ำบางเขน 3 (TR3)"],["SP04","สถานีสูบจ่ายน้ำบางเขน 1 (Dis1)"],["SP05","สถานีสูบจ่ายน้ำบางเขน 2 (Dis2)"],["SP06","โรงงานผลิตน้ำธนบุรี"],["SP07","โรงงานผลิตน้ำสามเสน 1"],["SP08","โรงงานผลิตน้ำสามเสน 2"],["SP09","โรงงานผลิตน้ำสามเสน 3"],["SP10","โรงงานผลิตน้ำสามเสน 4"],["SP11","สถานีสูบส่งน้ำมหาสวัสดิ์"],["SP12","สถานีสูบจ่ายน้ำมหาสวัสดิ์"],["SW01","สถานีสูบจ่ายน้ำลุมพินี"],["SW02","สถานีสูบจ่ายน้ำลาดพร้าว"],["SW03","สถานีสูบจ่ายน้ำคลองเตย"],["SW04","สถานีสูบจ่ายน้ำสำโรง"],["SW05","สถานีสูบจ่ายน้ำมีนบุรี"],["SW06","สถานีสูบจ่ายน้ำลาดกระบัง"],["SW07","สถานีสูบจ่ายน้ำบางพลี"],["SW08","สถานีสูบจ่ายน้ำราษฎร์บูรณะ"],["SW09","สถานีสูบจ่ายน้ำเพชรเกษม"],["SW10","สถานีสูบจ่ายน้ำท่าพระ"],["SW11","สถานีสูบจ่ายน้ำพหลโยธิน"],["SM01","สำนักงานประปาสาขานนทบุรี"],["SM02","สำนักงานประปาสาขาทุ่งมหาเมฆ"],["SM03","สำนักงานประปาสาขาสุขุมวิท-พระโขนง"],["SM04","สำนักงานประปาสาขาสมุทรปราการ"],["SM05","สำนักงานประปาสาขามีนบุรี"],["SM06","สำนักงานประปาสาขาบางบัวทอง"],["SM07","สำนักงานประปาสาขาพญาไท"],["S001","โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี"],["S002","โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก"],["S003","กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย"],["S004","โรงพยาบาลภูมิพลอดุลยเดช"],["S005","โรงพยาบาลซีจีเอช สายไหม"],["S006","พระราชวังดุสิต สวนจิตรลดา"],["S007","โรงพยาบาลศิริราช"],["S008","บริษัท โอสถสภา จำกัด (มหาชน)"],["S009","สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ"],["S010","ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ"],["S011","บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)"],["S012","โรงเรียนหาดอมราอักษรลักษณ์วิทยา"],["S013","บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)"],["S014","โรงไฟฟ้าพระนครใต้"],["S015","บริษัท มหาจักรออโตพาร์ท จำกัด"],["S016","นิคมอุตสาหกรรมบางชัน"],["S017","ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์"],["S018","นิคมอุตสาหกรรมลาดกระบัง"],["S019","บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)"],["S020","มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)"],["S021","นิคมอุตสาหกรรมบางพลี"],["S022","สถานีตำรวจภูธรคลองด่าน"],["S023","นิคมอุตสาหกรรมบางปู"],["S024","ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)"],["S025","ศูนย์กีฬาเฉลิมพระเกียรติ"],["S026","ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)"],["S027","มหาวิทยาลัยเอเชียอาคเนย์"],["S028","เรือนจำพิเศษธนบุรี"],["S029","โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี"],["S030","โรงเรียนราชวินิต นนทบุรี"],["S031","สถานีตำรวจภูธรไทรน้อย"],["S032","โรงเรียนตั้งพิรุฬห์ธรรม"],["S033","โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ"]];
+const PARAM={frc:{n:2,th:'คลอรีนอิสระคงเหลือ (mg/L)',d:2},tur:{n:1,th:'ความขุ่น (NTU)',d:2},
+ ph:{n:4,th:'ความเป็นกรด–ด่าง',d:2},ec:{n:5,th:'ความนำไฟฟ้า (µS/cm)',d:0},
+ tmp:{n:6,th:'อุณหภูมิน้ำ (°C)',d:1},sal:{n:9,th:'ความเค็ม (g/L)',d:2},
+ cl:{n:10,th:'คลอไรด์ (mg/L)',d:1},prs:{n:3,th:'แรงดันน้ำ (MPa)',d:2}};
+['r-sta','g-sta'].forEach(id=>{document.getElementById(id).innerHTML=
+  STATIONS.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');});
+
+/* ── ดึงแถวข้อมูล + ตัดแถวซ้ำจาก JOIN ── */
+async function fetchRows(code,start,end){
+  const body=new URLSearchParams({station:code,startdate:start,enddate:end}).toString();
+  const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  let rows=await res.json(); if(!Array.isArray(rows))rows=[];
+  const seen=new Set(),u=[];
+  rows.forEach(r=>{const k=JSON.stringify(r);if(!seen.has(k)){seen.add(k);u.push(r);}});
+  return u;
 }
-function clearOut(){document.getElementById('r-out').innerHTML='<div class="empty"><div class="ic">🗂️</div>เลือกเงื่อนไข แล้วกด "ค้นหา" เพื่อแสดงรายงาน</div>';}
-/* ── กราฟ ── */
+function fNum(r,f){for(const k in r){if(k.toUpperCase()===f){const n=Number(String(r[k]).trim());return isFinite(n)?n:null;}}return null;}
+function dtOf(r){ /* หา "วันที่ เวลา" จากแถว โดยไม่เดารูปแบบปฏิทิน */
+  const pat=/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4})[ T]+(\d{1,2}:\d{2})/;
+  for(const k in r){ if(/date|time|วัน/i.test(k)){const m=String(r[k]).match(pat); if(m)return{d:m[1],h:m[2].padStart(5,'0')};} }
+  for(const k in r){ const m=String(r[k]).match(pat); if(m)return{d:m[1],h:m[2].padStart(5,'0')}; }
+  return null;
+}
+/* ── สรุปเป็นซีรีส์ [{label,avg,min,max}] ── */
+function seriesFromRows(rows,pn,mode){
+  const A='AVG_'+pn,MN='MIN_'+pn,MX='MAX_'+pn;
+  if(mode==='hour'){
+    return rows.map((r,i)=>{const t=dtOf(r);
+      return {label:t?t.h:('ชม.'+(i+1)),avg:fNum(r,A),min:fNum(r,MN),max:fNum(r,MX)};});
+  }
+  const g=new Map();
+  rows.forEach(r=>{const t=dtOf(r);const key=t?t.d:'?';
+    if(!g.has(key))g.set(key,{a:[],mn:[],mx:[]});
+    const o=g.get(key),a=fNum(r,A),mn=fNum(r,MN),mx=fNum(r,MX);
+    if(a!=null)o.a.push(a); if(mn!=null)o.mn.push(mn); if(mx!=null)o.mx.push(mx);});
+  const avg=x=>x.length?x.reduce((p,q)=>p+q,0)/x.length:null;
+  return [...g.entries()].map(([k,o])=>({label:k,avg:avg(o.a),
+    min:o.mn.length?Math.min(...o.mn):null,max:o.mx.length?Math.max(...o.mx):null}));
+}
+function lastDay(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
+/* ── ดึงตามประเภทที่เลือกในฟอร์ม ── */
+async function collect(pf,progress){
+  const type=document.getElementById(pf+'-type').value;
+  const pn=PARAM[document.getElementById(pf+'-param').value].n;
+  const dv=document.getElementById(pf+'-date').value;
+  const code=document.getElementById(pf+'-sta').value;
+  if(!dv) throw new Error('กรุณาเลือกวันที่');
+  if(type==='d'){
+    const rows=await fetchRows(code,dv+' 00:00:00',dv+' 23:59:59');
+    return {data:seriesFromRows(rows,pn,'hour'),unit:'เวลา'};
+  }
+  if(type==='c'){
+    const d2=document.getElementById(pf+'-date2').value||dv;
+    const rows=await fetchRows(code,dv+' 00:00:00',d2+' 23:59:59');
+    const days=(new Date(d2)-new Date(dv))/864e5;
+    return {data:seriesFromRows(rows,pn,days<=2?'hour':'day'),unit:days<=2?'เวลา':'วันที่'};
+  }
+  if(type==='m'){
+    const rows=await fetchRows(code,dv+'-01 00:00:00',dv+'-'+String(lastDay(dv)).padStart(2,'0')+' 23:59:59');
+    return {data:seriesFromRows(rows,pn,'day'),unit:'วันที่'};
+  }
+  /* รายปี (พ.ศ.) -> ดึงทีละเดือน สรุปรายเดือน */
+  const ce=Number(dv)-543, TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const out=[];
+  for(let m=1;m<=12;m++){
+    if(progress)progress('เดือน '+m+'/12…');
+    const ym=ce+'-'+String(m).padStart(2,'0');
+    const rows=await fetchRows(code,ym+'-01 00:00:00',ym+'-'+String(lastDay(ym)).padStart(2,'0')+' 23:59:59');
+    const s=seriesFromRows(rows,pn,'day');
+    const av=s.map(x=>x.avg).filter(v=>v!=null);
+    const mns=s.map(x=>x.min).filter(v=>v!=null), mxs=s.map(x=>x.max).filter(v=>v!=null);
+    out.push({label:TH[m-1],avg:av.length?av.reduce((p,q)=>p+q,0)/av.length:null,
+      min:mns.length?Math.min(...mns):null, max:mxs.length?Math.max(...mxs):null});
+  }
+  return {data:out,unit:'เดือน'};
+}
+const errBox=m=>'<div class="empty" style="border-color:#e0b0b0;color:#b02a1f;background:#fdf5f5;"><div class="ic">⚠️</div>'+m+'<br><span style="font-size:10.5px;">ต้องเปิดจากเครื่องในวง intranet และ host หน้านี้บน 172.16.184.55</span></div>';
+const fx=(v,d)=>v==null?'–':v.toFixed(d);
+
+/* ── เมนูรายงาน ── */
+let lastCSV=null;
+async function runReport(){
+  const out=document.getElementById('r-out');
+  const pk=document.getElementById('r-param').value,P=PARAM[pk];
+  const staName=document.getElementById('r-sta').selectedOptions[0].textContent;
+  out.innerHTML='<div class="empty"><div class="ic">⏳</div><span id="r-prog">กำลังดึงข้อมูลจาก TWQMS…</span></div>';
+  try{
+    const {data,unit}=await collect('r',m=>{const p=document.getElementById('r-prog');if(p)p.textContent='กำลังดึง '+m;});
+    if(!data.length){out.innerHTML='<div class="empty"><div class="ic">🗂️</div>ไม่มีข้อมูลในช่วงที่เลือก</div>';return;}
+    const hasMM=data.some(x=>x.min!=null||x.max!=null);
+    const av=data.map(x=>x.avg).filter(v=>v!=null);
+    const mns=data.map(x=>x.min).filter(v=>v!=null), mxs=data.map(x=>x.max).filter(v=>v!=null);
+    const sum={avg:av.length?av.reduce((p,q)=>p+q,0)/av.length:null,
+      min:hasMM?(mns.length?Math.min(...mns):null):(av.length?Math.min(...av):null),
+      max:hasMM?(mxs.length?Math.max(...mxs):null):(av.length?Math.max(...av):null)};
+    let tr=data.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+x.label+'</td>'
+      +(hasMM?'<td>'+fx(x.max,P.d)+'</td><td>'+fx(x.min,P.d)+'</td>':'')
+      +'<td><b>'+fx(x.avg,P.d)+'</b></td></tr>').join('');
+    tr+='<tr style="background:#f2f4fb;font-weight:700;"><td></td><td>สูงสุด/ต่ำสุด/เฉลี่ย</td>'
+      +(hasMM?'<td>'+fx(sum.max,P.d)+'</td><td>'+fx(sum.min,P.d)+'</td>':'')
+      +'<td>'+fx(sum.avg,P.d)+'</td></tr>';
+    out.innerHTML='<div class="qcard" style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;align-items:center;">'
+      +'<span><b style="font-family:var(--disp);">สถานี:</b> '+staName+'</span>'
+      +'<span><b style="font-family:var(--disp);">พารามิเตอร์:</b> '+P.th+'</span>'
+      +'<span><b style="font-family:var(--disp);">เฉลี่ย:</b> <b class="rv-info">'+fx(sum.avg,P.d)+'</b></span>'
+      +'<span style="flex:1;"></span><button class="btn clear" onclick="exportCSV()">⬇ Export CSV</button></div>'
+      +'<div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th style="width:44px;">No.</th><th>'+unit+'</th>'
+      +(hasMM?'<th>สูงสุด</th><th>ต่ำสุด</th>':'')+'<th>เฉลี่ย</th></tr></thead><tbody>'+tr+'</tbody></table></div>';
+    lastCSV={head:['No.',unit].concat(hasMM?['สูงสุด','ต่ำสุด']:[]).concat(['เฉลี่ย']),
+      rows:data.map((x,i)=>[i+1,x.label].concat(hasMM?[fx(x.max,P.d),fx(x.min,P.d)]:[]).concat([fx(x.avg,P.d)])),
+      name:staName+' '+P.th};
+  }catch(e){out.innerHTML=errBox('ดึงข้อมูลไม่สำเร็จ ('+e.message+')');}
+}
+function clearOut(){lastCSV=null;document.getElementById('r-out').innerHTML='<div class="empty"><div class="ic">🗂️</div>เลือกเงื่อนไข แล้วกด "ค้นหา" เพื่อแสดงรายงาน</div>';}
+function exportCSV(){
+  if(!lastCSV)return;
+  const csv='\ufeff'+[lastCSV.head.join(',')].concat(lastCSV.rows.map(r=>r.join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=(lastCSV.name||'report').replace(/[\\/:*?"<>| ]+/g,'_')+'.csv'; a.click();
+}
+
+/* ── เมนูกราฟ ── */
 let gChart=null;
 function clearGraph(){if(gChart){gChart.destroy();gChart=null;}
   document.getElementById('g-out').innerHTML='<div class="empty"><div class="ic">📈</div>เลือกเงื่อนไข แล้วกด "แสดงกราฟ"</div>';}
-function runGraph(){
-  const t=document.getElementById('g-type').value,p=document.getElementById('g-param').value;
-  const sta=document.getElementById('g-sta').value;
-  const n=t==='d'?24:(t==='m'?30:12);
-  const labels=[...Array(n)].map((_,i)=>t==='d'?String(i).padStart(2,'0')+':00':(i+1));
-  document.getElementById('g-out').innerHTML='<div class="ccard"><h3>'+sta+'</h3><div class="csub">'+PARAM_TH[p]+'</div><div class="chartbox" style="height:320px;"><canvas id="gCanvas"></canvas></div></div>';
-  gChart=new Chart(document.getElementById('gCanvas'),{type:'line',
-   data:{labels,datasets:[{label:PARAM_TH[p],data:labels.map(()=>mock(p)),borderColor:'#2b3af0',backgroundColor:'rgba(43,58,240,.07)',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{y:{grid:{color:'#eef1f6'},ticks:{font:{family:'Sarabun',size:10}}},x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:10},maxTicksLimit:12}}}}});
+async function runGraph(){
+  const out=document.getElementById('g-out');
+  const pk=document.getElementById('g-param').value,P=PARAM[pk];
+  const staName=document.getElementById('g-sta').selectedOptions[0].textContent;
+  if(gChart){gChart.destroy();gChart=null;}
+  out.innerHTML='<div class="empty"><div class="ic">⏳</div><span id="g-prog">กำลังดึงข้อมูลจาก TWQMS…</span></div>';
+  try{
+    const {data,unit}=await collect('g',m=>{const p=document.getElementById('g-prog');if(p)p.textContent='กำลังดึง '+m;});
+    if(!data.length){out.innerHTML='<div class="empty"><div class="ic">📈</div>ไม่มีข้อมูลในช่วงที่เลือก</div>';return;}
+    out.innerHTML='<div class="ccard"><h3>'+staName+'</h3><div class="csub">'+P.th+' · ข้อมูลจริงจาก TWQMS</div>'
+      +'<div class="chartbox" style="height:330px;"><canvas id="gCanvas"></canvas></div></div>';
+    const hasMM=data.some(x=>x.min!=null||x.max!=null);
+    const ds=[{label:'เฉลี่ย',data:data.map(x=>x.avg),borderColor:'#2b3af0',backgroundColor:'rgba(43,58,240,.07)',fill:true,tension:.3,pointRadius:2,borderWidth:2}];
+    if(hasMM){
+      ds.push({label:'สูงสุด',data:data.map(x=>x.max),borderColor:'#0f9d58',borderDash:[5,4],pointRadius:0,borderWidth:1.4,fill:false,tension:.3});
+      ds.push({label:'ต่ำสุด',data:data.map(x=>x.min),borderColor:'#e04040',borderDash:[5,4],pointRadius:0,borderWidth:1.4,fill:false,tension:.3});
+    }
+    gChart=new Chart(document.getElementById('gCanvas'),{type:'line',
+      data:{labels:data.map(x=>x.label),datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{family:'Sarabun',size:10}}}},
+        scales:{y:{grid:{color:'#eef1f6'},ticks:{font:{family:'Sarabun',size:10}}},
+                x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:10},maxTicksLimit:14}}}}});
+  }catch(e){out.innerHTML=errBox('ดึงข้อมูลไม่สำเร็จ ('+e.message+')');}
 }
 
-/* ปิด dashboard: ถ้าเปิดใน overlay ของ FRCContour ให้ปิด overlay, ถ้าเปิดแท็บตรงให้ย้อนกลับ */
-function closeDash(){
-  try{ if(window.parent&&window.parent!==window&&typeof window.parent.closeDashboard==='function'){window.parent.closeDashboard();return;} }catch(e){}
-  if(history.length>1)history.back(); else window.close();
-}
 </script>
 </body></html>
