@@ -3716,9 +3716,8 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <!-- ── application ── -->
 <script src="app.js"></script>
 
-<!-- ═══ rev12: Dashboard ใหม่ (แบบ iframe) — เพิ่มโดยไม่แตะรายงานเดิม ═══
-     ปุ่ม 📊 Report ชี้มาที่นี่ / รายงานเดิม rev11 ยังอยู่ครบ เรียกได้ด้วย openReport()
-     revert: เปลี่ยน onclick ปุ่มกลับเป็น openReport() บรรทัดเดียว -->
+<!-- ═══ Dashboard ใหม่ (iframe) — เพิ่มโดยไม่แตะรายงานเดิม rev11 ═══
+     revert: เปลี่ยน onclick ปุ่ม report-btn กลับเป็น openReport() บรรทัดเดียว -->
 <style>
 #dash-overlay{display:none;position:fixed;inset:0;z-index:2600;background:rgba(6,53,64,.5);backdrop-filter:blur(3px);}
 #dash-overlay.open{display:flex;}
@@ -3728,7 +3727,7 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <script>
 function openDashboard(){
   var f=document.getElementById('dash-frame');
-  if(f.getAttribute('src')==='about:blank') f.src='dashboard.html';   // lazy โหลดครั้งแรกครั้งเดียว
+  if(f.getAttribute('src')==='about:blank') f.src='dashboard.html';
   document.getElementById('dash-overlay').classList.add('open');
 }
 function closeDashboard(){ document.getElementById('dash-overlay').classList.remove('open'); }
