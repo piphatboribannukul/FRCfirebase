@@ -67,7 +67,8 @@ td.v.bad{background:var(--badbg);color:var(--bad)}td.v.na{background:var(--nabg)
     <div class="grp" id="pinGrp"><button data-p="no" class="on">เลข</button><button data-p="frc">ค่า Cl₂</button></div>
     <span class="sp"></span><button class="pbtn" onclick="window.print()">🖨 พิมพ์ / PDF</button>
   </div>
-  <div class="main">
+  <div id="dayload" style="display:none;margin:0 16px;padding:8px 14px;border-radius:9px;font-family:var(--disp);font-size:11.5px;"></div>
+ <div class="main">
     <div class="col" id="colLeft"></div>
     <div class="col"><div class="mapbox"><div id="map"></div></div><div class="dis" id="colMid"></div></div>
     <div class="col"><div id="colRight"></div>
@@ -161,4 +162,68 @@ function wireControls(){
   document.getElementById('pinGrp').onclick=e=>{if(!e.target.dataset.p)return;[...e.currentTarget.children].forEach(b=>b.classList.remove('on'));e.target.classList.add('on');pinMode=e.target.dataset.p;buildMarkers();markerLayer.addTo(map);};
 }
 renderKPI();renderTables();initMap();wireControls();</script>
+
+<script>
+/* ============================================================================
+   ดึงข้อมูลรายวันจาก apiM.php ตาม ?date=YYYY-MM-DD
+   - ใช้งานได้เมื่อ host ไฟล์นี้บนเครื่องเดียวกับ apiM.php (172.16.184.55)
+   - เปิดจากที่อื่น (github.io / เครื่อง) จะติด CORS -> แสดงข้อมูลตัวอย่างเดิม + แจ้งเตือน
+   ============================================================================ */
+const API_ENDPOINT = '/apiM.php';   // root-relative: ใช้ได้ทุกโฟลเดอร์บนเครื่อง 172.16.184.55
+const TH_M=["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+function thDate(iso){const[y,m,d]=iso.split('-').map(Number);return `${d} ${TH_M[m]} ${y+543}`;}
+function banner(msg,bg,col){const b=document.getElementById('dayload');b.style.display='block';b.style.background=bg;b.style.color=col;b.innerHTML=msg;}
+function bannerHide(){document.getElementById('dayload').style.display='none';}
+
+async function fetchStation(id,iso){
+  const body=new URLSearchParams({station:id,startdate:iso+' 00:00:00',enddate:iso+' 23:59:59'}).toString();
+  const res=await fetch(API_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  let rows=await res.json();
+  if(!Array.isArray(rows)) rows=[];
+  const seen=new Set(),uniq=[];                       // apiM คืนแถวซ้ำ 2 เท่าจาก JOIN
+  rows.forEach(r=>{const k=JSON.stringify(r);if(!seen.has(k)){seen.add(k);uniq.push(r);}});
+  const num=(r,f)=>{for(const k in r){if(k.toUpperCase()===f){const n=Number(String(r[k]).trim());return isFinite(n)?n:null;}}return null;};
+  const frcs=[],turs=[],ecs=[];
+  uniq.forEach(r=>{const a=num(r,'AVG_2');if(a!=null)frcs.push(a);
+                   const b=num(r,'AVG_1');if(b!=null)turs.push(b);
+                   const c=num(r,'AVG_5');if(c!=null)ecs.push(c);});
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const frc=avg(frcs);
+  return {frc:frc==null?null:+frc.toFixed(2),
+          tur:turs.length?+avg(turs).toFixed(2):null,
+          ec:ecs.length?+avg(ecs).toFixed(0):null,
+          wh:(frc!=null&&frc>=0.2)?frcs.filter(v=>v<0.2).length:0};
+}
+
+async function loadDay(iso){
+  banner('⏳ กำลังดึงข้อมูลวันที่ '+thDate(iso)+' จาก TWQMS (61 สถานี)…','#fff8e6','#7a5c00');
+  const stns=REPORT.stations; let done=0,fail=0;
+  const CONC=8;                                       // ยิงขนานทีละ 8
+  const queue=[...stns];
+  async function worker(){
+    while(queue.length){
+      const s=queue.shift();
+      try{const v=await fetchStation(s.id,iso);Object.assign(s,v);}
+      catch(e){s.frc=s.tur=s.ec=null;s.wh=0;fail++;}
+      done++; if(done%10===0) banner('⏳ กำลังดึงข้อมูล… '+done+'/'+stns.length,'#fff8e6','#7a5c00');
+    }
+  }
+  try{
+    await Promise.all([...Array(CONC)].map(worker));
+    REPORT.date=iso.split('-').reverse().join('/');
+    document.querySelector('.hd .d .big').textContent=thDate(iso);
+    document.title='รายงานสรุปคุณภาพน้ำ · '+thDate(iso);
+    renderKPI(); renderTables(); buildMarkers();
+    if(fail>=stns.length){ throw new Error('all failed'); }
+    banner('✓ ข้อมูลวันที่ '+thDate(iso)+(fail?' (ดึงไม่ได้ '+fail+' สถานี)':'')+' · จาก TWQMS (apiM.php)','#e0f3e8','#0f7a43');
+    setTimeout(bannerHide,6000);
+  }catch(e){
+    banner('⚠ ดึงข้อมูลวันที่เลือกไม่ได้ (ต้องเปิดจากเครื่องที่อยู่วง intranet และ host บน 172.16.184.55) — กำลังแสดงข้อมูลตัวอย่าง 18 ส.ค. 2569','#fde8e8','#b02a1f');
+  }
+}
+
+const _q=new URLSearchParams(location.search).get('date');
+if(_q&&/^\d{4}-\d{2}-\d{2}$/.test(_q)) loadDay(_q);
+</script>
 </body></html>

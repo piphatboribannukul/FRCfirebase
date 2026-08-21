@@ -279,8 +279,8 @@ function loadDaily(){
   document.getElementById('d-out').innerHTML=
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
    +'<span style="font-family:var(--disp);font-size:12px;color:var(--mut);">รายงานประจำวันที่ '+d+'</span>'
-   +'<a href="report_daily.html" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>'
-   +'<iframe class="daily" src="report_daily.html"></iframe>';
+   +'<a href="report_daily.html?date='+d+'" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>'
+   +'<iframe class="daily" src="report_daily.html?date='+d+'"></iframe>';
 }
 function clearDaily(){document.getElementById('d-out').innerHTML='<div class="empty"><div class="ic">📄</div>เลือกวันที่ แล้วกด "เรียกดูรายงาน"</div>';}
 /* ── รายงาน ── */
