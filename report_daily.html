@@ -199,6 +199,8 @@ async function fetchStation(id,iso){
 async function loadDay(iso){
   banner('⏳ กำลังดึงข้อมูลวันที่ '+thDate(iso)+' จาก TWQMS (61 สถานี)…','#fff8e6','#7a5c00');
   const stns=REPORT.stations; let done=0,fail=0;
+  // สำรองข้อมูลเดิมไว้ก่อน — ถ้าดึงล้มเหลวทั้งหมดจะกู้คืน ไม่ให้รายงานกลายเป็น "–" ทั้งหน้า
+  const backup=stns.map(s=>({frc:s.frc,tur:s.tur,ec:s.ec,wh:s.wh}));
   const CONC=8;                                       // ยิงขนานทีละ 8
   const queue=[...stns];
   async function worker(){
@@ -209,18 +211,20 @@ async function loadDay(iso){
       done++; if(done%10===0) banner('⏳ กำลังดึงข้อมูล… '+done+'/'+stns.length,'#fff8e6','#7a5c00');
     }
   }
-  try{
-    await Promise.all([...Array(CONC)].map(worker));
-    REPORT.date=iso.split('-').reverse().join('/');
-    document.querySelector('.hd .d .big').textContent=thDate(iso);
-    document.title='รายงานสรุปคุณภาพน้ำ · '+thDate(iso);
+  await Promise.all([...Array(CONC)].map(worker));
+  if(fail>=stns.length){
+    // ดึงไม่ได้เลยสักสถานี (นอกวง intranet / apiM ล่ม) -> กู้ข้อมูลตัวอย่างเดิมกลับ ไม่แตะวันที่หัวรายงาน
+    stns.forEach((s,i)=>Object.assign(s,backup[i]));
     renderKPI(); renderTables(); buildMarkers();
-    if(fail>=stns.length){ throw new Error('all failed'); }
-    banner('✓ ข้อมูลวันที่ '+thDate(iso)+(fail?' (ดึงไม่ได้ '+fail+' สถานี)':'')+' · จาก TWQMS (apiM.php)','#e0f3e8','#0f7a43');
-    setTimeout(bannerHide,6000);
-  }catch(e){
-    banner('⚠ ดึงข้อมูลวันที่เลือกไม่ได้ (ต้องเปิดจากเครื่องที่อยู่วง intranet และ host บน 172.16.184.55) — กำลังแสดงข้อมูลตัวอย่าง 18 ส.ค. 2569','#fde8e8','#b02a1f');
+    banner('⚠ ดึงข้อมูลวันที่ '+thDate(iso)+' ไม่ได้ (ต้องเปิดจากเครื่องในวง intranet และ host บน 172.16.184.55) — แสดงข้อมูลตัวอย่าง 18 ส.ค. 2569 ตามเดิม','#fde8e8','#b02a1f');
+    return;
   }
+  REPORT.date=iso.split('-').reverse().join('/');
+  document.querySelector('.hd .d .big').textContent=thDate(iso);
+  document.title='รายงานสรุปคุณภาพน้ำ · '+thDate(iso);
+  renderKPI(); renderTables(); buildMarkers();
+  banner('✓ ข้อมูลวันที่ '+thDate(iso)+(fail?' (ดึงไม่ได้ '+fail+' สถานี)':'')+' · จาก TWQMS (apiM.php)','#e0f3e8','#0f7a43');
+  setTimeout(bannerHide,6000);
 }
 
 const _q=new URLSearchParams(location.search).get('date');
