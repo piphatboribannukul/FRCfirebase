@@ -3731,5 +3731,9 @@ function openDashboard(){
   document.getElementById('dash-overlay').classList.add('open');
 }
 function closeDashboard(){ document.getElementById('dash-overlay').classList.remove('open'); }
+/* ครอบทุกทางเข้า: เมนูบน "📋 รายงาน" (setTab→openReport ใน app.js) ก็มาเปิด dashboard ใหม่ด้วย
+   รายงานเดิม rev11 ยังเรียกได้ที่ _openReportLegacy() */
+if (typeof openReport === 'function') { window._openReportLegacy = openReport; }
+window.openReport = openDashboard;
 </script>
 </body></html>
