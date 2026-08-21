@@ -2404,7 +2404,7 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
   <span id="v2-badge">⬡ V38</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
-  <button id="report-btn" onclick="openReport()" title="Daily Report" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
+  <button id="report-btn" onclick="openDashboard()" title="Dashboard คุณภาพน้ำ (rev12)" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
   <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
   <span id="clock"></span>
 </div>
@@ -3715,4 +3715,22 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <script src="data/assets.js"></script>
 <!-- ── application ── -->
 <script src="app.js"></script>
+
+<!-- ═══ rev12: Dashboard ใหม่ (แบบ iframe) — เพิ่มโดยไม่แตะรายงานเดิม ═══
+     ปุ่ม 📊 Report ชี้มาที่นี่ / รายงานเดิม rev11 ยังอยู่ครบ เรียกได้ด้วย openReport()
+     revert: เปลี่ยน onclick ปุ่มกลับเป็น openReport() บรรทัดเดียว -->
+<style>
+#dash-overlay{display:none;position:fixed;inset:0;z-index:2600;background:rgba(6,53,64,.5);backdrop-filter:blur(3px);}
+#dash-overlay.open{display:flex;}
+#dash-overlay iframe{flex:1;border:none;width:100%;height:100%;background:#eef1f6;}
+</style>
+<div id="dash-overlay"><iframe id="dash-frame" src="about:blank" title="Dashboard"></iframe></div>
+<script>
+function openDashboard(){
+  var f=document.getElementById('dash-frame');
+  if(f.getAttribute('src')==='about:blank') f.src='dashboard.html';   // lazy โหลดครั้งแรกครั้งเดียว
+  document.getElementById('dash-overlay').classList.add('open');
+}
+function closeDashboard(){ document.getElementById('dash-overlay').classList.remove('open'); }
+</script>
 </body></html>

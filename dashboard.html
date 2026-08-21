@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<!-- ============================================================================
+     FRCContour — Dashboard Template v3 (สไตล์ Admin Dashboard)
+     ============================================================================
+     โครง: Sidebar ซ้าย (เมนูจัดกลุ่ม) + Topbar + Breadcrumb + KPI cards + Charts
+     เมนู: ภาพรวม / สรุปประจำวัน / รายงาน / กราฟ / ข้อเสนอแนะ
+     ข้อมูลจำลองทั้งหมด — จุดต่อจริง mark ด้วย TODO (Firebase / apiM.php)
+     ============================================================================ -->
+<html lang="th">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FRCContour — Dashboard คุณภาพน้ำ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--nav:#1b2559;--nav2:#141c46;--acc:#2b3af0;--accSoft:#e8ebff;--blue:#0a6fb8;
+ --ink:#20293a;--mut:#6b7690;--line:#e3e8f0;--good:#0f7a43;--goodbg:#e0f3e8;--warn:#b45309;--warnbg:#fdf0dd;
+ --bad:#c62828;--badbg:#fde8e8;--info:#0a6fb8;--infobg:#e3f2fb;
+ --sans:'Sarabun',sans-serif;--disp:'Prompt','Sarabun',sans-serif;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;}
+body{font-family:var(--sans);color:var(--ink);background:#eef1f6;display:flex;min-height:100vh;}
+
+/* ═══ SIDEBAR ═══ */
+.sb{width:225px;background:var(--nav);color:#cdd4ee;display:flex;flex-direction:column;flex-shrink:0;}
+.sb-brand{display:flex;gap:10px;align-items:center;padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sb-logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#2b8fd6,#0a5f9f);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;color:#fff;font-size:15px;flex-shrink:0;}
+.sb-brand .t{line-height:1.2;}
+.sb-brand .t b{font-family:var(--disp);font-size:14px;color:#fff;font-weight:600;display:block;}
+.sb-brand .t span{font-size:9.5px;color:#8d97c4;}
+.sb-menu{flex:1;overflow-y:auto;padding:10px 10px 12px;}
+.sb-cap{font-family:var(--disp);font-size:9px;letter-spacing:1.5px;color:#7d87b5;margin:14px 8px 6px;text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;font-family:var(--disp);font-size:12.5px;font-weight:500;color:#cdd4ee;cursor:pointer;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;transition:all .15s;}
+.sb-item .ic{width:18px;text-align:center;font-size:14px;}
+.sb-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sb-item.active{background:var(--acc);color:#fff;box-shadow:0 3px 10px rgba(43,58,240,.35);}
+.sb-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:9.5px;color:#7d87b5;}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+/* topbar */
+.tb{background:#fff;border-bottom:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;gap:12px;}
+.tb .search{flex:0 1 320px;display:flex;align-items:center;gap:8px;background:#f2f4f9;border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--mut);}
+.tb .search input{border:none;background:none;outline:none;font-family:var(--sans);font-size:12px;width:100%;}
+.tb .sp{flex:1;}
+.tb .live{display:flex;align-items:center;gap:6px;background:var(--goodbg);color:var(--good);font-family:var(--disp);font-size:11px;font-weight:600;padding:5px 13px;border-radius:20px;}
+.tb .live .dot{width:7px;height:7px;border-radius:50%;background:#1f9d3f;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tb .user{display:flex;align-items:center;gap:9px;padding-left:12px;border-left:1px solid var(--line);}
+.tb .user .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2b8fd6,#0a5f9f);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:13px;}
+.tb .user .nm{font-family:var(--disp);font-size:11.5px;font-weight:600;line-height:1.25;}
+.tb .user .nm span{display:block;font-size:9.5px;color:var(--mut);font-weight:400;}
+
+/* content */
+.ct{flex:1;overflow-y:auto;padding:16px 22px 30px;}
+.crumb{font-size:11px;color:var(--mut);margin-bottom:6px;}
+.crumb b{color:var(--acc);font-weight:600;}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.pagehead h1{font-family:var(--disp);font-size:19px;font-weight:600;margin:0 0 3px;}
+.pagehead .meta{font-size:11px;color:var(--mut);}
+.pagehead .meta b{color:var(--ink);}
+.actions{display:flex;gap:8px;}
+.chip-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-family:var(--disp);font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:all .15s;}
+.chip-btn:hover{border-color:var(--acc);color:var(--acc);}
+.chip-btn.primary{background:var(--acc);border-color:var(--acc);color:#fff;}
+
+/* KPI cards */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:12px;margin-bottom:14px;}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;border-top:3px solid var(--acc);box-shadow:0 1px 4px rgba(20,30,70,.05);}
+.kcard.green{border-top-color:#0f9d58;}.kcard.red{border-top-color:#e04040;}.kcard.orange{border-top-color:#f0930a;}.kcard.teal{border-top-color:#0aa5a0;}
+.kcard .row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.kcard .lbl{font-family:var(--disp);font-size:11px;color:var(--mut);font-weight:500;}
+.badge{font-family:var(--disp);font-size:9.5px;font-weight:600;padding:2px 9px;border-radius:12px;}
+.badge.up{background:var(--goodbg);color:var(--good);}.badge.down{background:var(--badbg);color:var(--bad);}
+.badge.info{background:var(--infobg);color:var(--info);}.badge.warn{background:var(--warnbg);color:var(--warn);}
+.kcard .val{font-family:var(--disp);font-size:24px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums;}
+.kcard .val small{font-size:12px;font-weight:500;color:var(--mut);margin-left:3px;}
+.kcard .sub{font-size:10.5px;color:var(--mut);margin-top:5px;}
+.kcard .sub a{color:var(--acc);text-decoration:none;font-weight:600;}
+.pbar{height:6px;background:#eef1f6;border-radius:4px;margin-top:8px;overflow:hidden;}
+.pbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#0f9d58,#3ac97f);}
+
+/* chart cards */
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:12px;}
+.ccard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(20,30,70,.05);}
+.ccard h3{font-family:var(--disp);font-size:13px;font-weight:600;margin:0 0 2px;}
+.ccard .csub{font-size:10.5px;color:var(--mut);margin-bottom:10px;}
+.chartbox{position:relative;height:250px;}
+
+/* pages + ฟอร์มค้นหา (สไตล์เดียวกับ v2) */
+.pg{display:none;}.pg.active{display:block;}
+.qcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(20,30,70,.05);}
+.qbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;align-items:end;}
+.qf label{display:block;font-family:var(--disp);font-size:10px;color:var(--mut);margin-bottom:4px;font-weight:500;}
+.qf label b{color:#c62828;}
+.qf select,.qf input{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:12px;background:#fff;outline:none;}
+.qf select:focus,.qf input:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(43,58,240,.1);}
+.qbtns{display:flex;gap:8px;}
+.btn{border:none;border-radius:8px;font-family:var(--disp);font-size:12px;font-weight:600;cursor:pointer;padding:9px 16px;}
+.btn.search{background:var(--acc);color:#fff;}.btn.search:hover{background:#1e2bd0;}
+.btn.clear{background:#eef1f6;color:#556;}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:42px 20px;text-align:center;color:#9aa5bb;background:#fafbfe;font-family:var(--disp);font-size:12.5px;}
+.empty .ic{font-size:30px;margin-bottom:8px;}
+.rp-tbl-wrap{overflow:auto;max-height:420px;border-radius:10px;border:1px solid var(--line);background:#fff;}
+.rp-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.rp-tbl th{background:var(--nav);color:#fff;padding:7px 10px;text-align:left;font-weight:600;font-size:10.5px;font-family:var(--disp);position:sticky;top:0;}
+.rp-tbl td{padding:6px 10px;border-bottom:1px solid #eef1f6;font-variant-numeric:tabular-nums;}
+.rp-tbl tr:hover td{background:#f6f8fd;}
+.alertrow{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:11.5px;}
+.alertrow.warn{border-left-color:#f0930a;}
+.alertrow b{font-family:var(--disp);font-weight:600;flex:1;}
+iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:12px;background:#fff;}
+.rv-good{color:var(--good);}.rv-warn{color:var(--warn);}.rv-bad{color:var(--bad);}.rv-info{color:var(--info);}
+@media(max-width:900px){.sb{width:60px;}.sb-brand .t,.sb-cap,.sb-item span.tx,.sb-foot{display:none;}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sb">
+  <div class="sb-brand"><div class="sb-logo">F</div><div class="t"><b>FRCContour</b><span>ระบบติดตามคุณภาพน้ำ กปน.</span></div></div>
+  <div class="sb-menu">
+    <div class="sb-cap">ภาพรวม</div>
+    <button class="sb-item active" onclick="go('rt',this)"><span class="ic">📊</span><span class="tx">Dashboard</span></button>
+    <button class="sb-item" onclick="go('daily',this)"><span class="ic">📄</span><span class="tx">สรุปประจำวัน</span></button>
+    <div class="sb-cap">ข้อมูลคุณภาพน้ำ</div>
+    <button class="sb-item" onclick="go('report',this)"><span class="ic">🗂️</span><span class="tx">รายงาน</span></button>
+    <button class="sb-item" onclick="go('graph',this)"><span class="ic">📈</span><span class="tx">กราฟ</span></button>
+    <div class="sb-cap">อื่น ๆ</div>
+    <button class="sb-item" onclick="go('fb',this)"><span class="ic">💬</span><span class="tx">ข้อเสนอแนะ</span></button>
+  </div>
+  <div class="sb-foot">rev12 proposal · กองบูรณาการคุณภาพน้ำ</div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <div class="tb">
+    <div class="search">🔍 <input placeholder="ค้นหาสถานี..."></div>
+    <span class="sp"></span>
+    <span class="live"><span class="dot"></span>เรียลไทม์ · 08:53:14</span>
+    <button class="chip-btn">🖨 พิมพ์</button>
+    <button class="chip-btn" style="border-color:#e0b0b0;color:#c62828;" onclick="closeDash()">✕ ปิด</button>
+    <div class="user"><div class="av">ค</div><div class="nm">กองบูรณาการคุณภาพน้ำ<span>ฝ่ายคุณภาพน้ำ กปน.</span></div></div>
+  </div>
+
+  <div class="ct">
+
+    <!-- ═══ 1) Dashboard ภาพรวม ═══ -->
+    <div class="pg active" id="pg-rt">
+      <div class="crumb">หน้าแรก / <b>Dashboard</b></div>
+      <div class="pagehead">
+        <div><h1>Dashboard ภาพรวมคุณภาพน้ำ</h1>
+          <div class="meta">ข้อมูล ณ <b>21 ส.ค. 2569 08:53 น.</b> · ค่าเรียลไทม์จากเซนเซอร์ <b>61 สถานี</b> (ไม่ใช่ค่าเฉลี่ยรายวัน)</div></div>
+        <div class="actions"><button class="chip-btn" onclick="go('daily',document.querySelectorAll('.sb-item')[1])">📄 สรุปประจำวัน</button><button class="chip-btn primary">🖨 พิมพ์</button></div>
+      </div>
+
+      <div class="kgrid">
+        <div class="kcard"><div class="row1"><span class="lbl">FRC เฉลี่ยขณะนี้</span><span class="badge down">▼ 3.4% จากเมื่อวาน</span></div>
+          <div class="val">0.84<small>mg/L</small></div><div class="sub">เมื่อวานเฉลี่ย 0.87 mg/L</div></div>
+        <div class="kcard green"><div class="row1"><span class="lbl">ผ่านเกณฑ์ (0.2–2.0)</span><span class="badge up">96.7%</span></div>
+          <div class="val">59<small>/ 61 สถานี</small></div><div class="pbar"><i style="width:96.7%"></i></div></div>
+        <div class="kcard red"><div class="row1"><span class="lbl">ต่ำกว่าเกณฑ์ (&lt;0.2)</span><span class="badge down">ต้องจัดการ</span></div>
+          <div class="val rv-bad">2<small>สถานี</small></div><div class="sub"><a href="#" onclick="return false;">ดูรายชื่อ →</a></div></div>
+        <div class="kcard orange"><div class="row1"><span class="lbl">ซ่อมบำรุง / ไม่มีข้อมูล</span><span class="badge warn">ตรวจสอบ</span></div>
+          <div class="val rv-warn">1<small>สถานี</small></div><div class="sub">สถานีสูบจ่ายน้ำคลองเตย</div></div>
+      </div>
+      <div class="kgrid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+        <div class="kcard teal"><div class="row1"><span class="lbl">สูงสุดขณะนี้</span></div><div class="val rv-good">1.97</div><div class="sub">สถานีสูบส่งน้ำบางเขน 2 (TR2)</div></div>
+        <div class="kcard red"><div class="row1"><span class="lbl">ต่ำสุดขณะนี้</span></div><div class="val rv-bad">0.15</div><div class="sub">บ.มหาจักรออโตพาร์ท</div></div>
+        <div class="kcard"><div class="row1"><span class="lbl">EC เฉลี่ย</span></div><div class="val">271<small>µS/cm</small></div><div class="sub">อยู่ในเกณฑ์ ≤500</div></div>
+        <div class="kcard green"><div class="row1"><span class="lbl">ดี (≥1.0)</span></div><div class="val rv-good">17<small>สถานี</small></div><div class="sub">27.9% ของทั้งหมด</div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="ccard"><h3>แนวโน้ม FRC เฉลี่ย 14 วันย้อนหลัง</h3><div class="csub">ค่าเฉลี่ยรายวันทุกสถานี (mg/L) เทียบเป้าหมาย 1.0</div>
+          <div class="chartbox"><canvas id="trendChart"></canvas></div></div>
+        <div class="ccard"><h3>สถานีเฝ้าระวังขณะนี้</h3><div class="csub">FRC ต่ำสุด 6 อันดับ (mg/L)</div>
+          <div class="chartbox"><canvas id="watchChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ 2) สรุปประจำวัน ═══ -->
+    <div class="pg" id="pg-daily">
+      <div class="crumb">หน้าแรก / <b>สรุปประจำวัน</b></div>
+      <div class="pagehead"><div><h1>รายงานสรุปประจำวัน</h1><div class="meta">รายงานผู้บริหาร · ค่าเฉลี่ยรายวัน 61 สถานี + แผนที่อิทธิพลโรงสูบ</div></div></div>
+      <div class="qcard"><div class="qbar">
+        <div class="qf"><label>วันที่รายงาน <b>*</b></label><input type="date" id="d-date" value="2026-08-20"></div>
+        <div class="qbtns"><button class="btn search" onclick="loadDaily()">🔍 เรียกดูรายงาน</button><button class="btn clear" onclick="clearDaily()">ล้าง</button></div>
+      </div></div>
+      <div id="d-out"><div class="empty"><div class="ic">📄</div>เลือกวันที่ แล้วกด "เรียกดูรายงาน"<br><span style="font-size:10.5px;">(ดึงจาก report_daily.html)</span></div></div>
+    </div>
+
+    <!-- ═══ 3) รายงาน ═══ -->
+    <div class="pg" id="pg-report">
+      <div class="crumb">หน้าแรก / <b>รายงาน</b></div>
+      <div class="pagehead"><div><h1>รายงานค่าคุณภาพน้ำ</h1><div class="meta">เลือกเงื่อนไขก่อน ระบบจึงจะแสดงผล</div></div></div>
+      <div class="qcard"><div class="qbar">
+        <div class="qf"><label>ประเภทรายงาน <b>*</b></label>
+          <select id="r-type" onchange="periodUI('r')"><option value="d">รายวัน</option><option value="m">รายเดือน</option><option value="y">รายปี</option><option value="c">กำหนดช่วงเอง</option></select></div>
+        <div class="qf" id="r-p1"><label>วันที่ <b>*</b></label><input type="date" id="r-date" value="2026-08-20"></div>
+        <div class="qf" id="r-p2" style="display:none;"><label>ถึงวันที่</label><input type="date" id="r-date2" value="2026-08-21"></div>
+        <div class="qf"><label>สถานี <b>*</b></label>
+          <select id="r-sta"><option value="">— ทุกสถานี —</option><option>สถานีสูบส่งน้ำบางเขน 1 (TR1)</option><option>สถานีสูบจ่ายน้ำลุมพินี</option><option>สถานีสูบจ่ายน้ำมหาสวัสดิ์</option><option>สถานีสูบจ่ายน้ำบางพลี</option><option>นิคมอุตสาหกรรมบางปู</option></select></div>
+        <div class="qf"><label>พารามิเตอร์ <b>*</b></label>
+          <select id="r-param"><option value="frc">คลอรีนอิสระคงเหลือ (mg/L)</option><option value="tur">ความขุ่น (NTU)</option><option value="ph">ความเป็นกรด–ด่าง</option><option value="ec">ความนำไฟฟ้า (µS/cm)</option><option value="tmp">อุณหภูมิน้ำ (°C)</option><option value="sal">ความเค็ม (g/L)</option><option value="cl">คลอไรด์ (mg/L)</option><option value="prs">แรงดันน้ำ (MPa)</option></select></div>
+        <div class="qbtns"><button class="btn search" onclick="runReport()">🔍 ค้นหา</button><button class="btn clear" onclick="clearOut()">ล้างเงื่อนไข</button></div>
+      </div></div>
+      <div id="r-out"><div class="empty"><div class="ic">🗂️</div>เลือกเงื่อนไข แล้วกด "ค้นหา" เพื่อแสดงรายงาน</div></div>
+    </div>
+
+    <!-- ═══ 4) กราฟ ═══ -->
+    <div class="pg" id="pg-graph">
+      <div class="crumb">หน้าแรก / <b>กราฟ</b></div>
+      <div class="pagehead"><div><h1>กราฟค่าคุณภาพน้ำ</h1><div class="meta">กราฟเรนเดอร์เมื่อกดแสดงเท่านั้น</div></div></div>
+      <div class="qcard"><div class="qbar">
+        <div class="qf"><label>ประเภท <b>*</b></label>
+          <select id="g-type" onchange="periodUI('g')"><option value="d">รายวัน</option><option value="m">รายเดือน</option><option value="y">รายปี</option><option value="c">กำหนดช่วงเอง</option></select></div>
+        <div class="qf" id="g-p1"><label>วันที่ <b>*</b></label><input type="date" id="g-date" value="2026-08-20"></div>
+        <div class="qf" id="g-p2" style="display:none;"><label>ถึงวันที่</label><input type="date" id="g-date2" value="2026-08-21"></div>
+        <div class="qf"><label>สถานี <b>*</b></label>
+          <select id="g-sta"><option>สถานีสูบส่งน้ำบางเขน 1 (TR1)</option><option>สถานีสูบจ่ายน้ำลุมพินี</option><option>สถานีสูบจ่ายน้ำมหาสวัสดิ์</option><option>สถานีสูบจ่ายน้ำบางพลี</option></select></div>
+        <div class="qf"><label>พารามิเตอร์ <b>*</b></label>
+          <select id="g-param"><option value="frc">คลอรีนอิสระคงเหลือ (mg/L)</option><option value="ec">ความนำไฟฟ้า (µS/cm)</option><option value="tur">ความขุ่น (NTU)</option></select></div>
+        <div class="qbtns"><button class="btn search" onclick="runGraph()">📈 แสดงกราฟ</button><button class="btn clear" onclick="clearGraph()">ล้างเงื่อนไข</button></div>
+      </div></div>
+      <div id="g-out"><div class="empty"><div class="ic">📈</div>เลือกเงื่อนไข แล้วกด "แสดงกราฟ"</div></div>
+    </div>
+
+    <!-- ═══ 5) ข้อเสนอแนะ ═══ -->
+    <div class="pg" id="pg-fb">
+      <div class="crumb">หน้าแรก / <b>ข้อเสนอแนะ</b></div>
+      <div class="pagehead"><div><h1>ข้อเสนอแนะ</h1><div class="meta">คงเนื้อหาเดิมจาก rev11 — ใช้ธีมใหม่อัตโนมัติ</div></div></div>
+      <div class="qcard" style="color:var(--mut);font-size:12px;">ส่วนฟอร์ม + รายการข้อเสนอแนะเดิม</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ── เมนู ── */
+function go(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+/* ── Dashboard charts (mock — TODO: ต่อ Firebase) ── */
+const days=[...Array(14)].map((_,i)=>(8+i)+' ส.ค.');
+new Chart(document.getElementById('trendChart'),{type:'bar',
+ data:{labels:days,datasets:[
+  {label:'FRC เฉลี่ยรายวัน',data:days.map(()=>+(0.78+Math.random()*.18).toFixed(2)),backgroundColor:'#4a56d6',borderRadius:5,maxBarThickness:26},
+  {label:'เป้าหมาย 1.0',data:days.map(()=>1.0),type:'line',borderColor:'#2b8fd6',borderDash:[6,4],pointRadius:0,borderWidth:1.6}]},
+ options:{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{family:'Sarabun',size:10}}}},
+  scales:{y:{min:0,max:1.4,grid:{color:'#eef1f6'},ticks:{font:{family:'Sarabun',size:10}}},
+          x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:9}}}}}});
+new Chart(document.getElementById('watchChart'),{type:'bar',
+ data:{labels:['มหาจักรออโตพาร์ท','นิคมลาดกระบัง','เตรียมอุดมฯ นนทบุรี','รพ.ซีจีเอช สายไหม','สภ.ไทรน้อย','สภ.คลองด่าน'],
+  datasets:[{data:[0.15,0.17,0.40,0.40,0.40,0.41],backgroundColor:['#e04040','#e04040','#f0930a','#f0930a','#f0930a','#f0930a'],borderRadius:5,maxBarThickness:18}]},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{min:0,max:1,grid:{color:'#eef1f6'},ticks:{font:{family:'Sarabun',size:10}}},
+          y:{grid:{display:false},ticks:{font:{family:'Sarabun',size:10}}}}}});
+
+/* ── ช่วงเวลาเปลี่ยนตามประเภท ── */
+function periodUI(pf){
+  const t=document.getElementById(pf+'-type').value;
+  const p1=document.getElementById(pf+'-p1'),p2=document.getElementById(pf+'-p2');
+  const inp=document.getElementById(pf+'-date'),lab=p1.querySelector('label');
+  p2.style.display=(t==='c')?'':'none';
+  if(t==='d'){inp.type='date';lab.innerHTML='วันที่ <b>*</b>';}
+  else if(t==='m'){inp.type='month';lab.innerHTML='เดือน <b>*</b>';}
+  else if(t==='y'){inp.type='number';inp.value='2569';lab.innerHTML='ปี (พ.ศ.) <b>*</b>';}
+  else{inp.type='date';lab.innerHTML='ตั้งแต่วันที่ <b>*</b>';}
+}
+/* ── สรุปประจำวัน ── */
+function loadDaily(){
+  const d=document.getElementById('d-date').value;
+  document.getElementById('d-out').innerHTML=
+   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+   +'<span style="font-family:var(--disp);font-size:12px;color:var(--mut);">รายงานประจำวันที่ '+d+'</span>'
+   +'<a href="report_daily.html" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>'
+   +'<iframe class="daily" src="report_daily.html"></iframe>';
+}
+function clearDaily(){document.getElementById('d-out').innerHTML='<div class="empty"><div class="ic">📄</div>เลือกวันที่ แล้วกด "เรียกดูรายงาน"</div>';}
+/* ── รายงาน ── */
+const PARAM_TH={frc:'คลอรีนอิสระคงเหลือ (mg/L)',tur:'ความขุ่น (NTU)',ph:'pH',ec:'ความนำไฟฟ้า (µS/cm)',tmp:'อุณหภูมิน้ำ (°C)',sal:'ความเค็ม (g/L)',cl:'คลอไรด์ (mg/L)',prs:'แรงดันน้ำ (MPa)'};
+const RANGE={frc:[0.4,1.9,2],tur:[0.2,1.2,2],ph:[7.0,7.9,2],ec:[220,300,0],tmp:[27,31,1],sal:[0.1,0.2,2],cl:[18,35,1],prs:[0.6,1.2,2]};
+function mock(p){const[a,b,d]=RANGE[p];return +(a+Math.random()*(b-a)).toFixed(d);}
+function runReport(){
+  const t=document.getElementById('r-type').value,p=document.getElementById('r-param').value;
+  const sta=document.getElementById('r-sta').value||'ทุกสถานี';
+  const rows=t==='d'?24:(t==='m'?30:(t==='y'?12:14));
+  let tr='',vals=[];
+  for(let i=1;i<=rows;i++){const v=mock(p);vals.push(v);
+    tr+='<tr><td>'+i+'</td><td>'+(t==='d'?String(i-1).padStart(2,'0')+':00':'ช่วงที่ '+i)+'</td><td>'+v+'</td></tr>';}
+  const avg=(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2);
+  document.getElementById('r-out').innerHTML=
+   '<div class="qcard" style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;align-items:center;">'
+   +'<span><b style="font-family:var(--disp);">สถานี:</b> '+sta+'</span>'
+   +'<span><b style="font-family:var(--disp);">พารามิเตอร์:</b> '+PARAM_TH[p]+'</span>'
+   +'<span><b style="font-family:var(--disp);">ค่าเฉลี่ย:</b> <b class="rv-info">'+avg+'</b></span>'
+   +'<span style="flex:1;"></span><button class="btn clear">⬇ Export CSV</button></div>'
+   +'<div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th style="width:50px;">No.</th><th>เวลา/ช่วง</th><th>'+PARAM_TH[p]+'</th></tr></thead><tbody>'+tr+'</tbody></table></div>';
+}
+function clearOut(){document.getElementById('r-out').innerHTML='<div class="empty"><div class="ic">🗂️</div>เลือกเงื่อนไข แล้วกด "ค้นหา" เพื่อแสดงรายงาน</div>';}
+/* ── กราฟ ── */
+let gChart=null;
+function clearGraph(){if(gChart){gChart.destroy();gChart=null;}
+  document.getElementById('g-out').innerHTML='<div class="empty"><div class="ic">📈</div>เลือกเงื่อนไข แล้วกด "แสดงกราฟ"</div>';}
+function runGraph(){
+  const t=document.getElementById('g-type').value,p=document.getElementById('g-param').value;
+  const sta=document.getElementById('g-sta').value;
+  const n=t==='d'?24:(t==='m'?30:12);
+  const labels=[...Array(n)].map((_,i)=>t==='d'?String(i).padStart(2,'0')+':00':(i+1));
+  document.getElementById('g-out').innerHTML='<div class="ccard"><h3>'+sta+'</h3><div class="csub">'+PARAM_TH[p]+'</div><div class="chartbox" style="height:320px;"><canvas id="gCanvas"></canvas></div></div>';
+  gChart=new Chart(document.getElementById('gCanvas'),{type:'line',
+   data:{labels,datasets:[{label:PARAM_TH[p],data:labels.map(()=>mock(p)),borderColor:'#2b3af0',backgroundColor:'rgba(43,58,240,.07)',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{y:{grid:{color:'#eef1f6'},ticks:{font:{family:'Sarabun',size:10}}},x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:10},maxTicksLimit:12}}}}});
+}
+
+/* ปิด dashboard: ถ้าเปิดใน overlay ของ FRCContour ให้ปิด overlay, ถ้าเปิดแท็บตรงให้ย้อนกลับ */
+function closeDash(){
+  try{ if(window.parent&&window.parent!==window&&typeof window.parent.closeDashboard==='function'){window.parent.closeDashboard();return;} }catch(e){}
+  if(history.length>1)history.back(); else window.close();
+}
+</script>
+</body></html>
