@@ -3735,5 +3735,11 @@ function closeDashboard(){ document.getElementById('dash-overlay').classList.rem
    รายงานเดิม rev11 ยังเรียกได้ที่ _openReportLegacy() */
 if (typeof openReport === 'function') { window._openReportLegacy = openReport; }
 window.openReport = openDashboard;
+/* เปิดจากลิงก์ภายนอกแบบเจาะจงหน้าคาดการณ์: index.html?open=forecast */
+if(new URLSearchParams(location.search).get('open')==='forecast'){
+  window.addEventListener('load',function(){
+    setTimeout(function(){ if(typeof window._openReportLegacy==='function') window._openReportLegacy(); },1500);
+  });
+}
 </script>
 </body></html>
