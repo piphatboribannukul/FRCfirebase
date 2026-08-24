@@ -1,3 +1,17 @@
+/* ═══ [patch 24/8/69] cache ประวัติจาก Firebase 5 นาที — เปิดรายงานซ้ำไม่ต้องดึงใหม่ ═══ */
+async function _fbGetHistoryCached(){
+  const TTL=5*60*1000;
+  if(window._histSnapCache && (Date.now()-window._histSnapCache.t)<TTL) return window._histSnapCache.snap;
+  if(window._histSnapPending) return window._histSnapPending;
+  window._histSnapPending=(async()=>{
+    try{
+      const snap=await window._fbGet(window._fbRef(window._fb,'history'));
+      window._histSnapCache={t:Date.now(),snap};
+      return snap;
+    } finally { window._histSnapPending=null; }
+  })();
+  return window._histSnapPending;
+}
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
@@ -4876,7 +4890,7 @@ async function fbLoadHistory() {
   const cutoff = Date.now() - HIST_MAX_HOURS * 3600000;
   const out = {};
   try {
-    const snap = await window._fbGet(window._fbRef(window._fb, 'history'));
+    const snap = await _fbGetHistoryCached();   // [patch] ใช้ cache ร่วม 5 นาที
     if (!snap.exists()) return {};
     snap.forEach(codeSnap => {
       const code = codeSnap.key.replace(/-/g, '_'); // restore key
@@ -7856,7 +7870,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   ctx.scale(dpr, dpr);
   var W = rect.width, H = rect.height;
   ctx.clearRect(0,0,W,H);
-  var isDk = _forceVividColors || document.body.classList.contains('dark');
+  var isDk = (_forceVividColors || document.body.classList.contains('dark')) && !document.getElementById('rp-light-theme');   // [patch] ธีมขาวรายงาน -> ใช้ชุดสีสว่าง
   var PL=46, PR=16, PT=16, PB=50;
   var cw = W-PL-PR, ch = H-PT-PB;
   var nowMs = Date.now();
@@ -7883,7 +7897,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   if (actPts.length===0) {
     ctx.fillStyle=isDk?'#ff8888':'#cc0044';ctx.font='bold 13px Sarabun,sans-serif';ctx.textAlign='center';
     ctx.fillText('ไม่พบค่า '+(param==='frc'?'FRC':'EC')+' ใน '+data.length+' records',W/2,H/2-10);
-    if(data.length>0){ctx.font='10px JetBrains Mono';ctx.fillStyle=isDk?'#c0a0b0':'#a06080';ctx.fillText('fields: '+Object.keys(data[0]).join(', '),W/2,H/2+10);}
+    if(data.length>0){ctx.font='10px JetBrains Mono';ctx.fillStyle=isDk?'#c0a0b0':'#5c7883';ctx.fillText('fields: '+Object.keys(data[0]).join(', '),W/2,H/2+10);}
     return;
   }
 
@@ -8016,9 +8030,9 @@ function rpTrendDraw(sensor, param, allData, _ids) {
   // grid
   for(var gi=0;gi<=4;gi++){
     var gy=PT+ch*gi/4;
-    ctx.strokeStyle=isDk?'rgba(255,255,255,.08)':'#e8e0f0';ctx.lineWidth=0.5;
+    ctx.strokeStyle=isDk?'rgba(255,255,255,.08)':'#dde6ee';ctx.lineWidth=0.5;
     ctx.beginPath();ctx.moveTo(PL,gy);ctx.lineTo(PL+cw,gy);ctx.stroke();
-    ctx.fillStyle=isDk?'#b0b0d0':'#806080';ctx.font='bold 9px JetBrains Mono,monospace';ctx.textAlign='right';
+    ctx.fillStyle=isDk?'#b0b0d0':'#44525f';ctx.font='bold 9px JetBrains Mono,monospace';ctx.textAlign='right';
     var lv=yMax-(yMax-yMin)*gi/4;
     ctx.fillText(param==='frc'?lv.toFixed(2):Math.round(lv).toString(),PL-5,gy+3);
   }
@@ -8034,7 +8048,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
     var dd=new Date(tx);
     var isFut=tx>nowMs;
     ctx.save();ctx.translate(px(tx),PT+ch+13);ctx.rotate(-Math.PI/2);
-    ctx.fillStyle=isFut?(isDk?'#a080d0':'#6050a0'):(isDk?'#b0b0d0':'#806080');
+    ctx.fillStyle=isFut?(isDk?'#a080d0':'#4a3f8f'):(isDk?'#b0b0d0':'#44525f');
     ctx.textAlign='right';ctx.font='8px JetBrains Mono,monospace';
     ctx.fillText(String(dd.getHours()).padStart(2,'0')+':00',0,0);
     ctx.restore();
@@ -8356,7 +8370,7 @@ async function rpAutoFitKAll(param) {
 
   // แสดงผล
   results.sort(function(a, b) { return a.mae - b.mae; });
-  var isDk = document.body.classList.contains('dark');
+  var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
   var html = '✅ <b>Auto-fit K เสร็จ ' + success + '/' + total + ' สถานี</b> (ข้าม ' + skipped + ' — ข้อมูลน้อย)<br>';
   html += '<div style="background:'+(isDk?'rgba(0,180,100,.1)':'#f0fff5')+';border:1.5px solid '+(isDk?'rgba(0,180,100,.3)':'#80d0a0')+';border-radius:10px;padding:10px 12px;margin:8px 0;">';
   html += '<div style="font-size:11px;font-weight:700;color:'+(isDk?'#4ecca3':'#008060')+';margin-bottom:6px;">⚠ ค่า K ใหม่ยังไม่ถูกบันทึก — กดปุ่มด้านล่างเพื่อใช้เป็น Default</div>';
@@ -8410,7 +8424,7 @@ async function confirmSingleKDefault(stationCode, newK) {
       localStorage.setItem('frc_k_default', JSON.stringify(cached));
     } catch(e){}
     if (kinfo) {
-      var isDk = document.body.classList.contains('dark');
+      var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
       kinfo.innerHTML = '✅ <b>K = ' + newK.toFixed(4) + '</b>/ชม. — บันทึกเป็น Default แล้ว';
       kinfo.style.color = isDk ? '#4ecca3' : '#008060';
     }
@@ -8434,7 +8448,7 @@ async function confirmKDefault() {
   var success = await fbSaveKDefault(STATION_K_PENDING);
   if (success) {
     if (statusEl) {
-      var isDk = document.body.classList.contains('dark');
+      var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
       statusEl.innerHTML = '<div style="background:'+(isDk?'rgba(0,180,100,.15)':'#e0fff0')+';border:1.5px solid '+(isDk?'#4ecca3':'#00b894')+';border-radius:8px;padding:12px;text-align:center;">'
         + '<div style="font-size:16px;margin-bottom:4px;">✅</div>'
         + '<div style="font-size:13px;font-weight:700;color:'+(isDk?'#4ecca3':'#008060')+';">บันทึก K Default สำเร็จ!</div>'
@@ -8456,7 +8470,7 @@ function rpTrendAutoFitK() {
   var allData = _trendCurrentData;
   if (!sensor || param !== 'frc' || !allData) return;
 
-  var isDk = document.body.classList.contains('dark');
+  var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
   var nowMs = Date.now();
   var key = String(sensor.id).replace(/\/|\./g, '-');
   var sName = (sensor.name || '').trim();
@@ -8545,7 +8559,7 @@ function rpTrendApplyK(stationCode, newK) {
   // แสดง feedback + ปุ่มยืนยัน
   var kinfo = document.getElementById(_trendKinfoId||'rp-trend-kinfo');
   if (kinfo) {
-    var isDk = document.body.classList.contains('dark');
+    var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
     kinfo.innerHTML = '✅ K = ' + newK.toFixed(4) + '/ชม. — <b style="color:'+(isDk?'#f0a030':'#c08000')+'">ยังไม่บันทึกเป็น Default</b>'
       + '<br><button onclick="confirmSingleKDefault(\''+stationCode+'\','+newK+')" style="margin-top:4px;padding:5px 14px;font-size:10px;font-weight:700;font-family:Sarabun,sans-serif;background:linear-gradient(135deg,#00b894,#009874);color:#fff;border:none;border-radius:6px;cursor:pointer;">✅ บันทึกเป็น K Default</button>'
       + ' <span style="font-size:9px;color:'+(isDk?'#808090':'#a0a0b0')+'">reload = กลับค่าเดิม</span>';
@@ -8643,7 +8657,7 @@ async function buildReport() {
   if (window._fbReady && window._fb) {
     const cutoff = Date.now() - 24*3600000;
     try {
-      const snap = await window._fbGet(window._fbRef(window._fb, 'history'));
+      const snap = await _fbGetHistoryCached();   // [patch] ใช้ cache ร่วม 5 นาที
       if (snap.exists()) {
         snap.forEach(codeSnap => {
           const code = codeSnap.key;
@@ -11392,7 +11406,7 @@ function submitFeedback(){
         });
       }
       dailyData.sort(function(a,b) { return b.date.localeCompare(a.date); });
-      var isDk = document.body.classList.contains('dark');
+      var isDk = document.body.classList.contains('dark') && !document.getElementById('rp-light-theme');   // [patch]
       var tc = isDk ? '#e0e0ff' : '#1a1a2e';
       var sc = isDk ? '#a0a0c0' : '#999';
       var html = '<div style="display:flex;gap:8px;margin-bottom:16px;">';

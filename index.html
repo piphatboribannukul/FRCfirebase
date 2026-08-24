@@ -3365,8 +3365,9 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
             <div id="rp-frc-trend-kinfo" style="font-size:10px;color:#a06080;margin-top:4px;display:none;"></div>
           </div>
         </div>
-        <div class="rp-section">สถานีเฝ้าระวัง</div>
-        <div class="rp-card" id="rp-frc-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
+        <div style="display:none!important;"><!-- ซ่อน: ซ้ำกับตารางด้านล่าง -->
+<div class="rp-section">สถานีเฝ้าระวัง</div>
+        <div class="rp-card" id="rp-frc-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div></div>
         <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
 <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
         <div class="rp-card">
@@ -3410,8 +3411,9 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
             <div id="rp-ec-trend-stats" style="font-size:10px;color:#a06080;margin-top:6px;"></div>
           </div>
         </div>
-        <div class="rp-section">สถานีเฝ้าระวัง</div>
-        <div class="rp-card" id="rp-ec-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
+        <div style="display:none!important;"><!-- ซ่อน: ซ้ำกับตารางด้านล่าง -->
+<div class="rp-section">สถานีเฝ้าระวัง</div>
+        <div class="rp-card" id="rp-ec-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div></div>
         <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
 <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
         <div class="rp-card">
@@ -3797,7 +3799,19 @@ window.openReport = openDashboard;
 /* เปิดจากลิงก์ภายนอกแบบเจาะจงหน้าคาดการณ์: index.html?open=forecast */
 if(new URLSearchParams(location.search).get('open')==='forecast'){
   window.addEventListener('load',function(){
-    setTimeout(function(){ if(typeof window._openReportLegacy==='function') window._openReportLegacy(); },1500);
+    var toast=document.createElement('div');
+    toast.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:4000;background:#0a5f8f;color:#fff;font-family:Prompt,Sarabun,sans-serif;font-size:13px;padding:9px 20px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+    toast.textContent='⏳ กำลังเตรียมข้อมูลคาดการณ์ — รอโหลดประวัติจาก Firebase…';
+    document.body.appendChild(toast);
+    var t0=Date.now();
+    var iv=setInterval(function(){
+      var b=document.getElementById('hist-api-badge');
+      var ready=b&&/✅|Live/.test(b.textContent||'');
+      if(ready||Date.now()-t0>60000){
+        clearInterval(iv); toast.remove();
+        if(typeof window._openReportLegacy==='function') window._openReportLegacy();
+      }
+    },1000);
   });
 }
 </script>
