@@ -2382,6 +2382,57 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
 }
 </style>
 
+
+<style id="rp-light-theme">
+/* ══ Daily Report — ธีมมาตรฐานขาว-ฟ้า (override ธีมชมพูเดิม) ══ */
+#report-overlay{background:rgba(6,53,64,.45);}
+#report-panel{background:#eef4f7!important;color:#0d2830!important;font-family:'Sarabun',sans-serif;}
+#report-panel .rp-header{background:linear-gradient(105deg,#064e86 0%,#0a7fbf 55%,#3ab0e0 100%)!important;border-bottom:none!important;box-shadow:0 2px 10px rgba(6,53,64,.25);}
+#report-panel .rp-header h2,#report-panel .rp-header h2 *{color:#fff!important;font-family:'Prompt','Sarabun',sans-serif!important;}
+#report-panel .rp-badge{background:rgba(255,255,255,.16)!important;border:1px solid rgba(255,255,255,.35)!important;color:#fff!important;font-family:'Prompt',sans-serif!important;}
+#report-panel #rp-info{color:rgba(255,255,255,.85)!important;font-family:'Sarabun',sans-serif!important;}
+#report-panel .rp-close{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.4)!important;color:#fff!important;}
+#report-panel .rp-close:hover{background:#fff!important;color:#064e86!important;}
+#report-panel .rp-tabs{background:#fff;border-bottom:2px solid #c9dde6!important;border-radius:10px 10px 0 0;padding:4px 8px 0;}
+#report-panel .rp-tab{color:#5c7883!important;font-family:'Prompt','Sarabun',sans-serif!important;border-bottom:3px solid transparent!important;background:transparent!important;}
+#report-panel .rp-tab:hover{color:#0a6fb8!important;}
+#report-panel .rp-tab.active{color:#0a6fb8!important;border-bottom-color:#0a86c4!important;}
+#report-panel .rp-section{color:#064e86!important;font-family:'Prompt','Sarabun',sans-serif!important;font-weight:600!important;}
+#report-panel .rp-section::after{background:#c9dde6!important;}
+#report-panel .rp-card{background:#fff!important;border:1px solid #d6e4ea!important;box-shadow:0 1px 4px rgba(6,53,64,.05)!important;}
+#report-panel .rp-stat{background:#fff!important;border:1px solid #d6e4ea!important;}
+#report-panel .rp-stat .sl{color:#5c7883!important;font-family:'Prompt',sans-serif!important;}
+#report-panel .rp-stat .sv{font-family:'Prompt',monospace!important;}
+#report-panel .rp-stat .ss{color:#93a4ab!important;}
+#report-panel .rv-good{color:#0f7a43!important;}#report-panel .rv-warn{color:#b45309!important;}
+#report-panel .rv-bad{color:#b02a1f!important;}#report-panel .rv-info{color:#0a6fb8!important;}#report-panel .rv-pink{color:#0a6fb8!important;}
+#report-panel .rp-alert{background:#fff!important;border:1px solid #e8e0d4!important;border-left:4px solid #b02a1f!important;color:#0d2830!important;}
+#report-panel .rp-alert.warn{border-left-color:#e0a000!important;}
+#report-panel .rp-tbl-wrap{background:#fff!important;border:1px solid #d6e4ea!important;}
+#report-panel .rp-tbl{background:#fff!important;}
+#report-panel .rp-tbl th{background:#0a5f8f!important;color:#fff!important;font-family:'Prompt',sans-serif!important;}
+#report-panel .rp-tbl.ec th{background:#1040a0!important;}
+#report-panel .rp-tbl td{color:#0d2830!important;border-bottom:1px solid #edf3f6!important;background:transparent!important;}
+#report-panel .rp-tbl tr:hover td{background:#f2f8fb!important;}
+#report-panel .rp-ccard{background:#fff!important;border:1px solid #d6e4ea!important;}
+#report-panel .rp-ccard .cc-t{color:#064e86!important;font-family:'Prompt',sans-serif!important;}
+#report-panel .rp-ccard .cc-r{border-bottom:1px solid #edf3f6!important;color:#33424e;}
+/* ล้าง inline สีชมพูของ select / input / ข้อความประกอบ */
+#report-panel select,#report-panel input[type="text"],#report-panel input[type="email"],#report-panel input[type="password"]{border:1.5px solid #c9dde6!important;background:#fff!important;color:#0d2830!important;outline:none!important;}
+#report-panel select:focus,#report-panel input:focus{border-color:#0a86c4!important;box-shadow:0 0 0 2px rgba(10,134,196,.12)!important;}
+#report-panel #rp-trend-stats,#report-panel #rp-trend-kinfo,#report-panel [id$="-stats"]{color:#5c7883!important;}
+#report-panel #rp-trend-chart-title,#report-panel [id$="-chart-title"]{color:#064e86!important;}
+#report-panel #rp-frc-fitall-status{color:#5c7883!important;background:#f2f8fb!important;}
+#report-panel [id$="-trend-collapse"]{color:#0a6fb8!important;border-color:#c9dde6!important;}
+#report-panel #rp-trend-list{border:1px solid #d6e4ea!important;background:#fff;}
+/* แท็บสถิติ (ai-*) ให้อ่านได้บนพื้นขาว */
+#report-panel [class^="ai-"],#report-panel [class*=" ai-"]{color:#33425a;}
+#report-panel .ai-rec{background:#f4f8fb!important;border:1px solid #d6e4ea!important;}
+#report-panel .ai-rec-text{color:#33425a!important;}
+#report-panel .ai-rank-item:hover{background:#f2f8fb!important;}
+#report-panel .ai-rank-name{color:#33425a!important;}
+#report-panel .ai-rank-num.rn{background:#e8eef3!important;color:#5c7883!important;}
+</style>
 </head>
 <body class="dash-mode">
 <div id="header">
@@ -3316,19 +3367,23 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
         </div>
         <div class="rp-section">สถานีเฝ้าระวัง</div>
         <div class="rp-card" id="rp-frc-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
-        <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
+        <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
+<div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
         <div class="rp-card">
           <select id="rp-frc-pump-sel" onchange="rpChartSelectStation('frc','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
           <div class="rp-chart"><canvas id="rp-frc-chart-pump"></canvas><div id="rp-frc-chart-pump-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
-        <div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
+        </div>
+        <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
+<div class="rp-section">กราฟ FRC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
         <div class="rp-card">
           <select id="rp-frc-mon-sel" onchange="rpChartSelectStation('frc','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #f0d0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#3a0a20;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
           <div class="rp-chart"><canvas id="rp-frc-chart-mon"></canvas><div id="rp-frc-chart-mon-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
+        </div>
         </div>
         <div class="rp-section">ตาราง FRC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>FRC</th><th>สถานะ</th></tr></thead><tbody id="rp-frc-tbody"></tbody></table></div></div>
@@ -3357,19 +3412,23 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
         </div>
         <div class="rp-section">สถานีเฝ้าระวัง</div>
         <div class="rp-card" id="rp-ec-alerts"><div style="text-align:center;padding:20px;color:#706080;">กำลังโหลด...</div></div>
-        <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
+        <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
+<div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานีสูบจ่าย / โรงผลิต</div>
         <div class="rp-card">
           <select id="rp-ec-pump-sel" onchange="rpChartSelectStation('ec','pump')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
           <div class="rp-chart"><canvas id="rp-ec-chart-pump"></canvas><div id="rp-ec-chart-pump-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
         </div>
-        <div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
+        </div>
+        <div style="display:none!important;"><!-- ตัดออกตามคำขอ 24/8/69: กราฟรวมอ่านยาก -->
+<div class="rp-section">กราฟ EC ค่าจริง ย้อนหลัง 24 ชม. — สถานี Monitor</div>
         <div class="rp-card">
           <select id="rp-ec-mon-sel" onchange="rpChartSelectStation('ec','mon')" style="width:100%;padding:6px 10px;border:1.5px solid #d0e0f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:11px;font-weight:600;margin-bottom:6px;outline:none;background:#fff;color:#0a1a3a;">
             <option value="all">📊 แสดงทุกสถานี</option>
           </select>
           <div class="rp-chart"><canvas id="rp-ec-chart-mon"></canvas><div id="rp-ec-chart-mon-stats" style="font-size:10px;color:#c0a0d0;padding:4px 8px;font-family:JetBrains Mono,monospace;"></div></div>
+        </div>
         </div>
         <div class="rp-section">ตาราง EC ทุกสถานี</div>
         <div class="rp-card"><div class="rp-tbl-wrap"><table class="rp-tbl ec"><thead><tr><th>#</th><th>สถานี</th><th>ประเภท</th><th>พื้นที่</th><th>EC</th><th>สถานะ</th></tr></thead><tbody id="rp-ec-tbody"></tbody></table></div></div>
