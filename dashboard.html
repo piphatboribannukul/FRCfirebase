@@ -154,6 +154,41 @@ body{font-family:var(--sans);color:var(--ink);background:#eef1f6;display:flex;mi
 iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:12px;background:#fff;}
 .rv-good{color:var(--good);}.rv-warn{color:var(--warn);}.rv-bad{color:var(--bad);}.rv-info{color:var(--info);}
 @media(max-width:900px){.sb{width:60px;}.sb-brand .t,.sb-cap,.sb-item span.tx,.sb-foot{display:none;}.grid2{grid-template-columns:1fr;}}
+/* ── มือถือ ── */
+@media(max-width:640px){
+  .sb{width:50px;}
+  .sb-item{padding:9px 8px;justify-content:center;}
+  .tb{padding:8px 10px;gap:8px;}
+  .tb .search{display:none;}
+  .tb .user .nm{display:none;}
+  .ct{padding:12px 10px 26px;}
+  .pagehead h1{font-size:16px;}
+  .pagehead{gap:8px;}
+  .actions{width:100%;flex-wrap:wrap;}
+  .chip-btn{padding:6px 10px;font-size:10.5px;}
+  .kgrid{grid-template-columns:1fr 1fr!important;gap:8px;}
+  .kcard .val{font-size:20px;}
+  .qbar{grid-template-columns:1fr!important;}
+  .qbtns{flex-wrap:wrap;}
+  .chartbox{height:210px!important;}
+  iframe.daily{height:72vh;}
+  .rt-chips{grid-template-columns:1fr 1fr;}
+  /* รายงานสถานีสูบจ่าย */
+  .pump-head{flex-direction:column;gap:10px;padding:14px 4% 12px;text-align:center;}
+  .pump-head .ph-logo{width:64px;height:64px;}
+  .pump-head .ph1{font-size:15.5px;}
+  .pump-head .ph3{font-size:15px;}
+  .pump-head .ph-tw{padding:6px 10px 6px 6px;gap:8px;}
+  .pump-head .ph-tw .q{height:50px;width:50px;}
+  .pump-head .ph-tw .tx b{font-size:10.5px;}
+  .ptbl{width:100%;font-size:11px;}
+  .ptbl th{font-size:9.5px;padding:6px 4px;}
+  .ptbl td{padding:6px 4px;}
+  .ptbl th.pst{min-width:86px;}
+  .ptbl td.pst{font-size:11px;}
+  .pnote{margin:0 1%;padding:10px 3% 12px;}
+  .fb-item{padding:10px;}
+}
 </style>
 </head>
 <body>
