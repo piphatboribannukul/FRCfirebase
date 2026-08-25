@@ -119,7 +119,7 @@ td.v.bad{background:var(--badbg);color:var(--bad)}td.v.na{background:var(--nabg)
         <div class="row"><b>คลอรีนอิสระคงเหลือ (มก/ล)</b><span class="chip c-g">0.2–2.0</span><span class="chip c-y">0.01–0.19</span><span class="chip c-r">&lt;0.01 หรือ &gt;2.0</span></div>
         <div class="row"><b>ความขุ่น (NTU)</b><span class="chip c-g">≤1</span><span class="chip c-y">1–4</span><span class="chip c-r">&gt;4</span></div>
         <div class="row"><b>ความนำไฟฟ้า (µS/cm)</b><span class="chip c-g">≤500</span><span class="chip c-y">501–1,200</span><span class="chip c-r">&gt;1,200</span></div>
-        <div style="color:var(--muted);margin-top:4px">"–" = อยู่ระหว่างซ่อมแซม/บำรุงรักษา · ⚠N = เฉลี่ยผ่าน แต่คลอรีนตก N ชม.</div>
+        <div style="color:var(--muted);margin-top:4px">"–" = อยู่ระหว่างซ่อมแซม/บำรุงรักษา · <span class="wn" style="margin-left:0">⚠N</span> = เฉลี่ยผ่าน แต่มีชั่วโมงเฝ้าระวัง (0.01–0.19) N ชม.</div>
       </div>
     </div>
   </div>
@@ -157,7 +157,7 @@ const PROV_COLOR={"กรุงเทพมหานคร":"#3d9fd6","นนท
 function renderKPI(){
   const s=REPORT.stations,cl=x=>frcClass(x.frc),c={ok:0,watch:0,bad:0,na:0,hidden:0};
   s.forEach(x=>{c[cl(x)]++;if(x.frc!=null&&x.frc>=0.2&&x.wh>0)c.hidden++;});
-  const K=[[s.length,'สถานีที่รายงาน',''],[c.ok,'คลอรีนผ่านเกณฑ์','ok'],[c.watch,'เฝ้าระวัง','watch'],[c.bad,'ไม่ผ่านเกณฑ์','bad'],[c.na,'ไม่มีข้อมูล','na'],[c.hidden,'เฉลี่ยผ่าน แต่มีชั่วโมงตก ⚠','risk']];
+  const K=[[s.length,'สถานีที่รายงาน',''],[c.ok,'คลอรีนผ่านเกณฑ์','ok'],[c.watch,'เฝ้าระวัง','watch'],[c.bad,'ไม่ผ่านเกณฑ์','bad'],[c.na,'ไม่มีข้อมูล','na'],[c.hidden,'เฉลี่ยผ่าน แต่มีชั่วโมงเฝ้าระวัง ⚠','risk']];
   document.getElementById('kpi').innerHTML=K.map(([n,cap,cls])=>`<div class="k ${cls}"><div class="num">${n}</div><div class="cap">${cap}</div></div>`).join('');
 }
 function groupCard(gIdx){
@@ -204,7 +204,7 @@ function buildMarkers(){
     const c=frcClass(s.frc),d=(pinMode==='frc'?28:22),fs=(pinMode==='frc'?9.5:10);
     const label=pinMode==='frc'?(s.frc==null?'–':s.frc.toFixed(2)):s.no;
     const icon=L.divIcon({className:'',html:`<div class="pin" style="background:${MARKER_COLOR[c]};width:${d}px;height:${d}px;font-size:${fs}px">${label}</div>`,iconSize:[d,d],iconAnchor:[d/2,d/2]});
-    const wh=s.wh>0?`<br><b style="color:#c2410c">⚠ คลอรีนตก ${s.wh} ชม.</b>`:'';
+    const wh=s.wh>0?`<br><b style="color:#c2410c">⚠ ชั่วโมงเฝ้าระวัง ${s.wh} ชม.</b>`:'';
     L.marker([s.lat,s.lon],{icon,zIndexOffset:1000}).bindPopup(`<b>${s.no}. ${s.name}</b> <span style="color:#888">(${s.id})</span><br>คลอรีน <b>${fmt(s.frc)}</b> มก/ล · ขุ่น <b>${fmt(s.tur)}</b> NTU · EC <b>${fmt(s.ec)}</b> µS/cm${wh}`).addTo(markerLayer);
   });
 }
@@ -257,7 +257,7 @@ module.exports = function leafletImage(map, callback) {
     // tiles, paths, and then markers
     map.eachLayer(drawTileLayer);
     map.eachLayer(drawEsriDynamicLayer);
-    
+
     if (map._pathRoot) {
         layerQueue.defer(handlePathRoot, map._pathRoot);
     } else if (map._panes) {
@@ -278,11 +278,11 @@ module.exports = function leafletImage(map, callback) {
             layerQueue.defer(handleMarkerLayer, l);
         }
     }
-    
+
     function drawEsriDynamicLayer(l) {
         if (!L.esri) return;
-       
-        if (l instanceof L.esri.DynamicMapLayer) {                       
+
+        if (l instanceof L.esri.DynamicMapLayer) {
             layerQueue.defer(handleEsriDymamicLayer, l);
         }
     }
@@ -457,18 +457,18 @@ module.exports = function leafletImage(map, callback) {
 
         if (isBase64) im.onload();
     }
-    
+
     function handleEsriDymamicLayer(dynamicLayer, callback) {
         var canvas = document.createElement('canvas');
         canvas.width = dimensions.x;
         canvas.height = dimensions.y;
-    
+
         var ctx = canvas.getContext('2d');
-    
+
         var im = new Image();
         im.crossOrigin = '';
         im.src = addCacheString(dynamicLayer._currentImage._image.src);
-    
+
         im.onload = function() {
             ctx.drawImage(im, 0, 0);
             callback(null, {
