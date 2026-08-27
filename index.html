@@ -2,60 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=
-
-    // ══════ rev26: Pipe Interpolation Layers (Pressure + EC along pipes) ══════
-    window._pipePressureGroup = L.layerGroup();
-    window._pipeEcGroup = L.layerGroup();
-    setTimeout(function(){
-      try {
-        var rtuOn = (window._rtuLive || []).filter(function(r){return r.lP > 0;});
-        var ecSensors = typeof SENSORS!=='undefined' ? SENSORS.filter(function(s){return s.ec>0;}) : [];
-        if (!rtuOn.length) { console.warn('[PipeInterp] No RTU online'); return; }
-        var pipeSegs = [];
-        if (typeof pipeNetGroup !== 'undefined') {
-          pipeNetGroup.eachLayer(function(layer) {
-            var ll = layer.getLatLngs();
-            if (ll && ll.length >= 2) pipeSegs.push(ll);
-          });
-        }
-        if (!pipeSegs.length) { console.warn('[PipeInterp] No pipe segments'); return; }
-        function pressColor(p) {
-          return p>=30?'#ef4444':p>=20?'#f97316':p>=15?'#22c55e':p>=10?'#3b82f6':p>=5?'#06b6d4':'#6b7280';
-        }
-        function ecInterpColor(ec) {
-          return ec>=400?'#ef4444':ec>=300?'#f97316':ec>=250?'#eab308':ec>=200?'#22c55e':ec>=150?'#06b6d4':'#3b82f6';
-        }
-        function idw3(lat, lon, pts, fn) {
-          var arr = [];
-          for (var i=0; i<pts.length; i++) {
-            var v = fn(pts[i]);
-            if (v==null || isNaN(v)) continue;
-            var d = Math.sqrt(Math.pow(pts[i].lat-lat,2)+Math.pow(pts[i].lon-lon,2))*111;
-            arr.push({d:Math.max(d,0.01), v:v});
-          }
-          arr.sort(function(a,b){return a.d-b.d;});
-          var wS=0, vS=0;
-          for (var j=0; j<Math.min(3,arr.length); j++) { var w=1/(arr[j].d*arr[j].d); wS+=w; vS+=w*arr[j].v; }
-          return wS>0 ? vS/wS : null;
-        }
-        var prR = L.canvas({padding:0.3});
-        var ecR = L.canvas({padding:0.3});
-        var prC=0, ecC=0;
-        var step = Math.max(1, Math.floor(pipeSegs.length/3000));
-        for (var si=0; si<pipeSegs.length; si+=step) {
-          var seg = pipeSegs[si];
-          var mLat = (seg[0].lat+seg[seg.length-1].lat)/2;
-          var mLon = (seg[0].lng+seg[seg.length-1].lng)/2;
-          var pV = idw3(mLat, mLon, rtuOn.map(function(r){return {lat:r.lt,lon:r.ln,v:r.lP};}), function(p){return p.v;});
-          if (pV!=null) { L.polyline(seg,{color:pressColor(pV),weight:2.5,opacity:0.7,interactive:false,renderer:prR}).addTo(window._pipePressureGroup); prC++; }
-          var eV = idw3(mLat, mLon, ecSensors.map(function(s){return {lat:s.lat,lon:s.lon,v:s.ec};}), function(p){return p.v;});
-          if (eV!=null) { L.polyline(seg,{color:ecInterpColor(eV),weight:2.5,opacity:0.7,interactive:false,renderer:ecR}).addTo(window._pipeEcGroup); ecC++; }
-        }
-        console.log('[PipeInterp] pressure='+prC+', EC='+ecC+' segments');
-      } catch(e) { console.warn('[PipeInterp] Error:', e); }
-    }, 5000);
-1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3481,7 +3428,6 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
     <button id="forecast-close-btn" onclick="openForecastBar()" style="margin-left:4px;flex-shrink:0;">✕</button>
   </div>
 </div>
-</div>
 <button id="feedback-btn" onclick="document.getElementById('fb-overlay').classList.add('open');document.getElementById('fb-form').style.display='';document.getElementById('fb-success').style.display='none';document.getElementById('fb-name').value='';document.getElementById('fb-msg').value='';"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>ติดต่อสอบถาม : นายพิพัฒน์ บริบาลนุกูล นว.5 กบน. ฝคภ.</button>
 <div id="fb-overlay" onclick="if(event.target===this)this.classList.remove('open');">
 <div id="fb-modal">
@@ -3776,6 +3722,62 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <script src="data/assets.js"></script>
 <!-- ── application ── -->
 <script src="app.js"></script>
+
+<!-- ══ rev26: Pipe Interpolation Layers — ย้ายมาจากตำแหน่งที่วางผิดใน <meta viewport> (27/08/2569) ══
+     ต้องรันหลัง app.js เพราะใช้ pipeNetGroup / SENSORS / _rtuLive; ตัวโค้ดหน่วงเอง 5 วิ -->
+<script>
+    // ══════ rev26: Pipe Interpolation Layers (Pressure + EC along pipes) ══════
+    window._pipePressureGroup = L.layerGroup();
+    window._pipeEcGroup = L.layerGroup();
+    setTimeout(function(){
+      try {
+        var rtuOn = (window._rtuLive || []).filter(function(r){return r.lP > 0;});
+        var ecSensors = typeof SENSORS!=='undefined' ? SENSORS.filter(function(s){return s.ec>0;}) : [];
+        if (!rtuOn.length) { console.warn('[PipeInterp] No RTU online'); return; }
+        var pipeSegs = [];
+        if (typeof pipeNetGroup !== 'undefined') {
+          pipeNetGroup.eachLayer(function(layer) {
+            var ll = layer.getLatLngs();
+            if (ll && ll.length >= 2) pipeSegs.push(ll);
+          });
+        }
+        if (!pipeSegs.length) { console.warn('[PipeInterp] No pipe segments'); return; }
+        function pressColor(p) {
+          return p>=30?'#ef4444':p>=20?'#f97316':p>=15?'#22c55e':p>=10?'#3b82f6':p>=5?'#06b6d4':'#6b7280';
+        }
+        function ecInterpColor(ec) {
+          return ec>=400?'#ef4444':ec>=300?'#f97316':ec>=250?'#eab308':ec>=200?'#22c55e':ec>=150?'#06b6d4':'#3b82f6';
+        }
+        function idw3(lat, lon, pts, fn) {
+          var arr = [];
+          for (var i=0; i<pts.length; i++) {
+            var v = fn(pts[i]);
+            if (v==null || isNaN(v)) continue;
+            var d = Math.sqrt(Math.pow(pts[i].lat-lat,2)+Math.pow(pts[i].lon-lon,2))*111;
+            arr.push({d:Math.max(d,0.01), v:v});
+          }
+          arr.sort(function(a,b){return a.d-b.d;});
+          var wS=0, vS=0;
+          for (var j=0; j<Math.min(3,arr.length); j++) { var w=1/(arr[j].d*arr[j].d); wS+=w; vS+=w*arr[j].v; }
+          return wS>0 ? vS/wS : null;
+        }
+        var prR = L.canvas({padding:0.3});
+        var ecR = L.canvas({padding:0.3});
+        var prC=0, ecC=0;
+        var step = Math.max(1, Math.floor(pipeSegs.length/3000));
+        for (var si=0; si<pipeSegs.length; si+=step) {
+          var seg = pipeSegs[si];
+          var mLat = (seg[0].lat+seg[seg.length-1].lat)/2;
+          var mLon = (seg[0].lng+seg[seg.length-1].lng)/2;
+          var pV = idw3(mLat, mLon, rtuOn.map(function(r){return {lat:r.lt,lon:r.ln,v:r.lP};}), function(p){return p.v;});
+          if (pV!=null) { L.polyline(seg,{color:pressColor(pV),weight:2.5,opacity:0.7,interactive:false,renderer:prR}).addTo(window._pipePressureGroup); prC++; }
+          var eV = idw3(mLat, mLon, ecSensors.map(function(s){return {lat:s.lat,lon:s.lon,v:s.ec};}), function(p){return p.v;});
+          if (eV!=null) { L.polyline(seg,{color:ecInterpColor(eV),weight:2.5,opacity:0.7,interactive:false,renderer:ecR}).addTo(window._pipeEcGroup); ecC++; }
+        }
+        console.log('[PipeInterp] pressure='+prC+', EC='+ecC+' segments');
+      } catch(e) { console.warn('[PipeInterp] Error:', e); }
+    }, 5000);
+</script>
 
 <!-- ═══ Dashboard ใหม่ (iframe) — เพิ่มโดยไม่แตะรายงานเดิม rev11 ═══
      revert: เปลี่ยน onclick ปุ่ม report-btn กลับเป็น openReport() บรรทัดเดียว -->

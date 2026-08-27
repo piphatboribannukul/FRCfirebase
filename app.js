@@ -1769,33 +1769,38 @@ const map=L.map('map',{center:[13.81,100.58],zoom:10,zoomControl:false,attributi
 window.map = map; // expose for search bar & other external scripts
 map.fitBounds([[13.45, 100.25],[14.10, 100.97]], {paddingTopLeft: [0, 0], paddingBottomRight: [0, 0]});
 L.control.zoom({position:'topright'}).addTo(map);
-// Tile layers: ลอง CartoDB ก่อน fallback เป็น OSM ถ้าโหลดไม่ได้
-const tileCartoDB = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {maxZoom:19});
+// Tile layers — 27/08/2569: default เป็น OSM เพราะ CARTO บังคับ API key แล้ว
+// (tile ลายน้ำ "API KEY REQUIRED" ยังยิง tileload ปกติ fallback เดิมจึงจับไม่ได้)
+// อยากกลับไปใช้ CARTO light_all: ใส่ CARTO_KEY แล้วตั้ง BASEMAP='carto'
+const BASEMAP='osm', CARTO_KEY='';
+const tileCartoDB = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'+(CARTO_KEY?'?api_key='+CARTO_KEY:''), {maxZoom:19});
 const tileOSM     = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',              {maxZoom:19});
 const tileHot     = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',           {maxZoom:19});
 
-tileCartoDB.addTo(map);
+const tilePrimary = (BASEMAP==='carto' && CARTO_KEY) ? tileCartoDB : tileOSM;
+const tileFallback = (tilePrimary===tileOSM) ? tileHot : tileOSM;
+tilePrimary.addTo(map);
 
-// fallback: ถ้า CartoDB โหลดไม่ได้ภายใน 6 วินาที → ลอง OSM
+// fallback: ถ้าชั้นหลักโหลดไม่ได้ภายใน 6 วินาที → สลับชั้นสำรอง (→ HOT เป็นชั้นสุดท้าย)
 let tileOk = false;
-tileCartoDB.on('tileload', () => { tileOk = true; });
+tilePrimary.on('tileload', () => { tileOk = true; });
 setTimeout(() => {
   if (!tileOk) {
-    console.warn('[Tile] CartoDB timeout → fallback OSM');
-    map.removeLayer(tileCartoDB);
-    tileOSM.addTo(map);
-    let osmOk = false;
-    tileOSM.on('tileload', () => { osmOk = true; });
+    console.warn('[Tile] primary timeout → fallback');
+    map.removeLayer(tilePrimary);
+    tileFallback.addTo(map);
+    let fbOk = false;
+    tileFallback.on('tileload', () => { fbOk = true; });
     setTimeout(() => {
-      if (!osmOk) {
-        console.warn('[Tile] OSM timeout → fallback HOT');
-        map.removeLayer(tileOSM);
+      if (!fbOk && tileFallback !== tileHot) {
+        console.warn('[Tile] fallback timeout → HOT');
+        map.removeLayer(tileFallback);
         tileHot.addTo(map);
       }
     }, 6000);
   }
 }, 6000);
-L.control.attribution({prefix:'© OpenStreetMap · © CARTO'}).addTo(map);
+L.control.attribution({prefix:(BASEMAP==='carto'&&CARTO_KEY)?'© OpenStreetMap · © CARTO':'© OpenStreetMap contributors'}).addTo(map);
 
 const layers={fill:true,lines:true,sensors:true,mwa:true,sta:true,thresh:true,flow:true,pipes:true,pipelines:false,rtu:false,'pipe-pressure':false,'pipe-ec':false,epanet:false,rawwater:false,'rawwater-mk':false};
 
