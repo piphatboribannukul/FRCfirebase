@@ -27,6 +27,19 @@ jobs:
             const j = await r.json();
             return j ? Object.keys(j) : [];
           }
+          // v2: entries ของ bot ใช้ push-ID (ไม่ใช่เลข ts) ต้อง query ตามค่า ts ข้างใน
+          // ต้องมี ".indexOn": ["ts"] ใน rules ของ history/$stationCode ก่อน
+          async function oldKeysByTs(path) {
+            const q = `orderBy=%22ts%22&endAt=${CUTOFF}`;
+            const r = await fetch(`${DB_URL}/${path}.json?${q}&auth=${DB_SECRET}`);
+            if (!r.ok) {
+              const t = await r.text();
+              if (t.includes('index')) { console.warn(`  (ข้าม ${path}: ยังไม่ได้เพิ่ม .indexOn ts ใน rules)`); return null; }
+              throw new Error(`QUERY ${path} ${r.status}`);
+            }
+            const j = await r.json();
+            return j ? Object.keys(j) : [];
+          }
           async function patchNulls(path, keys) {
             for (let i = 0; i < keys.length; i += CHUNK) {
               const body = {};
@@ -47,12 +60,18 @@ jobs:
             let totalDel = 0, totalKeep = 0;
             for (const st of stations) {
               const tsKeys = await shallowKeys(`history/${st}`);
-              const old = tsKeys.filter(k => Number(k) < CUTOFF);
+              // แบบที่ 1: key เป็นเลข timestamp (จาก poll.yml) — เทียบจากชื่อ key ตรง ๆ
+              const oldNumeric = tsKeys.filter(k => !isNaN(Number(k)) && Number(k) < CUTOFF);
+              // แบบที่ 2: key เป็น push-ID (จาก LINE bot) — query ด้วยค่า ts ข้างใน
+              const oldByTs = await oldKeysByTs(`history/${st}`);
+              const oldSet = new Set(oldNumeric);
+              if (oldByTs) for (const k of oldByTs) oldSet.add(k);
+              const old = [...oldSet];
               totalKeep += tsKeys.length - old.length;
               if (old.length) {
                 await patchNulls(`history/${st}`, old);
                 totalDel += old.length;
-                console.log(`  ${st}: deleted ${old.length}, kept ${tsKeys.length - old.length}`);
+                console.log(`  ${st}: deleted ${old.length} (numeric ${oldNumeric.length}), kept ${tsKeys.length - old.length}`);
               }
             }
             console.log(`DONE — deleted ${totalDel} entries, kept ${totalKeep} (last ${KEEP_DAYS} days)`);
