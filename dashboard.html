@@ -189,6 +189,10 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
   .pnote{margin:0 1%;padding:10px 3% 12px;}
   .fb-item{padding:10px;}
 }
+.eq-tb{border-collapse:collapse;}
+.eq-tb th{font-size:11px;color:#667;text-align:left;padding:5px 8px;border-bottom:2px solid var(--line);background:#f7f9fc;}
+.eq-tb td{padding:6px 8px;border-bottom:1px solid #f0f2f6;vertical-align:middle;}
+.eq-tb tr:hover td{background:#f9fbff;}
 </style>
 </head>
 <body>
@@ -205,6 +209,9 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
     <div class="sb-cap">ข้อมูลคุณภาพน้ำ (TWQMS)</div>
     <button class="sb-item" onclick="window.open('https://twqonline.mwa.co.th/Admin/water-quality-info/report-water-quality','_blank')"><span class="ic">🗂️</span><span class="tx">รายงาน ↗</span></button>
     <button class="sb-item" onclick="window.open('https://twqonline.mwa.co.th/Admin/water-quality-info/graph','_blank')"><span class="ic">📈</span><span class="tx">กราฟ ↗</span></button>
+    <div class="sb-cap">บำรุงรักษา</div>
+    <button class="sb-item" onclick="go('equip',this);equipInit()"><span class="ic">🔧</span><span class="tx">เปลี่ยนอุปกรณ์/เซ็นเซอร์</span></button>
+    <button class="sb-item" onclick="go('stock',this);stockInit()"><span class="ic">📦</span><span class="tx">Stock Sensor</span></button>
     <div class="sb-cap">อื่น ๆ</div>
     <button class="sb-item" onclick="go('fb',this)"><span class="ic">💬</span><span class="tx">ข้อเสนอแนะ</span></button>
   </div>
@@ -305,6 +312,42 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       <div class="rp-section-like" style="font-family:var(--disp);font-size:12px;color:var(--mut);margin:4px 2px 8px;">กระทู้ล่าสุด <span style="font-size:10px;">(บันทึกในเครื่องนี้ · รอเชื่อม Firebase)</span></div>
       <div id="fb-list"></div>
     </div>
+
+    <!-- ═══ 5) เปลี่ยนอุปกรณ์/เซ็นเซอร์ ═══ -->
+    <div class="pg" id="pg-equip">
+      <div class="crumb">หน้าแรก / <b>เปลี่ยนอุปกรณ์/เซ็นเซอร์</b></div>
+      <div class="pagehead"><div><h1>🔧 เปลี่ยนอุปกรณ์/เซ็นเซอร์</h1><div class="meta">ทะเบียนเซ็นเซอร์ 49 สถานี monitor · อายุใช้งาน · กำหนดเปลี่ยน (ข้อมูลกลาง Firebase)</div></div></div>
+      <div class="qcard">
+        <div class="qbar" style="grid-template-columns:2fr 1fr 1fr;">
+          <div class="qf"><label>สถานี</label><select id="eq-station" onchange="equipRenderStation()"></select></div>
+          <div class="qf"><label>ผู้บันทึก (ใช้ตอนแก้ไข/เปลี่ยน)</label><input type="text" id="eq-user" placeholder="ชื่อ-สกุล"></div>
+          <div class="qf" style="align-self:end;"><button class="chip-btn" onclick="equipAddParam()">➕ เพิ่มพารามิเตอร์</button></div>
+        </div>
+        <div id="eq-status" style="font-size:11.5px;color:#888;margin-top:4px;"></div>
+      </div>
+      <div id="eq-body"></div>
+      <div class="qcard"><b style="font-size:12.5px;">📜 ประวัติล่าสุดของสถานีนี้</b><div id="eq-log" style="margin-top:6px;"></div></div>
+    </div>
+
+    <!-- ═══ 6) Stock Sensor ═══ -->
+    <div class="pg" id="pg-stock">
+      <div class="crumb">หน้าแรก / <b>Stock Sensor</b></div>
+      <div class="pagehead"><div><h1>📦 Stock Sensor</h1><div class="meta">คลังอะไหล่เซ็นเซอร์ · รับเข้า/เบิกออก · log ทุกรายการ</div></div></div>
+      <div class="qcard">
+        <div class="qbar" style="grid-template-columns:1fr 1fr 1fr 90px auto;">
+          <div class="qf"><label>พารามิเตอร์</label><select id="st-param"></select></div>
+          <div class="qf"><label>ชนิดชิ้นส่วน</label><input id="st-part" list="dl-parts" placeholder="เช่น Sensor / Cartridge"></div>
+          <div class="qf"><label>ยี่ห้อ / รุ่น</label><input id="st-brand" list="dl-brands" placeholder="เช่น Hach CL17sc"></div>
+          <div class="qf"><label>จำนวน</label><input id="st-qty" type="number" min="1" value="1"></div>
+          <div class="qf" style="align-self:end;"><button class="chip-btn primary" onclick="stockIn()">📥 รับเข้า</button></div>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">รับเข้า = เพิ่มรายการใหม่หรือเติมของเดิม (ระบบรวมตามพารามิเตอร์+ชิ้นส่วน+ยี่ห้อ) · ผู้ทำรายการใช้ชื่อจากช่อง "ผู้บันทึก" หน้าเปลี่ยนอุปกรณ์</div>
+      </div>
+      <div class="qcard"><b style="font-size:12.5px;">คงเหลือในคลัง</b><div id="st-items" style="margin-top:6px;"></div></div>
+      <div class="qcard"><b style="font-size:12.5px;">📜 Log การเคลื่อนไหว (ล่าสุด 40 รายการ)</b><div id="st-log" style="margin-top:6px;"></div></div>
+      <datalist id="dl-parts"></datalist><datalist id="dl-brands"></datalist>
+    </div>
+
 
   </div>
 </div>
@@ -718,5 +761,230 @@ setTimeout(async()=>{
   catch(e){ /* นอกวง .55 — คงหน้าตัวอย่างไว้ */ }
 },400);
 
+</script>
+<script>
+/* ═══════════ เปลี่ยนอุปกรณ์/เซ็นเซอร์ + Stock (Firebase RTDB REST) ═══════════
+   โครงข้อมูล:
+   equipment/{stationId}/{paramKey}/{partId} = {part,brand,start,'lifeM',by,ts}
+   equipment_meta/params  = ["FRC","Turbidity",...]   (เพิ่มได้)
+   equipment_meta/brands  = {b1:"Hach CL17sc",...}    (ลิสต์กลาง เพิ่มอัตโนมัติ)
+   stock/items/{key}      = {param,part,brand,qty}    key = slug(param|part|brand)
+   stock/log/{push}       = {t:'in'|'out',param,part,brand,qty,by,station?,note?,ts}
+   equipment_log/{push}   = {station,param,part,brand,action,by,ts,detail}          */
+const FB_URL='https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+const EQUIP_STATIONS=[{"id": "SW01", "name": "สถานีสูบจ่ายน้ำลุมพินี"}, {"id": "SM02", "name": "สำนักงานประปาสาขาทุ่งมหาเมฆ"}, {"id": "SW11", "name": "สถานีสูบจ่ายน้ำพหลโยธิน"}, {"id": "SW02", "name": "สถานีสูบจ่ายน้ำลาดพร้าว"}, {"id": "S008", "name": "บริษัท โอสถสภา จำกัด (มหาชน)"}, {"id": "S009", "name": "สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ"}, {"id": "SW03", "name": "สถานีสูบจ่ายน้ำคลองเตย"}, {"id": "S010", "name": "ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ"}, {"id": "SM03", "name": "สำนักงานประปาสาขาสุขุมวิท-พระโขนง"}, {"id": "SW04", "name": "สถานีสูบจ่ายน้ำสำโรง"}, {"id": "S011", "name": "บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)"}, {"id": "S012", "name": "โรงเรียนหาดอมราอักษรลักษณ์วิทยา"}, {"id": "S013", "name": "บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)"}, {"id": "SM04", "name": "สำนักงานประปาสาขาสมุทรปราการ"}, {"id": "S014", "name": "โรงไฟฟ้าพระนครใต้"}, {"id": "SW05", "name": "สถานีสูบจ่ายน้ำมีนบุรี"}, {"id": "S015", "name": "บริษัท มหาจักรออโตพาร์ท จำกัด"}, {"id": "SM05", "name": "สำนักงานประปาสาขามีนบุรี"}, {"id": "S016", "name": "นิคมอุตสาหกรรมบางชัน"}, {"id": "S017", "name": "ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์"}, {"id": "SW06", "name": "สถานีสูบจ่ายน้ำลาดกระบัง"}, {"id": "S019", "name": "บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)"}, {"id": "S018", "name": "นิคมอุตสาหกรรมลาดกระบัง"}, {"id": "S020", "name": "มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)"}, {"id": "SW07", "name": "สถานีสูบจ่ายน้ำบางพลี"}, {"id": "S021", "name": "นิคมอุตสาหกรรมบางพลี"}, {"id": "S022", "name": "สถานีตำรวจภูธรคลองด่าน"}, {"id": "S023", "name": "นิคมอุตสาหกรรมบางปู"}, {"id": "SM01", "name": "สำนักงานประปาสาขานนทบุรี"}, {"id": "S003", "name": "กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย"}, {"id": "S002", "name": "โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก"}, {"id": "S005", "name": "โรงพยาบาลซีจีเอช สายไหม"}, {"id": "S004", "name": "โรงพยาบาลภูมิพลอดุลยเดช"}, {"id": "SW08", "name": "สถานีสูบจ่ายน้ำราษฎร์บูรณะ"}, {"id": "S026", "name": "ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)"}, {"id": "S025", "name": "ศูนย์กีฬาเฉลิมพระเกียรติ"}, {"id": "SW09", "name": "สถานีสูบจ่ายน้ำเพชรเกษม"}, {"id": "S027", "name": "มหาวิทยาลัยเอเชียอาคเนย์"}, {"id": "S028", "name": "เรือนจำพิเศษธนบุรี"}, {"id": "SW10", "name": "สถานีสูบจ่ายน้ำท่าพระ"}, {"id": "S024", "name": "ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)"}, {"id": "S029", "name": "โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี"}, {"id": "S032", "name": "โรงเรียนตั้งพิรุฬห์ธรรม"}, {"id": "SM06", "name": "สำนักงานประปาสาขาบางบัวทอง"}, {"id": "S030", "name": "โรงเรียนราชวินิต นนทบุรี"}, {"id": "S001", "name": "โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี"}, {"id": "S031", "name": "สถานีตำรวจภูธรไทรน้อย"}, {"id": "S007", "name": "โรงพยาบาลศิริราช"}, {"id": "S006", "name": "พระราชวังดุสิต สวนจิตรลดา"}];
+const EQ_DEFAULT_PARAMS=['คลอรีนอิสระคงเหลือ (FRC)','Turbidity','Conductivity','pH'];
+const EQ_DEFAULT_PARTS=['Sensor','Transmitter','Cartridge'];
+async function fbGet(p){const r=await fetch(FB_URL+'/'+p+'.json');if(!r.ok)throw new Error('GET '+p+' '+r.status);return r.json();}
+async function fbSet(p,v){const r=await fetch(FB_URL+'/'+p+'.json',{method:'PUT',body:JSON.stringify(v)});if(!r.ok)throw new Error('PUT '+p+' '+r.status);return r.json();}
+async function fbPush(p,v){const r=await fetch(FB_URL+'/'+p+'.json',{method:'POST',body:JSON.stringify(v)});if(!r.ok)throw new Error('POST '+p+' '+r.status);return r.json();}
+async function eqFbDel(p){await fetch(FB_URL+'/'+p+'.json',{method:'DELETE'});}
+const eqSlug=s=>s.replace(/[.#$\[\]\/\s]+/g,'_').replace(/_+$/,'');
+const eqUser=()=>{const v=(document.getElementById('eq-user').value||'').trim();if(!v){alert('กรุณากรอกชื่อผู้บันทึกก่อน (ช่องบนขวา)');return null;}localStorage.setItem('eq_user',v);return v;};
+const eqThD=iso=>{if(!iso)return '–';const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});};
+
+/* อายุ/กำหนดเปลี่ยน: แสดงเป็นเดือน, เหลือ ≤31 วัน นับวัน(เหลือง), เกิน = แดง */
+function eqDue(start,lifeM){
+  if(!start||!lifeM)return null;
+  const d=new Date(start+'T00:00:00'); d.setMonth(d.getMonth()+ +lifeM);
+  const days=Math.floor((d-new Date())/864e5);
+  let cls,txt;
+  if(days<0){cls='bad';txt='เกินกำหนด '+(-days)+' วัน';}
+  else if(days<=31){cls='warn';txt='เหลือ '+days+' วัน';}
+  else{const m=Math.floor(days/30.44);cls='ok';txt='เหลือ ~'+m+' เดือน';}
+  return {due:d,days,cls,txt};
+}
+const EQ_BADGE={ok:'background:#e6f6ea;color:#177a3d;',warn:'background:#fff3d6;color:#9a6a00;',bad:'background:#fde3e0;color:#b3261e;'};
+
+let _eqMeta={params:null,brands:{}}, _eqData=null, _stItems=null;
+async function eqLoadMeta(){
+  try{
+    const m=await fbGet('equipment_meta')||{};
+    _eqMeta.params=m.params&&m.params.length?m.params:EQ_DEFAULT_PARAMS.slice();
+    _eqMeta.brands=m.brands||{};
+  }catch(e){_eqMeta.params=EQ_DEFAULT_PARAMS.slice();}
+}
+function eqFillBrandList(){
+  const dl=document.getElementById('dl-brands');
+  dl.innerHTML=Object.values(_eqMeta.brands).map(b=>'<option value="'+b+'">').join('');
+  const dp=document.getElementById('dl-parts');
+  dp.innerHTML=EQ_DEFAULT_PARTS.map(p=>'<option value="'+p+'">').join('');
+}
+async function eqRememberBrand(b){
+  if(!b)return; if(Object.values(_eqMeta.brands).includes(b))return;
+  const k='b'+Date.now(); _eqMeta.brands[k]=b;
+  try{await fbSet('equipment_meta/brands/'+k,b);}catch(e){}
+  eqFillBrandList();
+}
+
+async function equipInit(){
+  const sel=document.getElementById('eq-station');
+  if(!sel.options.length){
+    sel.innerHTML=EQUIP_STATIONS.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('');
+    document.getElementById('eq-user').value=localStorage.getItem('eq_user')||'';
+  }
+  await eqLoadMeta(); eqFillBrandList(); equipRenderStation();
+}
+async function equipRenderStation(){
+  const sid=document.getElementById('eq-station').value, box=document.getElementById('eq-body'), st=document.getElementById('eq-status');
+  st.textContent='กำลังโหลดข้อมูลจาก Firebase…';
+  try{_eqData=await fbGet('equipment/'+sid)||{}; st.textContent='';}
+  catch(e){st.innerHTML='<b style="color:#b3261e">อ่าน Firebase ไม่ได้ ('+e.message+') — ถ้าเป็น 401/permission ให้เพิ่ม rules path equipment/* (ดู comment ในโค้ด)</b>';_eqData={};}
+  box.innerHTML=_eqMeta.params.map(pm=>{
+    const pk=eqSlug(pm), parts=_eqData[pk]||{};
+    const rows=Object.entries(parts).map(([pid,p])=>{
+      const d=eqDue(p.start,p.lifeM);
+      const badge=d?'<span style="font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;'+EQ_BADGE[d.cls]+'">'+d.txt+'</span>':'<span style="font-size:11px;color:#999">ยังไม่ตั้งอายุ</span>';
+      return '<tr><td>'+p.part+'</td><td>'+(p.brand||'–')+'</td><td>'+eqThD(p.start)+'</td><td style="text-align:center">'+(p.lifeM||'–')+'</td><td>'+(d?eqThD(d.due.toISOString().slice(0,10)):'–')+'</td><td>'+badge+'</td>'+
+        '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipReplace(\''+pk+'\',\''+pid+'\')">🔁 เปลี่ยน</button> <button class="chip-btn" onclick="equipEdit(\''+pk+'\',\''+pid+'\')">✏️</button> <button class="chip-btn" onclick="equipDel(\''+pk+'\',\''+pid+'\')">🗑</button></td></tr>';
+    }).join('');
+    return '<div class="qcard"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px;">'+pm+'</b>'+
+      '<button class="chip-btn" onclick="equipAddPart(\''+pk+'\',\''+pm+'\')">➕ เพิ่มชิ้นส่วน</button></div>'+
+      (rows?'<table class="eq-tb" style="width:100%;margin-top:6px;font-size:12px;"><thead><tr><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>เริ่มใช้</th><th>อายุ(เดือน)</th><th>ครบกำหนด</th><th>สถานะ</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+           :'<div style="font-size:12px;color:#999;margin-top:6px;">ยังไม่มีข้อมูล — กด ➕ เพิ่มชิ้นส่วน</div>')+'</div>';
+  }).join('');
+  equipRenderLog(sid);
+}
+async function equipRenderLog(sid){
+  const el=document.getElementById('eq-log');
+  try{
+    const lg=await fbGet('equipment_log')||{};
+    const rows=Object.values(lg).filter(x=>x.station===sid).sort((a,b)=>b.ts-a.ts).slice(0,12)
+      .map(x=>'<div style="font-size:11.5px;padding:3px 0;border-bottom:1px dashed #eee;">'+new Date(x.ts).toLocaleString('th-TH')+' · <b>'+x.action+'</b> '+x.param+' / '+x.part+(x.brand?' ('+x.brand+')':'')+' โดย '+x.by+(x.detail?' — '+x.detail:'')+'</div>').join('');
+    el.innerHTML=rows||'<span style="font-size:12px;color:#999">ยังไม่มีประวัติ</span>';
+  }catch(e){el.innerHTML='<span style="font-size:12px;color:#b3261e">โหลด log ไม่ได้</span>';}
+}
+async function eqWriteLog(entry){try{await fbPush('equipment_log',Object.assign({ts:Date.now()},entry));}catch(e){}}
+
+async function equipAddParam(){
+  const by=eqUser(); if(!by)return;
+  const nm=prompt('ชื่อพารามิเตอร์ใหม่ (เช่น ORP, DO):'); if(!nm)return;
+  _eqMeta.params.push(nm.trim());
+  try{await fbSet('equipment_meta/params',_eqMeta.params);}catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  equipRenderStation();
+}
+async function equipAddPart(pk,pm){
+  const by=eqUser(); if(!by)return;
+  const part=prompt('ชนิดชิ้นส่วน ('+EQ_DEFAULT_PARTS.join(' / ')+' หรือพิมพ์เอง):','Sensor'); if(!part)return;
+  const brand=prompt('ยี่ห้อ / รุ่น (เว้นว่างได้):')||'';
+  const start=prompt('วันเริ่มใช้ (YYYY-MM-DD):',new Date().toISOString().slice(0,10)); if(!start)return;
+  const lifeM=prompt('อายุใช้งาน (เดือน):','12'); if(!lifeM)return;
+  const sid=document.getElementById('eq-station').value;
+  const pid='p'+Date.now();
+  try{
+    await fbSet('equipment/'+sid+'/'+pk+'/'+pid,{part:part.trim(),brand:brand.trim(),start,lifeM:+lifeM,by,ts:Date.now()});
+    await eqRememberBrand(brand.trim());
+    await eqWriteLog({station:sid,param:pm,part,brand,action:'เพิ่มทะเบียน',by,detail:'เริ่ม '+start+' อายุ '+lifeM+' ด.'});
+  }catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  equipRenderStation();
+}
+async function equipEdit(pk,pid){
+  const by=eqUser(); if(!by)return;
+  const sid=document.getElementById('eq-station').value, p=(_eqData[pk]||{})[pid]; if(!p)return;
+  const brand=prompt('ยี่ห้อ / รุ่น:',p.brand||''); if(brand===null)return;
+  const start=prompt('วันเริ่มใช้ (YYYY-MM-DD):',p.start||''); if(start===null)return;
+  const lifeM=prompt('อายุใช้งาน (เดือน):',p.lifeM||12); if(lifeM===null)return;
+  try{
+    await fbSet('equipment/'+sid+'/'+pk+'/'+pid,Object.assign({},p,{brand:brand.trim(),start,lifeM:+lifeM,by,ts:Date.now()}));
+    await eqRememberBrand(brand.trim());
+    await eqWriteLog({station:sid,param:pk,part:p.part,brand,action:'แก้ไขข้อมูล',by,detail:'เริ่ม '+start+' อายุ '+lifeM+' ด.'});
+  }catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  equipRenderStation();
+}
+async function equipDel(pk,pid){
+  const by=eqUser(); if(!by)return;
+  const sid=document.getElementById('eq-station').value, p=(_eqData[pk]||{})[pid]; if(!p)return;
+  if(!confirm('ลบทะเบียน '+p.part+' ('+(p.brand||'-')+') ?'))return;
+  await eqFbDel('equipment/'+sid+'/'+pk+'/'+pid);
+  await eqWriteLog({station:sid,param:pk,part:p.part,brand:p.brand,action:'ลบทะเบียน',by});
+  equipRenderStation();
+}
+/* เปลี่ยนอุปกรณ์: เลือกของจาก stock → หัก stock 1 + log ทั้งสองฝั่ง + รีเซ็ตวันเริ่ม */
+async function equipReplace(pk,pid){
+  const by=eqUser(); if(!by)return;
+  const sid=document.getElementById('eq-station').value, p=(_eqData[pk]||{})[pid]; if(!p)return;
+  let items;
+  try{items=await fbGet('stock/items')||{};}catch(e){alert('อ่าน stock ไม่ได้: '+e.message);return;}
+  const match=Object.entries(items).filter(([k,v])=>v.qty>0);
+  let useKey=null, useBrand=p.brand||'';
+  if(match.length){
+    const menu=match.map(([k,v],i)=>(i+1)+') '+v.param+' / '+v.part+' / '+v.brand+' (คงเหลือ '+v.qty+')').join('\n');
+    const pick=prompt('เบิกจาก stock (พิมพ์หมายเลข) หรือ 0 = เปลี่ยนโดยไม่ตัด stock:\n'+menu,'0');
+    if(pick===null)return;
+    const n=+pick;
+    if(n>=1&&n<=match.length){useKey=match[n-1][0];useBrand=match[n-1][1].brand;}
+  }
+  const start=prompt('วันที่เปลี่ยน/เริ่มใช้ตัวใหม่ (YYYY-MM-DD):',new Date().toISOString().slice(0,10)); if(!start)return;
+  const lifeM=prompt('อายุใช้งานตัวใหม่ (เดือน):',p.lifeM||12); if(!lifeM)return;
+  try{
+    if(useKey){
+      const it=items[useKey];
+      await fbSet('stock/items/'+useKey+'/qty',it.qty-1);
+      await fbPush('stock/log',{t:'out',param:it.param,part:it.part,brand:it.brand,qty:1,by,station:sid,note:'เบิกเปลี่ยนที่สถานี',ts:Date.now()});
+    }
+    await fbSet('equipment/'+sid+'/'+pk+'/'+pid,{part:p.part,brand:useBrand,start,lifeM:+lifeM,by,ts:Date.now()});
+    await eqRememberBrand(useBrand);
+    await eqWriteLog({station:sid,param:pk,part:p.part,brand:useBrand,action:'เปลี่ยนอุปกรณ์',by,
+      detail:'ตัวเก่าเริ่ม '+(p.start||'-')+(useKey?' · ตัด stock 1':' · ไม่ตัด stock')});
+  }catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  equipRenderStation();
+}
+
+/* ─── Stock ─── */
+async function stockInit(){
+  await eqLoadMeta(); eqFillBrandList();
+  const sp=document.getElementById('st-param');
+  sp.innerHTML=_eqMeta.params.map(p=>'<option>'+p+'</option>').join('');
+  stockRender();
+}
+async function stockRender(){
+  const el=document.getElementById('st-items'), lg=document.getElementById('st-log');
+  try{
+    _stItems=await fbGet('stock/items')||{};
+    const rows=Object.entries(_stItems).sort((a,b)=>a[1].param.localeCompare(b[1].param))
+      .map(([k,v])=>'<tr><td>'+v.param+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=1?'color:#b3261e':'')+'">'+v.qty+'</td>'+
+        '<td style="white-space:nowrap"><button class="chip-btn" onclick="stockAdj(\''+k+'\',1)">+1</button> <button class="chip-btn" onclick="stockAdj(\''+k+'\',-1)">−1</button></td></tr>').join('');
+    el.innerHTML=rows?'<table class="eq-tb" style="width:100%;font-size:12px;"><thead><tr><th>พารามิเตอร์</th><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>คงเหลือ</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+      :'<span style="font-size:12px;color:#999">คลังว่าง — รับเข้าจากแบบฟอร์มด้านบน</span>';
+  }catch(e){el.innerHTML='<b style="color:#b3261e;font-size:12px;">อ่าน stock ไม่ได้: '+e.message+'</b>';}
+  try{
+    const logs=await fbGet('stock/log')||{};
+    lg.innerHTML=Object.values(logs).sort((a,b)=>b.ts-a.ts).slice(0,40)
+      .map(x=>'<div style="font-size:11.5px;padding:3px 0;border-bottom:1px dashed #eee;">'+new Date(x.ts).toLocaleString('th-TH')+' · '+(x.t==='in'?'<b style="color:#177a3d">📥 รับเข้า</b>':'<b style="color:#b3261e">📤 เบิกออก</b>')+' '+x.qty+' — '+x.param+' / '+x.part+' / '+x.brand+' · โดย '+x.by+(x.station?' → '+x.station:'')+(x.note?' ('+x.note+')':'')+'</div>').join('')||'<span style="font-size:12px;color:#999">ยังไม่มีรายการ</span>';
+  }catch(e){lg.innerHTML='';}
+}
+async function stockIn(){
+  const by=eqUser(); if(!by)return;
+  const param=document.getElementById('st-param').value;
+  const part=(document.getElementById('st-part').value||'').trim();
+  const brand=(document.getElementById('st-brand').value||'').trim();
+  const qty=+document.getElementById('st-qty').value||1;
+  if(!part||!brand){alert('กรอกชนิดชิ้นส่วนและยี่ห้อ/รุ่น');return;}
+  const key=eqSlug(param+'|'+part+'|'+brand);
+  try{
+    const cur=(await fbGet('stock/items/'+key))||{param,part,brand,qty:0};
+    await fbSet('stock/items/'+key,Object.assign(cur,{qty:cur.qty+qty}));
+    await fbPush('stock/log',{t:'in',param,part,brand,qty,by,note:'รับเข้า',ts:Date.now()});
+    await eqRememberBrand(brand);
+  }catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  stockRender();
+}
+async function stockAdj(key,dq){
+  const by=eqUser(); if(!by)return;
+  const it=_stItems[key]; if(!it)return;
+  if(dq<0&&it.qty<=0){alert('ของหมด');return;}
+  const note=prompt(dq>0?'เหตุผลการเติม:':'เหตุผลการเบิก / สถานีปลายทาง:',dq>0?'เติม stock':''); if(note===null)return;
+  try{
+    await fbSet('stock/items/'+key+'/qty',it.qty+dq);
+    await fbPush('stock/log',{t:dq>0?'in':'out',param:it.param,part:it.part,brand:it.brand,qty:Math.abs(dq),by,note,ts:Date.now()});
+  }catch(e){alert('ไม่สำเร็จ: '+e.message);return;}
+  stockRender();
+}
+/* Firebase rules ที่ต้องมี (วางใน Realtime Database → Rules):
+   "equipment":{".read":true,".write":true},
+   "equipment_meta":{".read":true,".write":true},
+   "equipment_log":{".read":true,".write":true},
+   "stock":{".read":true,".write":true}
+   (หรือผูก auth ตามนโยบาย — แจ้งได้ถ้าต้องการแบบ login) */
 </script>
 </body></html>
