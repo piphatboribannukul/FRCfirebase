@@ -232,7 +232,7 @@ const _stdRe=/น้ำยา|สารมาตรฐาน|standard|buffer|ค
 function _stRow(k,v){
   const logId='stlog-'+k;
   return '<tr><td>'+eqDisplay(v.param)+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=(_eqMeta.lowTh||2)?'color:#b3261e':'')+'">'+v.qty+'</td>'+
-    '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipToggleHist(\'{L}\'.replace(\'{L}\',this.dataset.l))" data-l="'+logId+'">📜 log</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,1)" data-k="'+k+'">+1</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,-1)" data-k="'+k+'">−1</button></td></tr>'+
+    '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipToggleHist(\'{L}\'.replace(\'{L}\',this.dataset.l))" data-l="'+logId+'">📜</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,1)" data-k="'+k+'">+1</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,-1)" data-k="'+k+'">−1</button> <button class="chip-btn" onclick="stockEdit(this.dataset.k)" data-k="'+k+'">✏️</button> <button class="chip-btn" onclick="stockDel(this.dataset.k)" data-k="'+k+'">🗑</button></td></tr>'+
     '<tr id="'+logId+'" style="display:none;background:#f9fbfe;"><td colspan="5" style="font-size:11.5px;padding:6px 14px;">'+_stItemLog(v)+'</td></tr>';
 }
 function _stItemLog(v){
@@ -240,7 +240,7 @@ function _stItemLog(v){
     .filter(x=>x.param===v.param&&x.part===v.part&&x.brand===v.brand)
     .sort((a,b)=>b.ts-a.ts).slice(0,20)
     .map(x=>'<div style="padding:2px 0;border-bottom:1px dashed #e7ebf1;">'+new Date(x.ts).toLocaleString('th-TH')
-      +' · '+(x.t==='in'?'<b style="color:#177a3d">📥 รับเข้า</b>':'<b style="color:#b3261e">📤 เบิกออก</b>')+' '+x.qty
+      +' · '+(x.t==='in'?'<b style="color:#177a3d">📥 รับเข้า</b>':x.t==='edit'?'<b style="color:#2b6cb0">✏️ แก้ไข</b>':x.t==='del'?'<b style="color:#889">🗑 ลบรายการ</b>':'<b style="color:#b3261e">📤 เบิกออก</b>')+' '+x.qty
       +' · โดย '+x.by+(x.station?' → '+x.station:'')+(x.note?' ('+x.note+')':'')+'</div>').join('');
   return '<b>📜 การเคลื่อนไหว — '+v.part+' / '+v.brand+'</b><div style="margin-top:4px;">'+(rows||'<span style="color:#999">ยังไม่มีรายการ</span>')+'</div>';
 }
@@ -260,7 +260,7 @@ async function stockRender(){
   try{
     const logs=await fbGet('stock/log')||{};
     lg.innerHTML=Object.values(logs).sort((a,b)=>b.ts-a.ts).slice(0,40)
-      .map(x=>'<div style="font-size:11.5px;padding:3px 0;border-bottom:1px dashed #eee;">'+new Date(x.ts).toLocaleString('th-TH')+' · '+(x.t==='in'?'<b style="color:#177a3d">📥 รับเข้า</b>':'<b style="color:#b3261e">📤 เบิกออก</b>')+' '+x.qty+' — '+x.param+' / '+x.part+' / '+x.brand+' · โดย '+x.by+(x.station?' → '+x.station:'')+(x.note?' ('+x.note+')':'')+'</div>').join('')||'<span style="font-size:12px;color:#999">ยังไม่มีรายการ</span>';
+      .map(x=>'<div style="font-size:11.5px;padding:3px 0;border-bottom:1px dashed #eee;">'+new Date(x.ts).toLocaleString('th-TH')+' · '+(x.t==='in'?'<b style="color:#177a3d">📥 รับเข้า</b>':x.t==='edit'?'<b style="color:#2b6cb0">✏️ แก้ไข</b>':x.t==='del'?'<b style="color:#889">🗑 ลบรายการ</b>':'<b style="color:#b3261e">📤 เบิกออก</b>')+' '+x.qty+' — '+x.param+' / '+x.part+' / '+x.brand+' · โดย '+x.by+(x.station?' → '+x.station:'')+(x.note?' ('+x.note+')':'')+'</div>').join('')||'<span style="font-size:12px;color:#999">ยังไม่มีรายการ</span>';
   }catch(e){lg.innerHTML='';}
 }
 async function stockIn(){
@@ -277,6 +277,37 @@ async function stockIn(){
     await fbPush('stock/log',{t:'in',param,part,brand,qty,by,note:'รับเข้า',ts:Date.now()});
     await eqRememberBrand(brand);
   }catch(e){alert('บันทึกไม่สำเร็จ: '+e.message);return;}
+  stockRender();
+}
+/* แก้รายละเอียดรายการ stock: ชนิดชิ้นส่วน/ยี่ห้อ — key ผูกกับสามค่านี้ จึงย้ายรายการไป key ใหม่ (รวมยอดถ้าซ้ำ) */
+async function stockEdit(key){
+  const by=eqUser(); if(!by)return;
+  const it=_stItems[key]; if(!it)return;
+  const part=prompt('ชนิดชิ้นส่วน:',it.part); if(part===null)return;
+  const brand=prompt('ยี่ห้อ / รุ่น:',it.brand); if(brand===null)return;
+  const np=part.trim(), nb=brand.trim();
+  if(!np||!nb){alert('กรอกให้ครบ');return;}
+  if(np===it.part&&nb===it.brand)return;
+  const nk=eqSlug(it.param+'|'+np+'|'+nb);
+  try{
+    const dup=nk!==key?(await fbGet('stock/items/'+nk)):null;
+    await fbSet('stock/items/'+nk,{param:it.param,part:np,brand:nb,qty:it.qty+(dup?dup.qty:0)});
+    if(nk!==key)await eqFbDel('stock/items/'+key);
+    await fbPush('stock/log',{t:'edit',param:it.param,part:np,brand:nb,qty:it.qty,by,
+      note:'แก้ไขจาก '+it.part+' / '+it.brand+(dup?' (รวมยอดกับรายการเดิม)':''),ts:Date.now()});
+    await eqRememberBrand(nb);
+  }catch(e){alert('ไม่สำเร็จ: '+e.message);return;}
+  stockRender();
+}
+async function stockDel(key){
+  const by=eqUser(); if(!by)return;
+  const it=_stItems[key]; if(!it)return;
+  if(!confirm('ลบรายการ '+it.part+' / '+it.brand+' (คงเหลือ '+it.qty+') ออกจากคลัง?'))return;
+  const note=prompt('เหตุผลการลบ:','คีย์ผิด/ยกเลิกใช้งาน'); if(note===null)return;
+  try{
+    await eqFbDel('stock/items/'+key);
+    await fbPush('stock/log',{t:'del',param:it.param,part:it.part,brand:it.brand,qty:it.qty,by,note,ts:Date.now()});
+  }catch(e){alert('ไม่สำเร็จ: '+e.message);return;}
   stockRender();
 }
 async function stockAdj(key,dq){
