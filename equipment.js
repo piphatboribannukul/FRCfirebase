@@ -39,7 +39,8 @@ async function eqLoadMeta(){
     const m=await fbGet('equipment_meta')||{};
     _eqMeta.params=m.params&&m.params.length?m.params:EQ_DEFAULT_PARAMS.slice();
     _eqMeta.brands=m.brands||{};
-  }catch(e){_eqMeta.params=EQ_DEFAULT_PARAMS.slice();}
+    _eqMeta.lowTh=(m.lowStockTh!=null)?+m.lowStockTh:2;
+  }catch(e){_eqMeta.params=EQ_DEFAULT_PARAMS.slice();_eqMeta.lowTh=2;}
 }
 function eqFillBrandList(){
   const dl=document.getElementById('dl-brands');
@@ -71,11 +72,11 @@ async function equipRenderStation(){
   try{_logAll=await fbGet('equipment_log')||{};}catch(e){}
   const _chg={};   // นับครั้งเปลี่ยน key = param|part
   window._eqHist={};   // ประวัติรายชิ้น key = param|part
-  Object.values(_logAll).forEach(x=>{
+  Object.entries(_logAll).forEach(([lk,x])=>{
     if(x.station!==sid||x.action!=='เปลี่ยนอุปกรณ์')return;
     const k=(x.param||'')+'|'+(x.part||'');
     _chg[k]=(_chg[k]||0)+1;
-    (window._eqHist[k]=window._eqHist[k]||[]).push(x);
+    (window._eqHist[k]=window._eqHist[k]||[]).push(Object.assign({_lk:lk},x));
   });
   Object.values(window._eqHist).forEach(a=>a.sort((x,y)=>(y.date?Date.parse(y.date):y.ts)-(x.date?Date.parse(x.date):x.ts)));
   box.innerHTML=_eqMeta.params.map(pm=>{
@@ -87,9 +88,10 @@ async function equipRenderStation(){
       const nchg=_chg[hk]||_chg[eqSlug(pm)+'|'+p.part]||0;
       const chgBadge=nchg?' <span style="font-size:10px;color:#667;background:#eef1f6;border-radius:5px;padding:1px 6px;white-space:nowrap;">🔁 '+nchg+' ครั้ง</span>':'';
       const hist=(window._eqHist[hk]||window._eqHist[eqSlug(pm)+'|'+p.part]||[]);
-      const histRows=hist.map(x=>'<div style="padding:2px 0;border-bottom:1px dashed #e7ebf1;">'
+      const histRows=hist.map(x=>'<div style="padding:2px 0;border-bottom:1px dashed #e7ebf1;display:flex;gap:6px;align-items:center;"><span style="flex:1;">'
         +'<b style="color:#2b6cb0">'+(x.date?eqThD(x.date):new Date(x.ts).toLocaleDateString('th-TH'))+'</b>'
-        +(x.brand?' · '+x.brand:'')+' · โดย '+x.by+(x.detail?' — '+x.detail:'')+'</div>').join('')
+        +(x.brand?' · '+x.brand:'')+' · โดย '+x.by+(x.detail?' — '+x.detail:'')+'</span>'
+        +'<button class="chip-btn" style="padding:0 6px;" onclick="equipDelLog(this.dataset.k)" data-k="'+x._lk+'">🗑</button></div>').join('')
         ||'<div style="color:#999;padding:2px 0;">ยังไม่มีประวัติการเปลี่ยนของชิ้นนี้</div>';
       const histId='hist-'+pk+'-'+pid;
       return '<tr><td>'+p.part+chgBadge+'</td><td>'+(p.brand||'–')+'</td><td>'+eqThD(p.start)+'</td><td style="text-align:center">'+(p.lifeM||'–')+'</td><td>'+(d?eqThD(d.due.toISOString().slice(0,10)):'–')+'</td><td>'+badge+'</td>'+
@@ -109,8 +111,9 @@ async function equipRenderLog(sid){
   const el=document.getElementById('eq-log');
   try{
     const lg=await fbGet('equipment_log')||{};
-    const rows=Object.values(lg).filter(x=>x.station===sid).sort((a,b)=>b.ts-a.ts).slice(0,12)
-      .map(x=>'<div style="font-size:11.5px;padding:3px 0;border-bottom:1px dashed #eee;">'+new Date(x.ts).toLocaleString('th-TH')+' · <b>'+x.action+'</b>'+(x.date?' <b style="color:#2b6cb0">[เปลี่ยนเมื่อ '+eqThD(x.date)+']</b>':'')+' '+x.param+' / '+x.part+(x.brand?' ('+x.brand+')':'')+' โดย '+x.by+(x.detail?' — '+x.detail:'')+'</div>').join('');
+    const rows=Object.entries(lg).filter(([k,x])=>x.station===sid).sort((a,b)=>b[1].ts-a[1].ts).slice(0,15)
+      .map(([k,x])=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed #eee;display:flex;gap:6px;align-items:center;"><span style="flex:1;">'+new Date(x.ts).toLocaleString('th-TH')+' · <b>'+x.action+'</b>'+(x.date?' <b style="color:#2b6cb0">[เปลี่ยนเมื่อ '+eqThD(x.date)+']</b>':'')+' '+x.param+' / '+x.part+(x.brand?' ('+x.brand+')':'')+' โดย '+x.by+(x.detail?' — '+x.detail:'')+'</span>'
+      +'<button class="chip-btn" style="padding:0 6px;" onclick="equipDelLog(this.dataset.k)" data-k="'+k+'">🗑</button></div>').join('');
     el.innerHTML=rows||'<span style="font-size:12px;color:#999">ยังไม่มีประวัติ</span>';
   }catch(e){el.innerHTML='<span style="font-size:12px;color:#b3261e">โหลด log ไม่ได้</span>';}
 }
@@ -157,6 +160,12 @@ async function equipDel(pk,pid){
   if(!confirm('ลบทะเบียน '+p.part+' ('+(p.brand||'-')+') ?'))return;
   await eqFbDel('equipment/'+sid+'/'+pk+'/'+pid);
   await eqWriteLog({station:sid,param:pk,part:p.part,brand:p.brand,action:'ลบทะเบียน',by});
+  equipRenderStation();
+}
+async function equipDelLog(lk){
+  const by=eqUser(); if(!by)return;
+  if(!confirm('ลบรายการประวัตินี้?'))return;
+  await eqFbDel('equipment_log/'+lk);
   equipRenderStation();
 }
 function equipToggleHist(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'':'none';}
@@ -213,7 +222,7 @@ async function stockInit(){
 const _stdRe=/น้ำยา|สารมาตรฐาน|standard|buffer|คาลิเบรท|calib/i;
 function _stRow(k,v){
   const logId='stlog-'+k;
-  return '<tr><td>'+v.param+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=1?'color:#b3261e':'')+'">'+v.qty+'</td>'+
+  return '<tr><td>'+v.param+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=(_eqMeta.lowTh||2)?'color:#b3261e':'')+'">'+v.qty+'</td>'+
     '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipToggleHist(\'{L}\'.replace(\'{L}\',this.dataset.l))" data-l="'+logId+'">📜 log</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,1)" data-k="'+k+'">+1</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,-1)" data-k="'+k+'">−1</button></td></tr>'+
     '<tr id="'+logId+'" style="display:none;background:#f9fbfe;"><td colspan="5" style="font-size:11.5px;padding:6px 14px;">'+_stItemLog(v)+'</td></tr>';
 }
@@ -311,10 +320,20 @@ async function equipSumInit(){
   due.innerHTML=urgent.length?'<table class="eq-tb"><colgroup><col style="width:26%"><col style="width:20%"><col style="width:16%"><col style="width:16%"><col style="width:10%"><col style="width:12%"></colgroup><thead><tr><th>สถานี</th><th>พารามิเตอร์</th><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>ครบกำหนด</th><th>สถานะ</th></tr></thead><tbody>'
       +urgent.map(u=>'<tr><td>'+nameOf(u.sid)+'</td><td>'+u.pk+'</td><td>'+u.part+'</td><td>'+u.brand+'</td><td>'+eqThD(u.d.due.toISOString().slice(0,10))+'</td><td><span style="font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;'+EQ_BADGE[u.d.cls]+'">'+u.d.txt+'</span></td></tr>').join('')+'</tbody></table>'
     :'<span style="font-size:12px;color:#177a3d">✅ ไม่มีรายการใกล้ครบหรือเกินกำหนด</span>';
-  const low=Object.values(items).filter(v=>v.qty<=1).sort((a,b)=>a.qty-b.qty);
+  const th=_eqMeta.lowTh!=null?_eqMeta.lowTh:2;
+  const thBox=document.getElementById('eqsum-thbox');
+  if(thBox)thBox.innerHTML='เกณฑ์ เหลือ ≤ <input type="number" min="0" style="width:52px;font-size:12px;" value="'+th+'" onchange="equipSetLowTh(this.value)"> ชิ้น';
+  const low=Object.values(items).filter(v=>v.qty<=th).sort((a,b)=>a.qty-b.qty);
   stk.innerHTML=low.length?low.map(v=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed #eee;"><b style="color:'+(v.qty===0?'#b3261e':'#9a6a00')+'">เหลือ '+v.qty+'</b> — '+v.param+' / '+v.part+' / '+v.brand+'</div>').join('')
     :'<span style="font-size:12px;color:#177a3d">✅ ไม่มีรายการใกล้หมด</span>';
   const have=new Set(Object.keys(eq));
   const missing=EQUIP_STATIONS.filter(s=>!have.has(s.id));
   emp.innerHTML=missing.length?(missing.length+' สถานี: '+missing.map(s=>s.name).join(' · ')):'✅ ครบทุกสถานี';
+}
+
+async function equipSetLowTh(v){
+  const n=Math.max(0,+v||0);
+  _eqMeta.lowTh=n;
+  try{await fbSet('equipment_meta/lowStockTh',n);}catch(e){alert('บันทึกเกณฑ์ไม่สำเร็จ: '+e.message);return;}
+  equipSumInit();
 }
