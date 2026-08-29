@@ -3,7 +3,7 @@ name: Prune Firebase history (keep 7 days)
 on:
   schedule:
     - cron: '0 18 * * *'   # 01:00 เวลาไทย ทุกวัน
-  workflow_dispatch:        # กดรันเองได้จากแท็บ Actions (แนะนำรันครั้งแรกทันทีหลังวางไฟล์)
+  workflow_dispatch:        # กดรันเองได้จากแท็บ Actions
 
 jobs:
   prune:
@@ -18,73 +18,67 @@ jobs:
           const DB_SECRET = process.env.FIREBASE_DB_SECRET;
           const KEEP_DAYS = 7;
           const CUTOFF    = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
-          const CHUNK     = 4000;   // ลบทีละก้อน กัน request ใหญ่เกิน
+          const BATCH     = 1000;   // ดึง/ลบทีละก้อนเล็กเสมอ — กัน response ใหญ่จนพัง
 
-          // fetch พร้อม retry 3 ครั้ง (กัน ETIMEDOUT ชั่วขณะระหว่างรันยาว)
+          const NET_CODES = ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','UND_ERR_CONNECT_TIMEOUT','UND_ERR_SOCKET'];
+          function isNetErr(e){
+            const c = (e && e.cause && e.cause.code) || (e && e.code) || '';
+            return NET_CODES.includes(c) || /fetch failed/i.test((e && e.message) || '');
+          }
           async function fetchRetry(url, opts) {
             for (let a = 1; ; a++) {
-              try { return await fetchRetry(url, opts); }
+              try { return await fetch(url, opts); }
               catch (e) {
-                if (a >= 3) throw e;
-                console.warn(`  retry ${a}/3 (${e.cause?.code || e.message}) รอ ${a*5} วิ...`);
+                if (!isNetErr(e) || a >= 3) throw e;   // retry เฉพาะ network เท่านั้น
+                console.warn(`    retry ${a}/3 (${(e.cause&&e.cause.code)||e.message}) รอ ${a*5} วิ...`);
                 await new Promise(r => setTimeout(r, a * 5000));
               }
             }
           }
-          // shallow = ดึงเฉพาะ "ชื่อ key" ไม่ดึงข้อมูล → แทบไม่กินโควตาดาวน์โหลด
-          async function shallowKeys(path) {
-            const r = await fetchRetry(`${DB_URL}/${path}.json?shallow=true&auth=${DB_SECRET}`);
-            if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
-            const j = await r.json();
-            return j ? Object.keys(j) : [];
-          }
-          // v2: entries ของ bot ใช้ push-ID (ไม่ใช่เลข ts) ต้อง query ตามค่า ts ข้างใน
-          // ต้องมี ".indexOn": ["ts"] ใน rules ของ history/$stationCode ก่อน
-          async function oldKeysByTs(path) {
-            const q = `orderBy=%22ts%22&endAt=${CUTOFF}`;
-            const r = await fetchRetry(`${DB_URL}/${path}.json?${q}&auth=${DB_SECRET}`);
-            if (!r.ok) {
-              const t = await r.text();
-              if (t.includes('index')) { console.warn(`  (ข้าม ${path}: ยังไม่ได้เพิ่ม .indexOn ts ใน rules)`); return null; }
-              throw new Error(`QUERY ${path} ${r.status}`);
-            }
-            const j = await r.json();
-            return j ? Object.keys(j) : [];
+          async function getJson(url) {
+            const r = await fetchRetry(url);
+            if (!r.ok) { const t = await r.text(); throw new Error(`HTTP ${r.status}: ${t.slice(0,120)}`); }
+            return r.json();
           }
           async function patchNulls(path, keys) {
-            for (let i = 0; i < keys.length; i += CHUNK) {
-              const body = {};
-              for (const k of keys.slice(i, i + CHUNK)) body[k] = null;
-              const r = await fetchRetry(`${DB_URL}/${path}.json?auth=${DB_SECRET}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-              });
-              if (!r.ok) throw new Error(`PATCH ${path} ${r.status}`);
+            const body = {};
+            for (const k of keys) body[k] = null;
+            const r = await fetchRetry(`${DB_URL}/${path}.json?auth=${DB_SECRET}`, {
+              method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            if (!r.ok) throw new Error(`PATCH ${path} ${r.status}`);
+          }
+
+          // ลบ entries เก่าของสถานีเดียว แบบวนทีละ batch จนหมด
+          async function pruneStation(st) {
+            let del = 0, guard = 0;
+            while (guard++ < 500) {   // เพดานกันวนไม่รู้จบ (500×1000 = 5 แสน/สถานี/รอบ)
+              const q = `orderBy=%22ts%22&endAt=${CUTOFF}&limitToFirst=${BATCH}`;
+              const j = await getJson(`${DB_URL}/history/${st}.json?${q}&auth=${DB_SECRET}`);
+              const keys = j ? Object.keys(j) : [];
+              if (!keys.length) break;
+              await patchNulls(`history/${st}`, keys);
+              del += keys.length;
+              if (keys.length < BATCH) break;
             }
+            return del;
           }
 
           (async () => {
-            const stations = await shallowKeys('history');
-            console.log('stations in history:', stations.length,
-                        '| cutoff:', new Date(CUTOFF).toISOString());
-            let totalDel = 0, totalKeep = 0;
+            const top = await getJson(`${DB_URL}/history.json?shallow=true&auth=${DB_SECRET}`);
+            const stations = top ? Object.keys(top) : [];
+            console.log('stations:', stations.length, '| cutoff:', new Date(CUTOFF).toISOString());
+            let totalDel = 0, failed = [];
             for (const st of stations) {
-              const tsKeys = await shallowKeys(`history/${st}`);
-              // แบบที่ 1: key เป็นเลข timestamp (จาก poll.yml) — เทียบจากชื่อ key ตรง ๆ
-              const oldNumeric = tsKeys.filter(k => !isNaN(Number(k)) && Number(k) < CUTOFF);
-              // แบบที่ 2: key เป็น push-ID (จาก LINE bot) — query ด้วยค่า ts ข้างใน
-              const oldByTs = await oldKeysByTs(`history/${st}`);
-              const oldSet = new Set(oldNumeric);
-              if (oldByTs) for (const k of oldByTs) oldSet.add(k);
-              const old = [...oldSet];
-              totalKeep += tsKeys.length - old.length;
-              if (old.length) {
-                await patchNulls(`history/${st}`, old);
-                totalDel += old.length;
-                console.log(`  ${st}: deleted ${old.length} (numeric ${oldNumeric.length}), kept ${tsKeys.length - old.length}`);
+              try {
+                const d = await pruneStation(st);
+                totalDel += d;
+                if (d) console.log(`  ${st}: deleted ${d}`);
+              } catch (e) {
+                failed.push(st);
+                console.error(`  ✗ ${st}: ${String(e.message||e).slice(0,140)} — ข้ามไปสถานีถัดไป`);
               }
             }
-            console.log(`DONE — deleted ${totalDel} entries, kept ${totalKeep} (last ${KEEP_DAYS} days)`);
+            console.log(`DONE — deleted ${totalDel} entries | failed stations: ${failed.length ? failed.join(', ') : 'none'}`);
+            if (failed.length > stations.length / 2) process.exit(1);
           })().catch(e => { console.error(e); process.exit(1); });
           EOF
