@@ -88,7 +88,6 @@ body{font-family:var(--sans);color:var(--ink);background:#eef1f6;display:flex;mi
 .ccard .csub{font-size:10.5px;color:var(--mut);margin-bottom:10px;}
 .chartbox{position:relative;height:250px;}
 
-
 /* ── รายงานสถานีสูบจ่ายน้ำ ── */
 .pump-head{display:flex;align-items:center;gap:16px;padding:18px 6% 14px;background:linear-gradient(180deg,#f4faff,#fff);border-bottom:1px solid var(--line);}
 .pump-head .ph-logo{width:92px;height:92px;flex:none;object-fit:contain;}
@@ -184,9 +183,10 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
 .eq-tb{border-collapse:collapse;table-layout:fixed;width:100%;font-size:13.5px;}
 .eq-tb col.c1{width:19%}.eq-tb col.c2{width:16%}.eq-tb col.c3{width:10%}.eq-tb col.c4{width:9%}
 .eq-tb col.c5{width:11%}.eq-tb col.c6{width:15%}.eq-tb col.c7{width:20%}
-.eq-tb th{font-size:12px;color:#667;text-align:left;padding:7px 10px;border-bottom:2px solid var(--line);background:#f7f9fc;}
-.eq-tb td{overflow:hidden;text-overflow:ellipsis;padding:8px 10px;vertical-align:middle;line-height:1.5;}
-.eq-tb td{border-bottom:1px solid #f0f2f6;}
+.eq-tb th{font-size:12.5px;font-weight:700;color:#3d4c66;text-align:left;padding:6px 10px;border-bottom:2px solid #d9e2ef;background:#eaf0f8;}
+.eq-tb th:first-child{border-radius:8px 0 0 0;}.eq-tb th:last-child{border-radius:0 8px 0 0;}
+
+.eq-tb td{border-bottom:1px solid #f0f2f6;overflow:hidden;text-overflow:ellipsis;padding:5.5px 10px;vertical-align:middle;line-height:1.45;}
 @media (max-width:820px){
   .qcard{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .eq-tb{min-width:700px;}   /* จอแคบ: ตารางคงความกว้างอ่านได้ เลื่อนแนวนอนในการ์ดแทนการบีบ */
@@ -357,7 +357,6 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       <div class="qcard"><b style="font-size:13px;">📦 Stock ใกล้หมด</b> <span id="eqsum-thbox" style="font-size:12px;color:#556;margin-left:8px;"></span><div id="eqsum-stock" style="margin-top:6px;"></div></div>
       <div class="qcard"><b style="font-size:12.5px;">🏷 สถานีที่ยังไม่มีทะเบียนเซ็นเซอร์</b><div id="eqsum-empty" style="margin-top:6px;font-size:12px;color:#667;"></div></div>
     </div>
-
 
   </div>
 </div>
@@ -553,7 +552,6 @@ function exportPumpCSV(){
   a.download=c.name.replace(/[\\/:*?"<>| ]+/g,'_')+'.csv'; a.click();
 }
 
-
 /* ── Export รายงานเป็นภาพ PNG (โหลด html2canvas เมื่อกดครั้งแรก) ── */
 function ensureH2C(){
   if(window.html2canvas) return Promise.resolve();
@@ -576,7 +574,6 @@ async function exportPumpPNG(){
     a.click();
   }catch(e){alert('Export ภาพไม่สำเร็จ: '+e.message);}
 }
-
 
 /* ── ปุ่มปิด: ถ้าอยู่ใน overlay ของ FRCContour ให้ปิด overlay กลับหน้าแผนที่, เปิดเดี่ยวให้ย้ายไป index ── */
 function closeDash(){
@@ -625,7 +622,6 @@ function fbSend(){
 }
 function fbDel(i){const l=fbAll();l.splice(i,1);localStorage.setItem('frc_fb',JSON.stringify(l));fbLoad();}
 fbLoad();
-
 
 /* ════════════════════════════════════════════════════════════════
    Dashboard ภาพรวม — ดึงข้อมูลจริงวันนี้จาก apiM.php (61+ สถานี)

@@ -12,6 +12,14 @@ const FB_URL='https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.
 const EQUIP_STATIONS=[{"id": "SW01", "name": "สถานีสูบจ่ายน้ำลุมพินี"}, {"id": "SM02", "name": "สำนักงานประปาสาขาทุ่งมหาเมฆ"}, {"id": "SW11", "name": "สถานีสูบจ่ายน้ำพหลโยธิน"}, {"id": "SW02", "name": "สถานีสูบจ่ายน้ำลาดพร้าว"}, {"id": "S008", "name": "บริษัท โอสถสภา จำกัด (มหาชน)"}, {"id": "S009", "name": "สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ"}, {"id": "SW03", "name": "สถานีสูบจ่ายน้ำคลองเตย"}, {"id": "S010", "name": "ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ"}, {"id": "SM03", "name": "สำนักงานประปาสาขาสุขุมวิท-พระโขนง"}, {"id": "SW04", "name": "สถานีสูบจ่ายน้ำสำโรง"}, {"id": "S011", "name": "บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)"}, {"id": "S012", "name": "โรงเรียนหาดอมราอักษรลักษณ์วิทยา"}, {"id": "S013", "name": "บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)"}, {"id": "SM04", "name": "สำนักงานประปาสาขาสมุทรปราการ"}, {"id": "S014", "name": "โรงไฟฟ้าพระนครใต้"}, {"id": "SW05", "name": "สถานีสูบจ่ายน้ำมีนบุรี"}, {"id": "S015", "name": "บริษัท มหาจักรออโตพาร์ท จำกัด"}, {"id": "SM05", "name": "สำนักงานประปาสาขามีนบุรี"}, {"id": "S016", "name": "นิคมอุตสาหกรรมบางชัน"}, {"id": "S017", "name": "ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์"}, {"id": "SW06", "name": "สถานีสูบจ่ายน้ำลาดกระบัง"}, {"id": "S019", "name": "บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)"}, {"id": "S018", "name": "นิคมอุตสาหกรรมลาดกระบัง"}, {"id": "S020", "name": "มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)"}, {"id": "SW07", "name": "สถานีสูบจ่ายน้ำบางพลี"}, {"id": "S021", "name": "นิคมอุตสาหกรรมบางพลี"}, {"id": "S022", "name": "สถานีตำรวจภูธรคลองด่าน"}, {"id": "S023", "name": "นิคมอุตสาหกรรมบางปู"}, {"id": "SM01", "name": "สำนักงานประปาสาขานนทบุรี"}, {"id": "S003", "name": "กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย"}, {"id": "S002", "name": "โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก"}, {"id": "S005", "name": "โรงพยาบาลซีจีเอช สายไหม"}, {"id": "S004", "name": "โรงพยาบาลภูมิพลอดุลยเดช"}, {"id": "SW08", "name": "สถานีสูบจ่ายน้ำราษฎร์บูรณะ"}, {"id": "S026", "name": "ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)"}, {"id": "S025", "name": "ศูนย์กีฬาเฉลิมพระเกียรติ"}, {"id": "SW09", "name": "สถานีสูบจ่ายน้ำเพชรเกษม"}, {"id": "S027", "name": "มหาวิทยาลัยเอเชียอาคเนย์"}, {"id": "S028", "name": "เรือนจำพิเศษธนบุรี"}, {"id": "SW10", "name": "สถานีสูบจ่ายน้ำท่าพระ"}, {"id": "S024", "name": "ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)"}, {"id": "S029", "name": "โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี"}, {"id": "S032", "name": "โรงเรียนตั้งพิรุฬห์ธรรม"}, {"id": "SM06", "name": "สำนักงานประปาสาขาบางบัวทอง"}, {"id": "S030", "name": "โรงเรียนราชวินิต นนทบุรี"}, {"id": "S001", "name": "โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี"}, {"id": "S031", "name": "สถานีตำรวจภูธรไทรน้อย"}, {"id": "S007", "name": "โรงพยาบาลศิริราช"}, {"id": "S006", "name": "พระราชวังดุสิต สวนจิตรลดา"}];
 const EQ_DEFAULT_PARAMS=['คลอรีนอิสระคงเหลือ (FRC)','Turbidity','Conductivity','pH'];
 const EQ_DEFAULT_PARTS=['Sensor','Transmitter','Cartridge'];
+/* ชื่อแสดงผลพารามิเตอร์ — เปลี่ยนเฉพาะหน้าจอ ไม่แตะ key ใน Firebase */
+const EQ_DISPLAY={
+ 'คลอรีนอิสระคงเหลือ (FRC)':'คลอรีนอิสระคงเหลือ (Free Residual Chlorine)',
+ 'Turbidity':'ความขุ่น (Turbidity)',
+ 'Conductivity':'ความนำไฟฟ้า (Conductivity)',
+ 'pH':'พีเอช (pH)'
+};
+const eqDisplay=n=>EQ_DISPLAY[(n||'').replace(/_/g,' ')]||n;
 async function fbGet(p){const r=await fetch(FB_URL+'/'+p+'.json');if(!r.ok)throw new Error('GET '+p+' '+r.status);return r.json();}
 async function fbSet(p,v){const r=await fetch(FB_URL+'/'+p+'.json',{method:'PUT',body:JSON.stringify(v)});if(!r.ok)throw new Error('PUT '+p+' '+r.status);return r.json();}
 async function fbPush(p,v){const r=await fetch(FB_URL+'/'+p+'.json',{method:'POST',body:JSON.stringify(v)});if(!r.ok)throw new Error('POST '+p+' '+r.status);return r.json();}
@@ -101,9 +109,9 @@ async function equipRenderStation(){
         +'<b>📜 ประวัติการเปลี่ยน — '+p.part+'</b> <button class="chip-btn" style="margin-left:8px;" onclick="equipAddHistory(\''+pk+'\',\''+pid+'\')">➕ บันทึกย้อนหลัง</button>'
         +'<div style="margin-top:4px;">'+histRows+'</div></td></tr>';
     }).join('');
-    return '<div class="qcard"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px;">'+pm+'</b>'+
+    return '<div class="qcard"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px;">'+eqDisplay(pm)+'</b>'+
       '<button class="chip-btn" onclick="equipAddPart(\''+pk+'\',\''+pm+'\')">➕ เพิ่มชิ้นส่วน</button></div>'+
-      (rows?'<table class="eq-tb" style="margin-top:6px;"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup><thead><tr><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>เริ่มใช้</th><th>อายุ(เดือน)</th><th>ครบกำหนด</th><th>สถานะ</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+      (rows?'<table class="eq-tb" style="margin-top:6px;"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup><thead><tr><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>เริ่มใช้</th><th style="text-align:center">อายุ (เดือน)</th><th>ครบกำหนด</th><th>สถานะ</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
            :'<div style="font-size:12px;color:#999;margin-top:6px;">ยังไม่มีข้อมูล — กด ➕ เพิ่มชิ้นส่วน</div>')+'</div>';
   }).join('');
   equipRenderLog(sid);
@@ -223,7 +231,7 @@ async function stockInit(){
 const _stdRe=/น้ำยา|สารมาตรฐาน|standard|buffer|คาลิเบรท|calib/i;
 function _stRow(k,v){
   const logId='stlog-'+k;
-  return '<tr><td>'+v.param+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=(_eqMeta.lowTh||2)?'color:#b3261e':'')+'">'+v.qty+'</td>'+
+  return '<tr><td>'+eqDisplay(v.param)+'</td><td>'+v.part+'</td><td>'+v.brand+'</td><td style="text-align:center;font-weight:700;'+(v.qty<=(_eqMeta.lowTh||2)?'color:#b3261e':'')+'">'+v.qty+'</td>'+
     '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipToggleHist(\'{L}\'.replace(\'{L}\',this.dataset.l))" data-l="'+logId+'">📜 log</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,1)" data-k="'+k+'">+1</button> <button class="chip-btn" onclick="stockAdj(this.dataset.k,-1)" data-k="'+k+'">−1</button></td></tr>'+
     '<tr id="'+logId+'" style="display:none;background:#f9fbfe;"><td colspan="5" style="font-size:11.5px;padding:6px 14px;">'+_stItemLog(v)+'</td></tr>';
 }
@@ -307,7 +315,7 @@ async function equipSumInit(){
         const d=eqDue(p.start,p.lifeM);
         if(!d){noAge++;continue;}
         if(d.cls==='ok')ok++;else if(d.cls==='warn')warn++;else bad++;
-        if(d.cls!=='ok')urgent.push({sid,pk:pk.replace(/_/g,' '),part:p.part,brand:p.brand||'–',d});
+        if(d.cls!=='ok')urgent.push({sid,pk,part:p.part,brand:p.brand||'–',d});
       }
     }
   }
@@ -319,13 +327,13 @@ async function equipSumInit(){
     +chip(bad,'เกินกำหนด','#fde3e0','#b3261e')
     +chip(noAge,'ยังไม่ตั้งอายุ','#eceff3','#667');
   due.innerHTML=urgent.length?'<table class="eq-tb"><colgroup><col style="width:26%"><col style="width:20%"><col style="width:16%"><col style="width:16%"><col style="width:10%"><col style="width:12%"></colgroup><thead><tr><th>สถานี</th><th>พารามิเตอร์</th><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>ครบกำหนด</th><th>สถานะ</th></tr></thead><tbody>'
-      +urgent.map(u=>'<tr><td>'+nameOf(u.sid)+'</td><td>'+u.pk+'</td><td>'+u.part+'</td><td>'+u.brand+'</td><td>'+eqThD(u.d.due.toISOString().slice(0,10))+'</td><td><span style="font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;'+EQ_BADGE[u.d.cls]+'">'+u.d.txt+'</span></td></tr>').join('')+'</tbody></table>'
+      +urgent.map(u=>'<tr><td>'+nameOf(u.sid)+'</td><td>'+eqDisplay(u.pk)+'</td><td>'+u.part+'</td><td>'+u.brand+'</td><td>'+eqThD(u.d.due.toISOString().slice(0,10))+'</td><td><span style="font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;'+EQ_BADGE[u.d.cls]+'">'+u.d.txt+'</span></td></tr>').join('')+'</tbody></table>'
     :'<span style="font-size:12px;color:#177a3d">✅ ไม่มีรายการใกล้ครบหรือเกินกำหนด</span>';
   const th=_eqMeta.lowTh!=null?_eqMeta.lowTh:2;
   const thBox=document.getElementById('eqsum-thbox');
   if(thBox)thBox.innerHTML='เกณฑ์ เหลือ ≤ <input type="number" min="0" style="width:52px;font-size:12px;" value="'+th+'" onchange="equipSetLowTh(this.value)"> ชิ้น';
   const low=Object.values(items).filter(v=>v.qty<=th).sort((a,b)=>a.qty-b.qty);
-  stk.innerHTML=low.length?low.map(v=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed #eee;"><b style="color:'+(v.qty===0?'#b3261e':'#9a6a00')+'">เหลือ '+v.qty+'</b> — '+v.param+' / '+v.part+' / '+v.brand+'</div>').join('')
+  stk.innerHTML=low.length?low.map(v=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed #eee;"><b style="color:'+(v.qty===0?'#b3261e':'#9a6a00')+'">เหลือ '+v.qty+'</b> — '+eqDisplay(v.param)+' / '+v.part+' / '+v.brand+'</div>').join('')
     :'<span style="font-size:12px;color:#177a3d">✅ ไม่มีรายการใกล้หมด</span>';
   const have=new Set(Object.keys(eq));
   const missing=EQUIP_STATIONS.filter(s=>!have.has(s.id));
