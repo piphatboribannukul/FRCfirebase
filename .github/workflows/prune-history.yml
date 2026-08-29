@@ -20,9 +20,20 @@ jobs:
           const CUTOFF    = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
           const CHUNK     = 4000;   // ลบทีละก้อน กัน request ใหญ่เกิน
 
+          // fetch พร้อม retry 3 ครั้ง (กัน ETIMEDOUT ชั่วขณะระหว่างรันยาว)
+          async function fetchRetry(url, opts) {
+            for (let a = 1; ; a++) {
+              try { return await fetchRetry(url, opts); }
+              catch (e) {
+                if (a >= 3) throw e;
+                console.warn(`  retry ${a}/3 (${e.cause?.code || e.message}) รอ ${a*5} วิ...`);
+                await new Promise(r => setTimeout(r, a * 5000));
+              }
+            }
+          }
           // shallow = ดึงเฉพาะ "ชื่อ key" ไม่ดึงข้อมูล → แทบไม่กินโควตาดาวน์โหลด
           async function shallowKeys(path) {
-            const r = await fetch(`${DB_URL}/${path}.json?shallow=true&auth=${DB_SECRET}`);
+            const r = await fetchRetry(`${DB_URL}/${path}.json?shallow=true&auth=${DB_SECRET}`);
             if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
             const j = await r.json();
             return j ? Object.keys(j) : [];
@@ -31,7 +42,7 @@ jobs:
           // ต้องมี ".indexOn": ["ts"] ใน rules ของ history/$stationCode ก่อน
           async function oldKeysByTs(path) {
             const q = `orderBy=%22ts%22&endAt=${CUTOFF}`;
-            const r = await fetch(`${DB_URL}/${path}.json?${q}&auth=${DB_SECRET}`);
+            const r = await fetchRetry(`${DB_URL}/${path}.json?${q}&auth=${DB_SECRET}`);
             if (!r.ok) {
               const t = await r.text();
               if (t.includes('index')) { console.warn(`  (ข้าม ${path}: ยังไม่ได้เพิ่ม .indexOn ts ใน rules)`); return null; }
@@ -44,7 +55,7 @@ jobs:
             for (let i = 0; i < keys.length; i += CHUNK) {
               const body = {};
               for (const k of keys.slice(i, i + CHUNK)) body[k] = null;
-              const r = await fetch(`${DB_URL}/${path}.json?auth=${DB_SECRET}`, {
+              const r = await fetchRetry(`${DB_URL}/${path}.json?auth=${DB_SECRET}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
