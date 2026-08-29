@@ -1,0 +1,60 @@
+name: Prune Firebase history (keep 7 days)
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 01:00 เวลาไทย ทุกวัน
+  workflow_dispatch:        # กดรันเองได้จากแท็บ Actions (แนะนำรันครั้งแรกทันทีหลังวางไฟล์)
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete history entries older than 7 days
+        env:
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+        run: |
+          node << 'EOF'
+          const DB_URL    = 'https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const DB_SECRET = process.env.FIREBASE_DB_SECRET;
+          const KEEP_DAYS = 7;
+          const CUTOFF    = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
+          const CHUNK     = 4000;   // ลบทีละก้อน กัน request ใหญ่เกิน
+
+          // shallow = ดึงเฉพาะ "ชื่อ key" ไม่ดึงข้อมูล → แทบไม่กินโควตาดาวน์โหลด
+          async function shallowKeys(path) {
+            const r = await fetch(`${DB_URL}/${path}.json?shallow=true&auth=${DB_SECRET}`);
+            if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
+            const j = await r.json();
+            return j ? Object.keys(j) : [];
+          }
+          async function patchNulls(path, keys) {
+            for (let i = 0; i < keys.length; i += CHUNK) {
+              const body = {};
+              for (const k of keys.slice(i, i + CHUNK)) body[k] = null;
+              const r = await fetch(`${DB_URL}/${path}.json?auth=${DB_SECRET}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              });
+              if (!r.ok) throw new Error(`PATCH ${path} ${r.status}`);
+            }
+          }
+
+          (async () => {
+            const stations = await shallowKeys('history');
+            console.log('stations in history:', stations.length,
+                        '| cutoff:', new Date(CUTOFF).toISOString());
+            let totalDel = 0, totalKeep = 0;
+            for (const st of stations) {
+              const tsKeys = await shallowKeys(`history/${st}`);
+              const old = tsKeys.filter(k => Number(k) < CUTOFF);
+              totalKeep += tsKeys.length - old.length;
+              if (old.length) {
+                await patchNulls(`history/${st}`, old);
+                totalDel += old.length;
+                console.log(`  ${st}: deleted ${old.length}, kept ${tsKeys.length - old.length}`);
+              }
+            }
+            console.log(`DONE — deleted ${totalDel} entries, kept ${totalKeep} (last ${KEEP_DAYS} days)`);
+          })().catch(e => { console.error(e); process.exit(1); });
+          EOF
