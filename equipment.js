@@ -94,7 +94,8 @@ async function equipRenderStation(){
         +'<button class="chip-btn" style="padding:0 6px;" onclick="equipDelLog(this.dataset.k)" data-k="'+x._lk+'">🗑</button></div>').join('')
         ||'<div style="color:#999;padding:2px 0;">ยังไม่มีประวัติการเปลี่ยนของชิ้นนี้</div>';
       const histId='hist-'+pk+'-'+pid;
-      return '<tr><td>'+p.part+chgBadge+'</td><td>'+(p.brand||'–')+'</td><td>'+eqThD(p.start)+'</td><td style="text-align:center">'+(p.lifeM||'–')+'</td><td>'+(d?eqThD(d.due.toISOString().slice(0,10)):'–')+'</td><td>'+badge+'</td>'+
+      const noteTag=p.note?' <span style="font-size:11px;color:#889;">('+p.note+')</span>':'';
+      return '<tr><td>'+p.part+noteTag+chgBadge+'</td><td>'+(p.brand||'–')+'</td><td>'+eqThD(p.start)+'</td><td style="text-align:center">'+(p.lifeM||'–')+'</td><td>'+(d?eqThD(d.due.toISOString().slice(0,10)):'–')+'</td><td>'+badge+'</td>'+
         '<td style="white-space:nowrap"><button class="chip-btn" onclick="equipToggleHist(\''+histId+'\')">📜</button> <button class="chip-btn" onclick="equipReplace(\''+pk+'\',\''+pid+'\')">🔁 เปลี่ยน</button> <button class="chip-btn" onclick="equipEdit(\''+pk+'\',\''+pid+'\')">✏️</button> <button class="chip-btn" onclick="equipDel(\''+pk+'\',\''+pid+'\')">🗑</button></td></tr>'+
         '<tr id="'+histId+'" style="display:none;background:#f9fbfe;"><td colspan="7" style="font-size:11.5px;padding:6px 14px;">'
         +'<b>📜 ประวัติการเปลี่ยน — '+p.part+'</b> <button class="chip-btn" style="margin-left:8px;" onclick="equipAddHistory(\''+pk+'\',\''+pid+'\')">➕ บันทึกย้อนหลัง</button>'
@@ -204,7 +205,7 @@ async function equipReplace(pk,pid){
       await fbSet('stock/items/'+useKey+'/qty',it.qty-1);
       await fbPush('stock/log',{t:'out',param:it.param,part:it.part,brand:it.brand,qty:1,by,station:sid,note:'เบิกเปลี่ยนที่สถานี',ts:Date.now()});
     }
-    await fbSet('equipment/'+sid+'/'+pk+'/'+pid,{part:p.part,brand:useBrand,start,lifeM:+lifeM,by,ts:Date.now()});
+    await fbSet('equipment/'+sid+'/'+pk+'/'+pid,Object.assign({part:p.part,brand:useBrand,start,lifeM:+lifeM,by,ts:Date.now()},p.note?{note:p.note}:{}));
     await eqRememberBrand(useBrand);
     await eqWriteLog({station:sid,param:pk,part:p.part,brand:useBrand,action:'เปลี่ยนอุปกรณ์',by,date:start,
       detail:'ตัวเก่าเริ่ม '+(p.start||'-')+(useKey?' · ตัด stock 1':' · ไม่ตัด stock')});
