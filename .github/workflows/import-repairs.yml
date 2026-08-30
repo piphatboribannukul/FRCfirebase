@@ -1,0 +1,33 @@
+name: Import repair history (one-time)
+
+on:
+  workflow_dispatch:   # รันครั้งเดียว — อ่านข้อมูลจาก repairs_data.json ใน repo
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import repairs
+        env:
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+          const DB='https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const SEC=process.env.FIREBASE_DB_SECRET;
+          const R=JSON.parse(fs.readFileSync('repairs_data.json','utf8'));
+          async function req(m,p,v){const r=await fetch(`${DB}/${p}.json?auth=${SEC}`,{method:m,headers:{'Content-Type':'application/json'},body:v===undefined?undefined:JSON.stringify(v)});if(!r.ok)throw new Error(m+' '+p+' '+r.status+': '+(await r.text()).slice(0,100));}
+          (async()=>{
+            await req('DELETE','repairs');
+            const keys=Object.keys(R);
+            for(let i=0;i<keys.length;i+=400){
+              const chunk={};
+              for(const k of keys.slice(i,i+400))chunk[k]=R[k];
+              await req('PATCH','repairs',chunk);
+              console.log('wrote',Math.min(i+400,keys.length),'/',keys.length);
+            }
+            await req('PUT','repairs_meta/lastNum',4163);
+            console.log('DONE —',keys.length,'tickets, lastNum=4163');
+          })().catch(e=>{console.error(e);process.exit(1);});
+          EOF
