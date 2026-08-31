@@ -145,12 +145,29 @@ function rpRender(){
         +'<td>'+(i.problem||'–')+(i.note?' <span class="muted">('+i.note+')</span>':'')+'</td>'
         +'<td>'+(idx===0?(x.reporter||'–'):'')+'</td>'
         +'<td>'+(idx===0?'<span class="chip'+(compShort(x.company)==='กบน.'?' inh':'')+'">'+compShort(x.company)+'</span>':'')+'</td>'
-        +'<td>'+(idx===0?'<span class="chip">ส่งแจ้งซ่อม</span>':'')+'</td>'
+        +'<td>'+(idx===0?(x.status==='closed'
+            ?'<span class="chip done">✔ ปิดงาน</span><div class="muted" style="margin-top:3px;">'+(x.closedBy||'')+' · '+thDisp(x.closedDate)+'</div>'
+            :'<span class="chip">ส่งแจ้งซ่อม</span> <button class="btn sm" style="margin-left:6px;" onclick="rpClose(this.dataset.k,this.dataset.n)" data-k="'+x.key+'" data-n="'+x.no+'">✔ ปิดงาน</button>'):'')+'</td>'
         +'<td>'+(idx===0?'<button class="btn sm ghost-danger" title="ลบใบ (กรณีส่งผิด)" onclick="rpDel(this.dataset.k,this.dataset.n)" data-k="'+x.key+'" data-n="'+x.no+'">🗑</button>':'')+'</td>'
         +'</tr>');
     });
   }
   document.getElementById('h-body').innerHTML=out.join('')||'<tr><td colspan="10" class="muted" style="padding:20px;">ไม่มีรายการตามเงื่อนไข — ปรับตัวกรองหรือกด โหลด</td></tr>';
+}
+async function rpClose(key,no){
+  const by=prompt('ปิดงาน '+no+'\nชื่อผู้ตรวจสอบ:',localStorage.getItem('rp_reporter')||'');
+  if(by===null)return;
+  const name=by.trim(); if(!name){alert('กรอกชื่อผู้ตรวจสอบ');return;}
+  localStorage.setItem('rp_reporter',name);
+  try{
+    const r=await fetch(BOT_URL+'/repair/close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,by:name})});
+    const res=await r.json();
+    if(!res.ok)throw new Error(res.error||'ไม่สำเร็จ');
+    const row=_rows.find(x=>x.key===key);
+    if(row){row.status='closed';row.closedBy=res.closedBy;row.closedDate=res.closedDate;}
+    rpRender();
+    if(res.sheet!=='updated')alert('ปิดงานแล้ว แต่ชีตไม่ได้อัปเดตวันที่แล้วเสร็จ ('+res.sheet+') — เติมมือในชีตได้');
+  }catch(e){alert('ปิดงานไม่สำเร็จ: '+e.message);}
 }
 async function rpDel(key,no){
   if(!confirm('ลบใบแจ้งซ่อม '+no+' ?\nใช้กรณีส่งผิดเท่านั้น — ลบแล้วกู้คืนไม่ได้ (แถวใน Google Sheet ต้องลบเองแยกต่างหาก)'))return;
@@ -163,9 +180,10 @@ async function rpDel(key,no){
 }
 function rpExport(){
   const list=rpFiltered();
-  const rows=[['เลขที่ใบ','วันที่ออกใบ','เวลา','วันที่พบ','เวลาพบ','สถานี','รายการปัญหา','ความผิดปกติ','หมายเหตุ','ผู้แจ้ง','ผู้รับจ้าง','ช่องทาง']];
+  const rows=[['เลขที่ใบ','วันที่ออกใบ','เวลา','วันที่พบ','เวลาพบ','สถานี','รายการปัญหา','ความผิดปกติ','หมายเหตุ','ผู้แจ้ง','ผู้รับจ้าง','สถานะ','ผู้ตรวจสอบ','วันที่ปิดงาน','ช่องทาง']];
   for(const x of list)for(const i of (x.items||[{}]))
-    rows.push([x.no,thDisp(x.dateIssue),x.timeIssue||'',thDisp(x.foundDate),x.foundTime||'',x.station,i.param||'',i.problem||'',i.note||'',x.reporter||'',compShort(x.company),x.via||'']);
+    rows.push([x.no,thDisp(x.dateIssue),x.timeIssue||'',thDisp(x.foundDate),x.foundTime||'',x.station,i.param||'',i.problem||'',i.note||'',x.reporter||'',compShort(x.company),
+      x.status==='closed'?'ปิดงาน':'ส่งแจ้งซ่อม',x.closedBy||'',x.closedDate?thDisp(x.closedDate):'',x.via||'']);
   const csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
