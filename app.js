@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '38.0';
+const APP_VERSION = '38.1';
 function appBadge(){ return '⬡ V' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
@@ -846,6 +846,8 @@ function idwDirect(lat, lon, pw=2) {
   // decay apply ต่อ sensor ก่อน weighted average (ถูกต้อง)
   let ws=0, vs=0;
   for(const s of SENSORS) {
+    // [v38.1] ข้าม sensor ที่ปิดซ่อม/ค่าค้าง — ไม่ให้ค่าตายปนใน interpolation
+    if (typeof _isSensorDown === 'function' && _isSensorDown(s)) continue;
     const dDeg = Math.sqrt((s.lat-lat)**2 + (s.lon-lon)**2);
     if(dDeg < 1e-8) return getParamVal(s);
     const dKm = dDeg * DEG_TO_KM;
@@ -854,7 +856,7 @@ function idwDirect(lat, lon, pw=2) {
     const val = PARAM_MODE === 'ec' ? getParamVal(s) : getParamVal(s) * epanetDecay(dKm, s);
     vs += w * val;
   }
-  return vs/ws;
+  return ws > 0 ? vs/ws : 0;
 }
 
 // ── IDW Cache: pre-compute lat/lon grid → bilinear lookup ──────────────────
@@ -1476,6 +1478,8 @@ function _pipeAwareFrc(lat, lon, j, i) {
   // Find the source sensor in SENSORS
   const sensor = SENSORS.find(s => String(s.id) === pd.sensorId);
   if (!sensor || !sensor.frc) return null;
+  // [v38.1] sensor ต้นทาง pipe อยู่ระหว่างซ่อม/ค่าค้าง → สีเทา
+  if (typeof _isSensorDown === 'function' && _isSensorDown(sensor)) return GRAY_SENTINEL;
 
   // v6: dist_km = equivalent pipe distance from Dijkstra on real pipe network
   // Use epanetDecay() so sensor-specific K (CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE)
@@ -1483,7 +1487,8 @@ function _pipeAwareFrc(lat, lon, j, i) {
   // v33-fix: pass _pressureGrid factor as distMult — applied ONLY if RTU live is
   //          unavailable (single pressure layer, no double-counting).
   const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-  return sensor.frc * epanetDecay(pd.dist_km, sensor, lat, lon, pGrid);
+  // [v38.1] time-lagged C₀ เมื่อ toggle เปิด
+  return _c0For(sensor, pd.dist_km, pGrid) * epanetDecay(pd.dist_km, sensor, lat, lon, pGrid);
 }
 
 function buildIdwCache() {
@@ -1562,6 +1567,11 @@ function buildIdwCache() {
             if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
             if (!_pip(lat, lon, zone.coords)) continue;
             const src = sources.find(s => String(s.id) === sid);
+            // [v38.1] สถานีต้นทางโซนอยู่ระหว่างซ่อมบำรุง/ค่าค้าง → พื้นที่สีเทา (ไม่มีข้อมูลเชื่อถือได้)
+            if (src && typeof _isSensorDown === 'function' && _isSensorDown(src)) {
+              zoneVal = GRAY_SENTINEL;
+              break;
+            }
             if (src && src.frc > 0) {
               const dKm = Math.sqrt((src.lat-lat)**2+(src.lon-lon)**2)*DEG_TO_KM;
               // ถ้ามี pipe data ในโซนนี้ ใช้ pipe distance แทน Euclidean (แม่นกว่า)
@@ -1571,10 +1581,11 @@ function buildIdwCache() {
                 // epanetDecay() ใช้ K จาก CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE
                 // v33-fix: pass _pressureGrid factor as distMult (fallback when no RTU live)
                 const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-                zoneVal = src.frc * epanetDecay(pd.dist_km, src, lat, lon, pGrid);
+                // [v38.1] time-lagged: C₀(now−t) แทน C₀(now) เมื่อ toggle เปิด
+                zoneVal = _c0For(src, pd.dist_km, pGrid) * epanetDecay(pd.dist_km, src, lat, lon, pGrid);
               } else {
                 // ไม่มี pipe data หรือ pipe ชี้ไปสถานีอื่น → ใช้ Euclidean × EUCLID_PIPE_FACTOR
-                zoneVal = src.frc * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src, lat, lon);
+                zoneVal = _c0For(src, dKm * EUCLID_PIPE_FACTOR, null) * epanetDecay(dKm * EUCLID_PIPE_FACTOR, src, lat, lon);
               }
               break;
             }
@@ -1973,6 +1984,12 @@ function _drawOnCanvas() {
                 + gv[j0Row+i0+1]*tx*oty
                 + gv[j1Row+i0]*(1-tx)*ty
                 + gv[j1Row+i0+1]*tx*ty;
+        // [v38.1] โซนซ่อมบำรุง/ค่าค้าง → สีเทา (bilinear ของ sentinel −9 ยังติดลบชัด)
+        if (v < -0.5) {
+          px[idx4] = 148; px[idx4+1] = 152; px[idx4+2] = 158;
+          px[idx4+3] = 128; // ~0.5 alpha
+          continue;
+        }
         // LUT lookup แทน paramColorRGBA
         const li = v <= lutMin ? 0 : v >= lutMax ? LUT_SIZE-1 : ((v - lutMin) * lutScale + 0.5)|0;
         px[idx4]   = lutR[li];
@@ -2050,6 +2067,8 @@ function _drawOnCanvas() {
       for(let j=0;j<RES;j++) for(let i=0;i<RES;i++) {
         const v00=gv[j*(RES+1)+i], v10=gv[j*(RES+1)+i+1];
         const v01=gv[(j+1)*(RES+1)+i], v11=gv[(j+1)*(RES+1)+i+1];
+        // [v38.1] cell ติดโซนสีเทา → ไม่วาดเส้น contour
+        if (v00 < -0.5 || v10 < -0.5 || v01 < -0.5 || v11 < -0.5) continue;
         const cv=[v00,v10,v11,v01];
         const cb=cv.map(x=>x>=level?1:0);
         if(cb[0]+cb[1]+cb[2]+cb[3]===0||cb[0]+cb[1]+cb[2]+cb[3]===4) continue;
@@ -3643,7 +3662,9 @@ function buildMarkers() {
     const pv = getParamVal(s);
     // marker color: FRC ใช้ statusColor (solid #cc0055/#e05080/#b07000 เหมือนต้นฉบับ)
     //               EC  ใช้ ecColor (solid blue/orange)
-    const c = PARAM_MODE === 'frc' ? statusColor(pv) : ecStatus(pv) === `เกินมาตรฐาน ⚠ (≥${EC_CONFIG.hi})` ? '#b32800' : pv >= EC_CONFIG.lo ? '#1565c0' : '#1a7ab0';
+    let c = PARAM_MODE === 'frc' ? statusColor(pv) : ecStatus(pv) === `เกินมาตรฐาน ⚠ (≥${EC_CONFIG.hi})` ? '#b32800' : pv >= EC_CONFIG.lo ? '#1565c0' : '#1a7ab0';
+    // [v38.1] maintenance/stale → marker สีเทา
+    if (typeof _isSensorDown === 'function' && _isSensorDown(s)) c = '#9aa0a6';
     const sz=s.type==='plant'?22:s.type==='pump'?18:7;   // v38.0: icon ต้นทางใหญ่ชัดเป็นลำดับชั้น
     const br=s.type==='monitor'?'50%':'3px';
     const tt = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name.replace(/\s+/g, ' ').trim()];
@@ -3976,6 +3997,7 @@ function buildMarkers() {
     })}).addTo(sensorGroup)
     .bindPopup(`<div class="lpop">
       <h4 style="color:#111">${s.name}</h4>
+      ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s) : ''}
       <div class="bigval" style="color:${_vcClosed?'#999':c}">${_vcClosed?'— ปิด —':paramFormat(pv)+' <span style="font-size:14px;color:#555">'+paramUnit()+'</span>'}</div>
       <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${_area}</span></div>
       <div class="pr"><span>สาขา</span><span class="pv" style="color:#111">${_branch}</span></div>
@@ -5289,6 +5311,8 @@ async function fetchAndUpdate() {
     // บันทึกประวัติ (ไม่ fit k อัตโนมัติ — ใช้ K Default จาก Firebase)
     const hist = recordHistory(SENSORS);
     updateHistBadge(hist);
+    // [v38.1] ตรวจค่าค้าง (sensor frozen) จาก history ทุกรอบ poll
+    try { if (typeof detectStale === 'function') detectStale(); } catch(e) { console.warn('[Stale]', e.message); }
 
     // sync ขึ้น Firebase
     fbSaveLive(SENSORS);
@@ -14712,3 +14736,247 @@ setTimeout(() => { try {
   buildDashboard();
   if (document.body.classList.contains('dash-mode')) _dashFitHome();
 } catch (e) { console.warn('[Dash] boot:', e.message); } }, 1800);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// [v38.1] MAINTENANCE MODE + STALE DETECTION + TIME-LAGGED C₀
+// ─ ปิดสถานีซ่อมบำรุงด้วยมือ (ปุ่มใน popup) / ตรวจค่าค้างอัตโนมัติจาก history
+// ─ สถานีต้นทางโซน (สจ.) ที่ down → พื้นที่อิทธิพลเป็นสีเทา (GRAY_SENTINEL)
+// ─ Time-lagged C₀: ใช้ C₀(now−t) จาก history แทน C₀(now) — toggle, default OFF
+//   พิสูจน์แล้ว 1–9 ก.ย. 69: โซน tt≥12h (เช่น มหาจักร) R² ดีขึ้น 0.07→0.17
+// ═══════════════════════════════════════════════════════════════════════════
+var GRAY_SENTINEL = -9;          // ค่า sentinel ใน _idwCache → render สีเทา
+var STALE_HOURS = 12;            // FRC ไม่ขยับเลยนานเกินนี้ = ค่าค้าง
+var STALE_MIN_PTS = 8;           // ต้องมีจุดใน window อย่างน้อยเท่านี้จึงตัดสิน
+var LAG_TOL_MS = 45 * 60 * 1000; // lookup C₀ ย้อนหลัง ยอมคลาดเวลาได้ ±45 นาที
+var LS_MAINT_KEY = 'mwa_maint_v1';
+var LS_TLAG_KEY  = 'mwa_tlag_v1';
+
+// ── state (lazy init — hoist-safe เพราะทุกที่เข้าถึงผ่านฟังก์ชัน) ──────────
+function _maintSet(){ if (!window._MAINT_SET) window._MAINT_SET = new Set(); return window._MAINT_SET; }
+function _staleSet(){ if (!window._STALE_SET) window._STALE_SET = new Set(); return window._STALE_SET; }
+
+function _isSensorDown(s) {
+  const code = String(s && typeof s === 'object' ? s.id : s);
+  return _maintSet().has(code) || _staleSet().has(code);
+}
+
+// ── Maintenance persistence ─────────────────────────────────────────────────
+function _loadMaintLocal() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(LS_MAINT_KEY) || '[]');
+    arr.forEach(c => _maintSet().add(String(c)));
+  } catch(e) {}
+}
+function _saveMaintLocal() {
+  try { localStorage.setItem(LS_MAINT_KEY, JSON.stringify([..._maintSet()])); } catch(e) {}
+}
+async function _fbLoadMaint() {
+  if (!window._fbReady || !window._fb || !window._fbGet) return;
+  try {
+    const snap = await window._fbGet(window._fbRef(window._fb, 'history/_maintenance'));
+    const val = snap && snap.val ? snap.val() : null;
+    if (val && typeof val === 'object') {
+      Object.keys(val).forEach(c => _maintSet().add(String(c)));
+      _saveMaintLocal();
+    }
+  } catch(e) { console.warn('[Maint] FB load:', e.message); }
+}
+async function _fbSaveMaint(code, on) {
+  if (!window._fbReady || !window._fb || !window._fbSet) return false;
+  try {
+    await window._fbSet(
+      window._fbRef(window._fb, 'history/_maintenance/' + String(code).replace(/\/|\./g,'-')),
+      on ? { ts: Date.now() } : null
+    );
+    return true;
+  } catch(e) {
+    console.warn('[Maint] FB save (ต้อง login):', e.message);
+    return false;
+  }
+}
+
+function _maintRebuild() {
+  try {
+    _histCache = null;
+    if (typeof buildIdwCache === 'function') buildIdwCache();
+    if (typeof redrawContour === 'function') redrawContour(50);
+    if (typeof buildMarkers === 'function') buildMarkers();
+    if (typeof _renderMaintPanel === 'function') _renderMaintPanel();
+  } catch(e) { console.warn('[Maint] rebuild:', e.message); }
+}
+
+// เรียกจากปุ่มใน popup / panel
+window.toggleMaintenance = async function(code) {
+  code = String(code);
+  const turnOn = !_maintSet().has(code);
+  if (turnOn) _maintSet().add(code); else _maintSet().delete(code);
+  _saveMaintLocal();
+  const okFb = await _fbSaveMaint(code, turnOn);
+  const s = (typeof SENSORS !== 'undefined') ? SENSORS.find(x => String(x.id) === code) : null;
+  const nm = s ? s.name : code;
+  console.log('[Maint]', turnOn ? '🔧 ปิดซ่อมบำรุง' : '✅ เปิดใช้งาน', nm, okFb ? '(sync Firebase)' : '(เฉพาะเครื่องนี้ — login เพื่อ sync)');
+  try { if (typeof map !== 'undefined') map.closePopup(); } catch(e) {}
+  _maintRebuild();
+};
+
+// ── Stale detection — ตรวจจาก history (localStorage ที่ merge Firebase แล้ว) ──
+function detectStale() {
+  if (typeof SENSORS === 'undefined' || typeof loadHistory !== 'function') return false;
+  const hist = loadHistory();
+  const cutoff = Date.now() - STALE_HOURS * 3600e3;
+  let changed = false;
+  for (const s of SENSORS) {
+    if (typeof s.id !== 'string') continue; // เฉพาะ mapped API sensors
+    const code = String(s.id);
+    const pts = (hist[code] || []).filter(p => p.ts >= cutoff && p.frc != null);
+    let stale = false;
+    if (pts.length >= STALE_MIN_PTS) {
+      const f0 = pts[0].frc;
+      stale = pts.every(p => Math.abs(p.frc - f0) < 1e-9);
+    }
+    const was = _staleSet().has(code);
+    if (stale && !was) {
+      _staleSet().add(code); changed = true;
+      console.warn('[Stale] ⚠ ' + (s.name || code) + ' — FRC ค้างที่ ' + (pts[0] ? pts[0].frc : '?') + ' นาน ≥' + STALE_HOURS + ' ชม. → ตัดออกจาก contour');
+    } else if (!stale && was) {
+      _staleSet().delete(code); changed = true;
+      console.log('[Stale] ✅ ' + (s.name || code) + ' กลับมาปกติ');
+    }
+  }
+  if (changed) _renderMaintPanel();
+  return changed;
+}
+
+// ── Time-lagged C₀ ──────────────────────────────────────────────────────────
+window.TIME_LAGGED_C0 = (function(){ try { return localStorage.getItem(LS_TLAG_KEY) === '1'; } catch(e){ return false; } })();
+
+function _lagHist() {
+  // cache 60 วิ — โครงสร้าง {code: [{ts,frc},...] sorted} + ล้าง memo
+  const now = Date.now();
+  if (window._lagHistCache && (now - window._lagHistCache.t) < 60e3) return window._lagHistCache.h;
+  let h = {};
+  try {
+    const raw = loadHistory();
+    for (const [code, pts] of Object.entries(raw)) {
+      h[code] = pts.filter(p => p.frc != null && p.frc > 0.001).sort((a,b) => a.ts - b.ts);
+    }
+  } catch(e) {}
+  window._lagHistCache = { t: now, h };
+  window._c0Memo = {};
+  return h;
+}
+
+// เวลาเดินทาง (วินาที) — ใช้ logic ความเร็วเดียวกับ epanetDecay (RTU pFactor / pressure grid)
+function _travelSec(dKm, sensor, distMult) {
+  let L_m = dKm * 1000;
+  let v_adj = EPANET.v;
+  let rtuApplied = false;
+  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+    const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
+    v_adj = EPANET.v * pFactor;
+    rtuApplied = true;
+  }
+  if (!rtuApplied && distMult != null && distMult > 0) L_m *= distMult;
+  return L_m / v_adj;
+}
+
+// C₀ ณ (now − tSec) จาก history — binary search จุดใกล้สุด ภายใน ±LAG_TOL_MS
+function _laggedC0(code, tSec) {
+  const pts = _lagHist()[code];
+  if (!pts || pts.length < 2) return null;
+  const target = Date.now() - tSec * 1000;
+  if (target < pts[0].ts - LAG_TOL_MS || target > pts[pts.length-1].ts + LAG_TOL_MS) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (pts[mid].ts <= target) lo = mid; else hi = mid;
+  }
+  const a = pts[lo], b = pts[hi];
+  const near = (Math.abs(a.ts - target) <= Math.abs(b.ts - target)) ? a : b;
+  return (Math.abs(near.ts - target) <= LAG_TOL_MS) ? near.frc : null;
+}
+
+// C₀ ที่ contour ใช้: snapshot (default) หรือ time-lagged (toggle)
+// fallback เป็น sensor.frc เสมอเมื่อไม่มีข้อมูลย้อนหลังพอ → ระบบไม่มีวันเสียหาย
+function _c0For(sensor, dKm, distMult) {
+  if (!window.TIME_LAGGED_C0) return sensor.frc;
+  try {
+    const tSec = _travelSec(dKm, sensor, distMult);
+    if (tSec < 1800) return sensor.frc; // < 30 นาที — lag ไม่มีนัย ประหยัด lookup
+    const key = String(sensor.id) + '|' + ((tSec / 900) | 0); // memo bucket 15 นาที
+    const memo = window._c0Memo || (window._c0Memo = {});
+    if (key in memo) return memo[key];
+    const c0 = _laggedC0(String(sensor.id), tSec);
+    const out = (c0 != null) ? c0 : sensor.frc;
+    memo[key] = out;
+    return out;
+  } catch(e) { return sensor.frc; }
+}
+
+// ── UI: popup badge + toggle button ─────────────────────────────────────────
+function _maintPopupHtml(s) {
+  if (typeof s.id !== 'string' && typeof s.id !== 'number') return '';
+  const code = String(s.id);
+  const isMaint = _maintSet().has(code);
+  const isStale = _staleSet().has(code);
+  let badge = '';
+  if (isMaint) badge = '<div style="margin:4px 0;padding:4px 8px;background:#f1f3f4;border:1px solid #dadce0;border-radius:6px;color:#5f6368;font-size:11px;font-weight:700;">🔧 ปิดซ่อมบำรุง — ไม่ใช้ค่านี้ใน contour</div>';
+  else if (isStale) badge = '<div style="margin:4px 0;padding:4px 8px;background:#fef7e0;border:1px solid #f0d060;border-radius:6px;color:#8a6d00;font-size:11px;font-weight:700;">⚠ ค่าค้าง ≥' + STALE_HOURS + ' ชม. — ตัดออกจาก contour อัตโนมัติ</div>';
+  const btn = '<button onclick="toggleMaintenance(\'' + code.replace(/'/g,"\\'") + '\')" style="margin:3px 0 5px;width:100%;padding:5px 8px;font-size:11px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;cursor:pointer;border:1px solid ' + (isMaint ? '#80c090;background:#f0fff4;color:#006020' : '#e0a0b8;background:#fff5f8;color:#a01048') + ';">' + (isMaint ? '✅ เปิดใช้งานสถานีนี้' : '🔧 ปิดซ่อมบำรุงสถานีนี้') + '</button>';
+  return badge + btn;
+}
+
+// ── UI: sidebar panel ───────────────────────────────────────────────────────
+function _renderMaintPanel() {
+  const list = document.getElementById('maint-list');
+  if (!list) return;
+  const rows = [];
+  _maintSet().forEach(code => {
+    const s = (typeof SENSORS !== 'undefined') ? SENSORS.find(x => String(x.id) === code) : null;
+    const nm = s ? (s.name||code).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.') : code;
+    rows.push('<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;padding:2px 0;"><span style="color:#5f6368;">🔧 ' + nm + '</span><button onclick="toggleMaintenance(\'' + code + '\')" style="font-size:9px;padding:1px 6px;border:1px solid #80c090;background:#f0fff4;color:#006020;border-radius:4px;cursor:pointer;">เปิด</button></div>');
+  });
+  _staleSet().forEach(code => {
+    if (_maintSet().has(code)) return;
+    const s = (typeof SENSORS !== 'undefined') ? SENSORS.find(x => String(x.id) === code) : null;
+    const nm = s ? (s.name||code).replace('สถานีสูบจ่ายน้ำ','สจ.').replace('โรงงานผลิตน้ำ','รง.') : code;
+    rows.push('<div style="padding:2px 0;color:#8a6d00;">⚠ ' + nm + ' <span style="color:#b0a070;">(ค่าค้าง — อัตโนมัติ)</span></div>');
+  });
+  list.innerHTML = rows.length ? rows.join('') : '<div style="color:#a0a0a0;">— ไม่มีสถานีปิด/ค่าค้าง —</div>';
+}
+
+function _injectMaintUI() {
+  if (document.getElementById('maint-block')) return;
+  const anchor = document.getElementById('hist-block');
+  if (!anchor) { setTimeout(_injectMaintUI, 3000); return; }
+  const html =
+    '<div class="sblock" id="maint-block" style="cursor:default;">' +
+      '<div style="font-weight:700;font-size:11px;color:#3a0a20;margin-bottom:5px;">🔧 ซ่อมบำรุง / Time-lag</div>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#604080;cursor:pointer;margin-bottom:4px;" onclick="event.stopPropagation()">' +
+        '<input type="checkbox" id="tlag-toggle" ' + (window.TIME_LAGGED_C0 ? 'checked' : '') + ' onchange="window._setTimeLagged(this.checked)" style="accent-color:#cc0055;">' +
+        '<span>⏱ Time-lagged C₀ <span style="color:#a080a0;">(ทดลอง — โซนไกลแม่นขึ้น)</span></span>' +
+      '</label>' +
+      '<div id="maint-list" style="font-size:10px;font-family:Sarabun,sans-serif;max-height:110px;overflow-y:auto;background:#faf6f9;border:1px solid #f0d4e2;border-radius:5px;padding:4px 6px;"></div>' +
+      '<div style="font-size:8.5px;color:#b090a8;margin-top:3px;">ปิด/เปิดสถานี: กด marker บนแผนที่ → ปุ่มในป๊อปอัป<br>ค่าค้าง ≥' + STALE_HOURS + ' ชม. ตัดออกอัตโนมัติ · โซน สจ. ที่ปิด = พื้นที่สีเทา</div>' +
+    '</div>';
+  anchor.insertAdjacentHTML('afterend', html);
+  _renderMaintPanel();
+}
+
+window._setTimeLagged = function(on) {
+  window.TIME_LAGGED_C0 = !!on;
+  try { localStorage.setItem(LS_TLAG_KEY, on ? '1' : '0'); } catch(e) {}
+  console.log('[TimeLag] ⏱ Time-lagged C₀:', on ? 'ON — ใช้ C₀(now−t) จาก history' : 'OFF — snapshot C₀(now)');
+  _maintRebuild();
+};
+
+// ── boot ────────────────────────────────────────────────────────────────────
+async function _maintBoot() {
+  _loadMaintLocal();
+  await _fbLoadMaint();
+  _injectMaintUI();
+  try { detectStale(); } catch(e) {}
+  if (_maintSet().size || _staleSet().size) _maintRebuild();
+  console.log('[v38.1] Maintenance/Stale/TimeLag พร้อม — maint:', _maintSet().size, '| stale:', _staleSet().size, '| tlag:', window.TIME_LAGGED_C0 ? 'ON' : 'OFF');
+}
+window.addEventListener('load', function(){ setTimeout(_maintBoot, 2500); });
