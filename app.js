@@ -2000,6 +2000,8 @@ function _drawOnCanvas() {
     }
     ctx.putImageData(imgData, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // restore scale for lines
+    // [v38.1] ขอบเข้ม + ป้าย "ไม่มีข้อมูล" รอบโซนที่ปิดซ่อม/ค่าค้าง
+    if (typeof _drawDownZoneOutlines === 'function') { try { _drawDownZoneOutlines(ctx, toXY); } catch(e) {} }
   }
 
   // ── 3. Contour lines (marching squares บน grid) ─────────────────────
@@ -4152,6 +4154,24 @@ map.on('mousemove',e=>{
     v = idw(_lat, _lon);
   }
 
+  // [v38.1] โซนสีเทา (sentinel) → "ไม่มีข้อมูล" / snap โดน sensor ที่ down → ป้ายเตือน
+  const _snapDown = isSnapped && PARAM_MODE === 'frc' && typeof _isSensorDown === 'function' && snapSensor && snapSensor.id != null && _isSensorDown(snapSensor);
+  if (PARAM_MODE === 'frc' && !isSnapped && v < -0.5) {
+    _tipValEl.textContent = '— ไม่มีข้อมูล —';
+    _tipValEl.style.setProperty('color', '#8a8f98', 'important');
+    _tipStEl.textContent = 'สถานีต้นทางปิดซ่อม/ค่าค้าง';
+    _tipStEl.style.setProperty('color', '#8a8f98', 'important');
+    _tipLlEl.textContent = e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+    _tipLabelEl.textContent = 'โซนไม่มีข้อมูลเชื่อถือได้';
+    const pt0=map.latLngToContainerPoint(e.latlng);
+    const _mr0 = map.getContainer().getBoundingClientRect();
+    const _pr0 = tip.offsetParent ? tip.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+    tip.style.left=(_mr0.left - _pr0.left + pt0.x + 16)+'px';
+    tip.style.top =(_mr0.top  - _pr0.top  + pt0.y - 22)+'px';
+    tip.style.display='block';
+    return;
+  }
+
   // สีแดงเมื่อต่ำกว่ามาตรฐาน (FRC<0.2 หรือ EC>600)
   const isAlert = PARAM_MODE==='frc' ? v < FRC_MIN : v >= EC_CONFIG.hi;
   const _isDark = document.body.classList.contains('dark');
@@ -4165,6 +4185,8 @@ map.on('mousemove',e=>{
   _tipStEl.style.setProperty('color', isSnapped ? (_isDark?'#ff6699':'#cc0055') : (isAlert ? alertColor : normalStColor), 'important');
   _tipLlEl.textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
   _tipLabelEl.textContent = _tipVcClosed ? 'VC ปิด (0%)'
+    : _snapDown
+    ? (_maintSet().has(String(snapSensor.id)) ? '🔧 ปิดซ่อมบำรุง — ไม่ใช้ใน contour' : '⚠ ค่าค้าง (เซนเซอร์อาจเสีย) — ไม่ใช้ใน contour')
     : isSnapped
     ? (snapSensor && snapSensor.type === 'vc'
       ? (PARAM_MODE==='ec'?'ค่า EC sim (EPANET)':'ค่า FRC sim (EPANET)')
@@ -14975,8 +14997,137 @@ async function _maintBoot() {
   _loadMaintLocal();
   await _fbLoadMaint();
   _injectMaintUI();
+  try { _injectGrayLegend(); } catch(e) {}
   try { detectStale(); } catch(e) {}
   if (_maintSet().size || _staleSet().size) _maintRebuild();
   console.log('[v38.1] Maintenance/Stale/TimeLag พร้อม — maint:', _maintSet().size, '| stale:', _staleSet().size, '| tlag:', window.TIME_LAGGED_C0 ? 'ON' : 'OFF');
 }
 window.addEventListener('load', function(){ setTimeout(_maintBoot, 2500); });
+
+// ═══ [v38.1b] Gray zone outlines + legend + _tlagEval ═══════════════════════
+
+// ขอบเส้นประสีเข้ม + ป้าย "⚠ ไม่มีข้อมูล" กลางโซนของสถานีที่ down (เรียกจาก _drawOnCanvas)
+function _drawDownZoneOutlines(ctx, toXY) {
+  if (PARAM_MODE !== 'frc' || !window.CUSTOM_ZONES) return;
+  ctx.save();
+  for (const [sid, zone] of Object.entries(window.CUSTOM_ZONES)) {
+    if (sid.startsWith('VC') || !zone.coords || zone.coords.length < 3) continue;
+    if (!_isSensorDown(sid)) continue;
+    // outline
+    ctx.beginPath();
+    let first = true;
+    let cx = 0, cy = 0;
+    for (const [la, lo] of zone.coords) {
+      const [x, y] = toXY(la, lo);
+      cx += x; cy += y;
+      if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(70,74,80,0.85)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // label กลางโซน
+    cx /= zone.coords.length; cy /= zone.coords.length;
+    const s = (typeof SENSORS !== 'undefined') ? SENSORS.find(x => String(x.id) === sid) : null;
+    const isMaint = _maintSet().has(String(sid));
+    const line1 = '⚠ ไม่มีข้อมูล';
+    const line2 = isMaint ? 'ปิดซ่อมบำรุง' : 'ค่าเซนเซอร์ค้าง';
+    ctx.font = '700 13px Sarabun, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.strokeText(line1, cx, cy - 4);
+    ctx.strokeText(line2, cx, cy + 13);
+    ctx.fillStyle = '#464a50';
+    ctx.fillText(line1, cx, cy - 4);
+    ctx.font = '600 11px Sarabun, sans-serif';
+    ctx.fillText(line2, cx, cy + 13);
+  }
+  ctx.restore();
+}
+
+// เพิ่มรายการ "ไม่มีข้อมูล" ใน legend (เรียกจาก _injectMaintUI ผ่าน boot)
+function _injectGrayLegend() {
+  if (document.getElementById('lg-sym-nodata')) return;
+  const anchor = document.getElementById('lg-sym-vc-closed');
+  if (!anchor) return;
+  anchor.insertAdjacentHTML('afterend',
+    '<div class="lg-item" id="lg-sym-nodata">' +
+      '<svg width="13" height="13"><rect x="1" y="1" width="11" height="11" rx="2" fill="#949aa0" opacity="0.55" stroke="#464a50" stroke-width="1.2" stroke-dasharray="3,2"/></svg>' +
+      '<span>ไม่มีข้อมูล (ซ่อม/ค่าค้าง)</span>' +
+    '</div>');
+}
+
+// ── _tlagEval(): พิสูจน์ time-lag vs snapshot จาก history ในเครื่อง ─────────
+// รันใน console: _tlagEval()  หรือ  _tlagEval(3) = ย้อนหลัง 3 วัน
+// เทียบ 2 โมเดลกับค่าจริงที่ sensor ปลายทาง: MAE/RMSE ต่อคู่ + สรุปรวม
+var TLAG_EVAL_PAIRS = [
+  { src:'SW05', dest:'SM05', tt:2.5,  name:'มีนบุรี → สาขามีนบุรี' },
+  { src:'SW05', dest:'S017', tt:4.5,  name:'มีนบุรี → ไตเทียม' },
+  { src:'SW05', dest:'S015', tt:15,   name:'มีนบุรี → มหาจักร' },
+  { src:'SW04', dest:'SM04', tt:2.5,  name:'สำโรง → สมุทรปราการ' },
+  { src:'SW04', dest:'S011', tt:4.5,  name:'สำโรง → ศิครินทร์' },
+  { src:'SW04', dest:'S012', tt:6.5,  name:'สำโรง → หาดอมรา' },
+  { src:'SW02', dest:'S008', tt:1.5,  name:'ลาดพร้าว → โอสถสภา' },
+  { src:'SW02', dest:'S009', tt:5,    name:'ลาดพร้าว → เกร็ดตระการ' },
+  { src:'SW07', dest:'S021', tt:5,    name:'บางพลี → นิคมบางพลี' },
+  { src:'SW07', dest:'S022', tt:17,   name:'บางพลี → คลองด่าน' },
+  { src:'SW06', dest:'S018', tt:1,    name:'ลาดกระบัง → นิคมลาดกระบัง' },
+];
+
+function _tlagFrcAt(pts, ts, tolMs) {
+  // ค่า FRC ใกล้เวลา ts ที่สุด ภายใน ±tolMs (pts sorted asc)
+  if (!pts || !pts.length) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (pts[m].ts <= ts) lo = m; else hi = m; }
+  const a = pts[lo], b = pts[hi];
+  const near = (Math.abs(a.ts - ts) <= Math.abs(b.ts - ts)) ? a : b;
+  return Math.abs(near.ts - ts) <= tolMs ? near.frc : null;
+}
+
+window._tlagEval = function(days) {
+  days = days || 7;
+  const hist = {};
+  try {
+    const raw = loadHistory();
+    for (const [c, pts] of Object.entries(raw))
+      hist[c] = pts.filter(p => p.frc != null && p.frc > 0.001).sort((a,b) => a.ts - b.ts);
+  } catch(e) { console.warn('อ่าน history ไม่ได้:', e.message); return; }
+  const cutoff = Date.now() - days * 86400e3;
+  const TOL = 40 * 60 * 1000;
+  console.log('═══ Time-lag vs Snapshot — ประเมินจาก history ' + days + ' วัน ═══');
+  console.log('pred_snapshot = C₀(t)·e^{−K·tt}   |   pred_timelag = C₀(t−tt)·e^{−K·tt}');
+  let g1 = 0, g2 = 0, gn = 0, wins1 = 0, wins2 = 0;
+  const rows = [];
+  for (const pair of TLAG_EVAL_PAIRS) {
+    const srcPts = hist[pair.src], dstPts = (hist[pair.dest] || []).filter(p => p.ts >= cutoff);
+    if (!srcPts || !srcPts.length || dstPts.length < 20) { rows.push({ 'คู่': pair.name, n: 0, หมายเหตุ: 'ข้อมูลไม่พอ' }); continue; }
+    if (_isSensorDown(pair.dest) || _isSensorDown(pair.src)) { rows.push({ 'คู่': pair.name, n: 0, หมายเหตุ: 'สถานี down — ข้าม' }); continue; }
+    const K = (typeof CONTOUR_K_OVERRIDE !== 'undefined' && CONTOUR_K_OVERRIDE[pair.dest]) ||
+              (typeof STATION_K_OVERRIDE !== 'undefined' && STATION_K_OVERRIDE[pair.dest]) || 0.03;
+    const decay = Math.exp(-K * pair.tt);
+    let se1 = 0, se2 = 0, ae1 = 0, ae2 = 0, n = 0;
+    for (const dp of dstPts) {
+      const c0now = _tlagFrcAt(srcPts, dp.ts, TOL);
+      const c0lag = _tlagFrcAt(srcPts, dp.ts - pair.tt * 3600e3, TOL);
+      if (c0now == null || c0lag == null) continue;
+      const e1 = c0now * decay - dp.frc, e2 = c0lag * decay - dp.frc;
+      se1 += e1*e1; se2 += e2*e2; ae1 += Math.abs(e1); ae2 += Math.abs(e2); n++;
+    }
+    if (n < 20) { rows.push({ 'คู่': pair.name, n, หมายเหตุ: 'จุดจับคู่ไม่พอ' }); continue; }
+    const mae1 = ae1/n, mae2 = ae2/n;
+    g1 += ae1; g2 += ae2; gn += n;
+    const win = mae2 < mae1 ? '⏱ time-lag' : (mae1 < mae2 ? 'snapshot' : 'เท่ากัน');
+    if (mae2 < mae1) wins2++; else if (mae1 < mae2) wins1++;
+    rows.push({ 'คู่': pair.name, tt: pair.tt + 'h', n,
+      'MAE snapshot': +mae1.toFixed(4), 'MAE time-lag': +mae2.toFixed(4),
+      'ดีขึ้น%': +(100*(mae1-mae2)/mae1).toFixed(1), 'ผู้ชนะ': win });
+  }
+  console.table(rows);
+  if (gn) console.log('รวมทุกคู่: MAE snapshot=' + (g1/gn).toFixed(4) + ' | MAE time-lag=' + (g2/gn).toFixed(4) +
+    ' | time-lag ชนะ ' + wins2 + ' คู่ / snapshot ชนะ ' + wins1 + ' คู่' +
+    '\nหมายเหตุ: ผลต่างจะชัดในคู่ tt ยาว (≥10h) และช่วงที่ C₀ ต้นทางแกว่งแรง — bias ระดับจาก K ฤดูกาลกระทบทั้งสองโมเดลเท่ากัน');
+  return { maeSnapshot: gn ? g1/gn : null, maeTimeLag: gn ? g2/gn : null, pairs: rows };
+};
