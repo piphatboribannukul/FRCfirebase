@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>แผนที่ความขุ่นแบบเรียลไทม์ (Real-time Turbidity Contour Map) v1.0</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="header">
+  <button id="tb-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+  <h1>🟤 แผนที่ความขุ่นแบบเรียลไทม์ (Turbidity Contour)</h1>
+  <span class="tb-vbadge">⬡ V1.0</span>
+  <a class="tb-frclink" href="../" title="กลับไปแผนที่คลอรีน">💧 FRC Contour</a>
+  <span class="tb-badge-live warn" id="tb-live-badge">⏳ กำลังโหลด...</span>
+</div>
+
+<div id="wrap">
+  <div id="sidebar">
+    <div class="tb-block">
+      <h3>⏱ Time-lagged Source</h3>
+      <label><input type="checkbox" id="tb-tlag-toggle" onchange="tbSetTimeLagged(this.checked)">
+        <span>ใช้ค่าอดีตของต้นทางตามเวลาเดินน้ำ</span></label>
+      <div class="tb-hint">Turb(จุด, ตอนนี้) = Turb(สถานี, ตอนนี้−t) × e<sup>−K·t</sup><br>
+        คลื่นความขุ่นเคลื่อนตามน้ำจริง (concept จาก FRCContour v38)</div>
+    </div>
+    <div class="tb-block">
+      <h3>⚙ K ตกตะกอน (K_settle)</h3>
+      <input type="number" id="tb-ksettle" step="0.001" min="0" max="1" onchange="tbSetKSettle(this.value)">
+      <div class="tb-hint">ต่อชั่วโมง · 0 = conservative ล้วน (ไม่ลดระหว่างทาง)<br>default 0.005/h — ความขุ่นตกตะกอน/เกาะผนังช้ามาก</div>
+    </div>
+    <div class="tb-block">
+      <h3>🔧 ซ่อมบำรุง / ค่าค้าง</h3>
+      <div id="tb-maint-list"></div>
+      <div class="tb-hint">ปิด/เปิดสถานี: กด marker → ปุ่มในป๊อปอัป<br>
+        ใช้รายการเดียวกับ FRCContour (Firebase history/_maintenance)<br>
+        ค่าค้าง ≥12 ชม. ตัดออกอัตโนมัติ · โซนที่ปิด = พื้นที่สีเทา</div>
+    </div>
+    <div class="tb-block">
+      <h3>🔑 เข้าสู่ระบบ (admin sync)</h3>
+      <input type="email" id="tb-email" placeholder="Email">
+      <input type="password" id="tb-pass" placeholder="Password">
+      <button onclick="tbLogin()">Login</button>
+      <div class="tb-hint" id="tb-auth-status">ยังไม่ login — ดูแผนที่ได้ปกติ แต่ history/maintenance จะไม่ sync ขึ้น Firebase</div>
+    </div>
+    <div class="tb-block">
+      <h3>ℹ️ เกี่ยวกับ</h3>
+      <div class="tb-hint" style="font-size:9.5px;">
+        Turbidity Contour v1.0 — สถาปัตยกรรมเดียวกับ FRCContour v38:
+        โซนอิทธิพล + time-lagged source + stale detection + gray zone ·
+        ใช้ data/, Firebase และ TWQMS API ร่วมกับแผนที่คลอรีน ·
+        เกณฑ์: ≤1 NTU ดี, ≤4 NTU ผ่าน (มาตรฐานน้ำบริโภค)
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+  <div id="tb-sim-banner">⚠ API ยังไม่ส่งค่าความขุ่น — แผนที่ใช้ค่าประมาณ/ค่าล่าสุดจาก Firebase (ไม่ใช่ realtime)</div>
+  <div id="tb-tip">
+    <div id="tb-tip-label"></div>
+    <div id="tb-tip-val"></div>
+    <div id="tb-tip-status"></div>
+    <div id="tb-tip-ll"></div>
+  </div>
+
+  <div id="legend">
+    <h4>ความขุ่น (NTU)</h4>
+    <div class="lg-bar"></div>
+    <div class="lg-lab"><span>0</span><span>1</span><span>4</span><span>10+</span></div>
+    <div class="lg-item"><span class="lg-dash" style="border-color:rgba(120,120,40,.7);"></span><span>1.0 NTU (ดี)</span></div>
+    <div class="lg-item"><span class="lg-dash" style="border-color:rgba(160,60,20,.9);"></span><span>4.0 NTU (เกณฑ์)</span></div>
+    <div class="lg-item"><span class="lg-gray"></span><span>ไม่มีข้อมูล (ซ่อม/ค้าง)</span></div>
+  </div>
+</div>
+
+<!-- ทรัพยากรร่วมกับ FRCContour (โฟลเดอร์นี้อยู่ใน repo FRCfirebase) -->
+<script src="../data/stations.js"></script>
+<script src="../data/zones.js"></script>
+<script src="../data/boundaries.js"></script>
+
+<!-- Firebase (โปรเจกต์เดียวกับ FRCContour) -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+  import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  const app = initializeApp(TB.FIREBASE);
+  window._fb = getDatabase(app);
+  window._fbAuth = getAuth(app);
+  window._fbRef = ref; window._fbSet = set; window._fbGet = get; window._fbOnValue = onValue;
+  window._fbSignIn = signInWithEmailAndPassword;
+  window._fbReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+  console.log('[Turb] Firebase พร้อม (โปรเจกต์ frc-contour ร่วมกับ FRCContour)');
+</script>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
