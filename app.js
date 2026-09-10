@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '38.1';
+const APP_VERSION = '38.2';
 function appBadge(){ return '⬡ V' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
@@ -1515,7 +1515,7 @@ function buildIdwCache() {
             if (_es.startsWith('VC') || !_ez.coords || _ez.coords.length < 3) continue;
             if (!_pip(lat, lon, _ez.coords)) continue;
             const _esr = SENSORS.find(s => String(s.id) === _es);
-            if (_esr) { _ecZV = getParamVal(_esr); break; }
+            if (_esr) { _ecZV = _ecValFor(_esr, lat, lon, j, i); break; }
           }
         }
         if (_ecZV !== null) { _idwCache[j * rows + i] = _ecZV; }
@@ -1530,7 +1530,7 @@ function buildIdwCache() {
               if (_d < _ecD) { const _s2 = SENSORS.find(s => String(s.id) === _es2); if (_s2) { _ecD = _d; _ecN = _s2; } }
             }
           }
-          _idwCache[j * rows + i] = _ecN ? getParamVal(_ecN) : _idw(lat, lon);
+          _idwCache[j * rows + i] = _ecN ? _ecValFor(_ecN, lat, lon, j, i) : _idw(lat, lon);
         }
       } else {
         // Pipe-network contour: ใช้ค่าจริงตามเส้นท่อ + zone influence
@@ -14873,19 +14873,41 @@ function detectStale() {
 window.TIME_LAGGED_C0 = (function(){ try { return localStorage.getItem(LS_TLAG_KEY) === '1'; } catch(e){ return false; } })();
 
 function _lagHist() {
-  // cache 60 วิ — โครงสร้าง {code: [{ts,frc},...] sorted} + ล้าง memo
+  // cache 60 วิ — {frc:{code:[{ts,v}]}, ec:{code:[{ts,v}]}} sorted + ล้าง memo
   const now = Date.now();
-  if (window._lagHistCache && (now - window._lagHistCache.t) < 60e3) return window._lagHistCache.h;
-  let h = {};
+  if (window._lagHistCache && (now - window._lagHistCache.t) < 60e3) return window._lagHistCache;
+  const out = { t: now, frc: {}, ec: {} };
   try {
     const raw = loadHistory();
     for (const [code, pts] of Object.entries(raw)) {
-      h[code] = pts.filter(p => p.frc != null && p.frc > 0.001).sort((a,b) => a.ts - b.ts);
+      const f = [], e = [];
+      for (const p of pts) {
+        if (p.frc != null && p.frc > 0.001) f.push({ ts: p.ts, v: p.frc });
+        if (p.ec  != null && p.ec  > 1)     e.push({ ts: p.ts, v: p.ec  });
+      }
+      if (f.length) out.frc[code] = f.sort((a,b) => a.ts - b.ts);
+      if (e.length) out.ec[code]  = e.sort((a,b) => a.ts - b.ts);
     }
   } catch(e) {}
-  window._lagHistCache = { t: now, h };
+  window._lagHistCache = out;
   window._c0Memo = {};
-  return h;
+  return out;
+}
+
+// lookup ทั่วไป: ค่า field ณ (now − tSec) จาก series sorted, ±LAG_TOL_MS
+function _laggedVal(bucket, code, tSec) {
+  const pts = bucket[code];
+  if (!pts || pts.length < 2) return null;
+  const target = Date.now() - tSec * 1000;
+  if (target < pts[0].ts - LAG_TOL_MS || target > pts[pts.length-1].ts + LAG_TOL_MS) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (pts[mid].ts <= target) lo = mid; else hi = mid;
+  }
+  const a = pts[lo], b = pts[hi];
+  const near = (Math.abs(a.ts - target) <= Math.abs(b.ts - target)) ? a : b;
+  return (Math.abs(near.ts - target) <= LAG_TOL_MS) ? near.v : null;
 }
 
 // เวลาเดินทาง (วินาที) — ใช้ logic ความเร็วเดียวกับ epanetDecay (RTU pFactor / pressure grid)
@@ -14902,20 +14924,41 @@ function _travelSec(dKm, sensor, distMult) {
   return L_m / v_adj;
 }
 
-// C₀ ณ (now − tSec) จาก history — binary search จุดใกล้สุด ภายใน ±LAG_TOL_MS
+// C₀ (FRC) ณ (now − tSec) จาก history
 function _laggedC0(code, tSec) {
-  const pts = _lagHist()[code];
-  if (!pts || pts.length < 2) return null;
-  const target = Date.now() - tSec * 1000;
-  if (target < pts[0].ts - LAG_TOL_MS || target > pts[pts.length-1].ts + LAG_TOL_MS) return null;
-  let lo = 0, hi = pts.length - 1;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (pts[mid].ts <= target) lo = mid; else hi = mid;
-  }
-  const a = pts[lo], b = pts[hi];
-  const near = (Math.abs(a.ts - target) <= Math.abs(b.ts - target)) ? a : b;
-  return (Math.abs(near.ts - target) <= LAG_TOL_MS) ? near.frc : null;
+  return _laggedVal(_lagHist().frc, code, tSec);
+}
+// EC ณ (now − tSec) จาก history — conservative tracer: lookup ล้วน ไม่มี decay
+function _laggedEc(code, tSec) {
+  return _laggedVal(_lagHist().ec, code, tSec);
+}
+
+// [v38.2] EC ที่ contour ใช้ต่อ pixel: snapshot (default) หรือ time-lagged (toggle เดียวกับ FRC)
+// EC เป็น conservative tracer → EC(จุด, now) = EC(สถานี, now − t) ตรงๆ ไม่มีตัวคูณ
+function _ecValFor(sensor, lat, lon, j, i) {
+  const cur = getParamVal(sensor);
+  if (!window.TIME_LAGGED_C0) return cur;
+  try {
+    // ระยะทาง: pipe distance ถ้า pipe grid ชี้ sensor เดียวกัน (แม่นกว่า) ไม่งั้น Euclidean × factor
+    let dKm = Math.sqrt((sensor.lat-lat)**2 + (sensor.lon-lon)**2) * DEG_TO_KM;
+    let distMult = null;
+    const pd = (typeof _getPipeDist === 'function') ? _getPipeDist(j, i) : null;
+    if (pd && String(pd.sensorId) === String(sensor.id)) {
+      dKm = pd.dist_km;
+    } else {
+      dKm *= EUCLID_PIPE_FACTOR;
+      distMult = (typeof _getPressureFactor === 'function') ? _getPressureFactor(j, i) : null;
+    }
+    const tSec = _travelSec(dKm, sensor, distMult);
+    if (tSec < 1800) return cur;
+    const key = 'ec|' + String(sensor.id) + '|' + ((tSec / 900) | 0);
+    const memo = window._c0Memo || (window._c0Memo = {});
+    if (key in memo) return memo[key];
+    const ec = _laggedEc(String(sensor.id), tSec);
+    const out = (ec != null) ? ec : cur;
+    memo[key] = out;
+    return out;
+  } catch(e) { return cur; }
 }
 
 // C₀ ที่ contour ใช้: snapshot (default) หรือ time-lagged (toggle)
@@ -14925,7 +14968,7 @@ function _c0For(sensor, dKm, distMult) {
   try {
     const tSec = _travelSec(dKm, sensor, distMult);
     if (tSec < 1800) return sensor.frc; // < 30 นาที — lag ไม่มีนัย ประหยัด lookup
-    const key = String(sensor.id) + '|' + ((tSec / 900) | 0); // memo bucket 15 นาที
+    const key = 'frc|' + String(sensor.id) + '|' + ((tSec / 900) | 0); // memo bucket 15 นาที
     const memo = window._c0Memo || (window._c0Memo = {});
     if (key in memo) return memo[key];
     const c0 = _laggedC0(String(sensor.id), tSec);
