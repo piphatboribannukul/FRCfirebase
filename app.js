@@ -2861,17 +2861,57 @@ function buildMarkers() {
   //   ตะวันตก : สถานีสูบส่ง/สูบจ่ายมหาสวัสดิ์ (SP11 MTR / SP12 MDIS) ย้อนเวลา ttRoot−100 ชม.
   //             (น้ำดิบเขื่อนแม่กลองหยุดส่งข้อมูล — ใช้ต้นทางที่มีข้อมูลจริงทุก 15 นาทีแทน)
   // ค่าแต่ละชั่วโมง = ค่าจริงที่ใกล้เวลาที่สุดภายในช่วงยอมรับ ไม่มีการลากเส้นเดา ถ้าไม่มี → ช่องเทา "ไม่มีข้อมูล"
+  // [v38.3b] กราฟใช้แกน Y คงที่ (ค่าเริ่ม 200–500 ปรับได้ จำค่าไว้ในเครื่อง) เพื่อให้เทียบสูง/ต่ำข้ามวันได้
   const EC_KNOWN_MDIS = ['โรงเรียนราชวินิต นนทบุรี','โรงเรียนตั้งพิรุฬห์ธรรม','โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
     'สำนักงานประปาสาขาบางบัวทอง','สถานีตำรวจภูธรไทรน้อย','สถานีสูบจ่ายน้ำมหาสวัสดิ์'];
   const EC_WATCH = 500, EC_OVER = 1200;   // ตาม ecStatus(): >500 เฝ้าระวัง, >1200 สูงกว่ามาตรฐาน
+  const EC_KNOWN_Y_KEY = 'ec_known_yaxis';
+  function _ecKnownY() {
+    try { const o = JSON.parse(localStorage.getItem(EC_KNOWN_Y_KEY) || 'null');
+      if (o && isFinite(o.lo) && isFinite(o.hi) && o.hi > o.lo) return o; } catch (e) {}
+    return { lo: 200, hi: 500 };
+  }
+  window._ecKnownData = window._ecKnownData || {};
+  function _ecKnownSvg(d) {
+    const dk = document.body.classList.contains('dark');
+    const tx = dk ? '#f0f0f8' : '#111', grid = dk ? 'rgba(255,255,255,.18)' : '#d4d8de';
+    const { lo, hi } = _ecKnownY();
+    const W = 320, H = 120, PL = 34, PR = 8, PT = 8, PB = 18, span = 24 + Math.max(d.TT, 1);
+    const X = t => PL + (t + 24) / span * (W - PL - PR);
+    const Y = v => PT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - PT - PB);   // ค่านอกช่วงชิดขอบ
+    const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
+    const out = d.past.concat(d.fut).filter(p => p.v < lo || p.v > hi).length;
+    const step = (hi - lo) <= 150 ? 25 : (hi - lo) <= 400 ? 50 : (hi - lo) <= 1000 ? 100 : 250;
+    let g = '<rect x="'+X(0).toFixed(1)+'" y="'+PT+'" width="'+(X(d.TT)-X(0)).toFixed(1)+'" height="'+(H-PT-PB)+'" fill="'+(dk?'rgba(255,255,255,.05)':'#eef4f1')+'"/>';
+    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+      g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
+        + '<text x="'+(PL-4)+'" y="'+(Y(v)+3.5).toFixed(1)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">'+v+'</text>';
+    }
+    if (EC_WATCH > lo && EC_WATCH < hi) g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#d97a00" stroke-width="1.2" stroke-dasharray="4 3"/>';
+    g += '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="0.8" stroke-dasharray="2 2"/>'
+      + '<text x="'+X(-24).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" fill="'+tx+'">−24 ชม.</text>'
+      + '<text x="'+X(0).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>'
+      + '<text x="'+X(d.TT).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">+'+(+d.TT.toFixed(1))+' ชม.</text>';
+    if (d.past.length >= 2) g += '<path d="'+P(d.past)+'" fill="none" stroke="#1f6fd1" stroke-width="2"/>';
+    if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2"/>';
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'+g+'</svg>'
+      + (out ? '<div style="font-size:11px;font-weight:600;color:#c0392b;">⚠ มี '+out+' จุดอยู่นอกช่วงแกน (แสดงชิดขอบ) — ปรับช่วงแกนด้านล่างเพื่อดูเต็ม</div>' : '');
+  }
+  window._ecKnownSetY = function (sid) {
+    const lo = parseFloat(document.getElementById('ecky-lo-' + sid)?.value), hi = parseFloat(document.getElementById('ecky-hi-' + sid)?.value);
+    if (!(isFinite(lo) && isFinite(hi) && hi > lo)) return;
+    try { localStorage.setItem(EC_KNOWN_Y_KEY, JSON.stringify({ lo, hi })); } catch (e) {}
+    const el = document.getElementById('ecky-chart-' + sid), d = window._ecKnownData[sid];
+    if (el && d) el.innerHTML = _ecKnownSvg(d);
+  };
   window._buildEcKnownCard = function(s, ecNow) {
     try {
       const nm = (s.name || '').replace(/\s+/g, ' ').trim();
       const info = EC_ROOT_SOURCE_MAP[s.name?.trim()] || EC_ROOT_SOURCE_MAP[nm];
       if (!info || !info.ttRoot) return null;
       const dk = document.body.classList.contains('dark');
-      const C = { tx: dk?'#e0e0f0':'#1a1a2e', mut: dk?'#a0a0c0':'#667', card: dk?'rgba(255,255,255,.05)':'#f5f7fb',
-                  line: dk?'rgba(255,255,255,.25)':'#9aa' };
+      const C = { tx: dk?'#f0f0f8':'#111', sub: dk?'#d0d0e0':'#333', card: dk?'rgba(255,255,255,.06)':'#f3f5f8',
+                  line: dk?'rgba(255,255,255,.4)':'#555' };
       let srcName, srcPts, tol, TT, east = false, srcNote = '';
       if (info.root === 'RAW_SAMLE') {
         east = true; TT = info.ttRoot; tol = 90 * 60000; srcName = 'สำแล';
@@ -2883,8 +2923,8 @@ function buildMarkers() {
         srcNote = 'ใช้ต้นทางที่สถานีมหาสวัสดิ์ เพราะน้ำดิบเขื่อนแม่กลองไม่มีข้อมูล';
         srcPts = ((loadHistory() || {})[sid] || []).filter(p => p.ec > 1).map(p => ({ ts: p.ts, v: p.ec }));
         if (TT <= 0.01) {
-          return '<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:'+C.card+';font-size:11px;color:'+C.mut+';">'
-            + 'สถานีนี้คือต้นทางฝั่งตะวันตก จึงไม่มีน้ำที่ "กำลังเดินทางมา" ให้แสดง<br>'+srcNote+'</div>';
+          return '<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:'+C.card+';font-size:12px;font-weight:600;color:'+C.tx+';">'
+            + 'สถานีนี้คือต้นทางฝั่งตะวันตก จึงไม่มีน้ำที่ "กำลังเดินทางมา" ให้แสดง<br><span style="font-weight:500;color:'+C.sub+';">'+srcNote+'</span></div>';
         }
       } else return null;
       srcPts.sort((a, b) => a.ts - b.ts);
@@ -2905,29 +2945,28 @@ function buildMarkers() {
         const day = dd === 0 ? 'วันนี้' : dd === 1 ? 'พรุ่งนี้' : dd === 2 ? 'มะรืนนี้' : ('อีก ' + dd + ' วัน');
         const hr = d.getHours(), part = hr < 6 ? 'ช่วงเช้ามืด' : hr < 12 ? 'ช่วงเช้า' : hr < 17 ? 'ช่วงบ่าย' : hr < 20 ? 'ช่วงเย็น' : 'ช่วงค่ำ';
         return day + part; };
-      // ── คำตอบ ──
+      const TTs = (+TT.toFixed(1));
+      const mxAll = known.length ? Math.round(Math.max(...known.map(c => c.v))) : null;
+      // ── คำตอบ (รวมตัวเลขสำคัญไว้ในบรรทัดเดียว) ──
       let vBg, vFg, vHtml;
       if (known.length < nCell * 0.5) {
-        vBg = C.card; vFg = C.mut;
-        vHtml = '<div style="font-size:13px;font-weight:700;">ข้อมูลต้นทางไม่พอ</div><div style="font-size:10.5px;">มีค่าจริงที่ '+srcName+' เพียง '+known.length+'/'+nCell+' ชม. ในช่วงที่ต้องใช้</div>';
+        vBg = C.card; vFg = C.tx;
+        vHtml = '<div style="font-size:14px;font-weight:700;">ข้อมูลต้นทางไม่พอ</div><div style="font-size:12px;font-weight:500;">มีค่าจริงที่'+srcName+'เพียง '+known.length+'/'+nCell+' ชม. ในช่วงที่ต้องใช้</div>';
       } else {
-        const mx = Math.max(...known.map(c => c.v));
         const hitOver = known.find(c => c.v > EC_OVER), hitWatch = known.find(c => c.v > EC_WATCH);
         const hit = hitOver || hitWatch;
         if (hit) {
           const w = Math.max(1, Math.round(hit.h * 0.1));
-          vBg = hitOver ? (dk?'rgba(220,60,40,.18)':'#fdecea') : (dk?'rgba(240,160,40,.16)':'#fff4e0');
-          vFg = hitOver ? (dk?'#ff8a7a':'#a32d2d') : (dk?'#ffc070':'#854f0b');
-          vHtml = '<div style="font-size:13px;font-weight:700;">⚠ น้ำ EC '+(hitOver?'สูงกว่ามาตรฐาน (>'+EC_OVER+')':'ระดับเฝ้าระวัง (>'+EC_WATCH+')')+' กำลังเดินทางมา</div>'
-            + '<div style="font-size:10.5px;">ถึงที่นี่ประมาณ'+tLabel(hit.h)+' (อีก '+Math.max(0,hit.h-w)+'–'+(hit.h+w)+' ชม.) · สูงสุด '+Math.round(mx)+' µS/cm · วัดจริงที่'+srcName+'แล้ว</div>';
+          vBg = hitOver ? (dk?'rgba(220,60,40,.22)':'#fde3e0') : (dk?'rgba(240,160,40,.2)':'#ffefd2');
+          vFg = hitOver ? (dk?'#ffb0a5':'#7a1414') : (dk?'#ffd59a':'#5c3500');
+          vHtml = '<div style="font-size:14px;font-weight:700;">⚠ น้ำ EC '+(hitOver?'สูงกว่ามาตรฐาน (>'+EC_OVER+')':'ระดับเฝ้าระวัง (>'+EC_WATCH+')')+' กำลังเดินทางมา</div>'
+            + '<div style="font-size:12px;font-weight:500;">ถึงที่นี่ประมาณ'+tLabel(hit.h)+' (อีก '+Math.max(0,hit.h-w)+'–'+(hit.h+w)+' ชม.) · สูงสุด '+mxAll+' µS/cm · วัดจริงที่'+srcName+'แล้ว</div>';
         } else {
-          vBg = dk?'rgba(60,160,80,.16)':'#eaf6ec'; vFg = dk?'#8fd9a0':'#2a6b36';
-          vHtml = '<div style="font-size:13px;font-weight:700;">✓ ปกติตลอด '+(+TT.toFixed(1))+' ชม. ข้างหน้า</div>'
-            + '<div style="font-size:10.5px;">น้ำที่กำลังเดินทางมาทั้งหมดไม่เกินระดับเฝ้าระวัง '+EC_WATCH+' µS/cm</div>';
+          vBg = dk?'rgba(60,160,80,.2)':'#e2f3e5'; vFg = dk?'#b5f0c2':'#14501f';
+          vHtml = '<div style="font-size:14px;font-weight:700;">✓ ปกติตลอด '+TTs+' ชม. ข้างหน้า</div>'
+            + '<div style="font-size:12px;font-weight:500;">สูงสุดที่จะมาถึง '+mxAll+' µS/cm · ไม่เกินระดับเฝ้าระวัง '+EC_WATCH+'</div>';
         }
       }
-      const mxAll = known.length ? Math.round(Math.max(...known.map(c => c.v))) : '—';
-      const metric = (l, v) => '<div style="flex:1;background:'+C.card+';border-radius:6px;padding:5px 7px;"><div style="font-size:9.5px;color:'+C.mut+';">'+l+'</div><div style="font-size:15px;font-weight:700;color:'+C.tx+';">'+v+'</div></div>';
       // ── เส้นทางน้ำ ──
       const segs = []; let rem = TT;
       if (east) { segs.push({ h: 13, to: 'บางเขน' }); segs.push({ h: 4, to: 'ออกโรงงาน' }); rem = TT - 17; }
@@ -2936,53 +2975,38 @@ function buildMarkers() {
       const hopIsTrunk = /^(TR\d|Dis\d|MTR|MH|MDIS)/.test(hop);
       if (isFinite(last) && last > 0 && rem - last >= 0.5 && hop && !hopIsTrunk) { segs.push({ h: rem - last, to: hop }); segs.push({ h: last, to: 'ที่นี่' }); }
       else { if (hopIsTrunk && segs.length) segs[segs.length-1].to = hop; segs.push({ h: Math.max(rem, 0.5), to: 'ที่นี่' }); }
-      const dot = c => '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
-      let route = '<div style="text-align:center;white-space:nowrap;">'+dot('#378ADD')+srcName.replace(/ \(.*\)/,'')+'</div>';
+      const dot = c => '<div style="width:9px;height:9px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
+      let route = '<div style="text-align:center;white-space:nowrap;">'+dot('#1f6fd1')+srcName.replace(/ \(.*\)/,'')+'</div>';
       segs.forEach((g, i) => {
-        route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:1.5px solid '+C.line+';margin:0 3px 12px;text-align:center;min-width:14px;"><span style="font-size:9px;color:'+C.mut+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
-          + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.mut)+g.to+'</div>';
+        route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:2px solid '+C.line+';margin:0 3px 14px;text-align:center;min-width:16px;"><span style="font-size:11px;font-weight:700;color:'+C.tx+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
+          + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.line)+g.to+'</div>';
       });
       // ── แถบเวลา ──
-      const strip = cells.map(c => '<div title="+'+c.h+' ชม. · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" style="flex:1;height:22px;background:'
-        + (c.v != null ? ecColorContour(c.v, 0.95) : (dk?'rgba(255,255,255,.12)':'#d8dbe0')) + ';"></div>').join('');
+      const strip = cells.map(c => '<div title="+'+c.h+' ชม. · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" style="flex:1;height:24px;background:'
+        + (c.v != null ? ecColorContour(c.v, 0.95) : (dk?'rgba(255,255,255,.14)':'#cfd3d9')) + ';"></div>').join('');
       const qtr = [0, Math.round(nCell/3), Math.round(nCell*2/3)].filter((v,i,a)=>a.indexOf(v)===i);
-      // ── กราฟ: 24 ชม.ย้อนหลังที่สถานีนี้ + น้ำที่กำลังมา ──
+      // ── กราฟ (แกน Y คงที่ ปรับได้) ──
       const past = ((loadHistory() || {})[String(s.id)] || []).filter(p => p.ec > 1 && p.ts >= now - 24*3600000)
         .map(p => ({ t: (p.ts - now) / 3600000, v: p.ec })).sort((a, b) => a.t - b.t);
       if (ecNow > 0) past.push({ t: 0, v: ecNow });
       const fut = known.map(c => ({ t: c.h, v: c.v }));
-      const allV = past.concat(fut).map(p => p.v);
-      let svg = '';
-      if (allV.length >= 2) {
-        let lo = Math.min(...allV), hi = Math.max(...allV); const pad = Math.max(10, (hi - lo) * 0.25);
-        lo -= pad; hi += pad; if (hi > EC_WATCH - 60) hi = Math.max(hi, EC_WATCH + 20);
-        const W = 300, H = 92, PL = 30, PR = 6, PT = 6, PB = 16, span = 24 + Math.max(TT, 1);
-        const X = t => PL + (t + 24) / span * (W - PL - PR), Y = v => PT + (1 - (v - lo) / (hi - lo)) * (H - PT - PB);
-        const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
-        svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;margin-top:8px;">'
-          + '<rect x="'+X(0)+'" y="'+PT+'" width="'+(X(TT)-X(0)).toFixed(1)+'" height="'+(H-PT-PB)+'" fill="'+(dk?'rgba(255,255,255,.04)':'#f1f5f3')+'"/>'
-          + (hi >= EC_WATCH ? '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#e08a1e" stroke-dasharray="3 3"/><text x="'+(W-PR)+'" y="'+(Y(EC_WATCH)-2).toFixed(1)+'" font-size="8" text-anchor="end" fill="#e08a1e">'+EC_WATCH+'</text>' : '')
-          + '<text x="'+(PL-3)+'" y="'+(PT+7)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">'+Math.round(hi)+'</text>'
-          + '<text x="'+(PL-3)+'" y="'+(H-PB)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">'+Math.round(lo)+'</text>'
-          + '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+C.line+'"/>'
-          + '<text x="'+X(-24).toFixed(1)+'" y="'+(H-4)+'" font-size="8" fill="'+C.mut+'">−24 ชม.</text>'
-          + '<text x="'+X(0).toFixed(1)+'" y="'+(H-4)+'" font-size="8" text-anchor="middle" fill="'+C.mut+'">ตอนนี้</text>'
-          + '<text x="'+X(TT).toFixed(1)+'" y="'+(H-4)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">+'+(+TT.toFixed(1))+' ชม.</text>'
-          + (past.length >= 2 ? '<path d="'+P(past)+'" fill="none" stroke="#378ADD" stroke-width="1.8"/>' : '')
-          + (fut.length >= 2 ? '<path d="'+P(fut)+'" fill="none" stroke="#1D9E75" stroke-width="1.8"/>' : '')
-          + '</svg>'
-          + '<div style="display:flex;gap:10px;font-size:9.5px;color:'+C.mut+';margin-top:2px;"><span><span style="display:inline-block;width:12px;border-top:2px solid #378ADD;vertical-align:middle;"></span> วัดที่นี่ (ย้อนหลัง)</span><span><span style="display:inline-block;width:12px;border-top:2px solid #1D9E75;vertical-align:middle;"></span> กำลังเดินทางมา</span></div>';
-      }
-      return '<div style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
-        + '<div style="font-size:9.5px;font-weight:700;color:'+(dk?'#80c0ff':'#1040a0')+';margin-bottom:5px;">📈 EC ที่กำลังเดินทางมา (ค่าวัดจริง ไม่ใช่การพยากรณ์)</div>'
-        + '<div style="padding:8px 10px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:8px;">'+vHtml+'</div>'
-        + '<div style="display:flex;gap:6px;margin-bottom:8px;">'+metric('ตอนนี้', ecNow > 0 ? Math.round(ecNow) : '—')+metric('สูงสุดที่จะมาถึง', mxAll)+metric('รู้ล่วงหน้า', (+TT.toFixed(1))+' ชม.')+'</div>'
-        + '<div style="font-size:9.5px;color:'+C.mut+';margin-bottom:3px;">เส้นทางน้ำ (ชม.)</div>'
-        + '<div style="display:flex;align-items:center;font-size:9.5px;color:'+C.tx+';margin-bottom:8px;">'+route+'</div>'
-        + '<div style="display:flex;justify-content:space-between;font-size:9px;color:'+C.mut+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?'+'+h:'ตอนนี้')+'</span>').join('')+'<span>+'+(+TT.toFixed(1))+' ชม.</span></div>'
+      const sid = String(s.id).replace(/[^\w-]/g, '_');
+      window._ecKnownData[sid] = { past, fut, TT };
+      const yr = _ecKnownY();
+      const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
+      const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
+      return '<div style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.12)':'#d0d8e0')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
+        + '<div style="padding:9px 11px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:10px;">'+vHtml+'</div>'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">เส้นทางน้ำ · รู้ล่วงหน้า '+TTs+' ชม.</div>'
+        + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:'+C.tx+';margin-bottom:10px;">'+route+'</div>'
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?'+'+h:'ตอนนี้')+'</span>').join('')+'<span>+'+TTs+' ชม.</span></div>'
         + '<div style="display:flex;gap:1px;border-radius:5px;overflow:hidden;">'+strip+'</div>'
-        + '<div style="font-size:9.5px;color:'+C.mut+';margin-top:3px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว และกำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
-        + svg + '</div>';
+        + '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว กำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
+        + '<div id="ecky-chart-'+sid+'" style="margin-top:8px;">'+_ecKnownSvg(window._ecKnownData[sid])+'</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
+        +   lg('#1f6fd1','วัดที่นี่ (ย้อนหลัง)') + lg('#11875f','กำลังเดินทางมา')
+        +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
+        + '</div></div>';
     } catch (e) { console.warn('[EC known card]', e.message); return null; }
   };
 
@@ -3814,7 +3838,7 @@ function buildMarkers() {
     }
 
     // กราฟคาดการณ์: เฉพาะ FRC mode + monitor + มี travel time
-    let decayChart = '';
+    let decayChart = ''; let _ecKnownShown = false;  // [v38.3]
     if (PARAM_MODE === 'frc' && (s.type === 'monitor' || s.type === 'pump') && tt && ttHours) {
       // ใช้ ROOT_SOURCE_MAP ก่อน (pair ที่ตรวจสอบแล้ว) fallback → SOURCE_MAP
       const sName = s.name?.trim();
@@ -3884,7 +3908,7 @@ function buildMarkers() {
       const ecRootInfo = EC_ROOT_SOURCE_MAP[s.name?.trim()] || EC_ROOT_SOURCE_MAP[s.name?.replace(/\s+/g,' ').trim()];
       const _ecKnown = (typeof window._buildEcKnownCard === 'function') ? window._buildEcKnownCard(s, ecNow) : null;  // [v38.3]
       if (_ecKnown) {
-        decayChart = _ecKnown;
+        decayChart = _ecKnown; _ecKnownShown = true;
       } else if (ecRootInfo) {
         // หา sensor ของ root (TR1/TR2/TR3/MTR) จาก EC_SOURCE_MAP
         const ecRootKey = ecRootInfo.root; // เช่น "TR1", "TR2", "MTR", "RAW_SAMLE"
@@ -4142,8 +4166,8 @@ function buildMarkers() {
       ${s.type==='vc'?'<div class="pr"><span>ข้อมูล</span><span class="pv" style="color:#6c3483">ค่า simulate จาก EPANET (ไม่ใช่ค่าวัดจริง)</span></div>':''}
       ${_vcStatusHtml}
       ${_vcClosed?'':'<div class="pr" style="margin-top:5px"><span>สถานะ</span><span class="pv" style="color:'+c+'">'+paramStatus(pv)+'</span></div>'}
-      ${ecRow}
-      ${_vcClosed?'':ttHtml}
+      ${(PARAM_MODE === 'ec' && _ecKnownShown) ? '' : ecRow}
+      ${(_vcClosed || (PARAM_MODE === 'ec' && _ecKnownShown)) ? '' : ttHtml}
       ${_vcClosed?'':(sourceChart && !decayChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
       ${_vcClosed?'':decayChart}
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
