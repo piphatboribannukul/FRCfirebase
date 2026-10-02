@@ -2910,6 +2910,8 @@ function buildMarkers() {
       + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-6)+'" font-size="10" font-weight="700" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
     if (d.past.length >= 2) g += '<path d="'+P(d.past)+'" fill="none" stroke="#1f6fd1" stroke-width="2"/>';
     if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2"/>';
+    g += '<text x="'+(X(d.TT)-3).toFixed(1)+'" y="'+(PT+11)+'" font-size="10.5" font-weight="800" text-anchor="end" fill="#11875f">คาดการณ์ →</text>'
+      + '<text x="'+(X(0)-3).toFixed(1)+'" y="'+(PT+11)+'" font-size="10.5" font-weight="800" text-anchor="end" fill="#1f6fd1">← ย้อนหลัง</text>';
     g += '<g id="ecky-tip-'+sid+'" style="pointer-events:none;"></g>'
       + '<rect x="'+PL+'" y="'+PT+'" width="'+(W-PL-PR)+'" height="'+(H-PT-PB)+'" fill="transparent" style="cursor:crosshair;"'
       + ' onmousemove="window._ecKnownTip(event,\''+sid+'\')" onclick="window._ecKnownTip(event,\''+sid+'\')" onmouseleave="window._ecKnownTip(null,\''+sid+'\')"/>';
@@ -2930,7 +2932,7 @@ function buildMarkers() {
     const x = PL + (p.t + 24) / span * (W - PL - PR), y = PT + (1 - (Math.min(hi, Math.max(lo, p.v)) - lo) / (hi - lo)) * (H - PT - PB);
     const dk = document.body.classList.contains('dark'), col = p.k ? '#11875f' : '#1f6fd1';
     const l1 = Math.round(p.v) + ' µS/cm';
-    const l2 = p.k ? 'ถึงที่นี่ ~' + _ecFmt(d.now + p.t * 3600000) : 'วัดที่นี่ ' + _ecFmt(d.now + p.t * 3600000);
+    const l2 = p.k ? 'คาดการณ์ถึงที่นี่ ~' + _ecFmt(d.now + p.t * 3600000) : 'วัดที่นี่ ' + _ecFmt(d.now + p.t * 3600000);
     const l3 = p.k ? 'วัดที่' + d.src + ' ' + _ecFmt(d.now + (p.t - d.TT) * 3600000) : '';
     const bw = 150, bh = l3 ? 44 : 31, bx = Math.min(W - PR - bw, Math.max(PL, x + (x > W / 2 ? -bw - 8 : 8))), by = PT;
     tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+col+'" stroke-width="1"/>'
@@ -2939,6 +2941,14 @@ function buildMarkers() {
       + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+13)+'" font-size="11" font-weight="700" fill="'+col+'">'+l1+'</text>'
       + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+26)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#f0f0f8':'#111')+'">'+l2+'</text>'
       + (l3 ? '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+39)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#c0c0d0':'#444')+'">'+l3+'</text>' : '');
+  };
+  window._ecKnownCell = function (sid, i) {
+    const d = window._ecKnownData[sid], el = document.getElementById('ecky-cell-' + sid);
+    if (!d || !el || !d.cells[i]) return;
+    const c = d.cells[i], arr = d.now + c.h * 3600000;
+    el.innerHTML = c.v != null
+      ? '<span style="color:#11875f;">คาดการณ์ '+_ecFmt(arr)+' น. · '+Math.round(c.v)+' µS/cm</span> <span style="font-weight:500;">(วัดที่'+d.src+' '+_ecFmt(arr - d.TT * 3600000)+')</span>'
+      : _ecFmt(arr)+' น. · ไม่มีข้อมูลจากต้นทาง';
   };
   window._ecKnownSetY = function (sid) {
     const lo = parseFloat(document.getElementById('ecky-lo-' + sid)?.value), hi = parseFloat(document.getElementById('ecky-hi-' + sid)?.value);
@@ -3005,9 +3015,9 @@ function buildMarkers() {
           vHtml = '<div style="font-size:14px;font-weight:700;">⚠ น้ำ EC '+(hitOver?'สูงกว่ามาตรฐาน (>'+EC_OVER+')':'ระดับเฝ้าระวัง (>'+EC_WATCH+')')+' กำลังเดินทางมา</div>'
             + '<div style="font-size:12px;font-weight:500;">ถึงที่นี่ประมาณ'+tLabel(hit.h)+' (อีก '+Math.max(0,hit.h-w)+'–'+(hit.h+w)+' ชม.) · สูงสุด '+mxAll+' µS/cm · วัดจริงที่'+srcName+'แล้ว</div>';
         } else {
-          vBg = dk?'rgba(60,160,80,.2)':'#e2f3e5'; vFg = dk?'#b5f0c2':'#14501f';
-          vHtml = '<div style="font-size:14px;font-weight:700;">✓ ปกติตลอด '+TTs+' ชม. ข้างหน้า</div>'
-            + '<div style="font-size:12px;font-weight:500;">สูงสุดที่จะมาถึง '+mxAll+' µS/cm · ไม่เกินระดับเฝ้าระวัง '+EC_WATCH+'</div>';
+          vBg = dk?'#1f8f45':'#1f8f45'; vFg = '#ffffff';   // [v38.3] เขียวทึบ เด่นเป็นตัวสรุป
+          vHtml = '<div style="font-size:16px;font-weight:800;">✓ ปกติตลอด '+TTs+' ชม. ข้างหน้า</div>'
+            + '<div style="font-size:12px;font-weight:600;">สูงสุดที่จะมาถึง '+mxAll+' µS/cm · ไม่เกินระดับเฝ้าระวัง '+EC_WATCH+'</div>';
         }
       }
       // ── เส้นทางน้ำ ──
@@ -3025,7 +3035,8 @@ function buildMarkers() {
           + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.line)+g.to+'</div>';
       });
       // ── แถบเวลา ──
-      const strip = cells.map(c => '<div title="+'+c.h+' ชม. · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" style="flex:1;height:24px;background:'
+      const sidS = String(s.id).replace(/[^\w-]/g, '_');
+      const strip = cells.map((c, i) => '<div title="'+_ecFmt(now + c.h * 3600000)+' · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" onclick="window._ecKnownCell(\''+sidS+'\','+i+')" onmouseenter="window._ecKnownCell(\''+sidS+'\','+i+')" style="flex:1;height:24px;cursor:pointer;background:'
         + (c.v != null ? ecColorContour(c.v, 0.95) : (dk?'rgba(255,255,255,.14)':'#cfd3d9')) + ';"></div>').join('');
       const qtr = [0, Math.round(nCell/3), Math.round(nCell*2/3)].filter((v,i,a)=>a.indexOf(v)===i);
       // ── กราฟ (แกน Y คงที่ ปรับได้) ──
@@ -3034,7 +3045,7 @@ function buildMarkers() {
       if (ecNow > 0) past.push({ t: 0, v: ecNow });
       const fut = known.map(c => ({ t: c.h, v: c.v }));
       const sid = String(s.id).replace(/[^\w-]/g, '_');
-      window._ecKnownData[sid] = { past, fut, TT, now, src: srcName };
+      window._ecKnownData[sid] = { past, fut, TT, now, src: srcName, cells };
       const yr = _ecKnownY();
       const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
       const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
@@ -3042,12 +3053,13 @@ function buildMarkers() {
         + '<div style="padding:9px 11px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:10px;">'+vHtml+'</div>'
         + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">เส้นทางน้ำ · รู้ล่วงหน้า '+TTs+' ชม.</div>'
         + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:'+C.tx+';margin-bottom:10px;">'+route+'</div>'
-        + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?'+'+h:'ตอนนี้')+'</span>').join('')+'<span>+'+TTs+' ชม.</span></div>'
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?_ecFmt(now + h * 3600000).replace(/^\d+ \S+ /,''):'ตอนนี้')+'</span>').join('')+'<span>'+_ecFmt(now + TT * 3600000)+'</span></div>'
         + '<div style="display:flex;gap:1px;border-radius:5px;overflow:hidden;">'+strip+'</div>'
+        + '<div id="ecky-cell-'+sid+'" style="font-size:12px;font-weight:700;color:'+C.tx+';min-height:16px;margin-top:3px;"></div>'
         + '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว กำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
         + '<div id="ecky-chart-'+sid+'" style="margin-top:8px;">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
-        +   lg('#1f6fd1','วัดที่นี่ (ย้อนหลัง)') + lg('#11875f','กำลังเดินทางมา')
+        +   lg('#1f6fd1','วัดที่นี่ (ย้อนหลัง)') + lg('#11875f','คาดการณ์ (น้ำที่กำลังเดินทางมา)')
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div></div>';
     } catch (e) { console.warn('[EC known card]', e.message); return null; }
