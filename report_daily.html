@@ -185,7 +185,8 @@ function polyLayer(list,prefix,op){
 }
 function initMap(){
   map=L.map('map',{zoomControl:true,attributionControl:false,renderer:L.canvas()}).setView([13.75,100.55],10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,crossOrigin:'anonymous'}).addTo(map);
+  // [fix ต.ค.69] CARTO basemap เริ่มบังคับ API key → ใช้ OpenStreetMap มาตรฐาน (ฟรี ไม่ต้องมี key)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19,attribution:'© OpenStreetMap contributors',crossOrigin:'anonymous'}).addTo(map);
   provLayer=L.layerGroup();
   REPORT.provinces.forEach(f=>{(f.t==='Polygon'?[f.c]:f.c).forEach(poly=>L.polygon(poly,{color:'#fff',weight:1.1,fillColor:PROV_COLOR[f.p]||'#8fb0c0',fillOpacity:0.5,opacity:0.85}).addTo(provLayer));});
   applyGroupColors();
