@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '38.2';
+const APP_VERSION = '38.3';
 function appBadge(){ return '⬡ V' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
@@ -2592,7 +2592,7 @@ const EC_ROOT_SOURCE_MAP = {
   // ttRoot = เวลาเดินทางรวม (น้ำดิบ → โรงผลิต+ผลิต 2ชม.+reservoir 2ชม. → อุโมงค์ → สถานี)
   //
   // ฝั่งตะวันออก: สำแล +13 + ผลิต 2 + reservoir 2 = 17 ชม. → TR/Dis → สถานี
-  // ฝั่งตะวันตก: คลองตะวันตก กม.14 +23 + ผลิต 2 + reservoir 2 = 27 ชม. → MTR/MDIS → สถานี
+  // ฝั่งตะวันตก: เขื่อนแม่กลอง +96 + ผลิต 2 + reservoir 2 = 100 ชม. → MTR/MDIS → สถานี
   //
   // ── TR1 (สำแล 17 + TR1→สถานี) ─────────────────────────────────────
   'สำนักงานประปาสาขาทุ่งมหาเมฆ':                              { root: 'RAW_SAMLE',  ttRoot: 24   }, // 17+7
@@ -2617,7 +2617,7 @@ const EC_ROOT_SOURCE_MAP = {
   'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์':                         { root: 'RAW_SAMLE',  ttRoot: 28.5 }, // 17+7+4.5
   'นิคมอุตสาหกรรมลาดกระบัง':                                   { root: 'RAW_SAMLE',  ttRoot: 30   }, // 17+13
   'บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)':          { root: 'RAW_SAMLE',  ttRoot: 30   }, // 17+13
-  // ── MTR (คลองตะวันตก กม.14 → มหาสวัสดิ์ 23+4=27 + MTR→สถานี) ─────
+  // ── MTR (เขื่อนแม่กลอง → มหาสวัสดิ์ 96+4=100 + MTR→สถานี) ─────
   'ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)':      { root: 'RAW_MAEKLONG', ttRoot: 116.5}, // 100+7+9.5
   'ศูนย์กีฬาเฉลิมพระเกียรติ':                                  { root: 'RAW_MAEKLONG', ttRoot: 110.5}, // 100+7+3.5
   'มหาวิทยาลัยเอเชียอาคเนย์':                                  { root: 'RAW_MAEKLONG', ttRoot: 108.5}, // 100+2+6.5
@@ -2634,7 +2634,7 @@ const EC_ROOT_SOURCE_MAP = {
   'โรงพยาบาลซีจีเอช สายไหม':                                   { root: 'RAW_SAMLE',  ttRoot: 27   }, // 17+10
   // ── ธนบุรี (สำแล 44+4=48 + สามเสน→ธนบุรี 2) ──────────────────────
   'โรงพยาบาลศิริราช':                                           { root: 'RAW_SAMLE',  ttRoot: 50   }, // 48+2
-  // ── MDIS (คลองตะวันตก กม.14 → มหาสวัสดิ์ 27 + MDIS→สถานี) ────────
+  // ── MDIS (เขื่อนแม่กลอง → มหาสวัสดิ์ 100 + MDIS→สถานี) ────────
   'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 112 }, // 100+12
   'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'RAW_MAEKLONG', ttRoot: 106.5}, // 100+6.5
   'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี':              { root: 'RAW_MAEKLONG', ttRoot: 104.5}, // 100+4.5
@@ -2689,9 +2689,9 @@ function buildMarkers() {
     'โรงงานผลิตน้ำสามเสน 2':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
     'โรงงานผลิตน้ำสามเสน 3':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
     'โรงงานผลิตน้ำสามเสน 4':          { tt_from: '48', tt_label: 'จาก สำแล (น้ำดิบ)' },
-    // rev28: มหาสวัสดิ์ — source จากคลองตะวันตก กม.14 → โรงงานมหาสวัสดิ์ 23 ชม. + ผลิต 2 + reservoir 2 = 27 ชม.
-    'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)': { tt_from: '27', tt_label: 'จาก เขื่อนแม่กลอง' },
-    'สถานีสูบจ่ายน้ำมหาสวัสดิ์':      { tt_from: '27', tt_label: 'จาก เขื่อนแม่กลอง' },
+    // [v38.3] มหาสวัสดิ์ — source จากเขื่อนแม่กลอง → โรงงานมหาสวัสดิ์ 96 ชม. + ผลิต 2 + reservoir 2 = 100 ชม.
+    'สถานีสูบส่งน้ำมหาสวัสดิ์ (MTR)': { tt_from: '100', tt_label: 'จาก เขื่อนแม่กลอง' },
+    'สถานีสูบจ่ายน้ำมหาสวัสดิ์':      { tt_from: '100', tt_label: 'จาก เขื่อนแม่กลอง' },
     // สถานีสูบจ่ายน้ำ (สจ.) — จากโรงงาน/สถานีสูบส่ง
     'สถานีสูบจ่ายน้ำลุมพินี':          { tt_from: '6',     tt_label: 'จาก TR1' },
     'สถานีสูบจ่ายน้ำพหลโยธิน':         { tt_from: '5',     tt_label: 'จาก TR1' },
@@ -2854,6 +2854,137 @@ function buildMarkers() {
     }
     return d;
   }
+
+  // ═══ [v38.3] การ์ดคาดการณ์ EC แบบ "รู้แน่" ═══════════════════════════════════════
+  // ใช้เฉพาะค่าที่วัดจริงที่ต้นทางแล้ว และกำลังเดินทางมาถึงสถานีนี้ (ไม่มีการพยากรณ์จากโมเดล)
+  //   ตะวันออก: น้ำดิบสำแล (history raw_S1) ย้อนเวลา ttRoot ชม.
+  //   ตะวันตก : สถานีสูบส่ง/สูบจ่ายมหาสวัสดิ์ (SP11 MTR / SP12 MDIS) ย้อนเวลา ttRoot−100 ชม.
+  //             (น้ำดิบเขื่อนแม่กลองหยุดส่งข้อมูล — ใช้ต้นทางที่มีข้อมูลจริงทุก 15 นาทีแทน)
+  // ค่าแต่ละชั่วโมง = ค่าจริงที่ใกล้เวลาที่สุดภายในช่วงยอมรับ ไม่มีการลากเส้นเดา ถ้าไม่มี → ช่องเทา "ไม่มีข้อมูล"
+  const EC_KNOWN_MDIS = ['โรงเรียนราชวินิต นนทบุรี','โรงเรียนตั้งพิรุฬห์ธรรม','โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
+    'สำนักงานประปาสาขาบางบัวทอง','สถานีตำรวจภูธรไทรน้อย','สถานีสูบจ่ายน้ำมหาสวัสดิ์'];
+  const EC_WATCH = 500, EC_OVER = 1200;   // ตาม ecStatus(): >500 เฝ้าระวัง, >1200 สูงกว่ามาตรฐาน
+  window._buildEcKnownCard = function(s, ecNow) {
+    try {
+      const nm = (s.name || '').replace(/\s+/g, ' ').trim();
+      const info = EC_ROOT_SOURCE_MAP[s.name?.trim()] || EC_ROOT_SOURCE_MAP[nm];
+      if (!info || !info.ttRoot) return null;
+      const dk = document.body.classList.contains('dark');
+      const C = { tx: dk?'#e0e0f0':'#1a1a2e', mut: dk?'#a0a0c0':'#667', card: dk?'rgba(255,255,255,.05)':'#f5f7fb',
+                  line: dk?'rgba(255,255,255,.25)':'#9aa' };
+      let srcName, srcPts, tol, TT, east = false, srcNote = '';
+      if (info.root === 'RAW_SAMLE') {
+        east = true; TT = info.ttRoot; tol = 90 * 60000; srcName = 'สำแล';
+        srcPts = ((window._rawWaterHistory || {})['S1'] || []).filter(p => p.ec > 0).map(p => ({ ts: p.ts, v: p.ec }));
+      } else if (info.root === 'RAW_MAEKLONG') {
+        const sid = EC_KNOWN_MDIS.includes(nm) ? 'SP12' : 'SP11';
+        TT = info.ttRoot - 100; tol = 40 * 60000;
+        srcName = sid === 'SP12' ? 'มหาสวัสดิ์ (MDIS)' : 'มหาสวัสดิ์ (MTR)';
+        srcNote = 'ใช้ต้นทางที่สถานีมหาสวัสดิ์ เพราะน้ำดิบเขื่อนแม่กลองไม่มีข้อมูล';
+        srcPts = ((loadHistory() || {})[sid] || []).filter(p => p.ec > 1).map(p => ({ ts: p.ts, v: p.ec }));
+        if (TT <= 0.01) {
+          return '<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:'+C.card+';font-size:11px;color:'+C.mut+';">'
+            + 'สถานีนี้คือต้นทางฝั่งตะวันตก จึงไม่มีน้ำที่ "กำลังเดินทางมา" ให้แสดง<br>'+srcNote+'</div>';
+        }
+      } else return null;
+      srcPts.sort((a, b) => a.ts - b.ts);
+      const now = Date.now();
+      const valAt = ts => {                          // ค่าจริงที่ใกล้ ts ที่สุดภายใน tol
+        let lo = 0, hi = srcPts.length - 1, best = null;
+        if (hi < 0) return null;
+        while (hi - lo > 1) { const m = (lo + hi) >> 1; if (srcPts[m].ts <= ts) lo = m; else hi = m; }
+        for (const p of [srcPts[lo], srcPts[hi]]) if (p && Math.abs(p.ts - ts) <= tol && (!best || Math.abs(p.ts - ts) < Math.abs(best.ts - ts))) best = p;
+        return best ? best.v : null;
+      };
+      const nCell = Math.max(1, Math.ceil(TT));
+      const cells = [];
+      for (let h = 0; h < nCell; h++) cells.push({ h, v: valAt(now + (h - TT) * 3600000) });
+      const known = cells.filter(c => c.v != null);
+      const tLabel = h => { const d = new Date(now + h * 3600000), td = new Date(now);
+        const dd = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(td.getFullYear(), td.getMonth(), td.getDate())) / 864e5);
+        const day = dd === 0 ? 'วันนี้' : dd === 1 ? 'พรุ่งนี้' : dd === 2 ? 'มะรืนนี้' : ('อีก ' + dd + ' วัน');
+        const hr = d.getHours(), part = hr < 6 ? 'ช่วงเช้ามืด' : hr < 12 ? 'ช่วงเช้า' : hr < 17 ? 'ช่วงบ่าย' : hr < 20 ? 'ช่วงเย็น' : 'ช่วงค่ำ';
+        return day + part; };
+      // ── คำตอบ ──
+      let vBg, vFg, vHtml;
+      if (known.length < nCell * 0.5) {
+        vBg = C.card; vFg = C.mut;
+        vHtml = '<div style="font-size:13px;font-weight:700;">ข้อมูลต้นทางไม่พอ</div><div style="font-size:10.5px;">มีค่าจริงที่ '+srcName+' เพียง '+known.length+'/'+nCell+' ชม. ในช่วงที่ต้องใช้</div>';
+      } else {
+        const mx = Math.max(...known.map(c => c.v));
+        const hitOver = known.find(c => c.v > EC_OVER), hitWatch = known.find(c => c.v > EC_WATCH);
+        const hit = hitOver || hitWatch;
+        if (hit) {
+          const w = Math.max(1, Math.round(hit.h * 0.1));
+          vBg = hitOver ? (dk?'rgba(220,60,40,.18)':'#fdecea') : (dk?'rgba(240,160,40,.16)':'#fff4e0');
+          vFg = hitOver ? (dk?'#ff8a7a':'#a32d2d') : (dk?'#ffc070':'#854f0b');
+          vHtml = '<div style="font-size:13px;font-weight:700;">⚠ น้ำ EC '+(hitOver?'สูงกว่ามาตรฐาน (>'+EC_OVER+')':'ระดับเฝ้าระวัง (>'+EC_WATCH+')')+' กำลังเดินทางมา</div>'
+            + '<div style="font-size:10.5px;">ถึงที่นี่ประมาณ'+tLabel(hit.h)+' (อีก '+Math.max(0,hit.h-w)+'–'+(hit.h+w)+' ชม.) · สูงสุด '+Math.round(mx)+' µS/cm · วัดจริงที่'+srcName+'แล้ว</div>';
+        } else {
+          vBg = dk?'rgba(60,160,80,.16)':'#eaf6ec'; vFg = dk?'#8fd9a0':'#2a6b36';
+          vHtml = '<div style="font-size:13px;font-weight:700;">✓ ปกติตลอด '+(+TT.toFixed(1))+' ชม. ข้างหน้า</div>'
+            + '<div style="font-size:10.5px;">น้ำที่กำลังเดินทางมาทั้งหมดไม่เกินระดับเฝ้าระวัง '+EC_WATCH+' µS/cm</div>';
+        }
+      }
+      const mxAll = known.length ? Math.round(Math.max(...known.map(c => c.v))) : '—';
+      const metric = (l, v) => '<div style="flex:1;background:'+C.card+';border-radius:6px;padding:5px 7px;"><div style="font-size:9.5px;color:'+C.mut+';">'+l+'</div><div style="font-size:15px;font-weight:700;color:'+C.tx+';">'+v+'</div></div>';
+      // ── เส้นทางน้ำ ──
+      const segs = []; let rem = TT;
+      if (east) { segs.push({ h: 13, to: 'บางเขน' }); segs.push({ h: 4, to: 'ออกโรงงาน' }); rem = TT - 17; }
+      const tti = TRAVEL_TIME[s.name] || TRAVEL_TIME[nm];
+      const last = tti ? parseFloat(tti.tt_from) : NaN, hop = tti ? tti.tt_label.replace(/^จาก\s*/, '') : '';
+      const hopIsTrunk = /^(TR\d|Dis\d|MTR|MH|MDIS)/.test(hop);
+      if (isFinite(last) && last > 0 && rem - last >= 0.5 && hop && !hopIsTrunk) { segs.push({ h: rem - last, to: hop }); segs.push({ h: last, to: 'ที่นี่' }); }
+      else { if (hopIsTrunk && segs.length) segs[segs.length-1].to = hop; segs.push({ h: Math.max(rem, 0.5), to: 'ที่นี่' }); }
+      const dot = c => '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
+      let route = '<div style="text-align:center;white-space:nowrap;">'+dot('#378ADD')+srcName.replace(/ \(.*\)/,'')+'</div>';
+      segs.forEach((g, i) => {
+        route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:1.5px solid '+C.line+';margin:0 3px 12px;text-align:center;min-width:14px;"><span style="font-size:9px;color:'+C.mut+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
+          + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.mut)+g.to+'</div>';
+      });
+      // ── แถบเวลา ──
+      const strip = cells.map(c => '<div title="+'+c.h+' ชม. · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" style="flex:1;height:22px;background:'
+        + (c.v != null ? ecColorContour(c.v, 0.95) : (dk?'rgba(255,255,255,.12)':'#d8dbe0')) + ';"></div>').join('');
+      const qtr = [0, Math.round(nCell/3), Math.round(nCell*2/3)].filter((v,i,a)=>a.indexOf(v)===i);
+      // ── กราฟ: 24 ชม.ย้อนหลังที่สถานีนี้ + น้ำที่กำลังมา ──
+      const past = ((loadHistory() || {})[String(s.id)] || []).filter(p => p.ec > 1 && p.ts >= now - 24*3600000)
+        .map(p => ({ t: (p.ts - now) / 3600000, v: p.ec })).sort((a, b) => a.t - b.t);
+      if (ecNow > 0) past.push({ t: 0, v: ecNow });
+      const fut = known.map(c => ({ t: c.h, v: c.v }));
+      const allV = past.concat(fut).map(p => p.v);
+      let svg = '';
+      if (allV.length >= 2) {
+        let lo = Math.min(...allV), hi = Math.max(...allV); const pad = Math.max(10, (hi - lo) * 0.25);
+        lo -= pad; hi += pad; if (hi > EC_WATCH - 60) hi = Math.max(hi, EC_WATCH + 20);
+        const W = 300, H = 92, PL = 30, PR = 6, PT = 6, PB = 16, span = 24 + Math.max(TT, 1);
+        const X = t => PL + (t + 24) / span * (W - PL - PR), Y = v => PT + (1 - (v - lo) / (hi - lo)) * (H - PT - PB);
+        const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
+        svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;margin-top:8px;">'
+          + '<rect x="'+X(0)+'" y="'+PT+'" width="'+(X(TT)-X(0)).toFixed(1)+'" height="'+(H-PT-PB)+'" fill="'+(dk?'rgba(255,255,255,.04)':'#f1f5f3')+'"/>'
+          + (hi >= EC_WATCH ? '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#e08a1e" stroke-dasharray="3 3"/><text x="'+(W-PR)+'" y="'+(Y(EC_WATCH)-2).toFixed(1)+'" font-size="8" text-anchor="end" fill="#e08a1e">'+EC_WATCH+'</text>' : '')
+          + '<text x="'+(PL-3)+'" y="'+(PT+7)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">'+Math.round(hi)+'</text>'
+          + '<text x="'+(PL-3)+'" y="'+(H-PB)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">'+Math.round(lo)+'</text>'
+          + '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+C.line+'"/>'
+          + '<text x="'+X(-24).toFixed(1)+'" y="'+(H-4)+'" font-size="8" fill="'+C.mut+'">−24 ชม.</text>'
+          + '<text x="'+X(0).toFixed(1)+'" y="'+(H-4)+'" font-size="8" text-anchor="middle" fill="'+C.mut+'">ตอนนี้</text>'
+          + '<text x="'+X(TT).toFixed(1)+'" y="'+(H-4)+'" font-size="8" text-anchor="end" fill="'+C.mut+'">+'+(+TT.toFixed(1))+' ชม.</text>'
+          + (past.length >= 2 ? '<path d="'+P(past)+'" fill="none" stroke="#378ADD" stroke-width="1.8"/>' : '')
+          + (fut.length >= 2 ? '<path d="'+P(fut)+'" fill="none" stroke="#1D9E75" stroke-width="1.8"/>' : '')
+          + '</svg>'
+          + '<div style="display:flex;gap:10px;font-size:9.5px;color:'+C.mut+';margin-top:2px;"><span><span style="display:inline-block;width:12px;border-top:2px solid #378ADD;vertical-align:middle;"></span> วัดที่นี่ (ย้อนหลัง)</span><span><span style="display:inline-block;width:12px;border-top:2px solid #1D9E75;vertical-align:middle;"></span> กำลังเดินทางมา</span></div>';
+      }
+      return '<div style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.08)':'#d0e8f8')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
+        + '<div style="font-size:9.5px;font-weight:700;color:'+(dk?'#80c0ff':'#1040a0')+';margin-bottom:5px;">📈 EC ที่กำลังเดินทางมา (ค่าวัดจริง ไม่ใช่การพยากรณ์)</div>'
+        + '<div style="padding:8px 10px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:8px;">'+vHtml+'</div>'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px;">'+metric('ตอนนี้', ecNow > 0 ? Math.round(ecNow) : '—')+metric('สูงสุดที่จะมาถึง', mxAll)+metric('รู้ล่วงหน้า', (+TT.toFixed(1))+' ชม.')+'</div>'
+        + '<div style="font-size:9.5px;color:'+C.mut+';margin-bottom:3px;">เส้นทางน้ำ (ชม.)</div>'
+        + '<div style="display:flex;align-items:center;font-size:9.5px;color:'+C.tx+';margin-bottom:8px;">'+route+'</div>'
+        + '<div style="display:flex;justify-content:space-between;font-size:9px;color:'+C.mut+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?'+'+h:'ตอนนี้')+'</span>').join('')+'<span>+'+(+TT.toFixed(1))+' ชม.</span></div>'
+        + '<div style="display:flex;gap:1px;border-radius:5px;overflow:hidden;">'+strip+'</div>'
+        + '<div style="font-size:9.5px;color:'+C.mut+';margin-top:3px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว และกำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
+        + svg + '</div>';
+    } catch (e) { console.warn('[EC known card]', e.message); return null; }
+  };
 
   function buildEcForecastChart(ecSource, sourceName, ttHours, sensorId, ecNow, srcId, opts) {
     // opts = { band: 0.10, rwHistKey: 'S1' or 'S11' } — raw water history key
@@ -3751,7 +3882,10 @@ function buildMarkers() {
 
       // ── ใช้ EC_ROOT_SOURCE_MAP เป็นหลัก (ที่มาสถานีคาดการณ์ EC) ──
       const ecRootInfo = EC_ROOT_SOURCE_MAP[s.name?.trim()] || EC_ROOT_SOURCE_MAP[s.name?.replace(/\s+/g,' ').trim()];
-      if (ecRootInfo) {
+      const _ecKnown = (typeof window._buildEcKnownCard === 'function') ? window._buildEcKnownCard(s, ecNow) : null;  // [v38.3]
+      if (_ecKnown) {
+        decayChart = _ecKnown;
+      } else if (ecRootInfo) {
         // หา sensor ของ root (TR1/TR2/TR3/MTR) จาก EC_SOURCE_MAP
         const ecRootKey = ecRootInfo.root; // เช่น "TR1", "TR2", "MTR", "RAW_SAMLE"
         const ecTT     = ecRootInfo.ttRoot || 0;
@@ -5336,12 +5470,14 @@ async function fetchAndUpdate() {
     // [v38.1] ตรวจค่าค้าง (sensor frozen) จาก history ทุกรอบ poll
     try { if (typeof detectStale === 'function') detectStale(); } catch(e) { console.warn('[Stale]', e.message); }
 
-    // sync ขึ้น Firebase
-    fbSaveLive(SENSORS);
-    // บันทึก history ทุกสถานีที่มีค่าใหม่
-    const now = Date.now();
-    for (const s of SENSORS) {
-      if (s.frc != null) fbSaveReading(String(s.id), { frc: s.frc, ec: s.ec ?? null, ts: now });
+    // [v38.3] เลิกเขียน live/history จากหน้าเว็บ — collector บน Railway (frc-line-bot) เป็นผู้บันทึกเจ้าเดียว
+    //         ตามเวลาของ TWQMS (sourceDtm) ทุกรอบ 15 นาที · เปิดกลับได้ด้วย window.BROWSER_WRITES_HISTORY = true
+    if (window.BROWSER_WRITES_HISTORY) {
+      fbSaveLive(SENSORS);
+      const now = Date.now();
+      for (const s of SENSORS) {
+        if (s.frc != null) fbSaveReading(String(s.id), { frc: s.frc, ec: s.ec ?? null, ts: now });
+      }
     }
 
     apiStatus = 'live';
@@ -12144,8 +12280,8 @@ function submitFeedback(){
 
       console.log(`[RawWater] ✅ ${Object.keys(latest).length} stations updated`);
 
-      // ── rev19: บันทึก EC น้ำดิบลง Firebase ────────────────────────────
-      if (window._fbReady && window._fb) {
+      // ── rev19: บันทึก EC น้ำดิบลง Firebase — [v38.3] ปิด: collector บน Railway บันทึกแทน ──
+      if (window.BROWSER_WRITES_HISTORY && window._fbReady && window._fb) {
         try {
           const now = Date.now();
           for (const [sid, r] of Object.entries(latest)) {
@@ -13118,7 +13254,7 @@ function submitFeedback(){
 
       // บันทึก current data ลง Firebase ทุก 10 นาที — เฉพาะเมื่อได้ข้อมูลจริง
       // rev29.1: ห้ามบันทึก fallback data ลง history (ป้องกัน EC 200 ค้างเป็น history ปลอม)
-      if (_mkApiFetched && window._fbReady && window._fb && window._fbSet && window._fbRef) {
+      if (window.BROWSER_WRITES_HISTORY && _mkApiFetched && window._fbReady && window._fb && window._fbSet && window._fbRef) {  // [v38.3] ปิด: collector บันทึกแทน
         const now = Date.now();
         Object.entries(_mkData).forEach(([sid, d]) => {
           if (d && d.ec > 0) {
