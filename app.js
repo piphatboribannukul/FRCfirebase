@@ -2872,37 +2872,80 @@ function buildMarkers() {
     return { lo: 200, hi: 500 };
   }
   window._ecKnownData = window._ecKnownData || {};
-  function _ecKnownSvg(d) {
+  const _TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const _ecFmt = ms => { const d = new Date(ms); return d.getDate()+' '+_TH_MON[d.getMonth()]+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  const EC_SVG = { W: 340, H: 150, PL: 40, PR: 8, PT: 18, PB: 38 };
+  function _ecKnownSvg(d, sid) {
     const dk = document.body.classList.contains('dark');
     const tx = dk ? '#f0f0f8' : '#111', grid = dk ? 'rgba(255,255,255,.18)' : '#d4d8de';
     const { lo, hi } = _ecKnownY();
-    const W = 320, H = 120, PL = 34, PR = 8, PT = 8, PB = 18, span = 24 + Math.max(d.TT, 1);
+    const { W, H, PL, PR, PT, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1);
     const X = t => PL + (t + 24) / span * (W - PL - PR);
     const Y = v => PT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - PT - PB);   // ค่านอกช่วงชิดขอบ
     const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
     const out = d.past.concat(d.fut).filter(p => p.v < lo || p.v > hi).length;
     const step = (hi - lo) <= 150 ? 25 : (hi - lo) <= 400 ? 50 : (hi - lo) <= 1000 ? 100 : 250;
     let g = '<rect x="'+X(0).toFixed(1)+'" y="'+PT+'" width="'+(X(d.TT)-X(0)).toFixed(1)+'" height="'+(H-PT-PB)+'" fill="'+(dk?'rgba(255,255,255,.05)':'#eef4f1')+'"/>';
+    // แกนค่า + หน่วย
     for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
       g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
         + '<text x="'+(PL-4)+'" y="'+(Y(v)+3.5).toFixed(1)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">'+v+'</text>';
     }
+    g += '<text x="2" y="'+(PT-6)+'" font-size="10" font-weight="700" fill="'+tx+'">µS/cm</text>';
     if (EC_WATCH > lo && EC_WATCH < hi) g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#d97a00" stroke-width="1.2" stroke-dasharray="4 3"/>';
+    // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
+    const stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
+    const t0 = new Date(d.now - 24 * 3600000); t0.setMinutes(0, 0, 0);
+    let lastDay = -1;
+    for (let ms = t0.getTime() + Math.ceil(t0.getHours() / stepH) * stepH * 3600000 - t0.getHours() * 3600000; ms <= d.now + d.TT * 3600000; ms += stepH * 3600000) {
+      const t = (ms - d.now) / 3600000; if (t < -24) continue;
+      const x = X(t), dt = new Date(ms);
+      g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+tx+'" stroke-width="0.8"/>'
+        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+13)+'" font-size="9.5" font-weight="600" text-anchor="middle" fill="'+tx+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
+      if (dt.getDate() !== lastDay) { lastDay = dt.getDate();
+        g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+25)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#1040a0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
+    }
+    g += '<text x="'+(W-PR)+'" y="'+(H-2)+'" font-size="9.5" font-weight="700" text-anchor="end" fill="'+tx+'">เวลา (ชม.)</text>';
     g += '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="0.8" stroke-dasharray="2 2"/>'
-      + '<text x="'+X(-24).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" fill="'+tx+'">−24 ชม.</text>'
-      + '<text x="'+X(0).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>'
-      + '<text x="'+X(d.TT).toFixed(1)+'" y="'+(H-4)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">+'+(+d.TT.toFixed(1))+' ชม.</text>';
+      + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-6)+'" font-size="10" font-weight="700" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
     if (d.past.length >= 2) g += '<path d="'+P(d.past)+'" fill="none" stroke="#1f6fd1" stroke-width="2"/>';
     if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2"/>';
-    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'+g+'</svg>'
+    g += '<g id="ecky-tip-'+sid+'" style="pointer-events:none;"></g>'
+      + '<rect x="'+PL+'" y="'+PT+'" width="'+(W-PL-PR)+'" height="'+(H-PT-PB)+'" fill="transparent" style="cursor:crosshair;"'
+      + ' onmousemove="window._ecKnownTip(event,\''+sid+'\')" onclick="window._ecKnownTip(event,\''+sid+'\')" onmouseleave="window._ecKnownTip(null,\''+sid+'\')"/>';
+    return '<svg id="ecky-svg-'+sid+'" viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'+g+'</svg>'
       + (out ? '<div style="font-size:11px;font-weight:600;color:#c0392b;">⚠ มี '+out+' จุดอยู่นอกช่วงแกน (แสดงชิดขอบ) — ปรับช่วงแกนด้านล่างเพื่อดูเต็ม</div>' : '');
   }
+  // คลิก/ชี้บนกราฟ → วัน เวลา ค่า (ค่าจริงที่ใกล้ที่สุด)
+  window._ecKnownTip = function (ev, sid) {
+    const tip = document.getElementById('ecky-tip-' + sid), svg = document.getElementById('ecky-svg-' + sid), d = window._ecKnownData[sid];
+    if (!tip || !svg || !d) return;
+    if (!ev) { tip.innerHTML = ''; return; }
+    const { W, H, PL, PR, PT, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1), { lo, hi } = _ecKnownY();
+    const r = svg.getBoundingClientRect(), vx = (ev.clientX - r.left) / r.width * W;
+    const t = (vx - PL) / (W - PL - PR) * span - 24;
+    const all = d.past.map(p => Object.assign({ k: 0 }, p)).concat(d.fut.map(p => Object.assign({ k: 1 }, p)));
+    if (!all.length) return;
+    const p = all.reduce((a, b) => Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a);
+    const x = PL + (p.t + 24) / span * (W - PL - PR), y = PT + (1 - (Math.min(hi, Math.max(lo, p.v)) - lo) / (hi - lo)) * (H - PT - PB);
+    const dk = document.body.classList.contains('dark'), col = p.k ? '#11875f' : '#1f6fd1';
+    const l1 = Math.round(p.v) + ' µS/cm';
+    const l2 = p.k ? 'ถึงที่นี่ ~' + _ecFmt(d.now + p.t * 3600000) : 'วัดที่นี่ ' + _ecFmt(d.now + p.t * 3600000);
+    const l3 = p.k ? 'วัดที่' + d.src + ' ' + _ecFmt(d.now + (p.t - d.TT) * 3600000) : '';
+    const bw = 150, bh = l3 ? 44 : 31, bx = Math.min(W - PR - bw, Math.max(PL, x + (x > W / 2 ? -bw - 8 : 8))), by = PT;
+    tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+col+'" stroke-width="1"/>'
+      + '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.5" fill="'+col+'" stroke="#fff" stroke-width="1.2"/>'
+      + '<rect x="'+bx.toFixed(1)+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+(dk?'#1d1d2b':'#fff')+'" stroke="'+col+'" stroke-width="1"/>'
+      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+13)+'" font-size="11" font-weight="700" fill="'+col+'">'+l1+'</text>'
+      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+26)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#f0f0f8':'#111')+'">'+l2+'</text>'
+      + (l3 ? '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+39)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#c0c0d0':'#444')+'">'+l3+'</text>' : '');
+  };
   window._ecKnownSetY = function (sid) {
     const lo = parseFloat(document.getElementById('ecky-lo-' + sid)?.value), hi = parseFloat(document.getElementById('ecky-hi-' + sid)?.value);
     if (!(isFinite(lo) && isFinite(hi) && hi > lo)) return;
     try { localStorage.setItem(EC_KNOWN_Y_KEY, JSON.stringify({ lo, hi })); } catch (e) {}
     const el = document.getElementById('ecky-chart-' + sid), d = window._ecKnownData[sid];
-    if (el && d) el.innerHTML = _ecKnownSvg(d);
+    if (el && d) el.innerHTML = _ecKnownSvg(d, sid);
   };
   window._buildEcKnownCard = function(s, ecNow) {
     try {
@@ -2991,7 +3034,7 @@ function buildMarkers() {
       if (ecNow > 0) past.push({ t: 0, v: ecNow });
       const fut = known.map(c => ({ t: c.h, v: c.v }));
       const sid = String(s.id).replace(/[^\w-]/g, '_');
-      window._ecKnownData[sid] = { past, fut, TT };
+      window._ecKnownData[sid] = { past, fut, TT, now, src: srcName };
       const yr = _ecKnownY();
       const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
       const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
@@ -3002,7 +3045,7 @@ function buildMarkers() {
         + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?'+'+h:'ตอนนี้')+'</span>').join('')+'<span>+'+TTs+' ชม.</span></div>'
         + '<div style="display:flex;gap:1px;border-radius:5px;overflow:hidden;">'+strip+'</div>'
         + '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว กำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
-        + '<div id="ecky-chart-'+sid+'" style="margin-top:8px;">'+_ecKnownSvg(window._ecKnownData[sid])+'</div>'
+        + '<div id="ecky-chart-'+sid+'" style="margin-top:8px;">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
         +   lg('#1f6fd1','วัดที่นี่ (ย้อนหลัง)') + lg('#11875f','กำลังเดินทางมา')
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
