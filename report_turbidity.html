@@ -60,10 +60,10 @@ td.v.bad{background:var(--badbg);color:var(--bad)}td.v.na{background:var(--nabg)
 .wn{font-size:7.5px;font-weight:800;color:#fff;background:#e07a1a;border-radius:5px;padding:0 3px;margin-left:3px;white-space:nowrap}
 .pin{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-family:var(--disp)}
 .blab{font-family:var(--disp);font-size:9.5px;font-weight:600;color:#1c3942;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
-.crit{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 12px;font-size:10px}
-.crit h4{margin:0 0 6px;font-family:var(--disp);font-size:12px;font-weight:600;color:var(--brand2)}
-.crit .row{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}.crit .row b{width:100%;font-size:9.5px;color:#456}
-.chip{padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700}
+.crit{border:1px solid var(--line);border-radius:9px;background:#fff;padding:10px 13px;font-size:11.5px;color:#1c2b31}
+.crit h4{margin:0 0 7px;font-family:var(--disp);font-size:14px;font-weight:700;color:var(--brand2)}
+.crit .row{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}.crit .row b{width:100%;font-size:11.5px;color:#1c2b31}
+.chip{padding:2px 8px;border-radius:4px;font-size:11.5px;font-weight:700}
 .c-g{background:var(--okbg);color:var(--ok)}.c-y{background:var(--watchbg);color:var(--watch)}.c-r{background:var(--badbg);color:var(--bad)}
 .ft{display:flex;justify-content:space-between;padding:2px 20px 12px;font-size:10px;color:var(--muted)}
 .leaflet-popup-content{font-family:var(--sans);font-size:12px}.leaflet-container{background:#dcf0f6}
@@ -112,7 +112,7 @@ td.v.mn{color:#5c7883;font-weight:600}
 .at .v b.ok{background:var(--okbg);color:var(--ok)}.at .v b.watch{background:var(--watchbg);color:var(--watch)}.at .v b.bad{background:var(--badbg);color:var(--bad)}.at .v b.na{background:var(--nabg);color:var(--na)}
 @media(max-width:900px){.areas{grid-template-columns:repeat(2,1fr)}.areas .ah,.areas .ah.r{grid-column:1/-1}}
 .plants{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:9px 14px 0;align-items:start}
-tr.bh td{background:rgba(255,255,255,.85);font-family:var(--disp);font-size:8.5px;font-weight:600;color:var(--bc);padding:1px 6px;border-bottom:1px solid var(--bc)}
+tr.bh td{background:#fff;font-family:var(--disp);font-size:11px;font-weight:700;color:var(--bc);padding:3px 7px 2px;border-top:1px solid var(--bc);border-bottom:1.5px solid var(--bc);letter-spacing:.1px}
 @media(max-width:900px){.plants{grid-template-columns:1fr 1fr}}
 .tb .ibtn{background:#0f7a43;color:#fff;border-radius:6px;padding:6px 14px;font-weight:600}
 .sheet.exporting .tb,.sheet.exporting #dayload{display:none!important;}
@@ -124,6 +124,8 @@ tr.bh td{background:rgba(255,255,255,.85);font-family:var(--disp);font-size:8.5p
     <div class="d"><div class="val">ประจำวันที่</div><div class="big">–</div></div></div>
   <div class="kpi" id="kpi"></div>
   <div class="tb">
+    <span class="lab">จัดกลุ่มตาราง:</span>
+    <div class="grp" id="layGrp"><button data-l="region" class="on">ตามภาค (บริการ 1–5)</button><button data-l="station">ตามอิทธิพลโรงสูบ</button></div>
     <span class="lab">ลงสี:</span>
     <div class="grp" id="bgGrp"><button data-b="region5" class="on">5 ภาค</button><button data-b="station">อิทธิพลโรงสูบ</button><button data-b="branch18">18 สาขา</button><button data-b="prov">3 จังหวัด</button></div>
     <span class="lab">หมุด:</span>
@@ -139,7 +141,7 @@ tr.bh td{background:rgba(255,255,255,.85);font-family:var(--disp);font-size:8.5p
     <div class="col"><div id="colRight"></div>
       <div class="crit"><h4>เกณฑ์คุณภาพน้ำ</h4>
         <div class="row"><b>ความขุ่น (NTU)</b><span class="chip c-g">≤ 4.00</span><span class="chip c-y">&gt; 4.00 – 5.00</span><span class="chip c-r">&gt; 5.00</span></div>
-        <div style="color:var(--muted);margin-top:4px;line-height:1.45">สีช่อง "เฉลี่ย" = ค่าเฉลี่ยรายวัน (จากรายชั่วโมง) · สีช่อง "สูงสุด" = ค่าสูงสุดรายชั่วโมง<br><span class="wn" style="margin-left:0">⚠เวลา</span> = เฉลี่ยผ่าน แต่มีชั่วโมงเกิน 4 NTU (เวลาที่สูงสุด) · <span class="hrs" style="margin-left:0">Nชม.</span> = ข้อมูลไม่ครบ 24 ชม. · "–" = ไม่มีข้อมูล/ซ่อมบำรุง</div>
+        <div style="color:#1c2b31;margin-top:6px;line-height:1.6;font-size:11px">สีช่อง "เฉลี่ย" = ค่าเฉลี่ยรายวัน (จากรายชั่วโมง) · สีช่อง "สูงสุด" = ค่าสูงสุดรายชั่วโมง<br><span class="wn" style="margin-left:0">⚠เวลา</span> = เฉลี่ยผ่าน แต่มีชั่วโมงเกิน 4 NTU (เวลาที่สูงสุด) · <span class="hrs" style="margin-left:0">Nชม.</span> = ข้อมูลไม่ครบ 24 ชม. · "–" = ไม่มีข้อมูล/ซ่อมบำรุง</div>
       </div>
     </div>
   </div>
@@ -217,7 +219,10 @@ const regionList=r=>REPORT.stations.filter(s=>r.br.includes(s.branch)&&!ALL_PLAN
 (function(){REPORT.stations.forEach(s=>s._o=s.no);let k=1;
   PLANTS.forEach(p=>p.ids.forEach(id=>{const s=REPORT.stations.find(x=>x.id===id);if(s)s.no=k++;}));
   REGIONS.forEach(r=>regionList(r).forEach(s=>s.no=k++));
-  REPORT.stations.forEach(s=>{if(s.no===s._o&&!ALL_PLANT_IDS.includes(s.id)&&!BR2REG[s.branch])s.no=k++;});})();
+  REPORT.stations.forEach(s=>{if(s.no===s._o&&!ALL_PLANT_IDS.includes(s.id)&&!BR2REG[s.branch])s.no=k++;});
+  REPORT.stations.forEach(s=>s.noR=s.no);})();
+let layoutMode='region';
+function applyNumbering(){REPORT.stations.forEach(s=>s.no=layoutMode==='region'?s.noR:s._o);}
 function renderAreas(){
   const el=document.getElementById('areaStrip');if(!el)return;
   const tile=(name,sub,col,list)=>{const st=stats(list),c=st?turClass(st.avg):'na',cm=st?turClass(st.max):'na';
@@ -235,17 +240,25 @@ function stRow(x){
 }
 function card(title,col,bg,list,groups){
   const st=stats(list);
-  const body=groups?groups.filter(([,l])=>l.length).map(([b,l])=>`<tr class="bh" style="--bc:${col}"><td colspan="5">สาขา${b}</td></tr>`+l.map(stRow).join('')).join(''):list.map(stRow).join('');
+  const body=groups?groups.filter(([,l])=>l.length).map(([b,l])=>`<tr class="bh" style="--bc:${shadeHex(col,0.7)}"><td colspan="5">▸ สาขา${b}</td></tr>`+l.map(stRow).join('')).join(''):list.map(stRow).join('');
   const sub=st?`<span class="gsum">เฉลี่ย ${st.avg.toFixed(2)} · สูงสุด ${fmt(st.max)}</span>`:'';
   return `<div class="gc" style="background:${bg};border-color:${col}55"><div class="gh" style="background:${col}">${title}${sub}</div><table><thead><tr><th class="no">No.</th><th class="st">สถานี</th><th>เฉลี่ย</th><th>สูงสุด</th><th>ต่ำสุด</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 const PLANT_COL='#4f6b7d',PLANT_BG='#eef2f5';
 function regionCard(i){const r=REGIONS[i];return card(r.name,r.col,r.bg,regionList(r),r.br.map(b=>[b,regionList(r).filter(s=>s.branch===b)]));}
 function renderTables(){
-  document.getElementById('plantRow').innerHTML=PLANTS.map(p=>card(p.name+' · น้ำออกจากโรงงาน',PLANT_COL,PLANT_BG,plantList(p))).join('');
-  document.getElementById('colLeft').innerHTML=regionCard(0)+regionCard(2);
-  document.getElementById('colMid').innerHTML=regionCard(1);
-  document.getElementById('colRight').innerHTML=regionCard(3)+regionCard(4);
+  const pr=document.getElementById('plantRow'),cm=document.getElementById('colMid');
+  if(layoutMode==='station'){   // แบบเดิม: กลุ่มอิทธิพลโรงสูบ (TR1/TR2/TR3, Dis1/Dis2, มหาสวัสดิ์, โรงงานผลิตน้ำ)
+    const byZone=z=>REPORT.gdef.map((g,i)=>[g,i]).filter(([g])=>g.zone===z).map(([,i])=>groupCard(i)).join('');
+    pr.style.display='none';pr.innerHTML='';cm.className='dis';
+    document.getElementById('colLeft').innerHTML=byZone('left');cm.innerHTML=byZone('mid');document.getElementById('colRight').innerHTML=byZone('right');
+  }else{
+    pr.style.display='';cm.className='col';
+    pr.innerHTML=PLANTS.map(p=>card(p.name+' · น้ำออกจากโรงงาน',PLANT_COL,PLANT_BG,plantList(p))).join('');
+    document.getElementById('colLeft').innerHTML=regionCard(0)+regionCard(2);
+    cm.innerHTML=regionCard(1);
+    document.getElementById('colRight').innerHTML=regionCard(3)+regionCard(4);
+  }
   renderSummary();renderAreas();
 }
 /* ── สรุปรายภาค: ตามโหมดลงสีที่เลือก (อิทธิพลโรงสูบ / 18 สาขา / 3 จังหวัด) + แถวน้ำออกจากโรงงานผลิตน้ำ ── */
@@ -303,7 +316,14 @@ function setFill(mode){
   if(mode==='station'){stationLayer.addTo(map);}else if(mode==='branch18'){provLayer.addTo(map);branch18Layer.addTo(map);}else if(mode==='prov'){provLayer.addTo(map);}else if(mode==='region5'){provLayer.addTo(map);region5Layer.addTo(map);}
   markerLayer.addTo(map);renderSummary();
 }
+function setLayout(l){
+  layoutMode=l;applyNumbering();renderTables();buildMarkers();markerLayer.addTo(map);
+  [...document.getElementById('layGrp').children].forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+  const fm=l==='region'?'region5':'station';   // ลงสีแผนที่ให้ตรงกับการจัดกลุ่ม (เปลี่ยนเองต่อได้)
+  [...document.getElementById('bgGrp').children].forEach(b=>b.classList.toggle('on',b.dataset.b===fm));setFill(fm);
+}
 function wireControls(){
+  document.getElementById('layGrp').onclick=e=>{if(e.target.dataset.l)setLayout(e.target.dataset.l);};
   document.getElementById('bgGrp').onclick=e=>{if(!e.target.dataset.b)return;[...e.currentTarget.children].forEach(b=>b.classList.remove('on'));e.target.classList.add('on');setFill(e.target.dataset.b);};
   document.getElementById('pinGrp').onclick=e=>{if(!e.target.dataset.p)return;[...e.currentTarget.children].forEach(b=>b.classList.remove('on'));e.target.classList.add('on');pinMode=e.target.dataset.p;buildMarkers();markerLayer.addTo(map);};
 }
