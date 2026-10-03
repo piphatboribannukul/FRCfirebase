@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map) v38.2</title>
+<title>แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map) v39</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2380,11 +2380,33 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
 #report-panel .ai-rank-name{color:#33425a!important;}
 #report-panel .ai-rank-num.rn{background:#e8eef3!important;color:#5c7883!important;}
 </style>
+<style>
+/* [v39] ตัวสลับพารามิเตอร์ — ย้ายมาซ้าย (หลังชื่อระบบ) ภาษาไทย เด่นชัด */
+body #header #param-switcher{margin-left:10px !important;margin-right:10px !important;display:flex !important;gap:0 !important;
+  border:2px solid #cc0055 !important;border-radius:999px !important;overflow:hidden !important;flex-shrink:0 !important;
+  box-shadow:0 2px 8px rgba(0,0,0,.12) !important;background:#fff !important;}
+body #header #param-switcher .param-btn{font-family:'Sarabun',sans-serif !important;font-size:13.5px !important;font-weight:700 !important;
+  padding:6px 16px !important;border:none !important;border-radius:0 !important;background:#fff !important;color:#333 !important;
+  white-space:nowrap !important;box-shadow:none !important;backdrop-filter:none !important;transition:background .2s,color .2s !important;}
+body #header #param-switcher .param-btn:not(.active):hover{background:#f4f4f6 !important;color:#111 !important;}
+body #header #param-switcher #btn-frc.active{background:#cc0055 !important;color:#fff !important;}
+body #header #param-switcher #btn-ec.active{background:#0b63c4 !important;color:#fff !important;}
+body #header #param-switcher:has(#btn-ec.active){border-color:#0b63c4 !important;}
+body.dark #header #param-switcher{background:#1c1c28 !important;}
+body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !important;color:#e8e8f0 !important;}
+@media (max-width:1280px){ body #header #param-switcher .param-btn{font-size:12px !important;padding:5px 11px !important;}
+  #header-title{font-size:12px !important;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} }
+@media (max-width:640px){ body #header #param-switcher .param-btn{font-size:11px !important;padding:4px 8px !important;} }
+</style>
 </head>
 <body class="dash-mode">
 <div id="header">
   <div class="live-dot"></div>
   <h1 id="header-title" title="แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map)">💧 แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์</h1>
+  <div id="param-switcher" role="group" aria-label="เลือกพารามิเตอร์">
+    <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">💧 คลอรีนอิสระคงเหลือ</button>
+    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ ความนำไฟฟ้า</button>
+  </div>
   <nav id="main-tabs">
     <button class="mtab active" id="mtab-dash" onclick="setTab('dash')">📊 แดชบอร์ด</button>
     <button class="mtab" id="mtab-map" onclick="setTab('map')">🗺️ แผนที่</button>
@@ -2395,10 +2417,6 @@ body.dash-mode #sidebar,body.dash-mode #about-btn,body.dash-mode #terrain3d-btn,
     <button class="mtab" id="mtab-3d" onclick="dashOpen3D()">🧊 3D</button>
     <button class="mtab" id="mtab-cl2" onclick="dashOpenWhatIf()">Cl₂ จำลอง</button>
   </nav>
-  <div id="param-switcher">
-    <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">🌸 FRC</button>
-    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ Conductivity</button>
-  </div>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
   <span id="v2-badge">⬡ V38</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
