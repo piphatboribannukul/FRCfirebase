@@ -203,7 +203,9 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
     <div class="sb-cap">ภาพรวม</div>
     <button class="sb-item active" onclick="go('rt',this)"><span class="ic">📊</span><span class="tx">Dashboard</span></button>
     <button class="sb-item" onclick="openForecast(this)"><span class="ic">🔮</span><span class="tx">คาดการณ์ (K)</span></button>
-    <button class="sb-item" onclick="go('daily',this)"><span class="ic">📄</span><span class="tx">สรุปประจำวัน</span></button>
+    <button class="sb-item" onclick="go('daily',this)"><span class="ic">🧪</span><span class="tx">สรุปคลอรีน</span></button>
+    <button class="sb-item" onclick="go('tub',this)"><span class="ic">💧</span><span class="tx">สรุปความขุ่น</span></button>
+    <button class="sb-item" onclick="go('ec',this)"><span class="ic">⚡</span><span class="tx">สรุปความนำไฟฟ้า</span></button>
     <button class="sb-item" onclick="go('pump',this)"><span class="ic">🚰</span><span class="tx">สถานีสูบจ่ายน้ำ</span></button>
     <div class="sb-cap">ข้อมูลคุณภาพน้ำ (TWQMS)</div>
     <button class="sb-item" onclick="window.open('https://twqonline.mwa.co.th/Admin/water-quality-info/report-water-quality','_blank')"><span class="ic">🗂️</span><span class="tx">รายงาน ↗</span></button>
@@ -238,7 +240,7 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       <div class="pagehead">
         <div><h1>Dashboard ภาพรวมคุณภาพน้ำ</h1>
           <div class="meta">ข้อมูล ณ <b id="rt-asof">–</b> · ค่าชั่วโมงล่าสุด <b>ทุกสถานี</b> <span class="badge warn" id="rt-badge" style="margin-left:6px;">🔶 ข้อมูลตัวอย่าง — กด "ดึงข้อมูลล่าสุด" บนเครื่อง .55</span></div></div>
-        <div class="actions"><button class="chip-btn primary" id="rt-refresh" onclick="rtFetch()">🔄 ดึงข้อมูลล่าสุด</button><button class="chip-btn" onclick="go('daily',document.querySelectorAll('.sb-item')[2])">📄 สรุปประจำวัน</button><button class="chip-btn" onclick="window.print()">🖨 พิมพ์</button></div>
+        <div class="actions"><button class="chip-btn primary" id="rt-refresh" onclick="rtFetch()">🔄 ดึงข้อมูลล่าสุด</button><button class="chip-btn" onclick="go('daily',document.querySelectorAll('.sb-item')[2])">🧪 สรุปคลอรีน</button><button class="chip-btn" onclick="window.print()">🖨 พิมพ์</button></div>
       </div>
 
       <div class="kgrid">
@@ -271,8 +273,8 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
 
     <!-- ═══ 2) สรุปประจำวัน ═══ -->
     <div class="pg" id="pg-daily">
-      <div class="crumb">หน้าแรก / <b>สรุปประจำวัน</b></div>
-      <div class="pagehead"><div><h1>รายงานสรุปประจำวัน</h1><div class="meta">รายงานผู้บริหาร · ค่าเฉลี่ยรายวัน 62 สถานี + แผนที่อิทธิพลโรงสูบ</div></div></div>
+      <div class="crumb">หน้าแรก / <b>สรุปคลอรีน</b></div>
+      <div class="pagehead"><div><h1>รายงานสรุปคลอรีนประจำวัน</h1><div class="meta">รายงานผู้บริหาร · ค่าเฉลี่ยรายวัน 62 สถานี + แผนที่อิทธิพลโรงสูบ</div></div></div>
       <div class="qcard"><div class="qbar">
         <div class="qf"><label>วันที่รายงาน <b>*</b></label><input type="date" id="d-date" value="2026-08-20"></div>
         <div class="qbtns"><button class="btn search" onclick="loadDaily()">🔍 เรียกดูรายงาน</button><button class="btn clear" onclick="clearDaily()">ล้าง</button></div>
@@ -280,6 +282,34 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       <div id="d-out"><div class="empty"><div class="ic">📄</div>เลือกวันที่ แล้วกด "เรียกดูรายงาน"<br><span style="font-size:10.5px;">(ดึงจาก report_daily.html)</span></div></div>
     </div>
 
+
+    <!-- ═══ สรุปความขุ่น (นำเข้าไฟล์ TWQMS R030301) ═══ -->
+    <div class="pg" id="pg-tub">
+      <div class="crumb">หน้าแรก / <b>สรุปความขุ่น</b></div>
+      <div class="pagehead"><div><h1>รายงานสรุปความขุ่นประจำวัน</h1><div class="meta">ค่าเฉลี่ยรายวันจากไฟล์ TWQMS · โรงงานผลิตน้ำ + บริการ 1–5 · เกณฑ์ ≤4 / >4–5 / >5 NTU</div></div></div>
+      <div class="qcard"><div class="qbar" style="align-items:center;">
+        <div style="flex:1;font-size:12px;line-height:1.6;">
+          <b>วิธีใช้:</b> 1) เปิด <a href="https://twqonline.mwa.co.th/Admin/water-quality-info/report-water-quality" target="_blank" rel="noopener">รายงานคุณภาพน้ำ TWQMS ↗</a> เลือก <b>รายงานคุณภาพน้ำรายวัน (R030301)</b> · วันที่ที่ต้องการ · สถานีทั้งหมด → ส่งออก Excel
+          &nbsp;2) กด <b>📂 นำเข้าไฟล์ TWQMS</b> ในรายงานด้านล่าง หรือลากไฟล์ .xlsx มาวาง <span style="color:var(--mut)">(ไฟล์เดียวใช้ได้ทั้งความขุ่นและความนำไฟฟ้า)</span>
+        </div>
+        <div class="qbtns"><a href="report_turbidity.html" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>
+      </div></div>
+      <iframe class="daily" id="if-tub" data-src="report_turbidity.html"></iframe>
+    </div>
+
+    <!-- ═══ สรุปความนำไฟฟ้า (นำเข้าไฟล์ TWQMS R030301) ═══ -->
+    <div class="pg" id="pg-ec">
+      <div class="crumb">หน้าแรก / <b>สรุปความนำไฟฟ้า</b></div>
+      <div class="pagehead"><div><h1>รายงานสรุปความนำไฟฟ้าประจำวัน</h1><div class="meta">ค่าเฉลี่ยรายวันจากไฟล์ TWQMS · โรงงานผลิตน้ำ + บริการ 1–5 · เกณฑ์ ≤500 / 501–1,200 / >1,200 µS/cm</div></div></div>
+      <div class="qcard"><div class="qbar" style="align-items:center;">
+        <div style="flex:1;font-size:12px;line-height:1.6;">
+          <b>วิธีใช้:</b> 1) เปิด <a href="https://twqonline.mwa.co.th/Admin/water-quality-info/report-water-quality" target="_blank" rel="noopener">รายงานคุณภาพน้ำ TWQMS ↗</a> เลือก <b>รายงานคุณภาพน้ำรายวัน (R030301)</b> · วันที่ที่ต้องการ · สถานีทั้งหมด → ส่งออก Excel
+          &nbsp;2) กด <b>📂 นำเข้าไฟล์ TWQMS</b> ในรายงานด้านล่าง หรือลากไฟล์ .xlsx มาวาง <span style="color:var(--mut)">(ไฟล์เดียวใช้ได้ทั้งความขุ่นและความนำไฟฟ้า)</span>
+        </div>
+        <div class="qbtns"><a href="report_ec.html" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>
+      </div></div>
+      <iframe class="daily" id="if-ec" data-src="report_ec.html"></iframe>
+    </div>
     <!-- ═══ 4.5) รายงานสรุปคุณภาพน้ำสถานีสูบจ่ายน้ำ ═══ -->
     <div class="pg" id="pg-pump">
       <div class="crumb">หน้าแรก / <b>สถานีสูบจ่ายน้ำ</b></div>
@@ -369,6 +399,8 @@ function go(id,btn){
   document.getElementById('pg-'+id).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const fr=document.getElementById('if-'+id);   // โหลดรายงานความขุ่น/EC เมื่อเปิดครั้งแรก
+  if(fr&&!fr.getAttribute('src'))fr.src=fr.dataset.src;
 }
 /* ── Dashboard charts (mock — TODO: ต่อ Firebase) ── */
 const days=[...Array(14)].map((_,i)=>(8+i)+' ส.ค.');
