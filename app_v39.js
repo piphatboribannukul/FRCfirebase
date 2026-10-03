@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '39.2-test';   // [v39 test] เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี
+const APP_VERSION = '39.3-test';   // [v39 test] เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี
 // ฤดูฝน มิ.ย.–พ.ย. (ใช้กับคู่ที่เวลาเดินน้ำต่างตามฤดู เช่น สจ.บางพลี → สภ.คลองด่าน แล้ง 17 / ฝน 20.5)
 function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 // [v39 · 3 ต.ค. 2569] ตารางเวลาเดินน้ำปรับใหม่ 47 คู่ จากการเทียบพีค TWQMS รายชั่วโมง ม.ค.–ก.ย. 2569 (7 เดือน, EC+FRC,
@@ -497,6 +497,7 @@ function onStationKSelect() {
   }
   document.getElementById('ep-station-k').value = k_hr.toFixed(5);
   updateStationKDisplay(k_hr);
+  try { if (typeof _v39KSuggest === 'function') _v39KSuggest(sid, k_hr); } catch(e) { console.warn('[v39] K suggest', e.message); }
 }
 
 function updateStationKDisplay(k_hr) {
@@ -607,11 +608,14 @@ function applyResearchK() {
 }
 
 // ── Firebase + localStorage save/load ────────────────────────────────────
-const _CONTOUR_K_FB_PATH = 'settings/contour_k_override';
+// [v39.3] หน้าทดสอบเก็บ K แยก ไม่กระทบ K ของหน้าหลัก (ครั้งแรกคัดลอกจากหน้าหลักมาเป็นค่าตั้งต้น)
+const _CONTOUR_K_FB_PATH = 'settings/contour_k_override_v39';
+const _CONTOUR_K_FB_PATH_PROD = 'settings/contour_k_override';
+window._v39ProdK = Object.assign({}, CONTOUR_K_OVERRIDE);   // K ของหน้าหลัก (ใช้เทียบ 'เดิม')
 
 async function _saveContourK() {
   // 1. localStorage (backup เสมอ)
-  try { localStorage.setItem('mwa_contour_k_override', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
+  try { localStorage.setItem('mwa_contour_k_override_v39', JSON.stringify(CONTOUR_K_OVERRIDE)); } catch(e) {}
   // 2. Firebase (primary) — ต้อง login
   if (window._fbReady && window._fb) {
     if (!window._fbUser) {
@@ -628,6 +632,20 @@ async function _saveContourK() {
 }
 
 async function _loadContourK() {
+  // [v39.3] โหลด K ของหน้าหลักไว้เทียบ + ถ้า v39 ยังไม่เคยบันทึก ใช้ K หน้าหลักเป็นค่าตั้งต้น
+  if (window._fbReady && window._fb) {
+    try {
+      const ps = await window._fbGet(window._fbRef(window._fb, _CONTOUR_K_FB_PATH_PROD));
+      if (ps && ps.exists()) { window._v39ProdK = Object.assign({}, ps.val()); }
+      const vs = await window._fbGet(window._fbRef(window._fb, _CONTOUR_K_FB_PATH));
+      if (!(vs && vs.exists()) && ps && ps.exists()) {
+        Object.keys(CONTOUR_K_OVERRIDE).forEach(k => delete CONTOUR_K_OVERRIDE[k]);
+        Object.assign(CONTOUR_K_OVERRIDE, ps.val());
+        console.log('[ContourK v39] ยังไม่มี K ของ v39 → ใช้ K หน้าหลักเป็นค่าตั้งต้น', Object.keys(CONTOUR_K_OVERRIDE).length, 'สถานี');
+        renderStationKList(); return;
+      }
+    } catch(e) { console.warn('[ContourK v39] prod load', e.message); }
+  }
   // 1. ลอง Firebase ก่อน
   if (window._fbReady && window._fb) {
     try {
@@ -655,7 +673,7 @@ async function _loadContourK() {
   }
   // 2. Fallback: localStorage
   try {
-    const saved = localStorage.getItem('mwa_contour_k_override');
+    const saved = localStorage.getItem('mwa_contour_k_override_v39');
     if (saved) {
       const data = JSON.parse(saved);
       Object.assign(CONTOUR_K_OVERRIDE, data);
@@ -667,7 +685,7 @@ async function _loadContourK() {
 
 // โหลด: localStorage ทันที (fast), Firebase หลัง ready (override)
 try {
-  const saved = localStorage.getItem('mwa_contour_k_override');
+  const saved = localStorage.getItem('mwa_contour_k_override_v39');
   if (saved) Object.assign(CONTOUR_K_OVERRIDE, JSON.parse(saved));
 } catch(e) {}
 
@@ -15504,7 +15522,7 @@ window._v39SetCal = function (on) {
 //   t = เวลาเดินน้ำจากตาราง (ไม่แตะ t / v) · หาร _tempKFactor ออก เพราะ epanetDecay คูณกลับเอง (ไม่นับอุณหภูมิซ้ำ)
 //   K ระดับ pixel: IDW (log) จาก anchor ของต้นทางเดียวกัน ผสมกับค่ากลางของโซน · โซนที่ไม่มี anchor = ไม่แตะ K เดิม
 const LS_V39K_KEY = 'v39_fit_k';
-window.V39_FIT_K = (function(){ try { return localStorage.getItem(LS_V39K_KEY) === '1'; } catch(e){ return false; } })();
+window.V39_FIT_K = false;   // [v39.3] ปิดถาวร — K รายสถานีแบบอัตโนมัติ ไม่ generalize (ตรวจแบบซ่อนสถานีแย่ลง) → ใช้ K จากเมนู EPANET Parameters แทน
 const V39_K_MIN = 0.005, V39_K_MAX = 0.5, V39_K_WIN_H = 72, V39_K_MIN_N = 12;
 window._v39K = {}; window._v39Kzone = {}; window._v39KMemo = {};
 function _v39HistIndex() {
@@ -15562,49 +15580,73 @@ window._v39SetFitK = function (on) {
   window._c0Memo = {}; console.log('[v39.2] 🧪 ปรับ K ตามเวลาใหม่:', on ? 'ON' : 'OFF');
   if (typeof _maintRebuild === 'function') _maintRebuild(); else { buildIdwCache(); if (typeof redrawContour === 'function') redrawContour(); }
 };
-// ตรวจ 3 แบบ (เดิม / เวลาใหม่ / เวลาใหม่+K ใหม่) × 2 วิธี (ปกติ / ซ่อนสถานีที่กำลังตรวจ)
+// ═══ [v39.3] K แนะนำรายสถานี (ต้นทาง) — แสดงในเมนู EPANET Parameters ให้ผู้ใช้ตัดสินใจเอง ═══
+//   ใช้ t จากตาราง (ไม่แตะ t) · K ของแต่ละคู่ = ค่ากลาง ln(C₀(τ−t)/C(τ))/t ย้อนหลัง 72 ชม. (หารผลอุณหภูมิออก)
+//   แนะนำจากเส้นทาง ≥ 6 ชม. (เส้นทางสั้น K ถูกขยายจากความต่างของ sensor) · จำกัด 0.5–1.5 เท่าของค่าปัจจุบัน
+window._v39KSuggest = function (sid, kNow) {
+  let box = document.getElementById('v39-k-suggest');
+  const ed = document.getElementById('ep-station-k-editor'); if (!ed) return;
+  if (!box) { ed.insertAdjacentHTML('beforeend', '<div id="v39-k-suggest" style="margin-top:6px;padding:6px;border:1px dashed #0b63c4;border-radius:5px;font-size:9.5px;color:#0b3d7a;line-height:1.45;"></div>'); box = document.getElementById('v39-k-suggest'); }
+  _v39BuildAnchors(); _v39FitK(null);
+  const A = (window._v39K[String(sid)] || []).slice().sort((a, b) => b.tt - a.tt);
+  const anc = (window._v39Anchors[String(sid)] || []);
+  if (!anc.length) { box.innerHTML = '🧪 v39: โซนนี้ไม่มีสถานีวัดอ้างอิง — คง K เดิม'; return; }
+  const ttOf = id => (anc.find(a => a.id === id) || {}).tt;
+  const rows = A.map(a => ({ name: a.name, tt: ttOf(a.id), K: a.K, n: a.n }));
+  const longR = rows.filter(r => r.tt >= 6);
+  let sug = null, note = '';
+  if (longR.length) {
+    const v = longR.map(r => Math.log(r.K)).sort((x, y) => x - y); sug = Math.exp(v[v.length >> 1]);
+    sug = Math.max(kNow * 0.5, Math.min(kNow * 1.5, sug)); note = 'จากเส้นทาง ≥ 6 ชม. ' + longR.length + ' คู่';
+  } else note = 'มีแต่เส้นทางสั้น (< 6 ชม.) — ไม่แนะนำให้ปรับจากข้อมูลนี้';
+  box.innerHTML = '<b>🧪 v39 K แนะนำ (ตามเวลาใหม่, 72 ชม.)</b><br>'
+    + rows.map(r => '• ' + r.name.slice(0, 20) + ' · t=' + (+r.tt).toFixed(1) + ' ชม. · K=' + r.K.toFixed(3) + (r.tt < 6 ? ' <span style="color:#a0a0b0;">(สั้น)</span>' : '')).join('<br>')
+    + '<br>ปัจจุบัน <b>' + kNow.toFixed(3) + '</b> → แนะนำ <b>' + (sug != null ? sug.toFixed(3) : '—') + '</b> /ชม.<br><span style="color:#6080a0;">' + note + '</span>'
+    + (sug != null ? '<br><button onclick="document.getElementById(\'ep-station-k\').value=' + sug.toFixed(4) + ';updateStationKDisplay(' + sug.toFixed(4) + ');" style="margin-top:3px;width:100%;font-size:9.5px;padding:3px;border:1px solid #0b63c4;background:#eef5ff;color:#0b3d7a;border-radius:4px;cursor:pointer;">ใส่ค่าแนะนำ (แล้วกด Apply เอง)</button>' : '');
+};
+// ═══ [v39.3] ตรวจย้อนหลัง 72 ชม. (ทุกชั่วโมง) — ไม่แกว่งตามเวลาที่กด ═══════════════════════
+//   pred = C₀ต้นทาง(τ − t) × e^(−K·tf·t) เทียบ Cปลายทาง(τ)   (C₀ เลื่อนเวลาเสมอ — ใช้ข้อมูลย้อนหลัง)
+//   เดิม: t = เวลา contour เดิม, K = K หน้าหลัก · ใหม่: t = ตาราง, K = K ของ v39 (เมนู EPANET)
+//   ซ่อนสถานี: t ได้จากสถานีอื่นในโซน (ไม่ใช้สถานีที่ตรวจ) · ตัดค่าวัดผิดปกติ (< 0.02 หรือ > 3 mg/L)
 window._v39Validate = function () {
-  const prevC = window.V39_CAL_TT, prevK = window.V39_FIT_K, H = _v39HistIndex();
-  _v39BuildAnchors(); const base = JSON.parse(JSON.stringify(window._v39Anchors));
-  const rows = [];
-  const predict = (src, a, cal, fit) => {
-    window.V39_CAL_TT = cal; window.V39_FIT_K = fit; window._v39Memo = {}; window._v39KMemo = {}; window._c0Memo = {};
-    const m = _v39ModelSec(src, a.lat, a.lon);
-    return _c0For(src, m.dKm, m.dm) * epanetDecay(m.dKm, src, a.lat, a.lon, m.dm);
-  };
+  const H = _v39HistIndex(), now = Date.now(), tf = window._tempKFactor || 1, prevC = window.V39_CAL_TT;
+  window.V39_CAL_TT = true; _v39BuildAnchors(); const base = JSON.parse(JSON.stringify(window._v39Anchors));
+  const kOf = (map, sid) => map[sid] != null ? map[sid] : (STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : K_total * 3600);
+  const acc = { old: [], neu: [], loo: [] }, rows = [];
   for (const [sid, A] of Object.entries(base)) {
-    const src = SENSORS.find(s => String(s.id) === sid);
-    if (!src || !(src.frc > 0) || (typeof _isSensorDown === 'function' && _isSensorDown(src))) continue;
     for (const a of A) {
-      const dst = SENSORS.find(s => String(s.id) === a.id);
-      if (!dst || !(dst.frc > 0) || (typeof _isSensorDown === 'function' && _isSensorDown(dst))) continue;
-      _v39BuildAnchors(); _v39FitK(null, H);
-      const p0 = predict(src, a, false, false), p1 = predict(src, a, true, false), p2 = predict(src, a, true, true);
-      const kz = (window._v39K[sid] || []).find(x => x.id === a.id);
-      _v39BuildAnchors(a.id); _v39FitK(a.id, H);                       // ซ่อนสถานีนี้
-      const l1 = predict(src, a, true, false), l2 = predict(src, a, true, true);
-      rows.push({ สถานี: a.name.slice(0, 24), ต้นทาง: sid, 'วัดจริง': +dst.frc.toFixed(2), 'เดิม': +p0.toFixed(2), 'เวลาใหม่': +p1.toFixed(2), 'เวลา+K': +p2.toFixed(2),
-        'ซ่อน:เวลาใหม่': +l1.toFixed(2), 'ซ่อน:เวลา+K': +l2.toFixed(2), 'ชม.': +a.tt.toFixed(1), 'K ใหม่/ชม.': kz ? +kz.K.toFixed(3) : '—', 'n K': kz ? kz.n : 0 });
+      _v39BuildAnchors(a.id); window._v39Memo = {};
+      const tLoo = a.tm * _v39Factor(sid, a.lat, a.lon);
+      const kOld = kOf(window._v39ProdK || {}, sid), kNew = kOf(CONTOUR_K_OVERRIDE, sid);
+      const e = { old: [], neu: [], loo: [] };
+      for (let h = 0; h < 72; h++) {
+        const ts = now - h * 3600000, obs = _v39ValAt(H[a.id], ts, 40 * 60000);
+        if (!(obs >= 0.02 && obs <= 3)) continue;
+        const pr = (t, k) => { const c0 = _v39ValAt(H[sid], ts - t * 3600000, 40 * 60000); return (c0 >= 0.02 && c0 <= 5) ? c0 * Math.exp(-k * tf * t) : null; };
+        const p0 = pr(a.tm, kOld), p1 = pr(a.tt, kNew), p2 = pr(tLoo, kNew);
+        if (p0 == null || p1 == null || p2 == null) continue;
+        e.old.push(p0 - obs); e.neu.push(p1 - obs); e.loo.push(p2 - obs);
+      }
+      if (e.old.length < 12) continue;
+      const m = x => x.reduce((s, v) => s + Math.abs(v), 0) / x.length, b = x => x.reduce((s, v) => s + v, 0) / x.length;
+      ['old', 'neu', 'loo'].forEach(k => acc[k].push(...e[k].map(v => ({ v, long: a.tt >= 10 }))));
+      rows.push({ สถานี: a.name.slice(0, 24), ต้นทาง: sid, 'ชม.เดิม': +a.tm.toFixed(1), 'ชม.ใหม่': +a.tt.toFixed(1), 'ชม.(ซ่อน)': +tLoo.toFixed(1),
+        'K เดิม': +kOld.toFixed(3), 'K v39': +kNew.toFixed(3), n: e.old.length,
+        'คลาด เดิม': +m(e.old).toFixed(3), 'คลาด ใหม่': +m(e.neu).toFixed(3), 'คลาด ซ่อน': +m(e.loo).toFixed(3), 'เอียง เดิม': +b(e.old).toFixed(3), 'เอียง ใหม่': +b(e.neu).toFixed(3) });
     }
   }
-  window.V39_CAL_TT = prevC; window.V39_FIT_K = prevK; _v39BuildAnchors(); if (prevK) _v39FitK(null, H);
-  window._v39Memo = {}; window._v39KMemo = {}; window._c0Memo = {};
-  const st = k => ({ mae: rows.reduce((s, r) => s + Math.abs(r[k] - r['วัดจริง']), 0) / Math.max(1, rows.length),
-                     bias: rows.reduce((s, r) => s + (r[k] - r['วัดจริง']), 0) / Math.max(1, rows.length) });
-  const R = { n: rows.length, เดิม: st('เดิม'), เวลาใหม่: st('เวลาใหม่'), 'เวลา+K': st('เวลา+K'), 'ซ่อน:เวลาใหม่': st('ซ่อน:เวลาใหม่'), 'ซ่อน:เวลา+K': st('ซ่อน:เวลา+K') };
+  window.V39_CAL_TT = prevC; _v39BuildAnchors(); window._v39Memo = {}; window._c0Memo = {};
+  const S = (arr, f) => { const x = arr.filter(f || (() => true)).map(o => o.v); return x.length ? { mae: x.reduce((s, v) => s + Math.abs(v), 0) / x.length, bias: x.reduce((s, v) => s + v, 0) / x.length, n: x.length } : { mae: NaN, bias: NaN, n: 0 }; };
+  const R = {}; for (const [k, l] of [['old', 'เดิม'], ['neu', 'เวลาใหม่ + K v39'], ['loo', 'ซ่อนสถานี: เวลาใหม่ + K v39']]) {
+    R[l] = { all: S(acc[k]), short: S(acc[k], o => !o.long), long: S(acc[k], o => o.long) }; }
   console.table(rows);
-  console.table(Object.fromEntries(Object.entries(R).filter(([k]) => k !== 'n').map(([k, v]) => [k, { 'คลาดเฉลี่ย': +v.mae.toFixed(3), 'เอียง': +v.bias.toFixed(3) }])));
-  if (window._v39Skipped.length) { console.log('[v39] anchor ที่ไม่ใช้ (ความเร็วหลุดช่วง):'); console.table(window._v39Skipped); }
-  const el = document.getElementById('v39-result'), f = v => v.mae.toFixed(3) + ' <span style="color:#6080a0;">(' + (v.bias >= 0 ? '+' : '') + v.bias.toFixed(3) + ')</span>';
-  if (el) el.innerHTML = 'ตรวจ ' + R.n + ' สถานี · คลาดเฉลี่ย mg/L <span style="color:#6080a0;">(เอียง)</span>'
-    + '<table style="width:100%;font-size:10px;margin-top:3px;border-collapse:collapse;">'
-    + '<tr><td>เดิม</td><td style="text-align:right;">' + f(R['เดิม']) + '</td></tr>'
-    + '<tr><td>เวลาใหม่</td><td style="text-align:right;">' + f(R['เวลาใหม่']) + '</td></tr>'
-    + '<tr><td><b>เวลาใหม่ + K ใหม่</b></td><td style="text-align:right;"><b>' + f(R['เวลา+K']) + '</b></td></tr>'
-    + '<tr><td colspan="2" style="color:#6080a0;padding-top:3px;">ซ่อนสถานีที่ตรวจ (เข้มกว่า):</td></tr>'
-    + '<tr><td>&nbsp; เวลาใหม่</td><td style="text-align:right;">' + f(R['ซ่อน:เวลาใหม่']) + '</td></tr>'
-    + '<tr><td>&nbsp; <b>เวลาใหม่ + K ใหม่</b></td><td style="text-align:right;"><b>' + f(R['ซ่อน:เวลา+K']) + '</b></td></tr></table>'
-    + '<span style="color:#6080a0;">ตารางรายสถานีใน Console (F12)</span>';
+  console.table(Object.fromEntries(Object.entries(R).map(([l, r]) => [l, { 'คลาด ทั้งหมด': +r.all.mae.toFixed(3), 'เอียง ทั้งหมด': +r.all.bias.toFixed(3), 'คลาด สั้น<10ชม.': +r.short.mae.toFixed(3), 'คลาด ยาว≥10ชม.': +r.long.mae.toFixed(3), 'เอียง ยาว': +r.long.bias.toFixed(3), 'จุดเทียบ': r.all.n }])));
+  const f = v => isNaN(v.mae) ? '—' : v.mae.toFixed(3) + ' <span style="color:#6080a0;">(' + (v.bias >= 0 ? '+' : '') + v.bias.toFixed(3) + ')</span>';
+  const el = document.getElementById('v39-result');
+  if (el) el.innerHTML = 'ย้อนหลัง 72 ชม. · ' + rows.length + ' สถานี · ' + R['เดิม'].all.n + ' จุดเทียบ<br>คลาดเฉลี่ย mg/L <span style="color:#6080a0;">(เอียง)</span>'
+    + '<table style="width:100%;font-size:10px;margin-top:3px;border-collapse:collapse;"><tr style="color:#6080a0;"><td></td><td style="text-align:right;">ทั้งหมด</td><td style="text-align:right;">ยาว≥10ชม.</td></tr>'
+    + Object.entries(R).map(([l, r]) => '<tr><td>' + l.replace('ซ่อนสถานี: ', 'ซ่อน: ').replace(' + K v39', '') + '</td><td style="text-align:right;">' + f(r.all) + '</td><td style="text-align:right;">' + f(r.long) + '</td></tr>').join('')
+    + '</table><span style="color:#6080a0;">ตารางรายสถานีใน Console (F12) · K v39 ปรับได้ที่ EPANET Parameters</span>';
   return R;
 };
 function _v39InjectUI() {
@@ -15613,13 +15655,11 @@ function _v39InjectUI() {
   if (!anchor) { setTimeout(_v39InjectUI, 3000); return; }
   anchor.insertAdjacentHTML('afterend',
     '<div class="sblock" id="v39-block" style="cursor:default;border:1.5px dashed #0b63c4;">' +
-      '<div style="font-weight:700;font-size:11px;color:#0b3d7a;margin-bottom:5px;">🧪 v39.2 test — เวลาเดินน้ำ + K ใน contour</div>' +
+      '<div style="font-weight:700;font-size:11px;color:#0b3d7a;margin-bottom:5px;">🧪 v39.3 test — เวลาเดินน้ำใน contour</div>' +
+      '<div style="font-size:9.5px;color:#6080a0;margin-bottom:5px;line-height:1.4;">t (เวลาเดินน้ำ) มาจากตาราง · K (การสลายตัว) ปรับแยกรายสถานีที่ EPANET Parameters → K รายสถานี (เก็บแยกจากหน้าหลัก)</div>' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;margin-bottom:5px;" onclick="event.stopPropagation()">' +
         '<input type="checkbox" id="v39-toggle" ' + (window.V39_CAL_TT ? 'checked' : '') + ' onchange="window._v39SetCal(this.checked)" style="accent-color:#0b63c4;">' +
         '<span>📐 ใช้ความเร็วจริงรายสถานี <span style="color:#6080a0;">(ปิด = contour เดิม)</span></span></label>' +
-      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;margin-bottom:5px;" onclick="event.stopPropagation()">' +
-        '<input type="checkbox" id="v39k-toggle" ' + (window.V39_FIT_K ? 'checked' : '') + ' onchange="window._v39SetFitK(this.checked)" style="accent-color:#0b63c4;">' +
-        '<span>🧪 ปรับ K ตามเวลาใหม่ <span style="color:#6080a0;">(72 ชม.ล่าสุด)</span></span></label>' +
       '<button onclick="event.stopPropagation();window._v39Validate()" style="width:100%;padding:5px;font-size:10.5px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;border:1px solid #0b63c4;background:#eef5ff;color:#0b3d7a;cursor:pointer;">ตรวจ contour เทียบค่าวัดจริง</button>' +
       '<div id="v39-result" style="font-size:10px;color:#0b3d7a;margin-top:5px;line-height:1.45;"></div>' +
     '</div>');
