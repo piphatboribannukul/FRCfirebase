@@ -229,7 +229,7 @@ function groupCard(gIdx){
   const g=REPORT.gdef[gIdx],list=REPORT.stations.filter(x=>x.g===gIdx),st=stats(list);
   const rows=list.map(x=>{
     const wn=isHidden(x)?`<span class="wn" title="ค่าสูงสุดรายชั่วโมง ${fmt(x.max)} µS/cm เวลา ${x.maxT} น.">⚠${x.maxT}</span>`:'';
-    const part=(x.avg!=null&&x.n<24)?`<span class="hrs" title="มีข้อมูล ${x.n} จาก 24 ชั่วโมง">${x.n}ชม.</span>`:'';
+    const exTag=x.excl?`<span class="hrs" style="background:#fde8e8;color:#b02a1f" title="${x.excl}">ตัดออก</span>`:'';const part=exTag||((x.avg!=null&&x.n<24)?`<span class="hrs" title="มีข้อมูล ${x.n} จาก 24 ชั่วโมง">${x.n}ชม.</span>`:'');
     return `<tr><td class="no">${x.no}</td><td class="st">${x.name}${wn}${part}</td><td class="v ${turClass(x.avg)}">${fmt(x.avg)}</td><td class="v ${turClass(x.max)}">${fmt(x.max)}</td><td class="v ${x.min==null?'na':'mn'}">${fmt(x.min)}</td></tr>`;
   }).join('');
   const sub=st?`<span class="gsum">เฉลี่ย ${fmt(st.avg)} · สูงสุด ${fmt(st.max)}</span>`:'';
@@ -271,7 +271,7 @@ function renderAreas(){
 /* ── การจัดเรียง: แถวแรก = โรงงานผลิตน้ำ 4 แห่ง · ถัดไป = บริการ 1–5 (สถานีในพื้นที่สาขาของภาคนั้น จัดกลุ่มตามสาขา) ── */
 function stRow(x){
   const wn=isHidden(x)?`<span class="wn" title="ค่าสูงสุดรายชั่วโมง ${fmt(x.max)} µS/cm เวลา ${x.maxT} น.">⚠${x.maxT}</span>`:'';
-  const part=(x.avg!=null&&x.n<24)?`<span class="hrs" title="มีข้อมูล ${x.n} จาก 24 ชั่วโมง">${x.n}ชม.</span>`:'';
+  const exTag=x.excl?`<span class="hrs" style="background:#fde8e8;color:#b02a1f" title="${x.excl}">ตัดออก</span>`:'';const part=exTag||((x.avg!=null&&x.n<24)?`<span class="hrs" title="มีข้อมูล ${x.n} จาก 24 ชั่วโมง">${x.n}ชม.</span>`:'');
   return `<tr><td class="no">${x.no}</td><td class="st">${x.name}${wn}${part}</td><td class="v ${turClass(x.avg)}">${fmt(x.avg)}</td><td class="v ${turClass(x.max)}">${fmt(x.max)}</td><td class="v ${x.min==null?'na':'mn'}">${fmt(x.min)}</td></tr>`;
 }
 function card(title,col,bg,list,groups){
@@ -815,9 +815,10 @@ async function importFile(file){
     if(!matched)throw new Error('ไม่พบแท็บสถานีที่ตรงกับรายชื่อ — ใช่ไฟล์รายงาน R030301 (รายงานคุณภาพน้ำรายวัน) หรือไม่');
     if(date){const th=`${date.d} ${TH_M[date.m]} ${date.y}`;REPORT.date=`${String(date.d).padStart(2,'0')}/${String(date.m).padStart(2,'0')}/${date.y}`;
       document.querySelector('.hd .d .big').textContent=th;document.title='รายงานความนำไฟฟ้าน้ำประปา · '+th;}
+    const exN=await applyExclude();
     renderKPI();renderTables();buildMarkers();markerLayer.addTo(map);
     const noData=REPORT.stations.filter(s=>s.avg==null).length;
-    banner('✓ นำเข้าข้อมูล'+(date?' วันที่ '+document.querySelector('.hd .d .big').textContent:'')+' — '+matched+' สถานี'+(noData?' (ไม่มีข้อมูลความนำไฟฟ้า '+noData+' สถานี)':'')+(unknown.length?' · ไม่รู้จักชื่อ: '+unknown.join(', '):''),unknown.length?'#fff8e6':'#e0f3e8',unknown.length?'#7a5c00':'#0f7a43');
+    banner('✓ นำเข้าข้อมูล'+(date?' วันที่ '+document.querySelector('.hd .d .big').textContent:'')+' — '+matched+' สถานี'+(noData?' (ไม่มีข้อมูลความนำไฟฟ้า '+noData+' สถานี)':'')+(exN?' · ตัดออก '+exN+' สถานี (เซนเซอร์ผิดปกติ)':'')+(unknown.length?' · ไม่รู้จักชื่อ: '+unknown.join(', '):''),unknown.length?'#fff8e6':'#e0f3e8',unknown.length?'#7a5c00':'#0f7a43');
     if(!unknown.length)setTimeout(bannerHide,7000);
   }catch(e){console.error(e);banner('⚠ นำเข้าไม่สำเร็จ: '+(e&&e.message||e),'#fde8e8','#b02a1f');}
 }
@@ -832,6 +833,9 @@ const FB_SRC={p:'ec'};
 /* ══ ยังไม่นำเข้าไฟล์ → ดึงข้อมูลอัตโนมัติผ่านบอท (Railway → Firebase · ทุก 15 นาที) ชุดเดียวกับการ์ด LINE ══
    ?d=-1 = เมื่อวาน (ทั้งวัน) · ค่าเริ่มต้น = วันนี้ 0.00 น.–ปัจจุบัน · นำเข้าไฟล์ TWQMS เมื่อไรก็แทนที่ทันที */
 const WQ_API='https://frc-line-bot-production.up.railway.app/wq-stats.json';
+/* สถานีที่ตัดออก (เซนเซอร์เสีย/ค่าค้าง) — รายการเดียวกับบอท LINE (พิมพ์ "ตัดค่า …" ในไลน์) ใช้กับการนำเข้าไฟล์ด้วย */
+async function applyExclude(){try{const r=await fetch('https://frc-line-bot-production.up.railway.app/wq-exclude.json?t='+Date.now());if(!r.ok)return 0;
+  const ex=((await r.json())||{})['ec']||{};let n=0;REPORT.stations.forEach(s=>{if(ex[s.id]){s.avg=s.max=s.min=null;s.maxT=s.minT='';s.n=0;s.excl=ex[s.id].reason||'ตัดออก';n++;}else s.excl='';});return n;}catch(e){return 0;}}
 async function loadFromFirebase(dayOffset){
   dayOffset=dayOffset<0?-1:0;
   banner('⏳ กำลังดึงข้อมูลจากระบบอัตโนมัติ…','#fff8e6','#7a5c00');
