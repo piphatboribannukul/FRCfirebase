@@ -827,30 +827,24 @@ document.getElementById('fileIn').onchange=e=>{if(e.target.files[0])importFile(e
   window.addEventListener('dragleave',e=>{e.preventDefault();if(--c<=0){c=0;dz.style.display='none';}});
   window.addEventListener('dragover',e=>e.preventDefault());
   window.addEventListener('drop',e=>{e.preventDefault();c=0;dz.style.display='none';const f=e.dataTransfer.files[0];if(f)importFile(f);});})();
-const FB_SRC={node:'history_wq',field:'tub'};
+const FB_SRC={p:'tub'};
 
-/* ══ ยังไม่นำเข้าไฟล์ → ดึงจากฐานข้อมูลอัตโนมัติ (Firebase · collector ทุก 15 นาที) ชุดเดียวกับบอท LINE ══
+/* ══ ยังไม่นำเข้าไฟล์ → ดึงข้อมูลอัตโนมัติผ่านบอท (Railway → Firebase · ทุก 15 นาที) ชุดเดียวกับการ์ด LINE ══
    ?d=-1 = เมื่อวาน (ทั้งวัน) · ค่าเริ่มต้น = วันนี้ 0.00 น.–ปัจจุบัน · นำเข้าไฟล์ TWQMS เมื่อไรก็แทนที่ทันที */
-const FB_URL='https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+const WQ_API='https://frc-line-bot-production.up.railway.app/wq-stats.json';
 async function loadFromFirebase(dayOffset){
   dayOffset=dayOffset<0?-1:0;
-  const b=new Date(Date.now()+7*3600e3), mid=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate())-7*3600e3+dayOffset*86400e3, end=dayOffset<0?mid+86400e3:null;
-  const expH=dayOffset<0?24:Math.max(1,Math.floor((Date.now()-mid)/3600e3));
   banner('⏳ กำลังดึงข้อมูลจากระบบอัตโนมัติ…','#fff8e6','#7a5c00');
-  let q=`orderBy=%22%24key%22&startAt=%22${mid}%22`+(end?`&endAt=%22${end-1}%22`:'');
+  let J=null;
+  try{const r=await fetch(`${WQ_API}?p=${FB_SRC.p}&d=${dayOffset}&t=${Date.now()}`);if(r.ok)J=await r.json();}catch(e){console.error(e);}
+  const S=(J&&J.stations)||{};
+  REPORT.stations.forEach(s=>{s.avg=s.max=s.min=null;s.maxT='';s.n=0;});
+  if(!J||!Object.keys(S).length){banner('⚠ ดึงข้อมูลจากระบบอัตโนมัติไม่ได้ — กด <b>📂 นำเข้าไฟล์ TWQMS</b> หรือลากไฟล์ .xlsx (รายงาน R030301) มาวาง','#fde8e8','#b02a1f');return;}
+  const mid=J.start, expH=dayOffset<0?24:Math.max(1,Math.floor((Date.now()-mid)/3600e3));
   let got=0;
-  await Promise.all(REPORT.stations.map(async s=>{
-    s.avg=s.max=s.min=null;s.maxT='';s.n=0;
-    try{
-      const r=await fetch(`${FB_URL}/${FB_SRC.node}/${encodeURIComponent(s.id)}.json?${q}`);if(!r.ok)return;
-      const v=await r.json()||{};let sum=0,n=0,max=null,mts=0,min=null;const hrs=new Set();
-      for(const p of Object.values(v)){const t=okNum(p&&p[FB_SRC.field]);if(t==null)continue;sum+=t;n++;hrs.add(Math.floor((Number(p.ts)-mid)/3600e3));
-        if(max==null||t>max){max=t;mts=Number(p.ts);}if(min==null||t<min)min=t;}
-      if(n){Object.assign(s,{avg:+(sum/n).toFixed(2),max,min,n:hrs.size>=expH-1?24:hrs.size,
-        maxT:new Date(mts).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hour12:false})});got++;}
-    }catch(e){}
-  }));
-  if(!got){banner('⚠ ดึงข้อมูลจากระบบอัตโนมัติไม่ได้ — กด <b>📂 นำเข้าไฟล์ TWQMS</b> หรือลากไฟล์ .xlsx (รายงาน R030301) มาวาง','#fde8e8','#b02a1f');return;}
+  REPORT.stations.forEach(s=>{const d=S[s.id];if(!d)return;got++;
+    Object.assign(s,{avg:+d.avg.toFixed(2),max:d.max,min:d.min,n:(d.h||0)>=expH-1?24:(d.h||0),
+      maxT:new Date(Number(d.maxTs)).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hour12:false})});});
   const dd=new Date(mid+12*3600e3),D=dd.getUTCDate(),Mo=dd.getUTCMonth()+1,Y=dd.getUTCFullYear()+543;
   const now=new Date().toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hour12:false});
   const th=`${D} ${TH_M[Mo]} ${Y}`;
