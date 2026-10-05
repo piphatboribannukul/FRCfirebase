@@ -112,8 +112,9 @@ td.v.mn{color:#5c7883;font-weight:600}
 .at .v b.ok{background:var(--okbg);color:var(--ok)}.at .v b.watch{background:var(--watchbg);color:var(--watch)}.at .v b.bad{background:var(--badbg);color:var(--bad)}.at .v b.na{background:var(--nabg);color:var(--na)}
 @media(max-width:900px){.areas{grid-template-columns:repeat(2,1fr)}.areas .ah,.areas .ah.r{grid-column:1/-1}}
 .plants{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:9px 14px 0;align-items:start}
+.plants.pumps{grid-template-columns:1fr 2fr}
 tr.bh td{background:#fff;font-family:var(--disp);font-size:11px;font-weight:700;color:var(--bc);padding:3px 7px 2px;border-top:1px solid var(--bc);border-bottom:1.5px solid var(--bc);letter-spacing:.1px}
-@media(max-width:900px){.plants{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.plants,.plants.pumps{grid-template-columns:1fr 1fr}}
 .tb .ibtn{background:#0f7a43;color:#fff;border-radius:6px;padding:6px 14px;font-weight:600}
 .sheet.exporting .tb,.sheet.exporting #dayload{display:none!important;}
 @media print{#drop{display:none!important}body{background:#fff;padding:0}.sheet{box-shadow:none;border-radius:0;max-width:100%}.tb{display:none}@page{size:A4 landscape;margin:4mm}}
@@ -138,7 +139,7 @@ tr.bh td{background:#fff;font-family:var(--disp);font-size:11px;font-weight:700;
   .hd .s{font-size:10.5px;line-height:1.35}
   .hd .d{flex-basis:100%;width:100%;text-align:left;display:flex;align-items:baseline;gap:8px;border-top:1px solid rgba(255,255,255,.25);padding-top:6px}
   .hd .d .val{font-size:12px}.hd .d .big{font-size:17px}
-  .plants{grid-template-columns:1fr}
+  .plants,.plants.pumps{grid-template-columns:1fr}
   .gh .gsum{float:none;display:block;margin-top:2px}
 }
 </style></head><body>
@@ -170,6 +171,7 @@ tr.bh td{background:#fff;font-family:var(--disp);font-size:11px;font-weight:700;
   </div>
   <div id="dayload" style="display:none;margin:0 16px;padding:8px 14px;border-radius:9px;font-family:var(--disp);font-size:11.5px;"></div>
   <div class="plants" id="plantRow"></div>
+  <div class="plants pumps" id="pumpRow"></div>
   <div id="drop">วางไฟล์ TWQMS (.xlsx) ที่นี่</div>
  <div class="main">
     <div class="col" id="colLeft"></div>
@@ -250,12 +252,20 @@ const REGIONS=[
 const BR2REG={};REGIONS.forEach(r=>r.br.forEach(b=>BR2REG[b]=r));
 const plantList=p=>REPORT.stations.filter(s=>p.ids.includes(s.id));
 const ALL_PLANT_IDS=PLANTS.flatMap(p=>p.ids);
-const regionList=r=>REPORT.stations.filter(s=>r.br.includes(s.branch)&&!ALL_PLANT_IDS.includes(s.id)).sort((a,b)=>r.br.indexOf(a.branch)-r.br.indexOf(b.branch)||a._o-b._o);
-/* ลำดับเลขสถานี = ลำดับที่แสดง (โรงงาน → บริการ 1–5 → ตามสาขา) */
+/* สถานีสูบจ่ายน้ำ แบ่งฝั่งตะวันตก/ตะวันออก (แม่น้ำเจ้าพระยา) — ไม่นับซ้ำในบริการ 1–5 (ตรงกับการ์ด LINE) */
+const PUMPS=[
+  {name:'สถานีสูบจ่าย · ฝั่งตะวันตก',sub:'ราษฎร์บูรณะ · เพชรเกษม · ท่าพระ',ids:['SW08','SW09','SW10']},
+  {name:'สถานีสูบจ่าย · ฝั่งตะวันออก',sub:'ลาดพร้าว · ลุมพินี · คลองเตย · สำโรง · มีนบุรี · ลาดกระบัง · บางพลี · พหลโยธิน',ids:['SW02','SW01','SW03','SW04','SW05','SW06','SW07','SW11']},
+];
+const ALL_PUMP_IDS=PUMPS.flatMap(p=>p.ids), PUMP_COL='#047857', PUMP_BG='#e7f6ef';
+const pumpList=p=>p.ids.map(id=>REPORT.stations.find(s=>s.id===id)).filter(Boolean);
+const regionList=r=>REPORT.stations.filter(s=>r.br.includes(s.branch)&&!ALL_PLANT_IDS.includes(s.id)&&!ALL_PUMP_IDS.includes(s.id)).sort((a,b)=>r.br.indexOf(a.branch)-r.br.indexOf(b.branch)||a._o-b._o);
+/* ลำดับเลขสถานี = ลำดับที่แสดง (โรงงาน → สถานีสูบจ่าย → บริการ 1–5 → ตามสาขา) */
 (function(){REPORT.stations.forEach(s=>s._o=s.no);let k=1;
   PLANTS.forEach(p=>p.ids.forEach(id=>{const s=REPORT.stations.find(x=>x.id===id);if(s)s.no=k++;}));
+  PUMPS.forEach(p=>pumpList(p).forEach(s=>s.no=k++));
   REGIONS.forEach(r=>regionList(r).forEach(s=>s.no=k++));
-  REPORT.stations.forEach(s=>{if(s.no===s._o&&!ALL_PLANT_IDS.includes(s.id)&&!BR2REG[s.branch])s.no=k++;});
+  REPORT.stations.forEach(s=>{if(s.no===s._o&&!ALL_PLANT_IDS.includes(s.id)&&!ALL_PUMP_IDS.includes(s.id)&&!BR2REG[s.branch])s.no=k++;});
   REPORT.stations.forEach(s=>s.noR=s.no);})();
 let layoutMode='region';
 function applyNumbering(){REPORT.stations.forEach(s=>s.no=layoutMode==='region'?s.noR:s._o);}
@@ -266,6 +276,7 @@ function renderAreas(){
       `<div class="v">เฉลี่ย <b class="${c}">${st?st.avg.toFixed(2):'–'}</b> สูงสุด <b class="${cm}">${st?fmt(st.max):'–'}</b> <span>${st?st.n:0}/${list.length}</span></div></div>`;};
   el.innerHTML=`<div class="ah">🏭 น้ำออกจากโรงงานผลิตน้ำ (NTU)</div><div class="ah r">🗺 แบ่งตามภาค — ผู้ช่วยผู้ว่าการ (บริการ 1–5)</div>`+
     PLANTS.map(p=>tile(p.name,p.sub,'#6f8496',plantList(p))).join('')+
+    PUMPS.map(p=>tile(p.name,p.sub,PUMP_COL,pumpList(p))).join('')+
     REGIONS.map(r=>tile(r.name,r.br.join(' · '),r.col,regionList(r))).join('');
 }
 /* ── การจัดเรียง: แถวแรก = โรงงานผลิตน้ำ 4 แห่ง · ถัดไป = บริการ 1–5 (สถานีในพื้นที่สาขาของภาคนั้น จัดกลุ่มตามสาขา) ── */
@@ -283,13 +294,14 @@ function card(title,col,bg,list,groups){
 const PLANT_COL='#4f6b7d',PLANT_BG='#eef2f5';
 function regionCard(i){const r=REGIONS[i];return card(r.name,r.col,r.bg,regionList(r),r.br.map(b=>[b,regionList(r).filter(s=>s.branch===b)]));}
 function renderTables(){
-  const pr=document.getElementById('plantRow'),cm=document.getElementById('colMid');
+  const pr=document.getElementById('plantRow'),pu=document.getElementById('pumpRow'),cm=document.getElementById('colMid');
   if(layoutMode==='station'){   // แบบเดิม: กลุ่มอิทธิพลโรงสูบ (TR1/TR2/TR3, Dis1/Dis2, มหาสวัสดิ์, โรงงานผลิตน้ำ)
     const byZone=z=>REPORT.gdef.map((g,i)=>[g,i]).filter(([g])=>g.zone===z).map(([,i])=>groupCard(i)).join('');
-    pr.style.display='none';pr.innerHTML='';cm.className='dis';
+    pr.style.display='none';pr.innerHTML='';pu.style.display='none';pu.innerHTML='';cm.className='dis';
     document.getElementById('colLeft').innerHTML=byZone('left');cm.innerHTML=byZone('mid');document.getElementById('colRight').innerHTML=byZone('right');
   }else{
-    pr.style.display='';cm.className='col';
+    pr.style.display='';pu.style.display='';
+    pu.innerHTML=PUMPS.map(p=>card(p.name,PUMP_COL,PUMP_BG,pumpList(p))).join('');cm.className='col';
     pr.innerHTML=PLANTS.map(p=>card(p.name+' · น้ำออกจากโรงงาน',PLANT_COL,PLANT_BG,plantList(p))).join('');
     document.getElementById('colLeft').innerHTML=regionCard(0)+regionCard(2);
     cm.innerHTML=regionCard(1);
@@ -867,6 +879,8 @@ function lineText(){
   const L2=[`📊 สรุปความขุ่นน้ำประปา (TWQMS)`,`ประจำวันที่ ${d}`,`เกณฑ์: 🟢 ≤4  🟡 >4–5  🔴 >5 NTU`,``,`🏭 น้ำออกจากโรงงานผลิตน้ำ (เฉลี่ย / สูงสุด)`];
   const ln=(n,l)=>{const st=stats(l);L2.push(st?`${DOT[turClass(st.avg)]} ${n}  ${st.avg.toFixed(2)} / ${fmt(st.max)}`:`⚪ ${n}  ไม่มีข้อมูล`);};
   PLANTS.forEach(p=>ln(p.name,plantList(p)));
+  L2.push('',`🚰 สถานีสูบจ่ายน้ำ`);
+  PUMPS.forEach(p=>ln(p.name.replace('สถานีสูบจ่าย · ',''),pumpList(p)));
   L2.push('',`🗺 แบ่งตามภาค (เฉลี่ย / สูงสุด)`);
   REGIONS.forEach(r=>ln(`${r.name} (${r.br.join(', ')})`,regionList(r)));
   const ex=S.filter(s=>s.max!=null&&s.max>T_OK).sort((a,b)=>b.max-a.max);
