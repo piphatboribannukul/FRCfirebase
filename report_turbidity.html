@@ -178,7 +178,7 @@ tr.bh td{background:#fff;font-family:var(--disp);font-size:11px;font-weight:700;
     <div class="col"><div class="mapbox"><div id="map"></div></div><div class="col" id="colMid"></div></div>
     <div class="col"><div id="colRight"></div>
       <div class="crit"><h4>เกณฑ์คุณภาพน้ำ</h4>
-        <div class="row"><b>ความขุ่น (NTU)</b><span class="chip c-g">≤ 4.00</span><span class="chip c-y">&gt; 4.00 – 5.00</span><span class="chip c-r">&gt; 5.00</span></div>
+        <div class="row"><b>ความขุ่น (NTU)</b><span class="chip c-g">&lt; 1.00</span><span class="chip c-y">1.00 – 4.00</span><span class="chip c-r">&gt; 4.00</span></div>
         <div style="color:#1c2b31;margin-top:6px;line-height:1.6;font-size:11px">สีช่อง "เฉลี่ย" = ค่าเฉลี่ยรายวัน (จากรายชั่วโมง) · สีช่อง "สูงสุด" = ค่าสูงสุดรายชั่วโมง<br><span class="wn" style="margin-left:0">⚠เวลา</span> = เฉลี่ยผ่าน แต่มีชั่วโมงเกิน 4 NTU (เวลาที่สูงสุด) · <span class="hrs" style="margin-left:0">Nชม.</span> = ข้อมูลไม่ครบ 24 ชม. · "–" = ไม่มีข้อมูล/ซ่อมบำรุง</div>
       </div>
     </div>
@@ -200,8 +200,9 @@ const REPORT = {
 /* ══ รายงานความขุ่น — นำเข้าไฟล์ TWQMS R030301 (รายงานคุณภาพน้ำรายวัน, 1 แท็บ/สถานี, รายชั่วโมง) ══
    เกณฑ์: เขียว ≤ 4.00 NTU · เหลือง > 4.00–5.00 NTU · แดง > 5.00 NTU
    สีหลัก = ค่าเฉลี่ยรายวัน (คำนวณใหม่จากรายชั่วโมง ตัด -9999/ค่าติดลบ) · ⚠ = เฉลี่ยผ่าน แต่ค่าสูงสุดรายชั่วโมงเกิน 4 NTU */
-const T_OK=4,T_WATCH=5;
-function turClass(v){return v==null?"na":(v<=T_OK?"ok":(v<=T_WATCH?"watch":"bad"))}
+/* เกณฑ์ กปน. (ต.ค.69): เขียว <1 · เหลือง 1–4 · แดง >4 NTU */
+const T_GOOD=1,T_OK=4;
+function turClass(v){return v==null?"na":(v<T_GOOD?"ok":(v<=T_OK?"watch":"bad"))}
 function fmt(v){return v==null?"–":v.toFixed(2)}
 const MARKER_COLOR={ok:'#1f9d3f',watch:'#f0a500',bad:'#e23b28',na:'#9aa8ae'};
 const DOT={ok:'🟢',watch:'🟡',bad:'🔴',na:'⚪'};
@@ -217,11 +218,11 @@ REPORT.stations.forEach(s=>{s.prov='';if(s.lat==null)return;for(const f of REPOR
   if(!s.prov){let best=1e9;REPORT.provinces.forEach(f=>(f.t==='Polygon'?[f.c]:f.c).forEach(p=>p[0].forEach(([a,b])=>{const d=(a-s.lat)**2+(b-s.lon)**2;if(d<best){best=d;s.prov=f.p;}})));}   // ตกช่องว่างของขอบเขตแบบย่อ → ใช้จังหวัดที่ใกล้ที่สุด
 });
 const hasData=()=>REPORT.stations.some(s=>s.avg!=null);
-const isHidden=s=>s.avg!=null&&s.avg<=T_OK&&s.max!=null&&s.max>T_OK;
+const isHidden=s=>s.avg!=null&&s.avg<=T_OK&&s.max!=null&&s.max>T_OK;   // เฉลี่ยไม่แดง แต่มีชั่วโมงเกิน 4
 function renderKPI(){
   const s=REPORT.stations,c={ok:0,watch:0,bad:0,na:0,hidden:0};
   s.forEach(x=>{c[turClass(x.avg)]++;if(isHidden(x))c.hidden++;});
-  const K=[[s.length,'สถานีที่รายงาน',''],[c.ok,'ความขุ่นผ่านเกณฑ์ (≤4)','ok'],[c.watch,'เฝ้าระวัง (>4–5)','watch'],[c.bad,'ไม่ผ่านเกณฑ์ (>5)','bad'],[c.na,'ไม่มีข้อมูล','na'],[c.hidden,'เฉลี่ยผ่าน แต่มีชั่วโมงเกิน 4 NTU ⚠','risk']];
+  const K=[[s.length,'สถานีที่รายงาน',''],[c.ok,'ความขุ่นดี (<1)','ok'],[c.watch,'เฝ้าระวัง (1–4)','watch'],[c.bad,'เกินเกณฑ์ (>4)','bad'],[c.na,'ไม่มีข้อมูล','na'],[c.hidden,'เฉลี่ยไม่เกิน 4 แต่มีชั่วโมงเกิน 4 NTU ⚠','risk']];
   document.getElementById('kpi').innerHTML=K.map(([n,cap,cls])=>`<div class="k ${cls}"><div class="num">${hasData()?n:'–'}</div><div class="cap">${cap}</div></div>`).join('');
 }
 function stats(list){const d=list.filter(x=>x.avg!=null);if(!d.length)return null;
@@ -876,7 +877,7 @@ if(!hasData())loadFromFirebase(Number(new URLSearchParams(location.search).get('
 /* ── ข้อความสรุปสำหรับส่ง LINE ── */
 function lineText(){
   const S=REPORT.stations,d=document.querySelector('.hd .d .big').textContent;
-  const L2=[`📊 สรุปความขุ่นน้ำประปา (TWQMS)`,`ประจำวันที่ ${d}`,`เกณฑ์: 🟢 ≤4  🟡 >4–5  🔴 >5 NTU`,``,`🏭 น้ำออกจากโรงงานผลิตน้ำ (เฉลี่ย / สูงสุด)`];
+  const L2=[`📊 สรุปความขุ่นน้ำประปา (TWQMS)`,`ประจำวันที่ ${d}`,`เกณฑ์: 🟢 <1  🟡 1–4  🔴 >4 NTU`,``,`🏭 น้ำออกจากโรงงานผลิตน้ำ (เฉลี่ย / สูงสุด)`];
   const ln=(n,l)=>{const st=stats(l);L2.push(st?`${DOT[turClass(st.avg)]} ${n}  ${st.avg.toFixed(2)} / ${fmt(st.max)}`:`⚪ ${n}  ไม่มีข้อมูล`);};
   PLANTS.forEach(p=>ln(p.name,plantList(p)));
   L2.push('',`🚰 สถานีสูบจ่ายน้ำ`);
