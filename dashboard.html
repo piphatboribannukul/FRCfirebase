@@ -207,6 +207,7 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
     <button class="sb-item" onclick="go('frc',this)"><span class="ic">🧪</span><span class="tx">สรุปคลอรีน</span></button>
     <button class="sb-item" onclick="go('tub',this)"><span class="ic">💧</span><span class="tx">สรุปความขุ่น</span></button>
     <button class="sb-item" onclick="go('ec',this)"><span class="ic">⚡</span><span class="tx">สรุปความนำไฟฟ้า</span></button>
+    <button class="sb-item" onclick="go('monthly',this)"><span class="ic">📈</span><span class="tx">กราฟรายเดือน</span></button>
     <button class="sb-item" onclick="go('pump',this)"><span class="ic">🚰</span><span class="tx">สถานีสูบจ่ายน้ำ</span></button>
     <div class="sb-cap">ข้อมูลคุณภาพน้ำ (TWQMS)</div>
     <button class="sb-item" onclick="window.open('https://twqonline.mwa.co.th/Admin/water-quality-info/report-water-quality','_blank')"><span class="ic">🗂️</span><span class="tx">รายงาน ↗</span></button>
@@ -325,6 +326,17 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
       </div></div>
       <iframe class="daily" id="if-ec" data-src="report_ec.html"></iframe>
     </div>
+    <!-- ═══ กราฟรายเดือน (นำเข้า Excel สรุปรายเดือน) ═══ -->
+    <div class="pg" id="pg-monthly">
+      <div class="crumb">หน้าแรก / <b>กราฟรายเดือน</b></div>
+      <div class="pagehead"><div><h1>สรุปกราฟคุณภาพน้ำรายเดือน</h1><div class="meta">ตามเส้นทางน้ำ โรงงาน → สูบส่ง → สูบจ่าย → สถานีตรวจวัด · คลอรีน (Control chart) · ความนำไฟฟ้า · ความขุ่น</div></div></div>
+      <div class="qcard"><div class="qbar" style="align-items:center;">
+        <div style="flex:1;font-size:12px;line-height:1.6;"><b>วิธีใช้:</b> กด <b>📂 นำเข้าไฟล์ Excel</b> ในหน้าด้านล่าง เลือกไฟล์สรุปรายเดือน (มีชีต Cl2 · Tur · Cond) แล้วตั้งเดือน/ปีและเกณฑ์ที่ ⚙</div>
+        <div class="qbtns"><a href="report_monthly.html" target="_blank" class="chip-btn" style="text-decoration:none;">เปิดเต็มจอ ↗</a></div>
+      </div></div>
+      <iframe class="daily" id="if-monthly" data-src="report_monthly.html" style="height:900px"></iframe>
+    </div>
+
     <!-- ═══ 4.5) รายงานสรุปคุณภาพน้ำสถานีสูบจ่ายน้ำ ═══ -->
     <div class="pg" id="pg-pump">
       <div class="crumb">หน้าแรก / <b>สถานีสูบจ่ายน้ำ</b></div>
