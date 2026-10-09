@@ -56,6 +56,9 @@ body{margin:0;background:var(--bg);font-family:var(--body);color:var(--ink);padd
 .tgt i{display:inline-block;width:34px;height:3px;background:#e53935}
 .cell{position:absolute;top:6px;bottom:6px}
 .b2 .cell,.b3 .cell{top:18px}
+.b3 .cell{bottom:17px}
+.slink{position:absolute;right:10px;bottom:3px;font-size:10px;color:#0a6fb8;font-weight:500;text-decoration:none;z-index:3}
+.slink:hover{text-decoration:underline}
 .card{position:absolute;inset:0 6px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(20,60,90,.12);padding:4px 6px 2px;display:flex;flex-direction:column}
 .card .ct{font-size:12px;font-weight:600;color:#0a5aa0;text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .cs{font-size:9.5px;color:#6a808b;text-align:center;line-height:1.2;min-height:11px}
@@ -135,6 +138,7 @@ const PAGES=[
   mons:[[N.MHD,'สำนักงานประปาสาขาบางบัวทอง','โรงเรียนบดินทรเดชา(สิงห์ สิงหเสนีย์)นนทบุรี','โรงเรียนตั้งพิรุฬห์ธรรม','โรงเรียนเตรียมอุดมน้อมเกล้า นนทบุรี','โรงเรียนเราชวินิต นนทบุรี','สภ.ไทรน้อย']]},
 ];
 const DEF={frc:0.2,tub:1.0,ec:500,k:2};
+const REPORT_URL='https://piphatboribannukul.github.io/FRCfirebase/report_monthly.html';   // แสดงมุมล่างขวาของทุกหน้า (ติดไปกับภาพ/PDF)
 const PAR={
  frc:{sheet:['Cl2','CL2','คลอรีน'],title:'คลอรีนอิสระคงเหลือ (ค่าเฉลี่ย)',unit:'mg/L',dec:2,ctrl:true,tgtTxt:v=>`เกณฑ์ > ${v} mg/L`,yMin:2.5},
  ec:{sheet:['Cond','EC','COND'],title:'ค่าความนำไฟฟ้า (ค่าสูงสุด)',unit:'µS/cm',dec:0,ctrl:false,tgtTxt:v=>`เกณฑ์ < ${v} µS/cm`,yMin:0},
@@ -258,6 +262,7 @@ function slideHTML(pg,par,days,label){
     <div class="band b1"><div class="rl">สถานีสูบส่งน้ำ</div><div class="bc">${send}</div></div>
     <div class="band b2"><div class="rl">สถานีสูบจ่ายน้ำ</div><div class="bc">${pumps}</div></div>
     <div class="band b3"><div class="rl">สถานีตรวจวัด</div><div class="bc">${mons}</div></div>
+    <a class="slink" href="${REPORT_URL}" target="_blank" rel="noopener">🔗 ${REPORT_URL.replace(/^https?:\/\//,'')}</a>
   </div>`;
 }
 function render(){
