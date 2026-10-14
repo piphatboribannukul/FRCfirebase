@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>แก้ทะเบียน KRK</title>
+<style>
+body{font-family:Sarabun,Tahoma,sans-serif;background:#f4f6fa;margin:0;padding:16px;color:#1d2433}
+h1{font-size:20px;margin:0 0 4px}.meta{font-size:13px;color:#667;margin-bottom:12px}
+.card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px #0001;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid #e7ebf1;text-align:left}
+th{background:#eef1f6}.old{color:#b3261e;text-decoration:line-through}.new{color:#177a3d;font-weight:700}
+button{font:inherit;padding:8px 16px;border-radius:8px;border:0;background:#1d4ed8;color:#fff;cursor:pointer}
+button:disabled{background:#9aa5b8}input{font:inherit;padding:6px 10px;border:1px solid #ccd3df;border-radius:6px}
+#msg{margin-top:10px;font-weight:700}
+</style></head><body>
+<h1>🔧 แก้ทะเบียนเซ็นเซอร์ KRK — สถานีสูบจ่ายน้ำ</h1>
+<div class="meta">1) ปีเริ่มใช้ 2567 → 2566 (วัน/เดือนคงเดิม) · 2) ใส่รุ่นตามเอกสาร · ตรวจตารางก่อน แล้วกดบันทึก</div>
+<div class="card">
+ ผู้บันทึก <input id="by" value="พิพัฒน์ บริบาลนุกูล">
+ <button id="go" disabled onclick="apply()">💾 บันทึกทั้งหมด</button>
+ <div id="msg">กำลังโหลด…</div>
+</div>
+<div class="card"><table><thead><tr><th>สถานี</th><th>พารามิเตอร์</th><th>ชิ้นส่วน</th><th>ยี่ห้อ/รุ่น</th><th>เริ่มใช้</th></tr></thead><tbody id="tb"></tbody></table></div>
+<script>
+const FB='https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+/* รุ่นตามเอกสาร 2.1–2.4 */
+const MODELS={
+ frc:{sensor:'RE-22B',flow:'FC-35',main:'RC-100C'},
+ tur:{sensor:'TLD-5LK',flow:'TRDH-5LS',main:'TR-502L'},
+ ec:{sensor:'ECD-1CY-PT ¾',flow:'ECD-FHP2',main:'EC-502S'},
+ ph:{sensor:'MK-11',flow:'HF-11-P2',main:'PC-502'}
+};
+const pKind=k=>{k=k.toLowerCase();return k.includes('frc')||k.includes('คลอรีน')?'frc':k.includes('turb')||k.includes('ขุ่น')?'tur':k.includes('conduct')||k.includes('นำไฟฟ้า')?'ec':k.includes('ph')||k.includes('พีเอช')?'ph':null;};
+const partKind=s=>{s=(s||'').toLowerCase();return s.includes('sensor')||s.includes('เซ็นเซอร์')?'sensor':s.includes('flow')||s.includes('tank')?'flow':s.includes('transmitter')||s.includes('analy')||s.includes('เครื่อง')?'main':null;};
+const thD=iso=>iso?new Date(iso+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}):'–';
+let changes=[];
+async function load(){
+  const [eq,st]=await Promise.all([fetch(FB+'/equipment.json').then(r=>r.json()),Promise.resolve(null)]);
+  const names={};try{(await fetch('equipment.js').then(r=>r.text())).match(/EQUIP_STATIONS=(\[.*?\]);/s)&&JSON.parse(RegExp.$1).forEach(s=>names[s.id]=s.name);}catch(e){}
+  const rows=[],stSet=new Set();
+  Object.entries(eq||{}).forEach(([sid,params])=>{
+    if(!/^SW/.test(sid))return;
+    Object.entries(params||{}).forEach(([pk,parts])=>{
+      const k=pKind(pk.replace(/_/g,' '));if(!k)return;
+      Object.entries(parts||{}).forEach(([pid,p])=>{
+        if(!/krk/i.test(p.brand||''))return;
+        stSet.add(sid);
+        const pkd=partKind(p.part), model=pkd?MODELS[k][pkd]:null;
+        const nb=model?'KRK '+model:p.brand;
+        const ns=/^2024-/.test(p.start||'')?p.start.replace(/^2024/,'2023'):p.start;
+        const c={sid,pk,pid,p,nb,ns,chg:nb!==p.brand||ns!==p.start};
+        if(c.chg)changes.push(c);
+        rows.push(c);
+      });
+    });
+  });
+  rows.sort((a,b)=>a.sid.localeCompare(b.sid));
+  document.getElementById('tb').innerHTML=rows.map(c=>'<tr><td>'+(names[c.sid]||c.sid)+'</td><td>'+c.pk.replace(/_/g,' ')+'</td><td>'+c.p.part+(c.p.note?' ('+c.p.note+')':'')+'</td><td>'
+    +(c.nb!==c.p.brand?'<span class="old">'+c.p.brand+'</span> → <span class="new">'+c.nb+'</span>':c.nb)+'</td><td>'
+    +(c.ns!==c.p.start?'<span class="old">'+thD(c.p.start)+'</span> → <span class="new">'+thD(c.ns)+'</span>':thD(c.p.start))+'</td></tr>').join('');
+  document.getElementById('msg').textContent='พบ '+stSet.size+' สถานีที่เป็น KRK · '+rows.length+' รายการ · ต้องแก้ '+changes.length+' รายการ';
+  document.getElementById('go').disabled=!changes.length;
+}
+async function apply(){
+  const by=document.getElementById('by').value.trim();if(!by)return alert('กรอกชื่อผู้บันทึก');
+  if(!confirm('บันทึก '+changes.length+' รายการ?'))return;
+  const b=document.getElementById('go');b.disabled=true;let ok=0;
+  for(const c of changes){
+    const v=Object.assign({},c.p,{brand:c.nb,start:c.ns,by,ts:Date.now()});
+    const r=await fetch(FB+'/equipment/'+c.sid+'/'+c.pk+'/'+c.pid+'.json',{method:'PUT',body:JSON.stringify(v)});
+    if(r.ok){ok++;
+      await fetch(FB+'/equipment_log.json',{method:'POST',body:JSON.stringify({ts:Date.now(),station:c.sid,param:c.pk,part:c.p.part,brand:c.nb,action:'แก้ไขข้อมูล',by,
+        detail:'แก้ทะเบียน KRK: '+(c.p.brand!==c.nb?c.p.brand+' → '+c.nb+' ':'')+(c.p.start!==c.ns?'เริ่ม '+c.p.start+' → '+c.ns:'')})});}
+  }
+  document.getElementById('msg').textContent='✅ บันทึกสำเร็จ '+ok+'/'+changes.length+' รายการ — เปิดหน้าเปลี่ยนอุปกรณ์/เซ็นเซอร์ ตรวจได้เลย';
+  changes=[];
+}
+load().catch(e=>document.getElementById('msg').textContent='โหลดไม่สำเร็จ: '+e.message);
+</script></body></html>
