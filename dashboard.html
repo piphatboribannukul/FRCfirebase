@@ -420,13 +420,11 @@ iframe.daily{width:100%;height:760px;border:1px solid var(--line);border-radius:
     <!-- ═══ 8) ประวัติสอบเทียบเครื่องมือ Portable (calibration.js) ═══ -->
     <div class="pg" id="pg-calib">
       <div class="crumb">หน้าแรก / <b>ประวัติสอบเทียบเครื่องมือ</b></div>
-      <div class="pagehead"><div><h1>🧪 ประวัติการสอบเทียบเครื่องมือ Portable</h1><div class="meta">บันทึกผลสอบเทียบกับสารมาตรฐาน · เทียบตัวอย่างจริง (%RPD) · ประวัติรายเครื่อง (ข้อมูลกลาง Firebase)</div></div></div>
+      <div class="pagehead"><div><h1>🧪 ประวัติการสอบเทียบเครื่องมือ Portable</h1><div class="meta">รายเดือน · ① เทียบสารมาตรฐาน (%Error) · ② เทียบเครื่อง กปน. กับ PICO (%Error) · ข้อมูลกลาง Firebase</div></div></div>
       <div class="qcard">
         <div class="cal-bar">
-          <div class="qf"><label>ผู้บันทึก</label><input type="text" id="cal-user" placeholder="ชื่อ-สกุล"></div>
-          <button class="chip-btn primary" onclick="calNew()">➕ บันทึกรอบใหม่</button>
-          <button class="chip-btn" onclick="calPickExcel()">📂 นำเข้า Excel</button>
-          <button class="chip-btn" onclick="calDevices()">🧰 จัดการเครื่องมือ / ตั้งค่า</button>
+          <div class="qf" style="flex:0 1 260px"><label>ผู้บันทึก</label><input type="text" id="cal-user" placeholder="ชื่อ-สกุล" style="width:100%"></div><div style="flex:1"></div>
+          <button class="chip-btn" onclick="calDevices()">🧰 เครื่องมือ / ตั้งค่า / นำเข้า Excel</button>
         </div>
       </div>
       <div id="cal-body"></div>
