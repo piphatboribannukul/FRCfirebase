@@ -1,0 +1,41 @@
+# สร้างข้อมูลเมือง 3 มิติรอบสถานี (ใช้กับ frc3d.js / test3d.html)            [17 ต.ค. 2569]
+# รันเองเดือนละครั้ง + กดรันเองได้ที่แท็บ Actions → build-city-3d → Run workflow
+# ผลลัพธ์: data/city/*.json + data/city/index.json (commit กลับเข้า repo อัตโนมัติ)
+name: build-city-3d
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'สร้างใหม่ทุกสถานี (ไม่ติ๊ก = เฉพาะที่ยังไม่มี/เก่ากว่า 25 วัน)'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 20 1 * *'     # วันที่ 2 ของเดือน 03:17 น. เวลาไทย
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-city-3d
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: ดึงข้อมูล OSM รอบทุกสถานี
+        run: python tools/build_city.py ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+      - name: commit ข้อมูลกลับเข้า repo
+        run: |
+          git config user.name "city-3d-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/city
+          if git diff --cached --quiet; then echo "ไม่มีการเปลี่ยนแปลง"; exit 0; fi
+          git commit -m "ข้อมูลเมือง 3 มิติ: อัปเดต $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 10; done

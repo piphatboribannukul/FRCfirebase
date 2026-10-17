@@ -37,7 +37,7 @@
   }
 
   // ── ขนาดตู้: ขนาดจริงเมื่อซูม ≥ 19.5 · ซูมออกแล้วขยาย (ไม่งั้นมองไม่เห็นในภาพเมือง) ──
-  const NEAR_Z = 21.2, FAR_Z = 16.9, BEAM_H = 14;
+  const NEAR_Z = 21.3, FAR_Z = 16.9, INTRO_Z = 15.6, BEAM_H = 14;
   function exag(z) { return Math.min(40, Math.max(1, Math.pow(2, 19.5 - z))); }
   function beamAlpha(z) { return Math.max(0, Math.min(0.6, (18.3 - z) * 0.4)); }
 
@@ -69,7 +69,7 @@
     if (document.getElementById('frc3d-css')) return;
     const st = document.createElement('style'); st.id = 'frc3d-css';
     st.textContent = `
-#frc3d-wrap{position:fixed;inset:0;z-index:100000;background:#111;font-family:Sarabun,'Noto Sans Thai',sans-serif}
+#frc3d-wrap{position:fixed;inset:0;z-index:100000;background:linear-gradient(#8ec5ef 0%,#cfe6f7 45%,#f3efe7 100%);font-family:Sarabun,'Noto Sans Thai',sans-serif}
 #frc3d-map{position:absolute;inset:0}
 #frc3d-bar{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none;z-index:2}
 #frc3d-bar>*{pointer-events:auto}
@@ -88,6 +88,7 @@
 .frc3d-card .v span{font-size:11px;color:#444}
 .frc3d-card .s{font-size:11px;color:#555;margin-top:1px}
 .frc3d-card:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:rgba(255,255,255,.96);border-bottom:0}
+.frc3d-night{background:linear-gradient(#05070d 0%,#141b2b 60%,#1b2233 100%)!important}
 .frc3d-night .frc3d-card{background:rgba(20,24,32,.92);color:#eef2f7}
 .frc3d-night .frc3d-card .v span,.frc3d-night .frc3d-card .s{color:#b9c2cf}
 .frc3d-night .frc3d-card:after{border-top-color:rgba(20,24,32,.92)}
@@ -98,28 +99,28 @@
     document.head.appendChild(st);
   }
 
-  // ── ตู้ตรวจวัดคุณภาพน้ำ (แบบตู้สเตนเลส + สติกเกอร์ฟ้าลายหยดน้ำ ตามตู้จริง) — หน่วยเมตร แกน y ขึ้น ──
+  // ── ตู้ตรวจวัดคุณภาพน้ำ (ตู้สเตนเลส + สติกเกอร์ฟ้า + หลังคาเหล็กสีน้ำเงิน ตามตู้จริง) — หน่วยเมตร แกน y ขึ้น ──
   function wrapTexture(T, side) {
     const W = 256, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
-    // ส่วนบน: สเตนเลส + ช่องระบายอากาศ
-    const st = g.createLinearGradient(0, 0, W, 0); st.addColorStop(0, '#c9ced3'); st.addColorStop(0.5, '#e9ecef'); st.addColorStop(1, '#c2c7cc');
-    g.fillStyle = st; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#9aa1a8'; for (let y = 22; y < 120; y += 11) g.fillRect(34, y, W - 68, 4);
-    // ส่วนล่าง: สติกเกอร์ฟ้า
-    const top = side ? 150 : 135, bg = g.createLinearGradient(0, top, 0, H);
-    bg.addColorStop(0, '#2d8de0'); bg.addColorStop(0.55, '#1663b8'); bg.addColorStop(1, '#0b3f86');
-    g.fillStyle = bg; g.beginPath(); g.moveTo(0, top + 24);
-    g.bezierCurveTo(W * 0.3, top - 10, W * 0.6, top + 40, W, top + 6); g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.fill();
-    // คลื่นน้ำ
-    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5;
-    for (let k = 0; k < 3; k++) { const y = H - 60 - k * 26; g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= W; x += 16) g.lineTo(x, y + Math.sin(x / 26 + k) * 6); g.stroke(); }
-    // หยดน้ำ
+    const st = g.createLinearGradient(0, 0, W, 0); st.addColorStop(0, '#c4c9ce'); st.addColorStop(0.5, '#eceef0'); st.addColorStop(1, '#bfc4c9');
+    g.fillStyle = st; g.fillRect(0, 0, W, H);                                         // สเตนเลส
+    if (!side) { g.fillStyle = '#99a0a7'; for (let y = 20; y < 92; y += 10) g.fillRect(40, y, W - 80, 4); }   // ช่องระบายอากาศ
+    const top = side ? 70 : 108, bg = g.createLinearGradient(0, top, 0, H);
+    bg.addColorStop(0, '#2b8be0'); bg.addColorStop(0.5, '#1660b6'); bg.addColorStop(1, '#0a3d84');
+    g.fillStyle = bg; g.fillRect(10, top, W - 20, H - top - 14);                       // สติกเกอร์ฟ้า
+    if (!side) {                                                                       // แผงขาวด้านบนสติกเกอร์: ตราหยดน้ำ + ชื่อตู้
+      g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(26, top + 16, W - 52, 112, 14) : g.rect(26, top + 16, W - 52, 112); g.fill();
+      g.fillStyle = '#1660b6'; g.beginPath(); g.arc(70, top + 72, 30, 0, 6.283); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(70, top + 50); g.bezierCurveTo(86, top + 70, 84, top + 90, 70, top + 90); g.bezierCurveTo(56, top + 90, 54, top + 70, 70, top + 50); g.fill();
+      g.fillStyle = '#0b4f9a'; g.textAlign = 'left'; g.font = 'bold 21px Sarabun, "Noto Sans Thai", sans-serif';
+      g.fillText('ตู้ตรวจวัด', 108, top + 62); g.fillText('คุณภาพน้ำ', 108, top + 88); g.font = '15px Sarabun, sans-serif'; g.fillStyle = '#3d6ea8'; g.fillText('ออนไลน์ 24 ชม.', 108, top + 112);
+    }
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 5;                          // คลื่นน้ำ
+    for (let k = 0; k < 3; k++) { const y = H - 64 - k * 24; g.beginPath(); g.moveTo(10, y); for (let x = 10; x <= W - 10; x += 14) g.lineTo(x, y + Math.sin(x / 24 + k) * 6); g.stroke(); }
     const drop = (x, y, s, a) => { g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.beginPath(); g.moveTo(x, y - s); g.bezierCurveTo(x + s * 0.7, y - s * 0.2, x + s * 0.6, y + s * 0.6, x, y + s * 0.6); g.bezierCurveTo(x - s * 0.6, y + s * 0.6, x - s * 0.7, y - s * 0.2, x, y - s); g.fill(); };
-    drop(W * 0.5, top + 150, side ? 46 : 62, 0.95); drop(W * 0.24, top + 95, 20, 0.6); drop(W * 0.78, top + 120, 26, 0.7); drop(W * 0.68, top + 215, 14, 0.5);
-    g.fillStyle = '#ffffff'; g.textAlign = 'center';
-    g.font = 'bold 25px Sarabun, "Noto Sans Thai", sans-serif'; g.fillText(side ? 'น้ำประปาดื่มได้' : 'ตู้ตรวจวัด', W / 2, top + 255);
-    g.font = 'bold 25px Sarabun, "Noto Sans Thai", sans-serif'; g.fillText(side ? 'ตรวจวัดออนไลน์' : 'คุณภาพน้ำประปา', W / 2, top + 287);
+    if (side) { drop(W * 0.5, top + 150, 58, 0.95); drop(W * 0.25, top + 80, 18, 0.6); drop(W * 0.76, top + 110, 24, 0.7); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = 'bold 26px Sarabun, sans-serif'; g.fillText('น้ำประปา', W / 2, top + 250); g.fillText('ดื่มได้', W / 2, top + 284); }
+    else { drop(W * 0.5, top + 230, 44, 0.95); drop(W * 0.22, top + 190, 16, 0.6); drop(W * 0.8, top + 205, 20, 0.7); }
     const t = new T.CanvasTexture(c); t.anisotropy = 8; return t;
   }
   function buildCabinet(T, color, opt) {
@@ -127,54 +128,155 @@
     const grp = new T.Group();
     const M = (c, o) => new T.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.5, metalness: 0.15 }, o || {}));
     const box = (w, h, d, mat, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); grp.add(m); return m; };
-    const steel = M('#d3d7db', { metalness: 0.35, roughness: 0.32 }), steelD = M('#b4bac0', { metalness: 0.35, roughness: 0.4 }), conc = M('#c9c5bd', { roughness: 0.95 });
-    const BW = 0.72, BD = 0.5, BH = 1.62, B0 = 0.14;
-    box(1.10, B0, 0.84, conc, 0, B0 / 2, 0);                                    // ฐานคอนกรีต
-    box(BW, BH, BD, steel, 0, B0 + BH / 2, 0);                                   // ตัวตู้สเตนเลส
-    box(BW + 0.06, 0.035, BD + 0.06, steelD, 0, B0 + BH + 0.018, 0);            // ฝาบน
-    const roofG = new T.BoxGeometry(BW + 0.1, 0.03, BD + 0.14); const roof = new T.Mesh(roofG, steelD);   // หลังคาลาดกันฝน
-    roof.position.set(0, B0 + BH + 0.07, 0.01); roof.rotation.x = 0.12; grp.add(roof);
-    // สติกเกอร์หน้า/ข้าง
+    const steel = M('#d3d7db', { metalness: 0.35, roughness: 0.32 }), steelD = M('#b4bac0', { metalness: 0.35, roughness: 0.4 }), conc = M('#cfcbc3', { roughness: 0.95 });
+    const BW = 0.72, BD = 0.5, BH = 1.62, B0 = 0.22;
+    box(1.6, B0, 1.3, conc, 0, B0 / 2, -0.15);                                   // ฐานคอนกรีตยกสูง
+    box(BW, BH, BD, steel, 0, B0 + BH / 2, 0);
+    box(BW + 0.06, 0.035, BD + 0.06, steelD, 0, B0 + BH + 0.018, 0);
     const front = new T.Mesh(new T.PlaneGeometry(BW - 0.04, BH - 0.06), new T.MeshLambertMaterial({ map: wrapTexture(T, false) }));
     front.position.set(0, B0 + BH / 2, BD / 2 + 0.003); grp.add(front);
     for (const s of [-1, 1]) {
       const side = new T.Mesh(new T.PlaneGeometry(BD - 0.04, BH - 0.06), new T.MeshLambertMaterial({ map: wrapTexture(T, true) }));
       side.position.set(s * (BW / 2 + 0.003), B0 + BH / 2, 0); side.rotation.y = s * Math.PI / 2; grp.add(side);
     }
-    // ไฟสถานะสีตามเกณฑ์ FRC + มือจับ + บานพับ
     const ledMat = M(color, { emissive: color, emissiveIntensity: 0.6, roughness: 0.2 });
-    const led = new T.Mesh(new T.SphereGeometry(0.035, 12, 8), ledMat); led.position.set(BW / 2 - 0.09, B0 + BH - 0.12, BD / 2 + 0.02); grp.add(led);
+    const led = new T.Mesh(new T.SphereGeometry(0.035, 12, 8), ledMat); led.position.set(BW / 2 - 0.09, B0 + BH - 0.1, BD / 2 + 0.02); grp.add(led);
     box(0.025, 0.16, 0.035, M('#8d949b', { metalness: 0.6, roughness: 0.25 }), BW / 2 - 0.07, B0 + BH * 0.55, BD / 2 + 0.02);
-    for (const y of [0.35, 1.25]) box(0.02, 0.07, 0.02, steelD, -BW / 2 + 0.03, B0 + y, BD / 2 + 0.012);
-    // แนวเก็บน้ำตัวอย่าง: ท่อเมนใต้ถนน → มาตรวัดน้ำ → ท่อ PB เข้าตู้
+    // ท่อเก็บน้ำตัวอย่าง → มาตรวัดน้ำ
     const pipeMat = M('#7b8189', { metalness: 0.3, roughness: 0.45 });
-    const cyl = (r, len, x, y, z, rz) => { const m = new T.Mesh(new T.CylinderGeometry(r, r, len, 10), pipeMat); m.position.set(x, y, z); m.rotation.set(0, 0, rz || 0); grp.add(m); return m; };
-    cyl(0.022, 2.4, -1.55, 0.03, 0.1, Math.PI / 2);
-    box(0.30, 0.12, 0.22, M('#4f565e'), -2.85, 0.06, 0.1);
-    cyl(0.022, 0.6, -2.85, -0.24, 0.1);
-    // หลังคากันแดดสีฟ้า (บางตู้มี)
-    if (opt.canopy) {
-      const post = M('#6f777f', { metalness: 0.4, roughness: 0.4 }), blue = M('#1f5fae', { roughness: 0.45, side: T.DoubleSide });
-      for (const x of [-0.62, 0.62]) box(0.06, 2.45, 0.06, post, x, 1.22, -0.42);
-      const cr = new T.Mesh(new T.BoxGeometry(1.5, 0.04, 1.15), blue); cr.position.set(0, 2.47, -0.05); cr.rotation.x = 0.16; grp.add(cr);
-      box(1.5, 0.12, 0.03, blue, 0, 2.4, 0.52);
+    const pp = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, 1.9, 10), pipeMat); pp.position.set(-1.3, 0.05, 0.1); pp.rotation.z = Math.PI / 2; grp.add(pp);
+    box(0.30, 0.12, 0.22, M('#4f565e'), -2.35, 0.06, 0.1);
+    // หลังคาเหล็กสีน้ำเงิน (โครงเสาสี่เหลี่ยม 2 ต้นด้านหลัง)
+    if (opt.canopy !== false) {
+      const blue = M('#1d5bb0', { roughness: 0.45, metalness: 0.2 }), blueD = M('#164a91', { roughness: 0.5 });
+      for (const x of [-0.6, 0.6]) box(0.08, 2.55, 0.08, blue, x, B0 + 1.27, -0.5);
+      box(1.28, 0.08, 0.08, blue, 0, B0 + 2.5, -0.5);
+      const cr = new T.Mesh(new T.BoxGeometry(1.5, 0.04, 1.35), blue); cr.position.set(0, B0 + 2.58, 0.02); cr.rotation.x = 0.13; grp.add(cr);
+      box(1.5, 0.16, 0.03, blueD, 0, B0 + 2.43, 0.7);
+      for (const x of [-0.75, 0.75]) box(0.03, 0.16, 1.35, blueD, x, B0 + 2.5, 0.02);
     }
-    // เสาไฟข้างตู้ (ไฟติดตอนกลางคืน)
-    const poleMat = M('#6b7077', { metalness: 0.5, roughness: 0.4 });
-    const pole = new T.Mesh(new T.CylinderGeometry(0.05, 0.07, 4.6, 10), poleMat); pole.position.set(1.15, 2.3, -0.55); grp.add(pole);
-    const arm = new T.Mesh(new T.BoxGeometry(0.75, 0.05, 0.06), poleMat); arm.position.set(0.82, 4.55, -0.55); grp.add(arm);
-    const lampMat = M('#fff4d6', { emissive: '#ffd27a', emissiveIntensity: 0.0, roughness: 0.3 });
-    const lamp = new T.Mesh(new T.BoxGeometry(0.34, 0.08, 0.16), lampMat); lamp.position.set(0.52, 4.5, -0.55); grp.add(lamp);
-    const lampLight = new T.PointLight(0xffd9a0, 0, 10, 1.6); lampLight.position.set(0.4, 3.9, 0.3); grp.add(lampLight);
+    const lampLight = new T.PointLight(0xffe2b0, 0, 6, 1.6); lampLight.position.set(0, B0 + 2.3, 0.6); grp.add(lampLight);
+    const lampMat = M('#ffffff', { emissive: '#fff1c9', emissiveIntensity: 0 });
+    const lamp = new T.Mesh(new T.BoxGeometry(0.5, 0.03, 0.1), lampMat); lamp.position.set(0, B0 + 2.38, 0.35); grp.add(lamp);
     return { grp, dropMat: ledMat, lampMat, lampLight };
   }
 
-  // ตำแหน่ง/ลักษณะตู้ที่ยืนยันจากหน้างาน (Street View) — ใช้แทนพิกัดในระบบ · yaw = องศา (0 = หันลงใต้) ไม่ใส่ = หันหาถนนอัตโนมัติ
+  // ── ฉากรอบตู้ที่จัดเองตามภาพ Street View (ส่วนที่ OSM ไม่มีรายละเอียด) ──────
+  //   พิกัดในกรอบ "มองหน้าตู้": x = ขวามือของคนที่ยืนมองหน้าตู้ (เหมือนภาพ Street View), z = ไปทางถนน (+) / ข้างหลังตู้ (−), หน่วยเมตร
+  function signTexture(T, text, sub, fg, bg) {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d');
+    g.fillStyle = bg || '#ffffff'; g.fillRect(0, 0, 1024, 256);
+    g.fillStyle = fg || '#0f8a6c'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold ' + (sub ? 104 : 124) + 'px Sarabun, "Noto Sans Thai", sans-serif'; g.fillText(text, 512, sub ? 100 : 128, 980);
+    if (sub) { g.font = 'bold 60px Sarabun, sans-serif'; g.fillText(sub, 512, 200, 960); }
+    const t = new T.CanvasTexture(c); t.anisotropy = 8; return t;
+  }
+  function buildProps(T, props) {
+    const grp = new T.Group(); let raise = 0;
+    const L = (c, o) => new T.MeshLambertMaterial(Object.assign({ color: c }, o || {}));
+    const add = (geo, mat, x, y, z, ry) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; grp.add(m); return m; };
+    const B = (w, h, d) => new T.BoxGeometry(w, h, d);
+    for (const p of props || []) {
+      const ry = (p.rot || 0) * Math.PI / 180;
+      if (p.type === 'platform') {                 // พื้นยกสูง (สนามหญ้า/สวน) + กำแพงกันดิน + ขอบฟุตบาทแดงขาว
+        const cx = (p.x1 + p.x2) / 2, cz = (p.z1 + p.z2) / 2, w = p.x2 - p.x1, d = p.z2 - p.z1;
+        add(B(w, p.h, d), L('#cfc8bc'), cx, p.h / 2, cz);
+        add(B(w - 0.3, 0.06, d - 0.3), L('#7fae5a'), cx, p.h + 0.03, cz - 0.1);
+        add(B(w, p.h + 0.05, 0.25), L('#d8d2c6'), cx, (p.h + 0.05) / 2, p.z2 - 0.12);
+        for (let x = p.x1; x < p.x2; x += 1.0) add(B(0.98, 0.18, 0.3), L(Math.round((x - p.x1)) % 2 ? '#c23b2e' : '#f2f2f2'), x + 0.5, 0.09, p.z2 + 0.6);
+        if (p.cab) raise = p.h;
+      } else if (p.type === 'shrine') {            // ศาลพระภูมิ/ศาลพระพรหม (ฐาน + เรือนทรงไทยทอง)
+        const s = p.s || 1, gold = L('#e1ad3a'), red = L('#b4351f'), white = L('#f5f1e8');
+        add(B(2.2 * s, 0.5 * s, 2.2 * s), white, p.x, 0.25 * s + (p.y || 0), p.z);
+        add(new T.CylinderGeometry(0.22 * s, 0.28 * s, 1.6 * s, 12), white, p.x, 1.3 * s + (p.y || 0), p.z);
+        add(B(1.3 * s, 0.12 * s, 1.3 * s), gold, p.x, 2.15 * s + (p.y || 0), p.z);
+        add(B(0.9 * s, 0.8 * s, 0.9 * s), red, p.x, 2.6 * s + (p.y || 0), p.z);
+        for (const [dx, dz] of [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]]) add(new T.CylinderGeometry(0.05 * s, 0.05 * s, 0.9 * s, 6), gold, p.x + dx * s, 2.65 * s + (p.y || 0), p.z + dz * s);
+        add(new T.ConeGeometry(0.85 * s, 0.9 * s, 4), gold, p.x, 3.5 * s + (p.y || 0), p.z, Math.PI / 4);
+        add(new T.ConeGeometry(0.12 * s, 0.9 * s, 8), gold, p.x, 4.3 * s + (p.y || 0), p.z);
+      } else if (p.type === 'sign') {              // ป้ายชื่อ (บนอาคาร/กันสาด หรือป้ายตั้ง)
+        const w = p.w || 8, h = p.h || w / 4;
+        const m = add(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: signTexture(T, p.text, p.sub, p.fg, p.bg), side: T.DoubleSide }), p.x, p.y || 4, p.z, ry);
+        if (p.post) { add(B(0.15, (p.y || 4) - h / 2, 0.15), L('#8a9096'), p.x - w * 0.35 * Math.cos(ry), ((p.y || 4) - h / 2) / 2, p.z + w * 0.35 * Math.sin(ry)); add(B(0.15, (p.y || 4) - h / 2, 0.15), L('#8a9096'), p.x + w * 0.35 * Math.cos(ry), ((p.y || 4) - h / 2) / 2, p.z - w * 0.35 * Math.sin(ry)); }
+        if (p.box) add(B(w + 0.3, h + 0.3, 0.3), L(p.box), p.x - Math.sin(ry) * 0.17, p.y || 4, p.z - Math.cos(ry) * 0.17, ry);
+        void m;
+      } else if (p.type === 'canopyBuilding') {    // ทางเข้าอาคาร: กันสาดใหญ่ + เสา (ป้ายชื่อติดขอบกันสาด)
+        const w = p.w, d = p.d, y = p.y || 4.5;
+        add(B(w, 0.6, d), L(p.color || '#f4f4f2'), p.x, y, p.z, ry);
+        for (const sx of [-0.45, 0.45]) add(new T.CylinderGeometry(0.3, 0.3, y, 12), L('#e9e9e6'), p.x + sx * w * Math.cos(ry) + Math.sin(ry) * d * 0.4, y / 2, p.z - sx * w * Math.sin(ry) + Math.cos(ry) * d * 0.4);
+      } else if (p.type === 'pavilion' || p.type === 'shed') {   // อาคารเปิดโล่ง (เสา + หลังคา) / เพิงหลังคาเมทัลชีท
+        const g2 = new T.Group(), w = p.w, d = p.d, h = p.h;
+        const colM = L(p.type === 'pavilion' ? '#f2f0ea' : '#9aa0a6'), roofM = L(p.type === 'pavilion' ? '#e9e6df' : '#a9b0b5', { side: T.DoubleSide });
+        const nx = Math.max(2, Math.round(w / (p.type === 'pavilion' ? 5 : 4))), nz = Math.max(2, Math.round(d / 5));
+        for (let i = 0; i <= nx; i++) for (const j of [0, nz]) { const m = new T.Mesh(B(p.type === 'pavilion' ? 0.5 : 0.15, h, p.type === 'pavilion' ? 0.5 : 0.15), colM); m.position.set(-w / 2 + i * w / nx, h / 2, -d / 2 + j * d / nz); g2.add(m); }
+        if (p.type === 'pavilion') {
+          const r = new T.Mesh(B(w + 1.2, 0.5, d + 1.2), roofM); r.position.y = h + 0.25; g2.add(r);
+          const band = new T.Mesh(B(w + 0.2, 1.4, d + 0.2), L('#f6f5f1')); band.position.y = h - 0.7; g2.add(band);
+          for (let x = -w / 2 + 0.3; x < w / 2; x += 0.35) { const s2 = new T.Mesh(B(0.08, 1.0, 0.06), L('#d4d1ca')); s2.position.set(x, h - 0.75, d / 2 + 0.14); g2.add(s2); }   // บานเกล็ด
+          const inner = new T.Mesh(B(w * 0.6, h - 1.4, d * 0.5), L('#e7e2d8')); inner.position.set(-w * 0.15, (h - 1.4) / 2, -d * 0.15); g2.add(inner);   // ห้องด้านใน
+          const floor = new T.Mesh(B(w, 0.15, d), L('#d9d4ca')); floor.position.y = 0.08; g2.add(floor);
+        } else {
+          const rise = Math.min(1.2, d * 0.12);
+          for (const s of [-1, 1]) { const sl = new T.Mesh(B(w + 0.6, 0.05, d / 2 / Math.cos(Math.atan(rise / (d / 2))) + 0.4), roofM); sl.position.set(0, h + rise / 2, s * d / 4); sl.rotation.x = s * Math.atan(rise / (d / 2)); g2.add(sl); }
+          const back = new T.Mesh(B(w, h * 0.6, 0.1), L('#c9c3b6')); back.position.set(0, h * 0.3, -d / 2); g2.add(back);
+        }
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'fence') {             // รั้วโปร่งสีขาว
+        const len = Math.hypot(p.x2 - p.x1, p.z2 - p.z1), a = Math.atan2(p.x2 - p.x1, p.z2 - p.z1), h = p.h || 2.2, m = L(p.color || '#f3f3f0');
+        for (let s = 0; s <= len; s += 0.25) add(B(0.06, h, 0.06), m, p.x1 + (p.x2 - p.x1) * s / len, h / 2, p.z1 + (p.z2 - p.z1) * s / len);
+        add(B(0.08, 0.1, len), m, (p.x1 + p.x2) / 2, h, (p.z1 + p.z2) / 2, a); add(B(0.08, 0.1, len), m, (p.x1 + p.x2) / 2, 0.3, (p.z1 + p.z2) / 2, a);
+        add(B(0.2, 0.35, len), L('#d8d2c6'), (p.x1 + p.x2) / 2, 0.17, (p.z1 + p.z2) / 2, a);
+      } else if (p.type === 'skywalk') {           // ทางเชื่อมลอยฟ้า + บันไดเลื่อนขึ้น
+        const g2 = new T.Group(), h = p.h || 6.5, len = p.len || 30, run = p.run || 11, w = 3.6;
+        const conc = L('#d7d5d0'), glass = new T.MeshLambertMaterial({ color: '#7fb3c8', transparent: true, opacity: 0.45, side: T.DoubleSide }), roof = L('#c8ccd0');
+        const deck = new T.Mesh(B(w, 0.8, len), conc); deck.position.set(0, h, -len / 2); g2.add(deck);
+        for (const s of [-1, 1]) { const gl = new T.Mesh(B(0.05, 2.6, len), glass); gl.position.set(s * w / 2, h + 1.7, -len / 2); g2.add(gl); }
+        const rf = new T.Mesh(B(w + 0.4, 0.15, len), roof); rf.position.set(0, h + 3.05, -len / 2); g2.add(rf);
+        for (let z = -6; z > -len; z -= 12) { const c2 = new T.Mesh(B(0.8, h, 0.8), conc); c2.position.set(0, h / 2, z); g2.add(c2); }
+        const ang = Math.atan2(h, run), slope = Math.hypot(h, run);                    // บันไดเลื่อน (ลาดลงมาทางถนน)
+        const esc = new T.Mesh(B(2.4, 0.5, slope), L('#9aa3aa')); esc.position.set(0, h / 2, run / 2); esc.rotation.x = ang; g2.add(esc);
+        for (const s of [-1, 1]) { const gl = new T.Mesh(B(0.05, 1.1, slope), glass); gl.position.set(s * 1.2, h / 2 + 0.8, run / 2); gl.rotation.x = ang; g2.add(gl); }
+        const box2 = new T.Mesh(B(w + 1, 4.4, 4.5), glass); box2.position.set(0, h + 1.8, 1.2); g2.add(box2);       // โถงกระจกด้านบน
+        const fr = new T.Mesh(B(w + 1.1, 0.25, 4.6), roof); fr.position.set(0, h + 4.1, 1.2); g2.add(fr);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'tree') {
+        const s = p.s || 1.6, tr = new T.Mesh(new T.CylinderGeometry(0.25 * s, 0.4 * s, 4 * s, 7), L('#6f5236')); tr.position.set(p.x, 2 * s, p.z); grp.add(tr);
+        for (const [dx, dy, dz, r] of [[0, 4.8, 0, 2.6], [1.5, 4.2, 0.6, 1.9], [-1.4, 4.4, -0.5, 2.0], [0.3, 5.9, -0.3, 1.8]]) add(new T.IcosahedronGeometry(r * s, 0), L('#4f8d3c'), p.x + dx * s, dy * s, p.z + dz * s);
+      } else if (p.type === 'bus') {
+        const g2 = new T.Group(); const body = new T.Mesh(B(2.5, 3.1, 11.5), L(p.color || '#f2f2f2')); body.position.y = 1.85; g2.add(body);
+        const win = new T.Mesh(B(2.52, 1.0, 10.5), L('#3b4a56')); win.position.set(0, 2.5, 0); g2.add(win);
+        const stripe = new T.Mesh(B(2.53, 0.35, 11.4), L('#1f7a4a')); stripe.position.y = 1.35; g2.add(stripe);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      }
+    }
+    return { grp, raise };
+  }
+
+  // ── ตำแหน่ง/มุมหัน/ฉากของตู้ที่ยืนยันจากหน้างาน (Street View) ───────────────
+  //   yaw = ทิศหน้าตู้ (องศา, 0 = หันลงใต้, 90 = ตะวันออก, -90 = ตะวันตก, 180 = เหนือ) · hide = ลบอาคาร OSM ในรัศมี (ม.) แล้วใช้ฉากที่จัดเองแทน
   const CAB_FIX = [
-    { match: /ศิริราช/, lat: 13.759400, lon: 100.484400 },          // ถ.รถไฟ ข้างบันไดเลื่อนทางเชื่อม (กรอบแดง ภาพ Street View เม.ย. 2024)
-    { match: /ศิครินทร์/, lat: 13.655194, lon: 100.645806 },        // ทางเท้าหน้า รพ.ศิครินทร์ ข้างสวนศาลพระภูมิ
+    { match: /ศิริราช/, lat: 13.759400, lon: 100.484400, yaw: -90, hide: 16,        // ถ.รถไฟ ข้างบันไดเลื่อนทางเชื่อมเข้า รพ. (Street View เม.ย. 2024)
+      props: [
+        { type: 'shed', x: 5.5, z: -6, w: 14, d: 9, h: 4.2 },                        // อาคารเปิด หลังคาเมทัลชีท ด้านหลังตู้
+        { type: 'skywalk', x: -16, z: -1.5, rot: 90, h: 7, len: 34, run: 10 },        // บันไดเลื่อน + ทางเชื่อมลอยฟ้า ด้านซ้าย
+        { type: 'bus', x: 15, z: 7, rot: 90, color: '#f4f4f2' },
+      ] },
+    { match: /ศิครินทร์/, lat: 13.655194, lon: 100.645806, yaw: 0, hide: 0,          // ทางเท้าหน้า รพ.ศิครินทร์ ข้างสวนศาลพระภูมิ
+      props: [
+        { type: 'platform', x1: -2.5, x2: 16, z1: -14, z2: 0.9, h: 0.75, cab: true },
+        { type: 'shrine', x: 5.5, z: -6, s: 1.0, y: 0.75 }, { type: 'shrine', x: 9.5, z: -8, s: 0.85, y: 0.75 },
+        { type: 'canopyBuilding', x: -13, z: -30, w: 26, d: 8, y: 5 },
+        { type: 'sign', x: -13, z: -25.9, y: 5.05, w: 15, h: 1.6, text: 'โรงพยาบาลศิครินทร์', fg: '#11896b', bg: '#f4f4f2' },
+        { type: 'sign', x: -6.5, z: -1, y: 1.2, w: 1.6, h: 0.9, text: 'ทางออก OUT', fg: '#ffffff', bg: '#16613f', post: true },
+      ] },
+    { match: /จิตรลดา/, lat: 13.772500, lon: 100.521000, yaw: 163, hide: 26,           // ถ.ราชวิถี มุมอาคารโถงโล่งติดรั้วขาว
+      props: [
+        { type: 'pavilion', x: -13, z: -6.5, w: 24, d: 11, h: 6.5 },
+        { type: 'fence', x1: 0.9, z1: -0.6, x2: 18, z2: -2.2, h: 2.4 },
+        { type: 'tree', x: -13, z: 3.5, s: 1.6 }, { type: 'tree', x: 11, z: 4, s: 1.7 }, { type: 'tree', x: 24, z: 3, s: 1.6 }, { type: 'tree', x: -27, z: 4, s: 1.5 },
+      ] },
   ];
-  function cabFix(st) { const f = CAB_FIX.find(x => x.match.test(st.name || '')); return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, canopy: f.canopy, fixed: true }) : st; }
+  function cabFix(st) { const f = CAB_FIX.find(x => x.match.test(st.name || '')); return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, canopy: f.canopy, props: f.props, hideR: f.hide, fixed: true }) : st; }
 
   // ═════════════════════════════════════════════════════════════════════════
   //  เมือง 3 มิติมีสี — สร้างจากข้อมูล OpenStreetMap รอบสถานี (แนวเดียวกับ Longdo: procedural จาก OSM)
@@ -198,6 +300,7 @@
       `node["man_made"="stupa"]${A};way["man_made"="stupa"]${A};` +
       `way["amenity"="place_of_worship"]${A};relation["amenity"="place_of_worship"]${A};` +
       `way["railway"~"^(light_rail|subway|monorail|rail)$"]${A};` +
+      `way["amenity"~"^(hospital|school|university|college|clinic)$"]${A};relation["amenity"~"^(hospital|school|university|college|clinic)$"]${A};` +
       `);out body geom qt;`;
     let lastErr;
     for (const url of CFG.overpass) {
@@ -512,6 +615,7 @@
       const rr = toRings(el, P); if (!rr || !rr.outer.length) continue;
       for (let outer of rr.outer) {
         if (outer.length < 3 || ringDist(r0[0], r0[1], outer) > hideR) continue;
+        if (opts.hideR > 0 && ringDist(opts.cabXZ[0], opts.cabXZ[1], outer) < opts.hideR) continue;   // พื้นที่ฉากจัดเองรอบตู้
         if (areaXZ(outer) < 0) outer = outer.slice().reverse();
         const inners = rr.inner.filter(hh => hh.length > 2 && pip(hh[0][0], hh[0][1], outer)).map(hh => areaXZ(hh) > 0 ? hh.slice().reverse() : hh);
         const area = Math.abs(areaXZ(outer)) - inners.reduce((s, hh) => s + Math.abs(areaXZ(hh)), 0);
@@ -528,7 +632,7 @@
         if (!isFinite(h)) {
           if (!isFinite(lv)) {
             if (kind === 'house') lv = rnd() < 0.55 ? 2 : 1;
-            else if (kind === 'apt') lv = area > 1200 ? 8 + Math.floor(rnd() * 16) : 5 + Math.floor(rnd() * 4);
+            else if (kind === 'apt') lv = area > 1200 ? 6 + Math.floor(rnd() * 10) : 4 + Math.floor(rnd() * 4);
             else if (kind === 'office') lv = 6 + Math.floor(rnd() * 14);
             else if (kind === 'shop') lv = area > 3000 ? 4 : 3 + Math.floor(rnd() * 2);
             else if (kind === 'ind' || kind === 'roof') lv = 1;
@@ -536,7 +640,7 @@
             else if (kind === 'hosp') lv = 5 + Math.floor(rnd() * 8);
             else if (kind === 'temple') lv = 2;
             else if (isRow) lv = 3 + (rnd() < 0.45 ? 1 : 0);
-            else lv = area < 70 ? 2 : area < 260 ? 3 + Math.floor(rnd() * 2) : area < 1500 ? 4 + Math.floor(rnd() * 3) : 3;
+            else lv = area < 70 ? 2 : area < 260 ? 2 + Math.floor(rnd() * 2) : area < 1500 ? 2 + Math.floor(rnd() * 3) : 2;   // ไม่มีข้อมูล → อาคารเตี้ย (กทม. ส่วนใหญ่)
           }
           h = kind === 'ind' ? 7 + rnd() * 4 : kind === 'temple' ? 7 : kind === 'roof' ? 4.5 : lv * 3.2 + 0.4;
         }
@@ -551,7 +655,7 @@
         let wallC, roofC;
         try { wallC = C(t['building:colour'] || t['building:color'] || pick(WALL[kind] || WALL.shop, rnd())); } catch (e) { wallC = C(pick(WALL.shop, rnd())); }
         try { roofC = C(t['roof:colour'] || t['roof:color'] || (shape === 'flat' ? pick(ROOF_FLAT, rnd()) : kind === 'ind' ? pick(['#7d97ab', '#8aa0b0', '#6f8a9e'], rnd()) : pick(ROOF_TILE, rnd()))); } catch (e) { roofC = C(pick(ROOF_FLAT, rnd())); }
-        bInfo.push({ outer, inners, h, kind });
+        bInfo.push({ outer, inners, h, kind, area, name: t.name });
         // ผนัง
         const ftype = kind === 'office' ? 'glass' : kind === 'hosp' ? 'hosp' : kind === 'ind' ? 'ind' : kind === 'temple' ? 'temple' : kind === 'house' ? 'house' : kind === 'apt' ? 'apt' : 'win';
         const gtype = (isRow || kind === 'shop' || (kind === 'apt' && rnd() < 0.4) || (kind === 'yes' && area < 600 && rnd() < 0.5)) ? 'shopG' : null;
@@ -593,7 +697,7 @@
     }
     // ── ตู้อยู่ในตัวอาคาร (พิกัดคลาด) → ขยับออกมาที่ขอบอาคาร +2 ม. ──
     for (const b of bInfo) {
-      if (!pip(opts.cabXZ[0], opts.cabXZ[1], b.outer)) continue;
+      if (opts.fixed || !pip(opts.cabXZ[0], opts.cabXZ[1], b.outer)) continue;
       let best = null;
       for (let i = 0; i < b.outer.length; i++) { const a = b.outer[i], c = b.outer[(i + 1) % b.outer.length], d = segDist(opts.cabXZ[0], opts.cabXZ[1], a, c); if (!best || d[0] < best[0]) best = [d[0], d[1], d[2], a, c]; }
       if (best) { const [, x, z, a, c] = best, L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1; opts.cabXZ = [x + (c[1] - a[1]) / L * 2.2, z - (c[0] - a[0]) / L * 2.2]; }
@@ -603,7 +707,7 @@
     // ── 2) ถนน: ผิวยางมะตอย + ทางเท้า + เส้นจราจร + เสาไฟ ──
     const ROADW = { trunk: 20, primary: 16, secondary: 12, tertiary: 9, residential: 6, unclassified: 6, living_street: 5 };
     const asph = C('#62666b'), asph2 = C('#6b6f74'), walk = C('#d9d3c7'), curb = C('#bdb6aa'), lineW = C('#f4f4f2'), lineY = C('#e8c547');
-    let bestRoad = null;
+    let bestRoad = null; const roadSegs = [];
     const ribbon = (G, a, b, w, y, col) => {
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.2) return;
       const nx = -(b[1] - a[1]) / L * w / 2, nz = (b[0] - a[0]) / L * w / 2;
@@ -614,7 +718,7 @@
       const t = el.tags || {}; const w = ROADW[t.highway]; if (!w || el.type !== 'way' || !el.geometry) continue;
       const line = el.geometry.map(p => P(p.lat, p.lon));
       if (!line.some((q, i) => i < line.length - 1 && segDist(r0[0], r0[1], q, line[i + 1])[0] < hideR + 40)) continue;
-      for (let i = 0; i < line.length - 1; i++) { const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
+      for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1]]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
       const elev = /^(yes|viaduct)$/.test(t.bridge || '') ? 7 : 0, G = bucket('road'), yA = elev + 0.2, yW = elev + 0.05;
       if (t.tunnel) continue;
       for (let i = 0; i < line.length - 1; i++) {
@@ -638,6 +742,30 @@
       for (let i = 1; i < line.length - 1; i++) { if (!elev) disc(G, line[i], (w + 5) / 2, yW, walk); disc(G, line[i], w / 2, yA, w >= 12 ? asph : asph2); }   // รอยต่อโค้ง
     }
     opts.cabYaw = opts.yawFix != null ? opts.yawFix : bestRoad && bestRoad[0] > 0.5 && bestRoad[0] < 60 ? Math.atan2(bestRoad[1] - opts.cabXZ[0], bestRoad[2] - opts.cabXZ[1]) : 0;
+
+    // ── ป้ายชื่ออาคาร (โรงพยาบาล/โรงเรียน/วัด/ห้าง…) หันหาถนน ──
+    const signs = [];
+    {
+      const named = [];
+      for (const el of els) {                                              // พื้นที่ รพ./โรงเรียน ที่มีชื่อ → อาคารใหญ่สุดในพื้นที่
+        const t = el.tags || {}; if (t.building || !t.name || !/^(hospital|school|university|college|clinic|place_of_worship)$/.test(t.amenity || '')) continue;
+        const rr = toRings(el, P); if (!rr) continue;
+        for (const o of rr.outer) { let best = null; for (const b of bInfo) { if (b.name) continue; const cx = b.outer.reduce((s2, q) => s2 + q[0], 0) / b.outer.length, cz = b.outer.reduce((s2, q) => s2 + q[1], 0) / b.outer.length; if (pip(cx, cz, o) && (!best || b.area > best.area)) best = b; } if (best) best.areaName = t.name; }
+      }
+      for (const b of bInfo) { const nm = b.name || b.areaName; if (nm && b.area > 120 && b.h > 3) named.push([b, nm]); }
+      named.sort((a, b) => b[0].area - a[0].area);
+      for (const [b, nm] of named.slice(0, 24)) {
+        let best = null;
+        for (let i = 0; i < b.outer.length; i++) {
+          const a = b.outer[i], c = b.outer[(i + 1) % b.outer.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < 6) continue;
+          const nx = (c[1] - a[1]) / L, nz = -(c[0] - a[0]) / L, mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
+          let dmin = 1e9, rx = 0, rz = 0; for (const sg of roadSegs) { const d = segDist(mx, mz, sg[0], sg[1]); if (d[0] < dmin) { dmin = d[0]; rx = d[1] - mx; rz = d[2] - mz; } }
+          const rl = Math.hypot(rx, rz) || 1, face = (nx * rx + nz * rz) / rl, sc2 = L * Math.max(0.05, face) / (1 + dmin / 60);
+          if (!best || sc2 > best.sc) best = { sc: sc2, a, c, L, nx, nz, mx, mz };
+        }
+        if (best) signs.push({ b, nm, ...best });
+      }
+    }
 
     // ── 3) รถไฟฟ้า (BTS/MRT/ARL/รถไฟ) — ยกระดับ = ทางวิ่งคอนกรีต + เสา ──
     for (const el of els) {
@@ -677,7 +805,7 @@
     bInfo.forEach((b, i) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const q of b.outer) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); } b.bb = [x0, z0, x1, z1]; for (let gx = Math.floor(x0 / GS); gx <= Math.floor(x1 / GS); gx++) for (let gz = Math.floor(z0 / GS); gz <= Math.floor(z1 / GS); gz++) { const k = gx + ',' + gz; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(i); } });
     const inBuilding = (x, z, pad) => { const l = grid.get(Math.floor(x / GS) + ',' + Math.floor(z / GS)); if (!l) return false; for (const i of l) { const b = bInfo[i]; if (x < b.bb[0] - pad || x > b.bb[2] + pad || z < b.bb[1] - pad || z > b.bb[3] + pad) continue; if (pip(x, z, b.outer)) return true; if (pad > 0 && (pip(x + pad, z, b.outer) || pip(x - pad, z, b.outer) || pip(x, z + pad, b.outer) || pip(x, z - pad, b.outer))) return true; } return false; };
     const addTree = (x, z, s, seed) => {
-      if (trees.length >= 4500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < 15) return;
+      if (trees.length >= 4500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < Math.max(15, (opts.hideR || 0) + 4)) return;
       if (inBuilding(x, z, 1.2)) return;
       trees.push({ x, z, s: s * (0.8 + hash(seed) * 0.5), c: hash(seed + 7), type: hash(seed + 3) < 0.12 ? 'palm' : hash(seed + 5) < 0.35 ? 'round' : 'tall' });
     };
@@ -780,6 +908,13 @@
       const m = new T.Mesh(new T.LatheGeometry(pts, 24), new T.MeshLambertMaterial({ color: s.gold ? '#e0b142' : '#f4f1ea' })); m.position.set(s.x, 0, s.z); grp.add(m);
       if (!s.gold) { const sp = new T.Mesh(new T.ConeGeometry(Rr * 0.16, H * 0.3, 12), goldM); sp.position.set(s.x, H * 0.85, s.z); grp.add(sp); }
     }
+    for (const sg of signs) {
+      const kind = sg.b.kind, w = Math.min(sg.L * 0.85, Math.max(6, sg.nm.length * 0.95), 34), hgt = Math.max(1.1, Math.min(3.2, w / 6.5));
+      const col = kind === 'hosp' ? ['#0f8a6c', '#ffffff'] : kind === 'temple' ? ['#f2c14e', '#8e1f12'] : kind === 'school' ? ['#16407a', '#ffffff'] : ['#ffffff', '#1f4f8f'];
+      const m = new T.Mesh(new T.PlaneGeometry(w, hgt), new T.MeshBasicMaterial({ map: signTexture(T, sg.nm, null, col[0], col[1]) }));
+      const y = sg.b.h > 7 ? sg.b.h - hgt / 2 - 0.7 : sg.b.h + hgt / 2 + 0.3;
+      m.position.set(sg.mx + sg.nx * 0.18, y, sg.mz + sg.nz * 0.18); m.rotation.y = Math.atan2(sg.nx, sg.nz); grp.add(m);
+    }
     return { grp, wallMats, nightMats, nBuild: bInfo.length, nTree: trees.length, cabXZ: opts.cabXZ, cabYaw: opts.cabYaw || 0 };
   }
 
@@ -789,7 +924,7 @@
     const merc = ml.MercatorCoordinate.fromLngLat([st.lon, st.lat], 0);
     const mpu = merc.meterInMercatorCoordinateUnits();
     const color = frcHex(st.frc);
-    let renderer, scene, camera, cab, cabRoot, beam, beamMat, ring, ringMat, city = null, night = false, lights = {};
+    let renderer, scene, camera, cab, cabRoot, propsRoot, beam, beamMat, ring, ringMat, city = null, night = false, lights = {};
     return {
       id: 'frc3d-cabinet', type: 'custom', renderingMode: '3d',
       onAdd(map, gl) {
@@ -798,6 +933,9 @@
         lights.sun = new T.DirectionalLight(0xfff4e0, 0.62); lights.sun.position.set(-40, 70, 25); scene.add(lights.sun);
         cabRoot = new T.Group(); scene.add(cabRoot);
         cab = buildCabinet(T, color, { canopy: st.canopy }); cabRoot.add(cab.grp);
+        propsRoot = new T.Group(); scene.add(propsRoot);
+        if (st.props) { const pr = buildProps(T, st.props); propsRoot.add(pr.grp); cab.grp.position.y = pr.raise; }
+        propsRoot.rotation.y = st.yaw != null ? st.yaw * Math.PI / 180 : 0; cab.grp.rotation.y = 0; cabRoot.rotation.y = propsRoot.rotation.y;
         // ลำแสงเหนือตู้ — หาตำแหน่งได้เมื่อซูมออก
         beamMat = new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.0, depthWrite: false, side: T.DoubleSide });
         beam = new T.Mesh(new T.CylinderGeometry(0.35, 0.9, BEAM_H, 24, 1, true), beamMat);
@@ -810,7 +948,7 @@
         renderer.autoClear = false;
         this.map = map;
       },
-      setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); cabRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); cab.grp.rotation.y = c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
+      setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); cabRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); propsRoot.position.copy(cabRoot.position); cabRoot.rotation.y = propsRoot.rotation.y = c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
       setNight(on) {
         if (!lights.hemi) return;
         if (city) { city.wallMats.forEach(m => { m.emissiveIntensity = on ? 0.85 : 0; }); city.nightMats.forEach(([m, v]) => { m.emissiveIntensity = on ? v : 0; }); }
@@ -886,7 +1024,7 @@
         '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
         '<div class="frc3d-sp"></div>' +
         '<button class="frc3d-btn" data-a="replay">▶ บินใหม่</button>' +
-        '<button class="frc3d-btn on" data-a="orbit">🔄 หมุนรอบ</button>' +
+        '<button class="frc3d-btn" data-a="orbit">🔄 หมุนรอบ</button>' +
         '<button class="frc3d-btn" data-a="night">🌙 กลางคืน</button>' +
         '<button class="frc3d-btn" data-a="near">🔍 ดูตู้ใกล้ๆ</button>' +
         '<button class="frc3d-btn frc3d-close" data-a="close">✕ ปิด</button>' +
@@ -895,7 +1033,7 @@
       '<div id="frc3d-attr">© <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>';
     document.body.appendChild(wrap);
     const msg = wrap.querySelector('#frc3d-msg');
-    const state = { wrap, map: null, orbit: true, night: false, saved: {}, layer: null, st };
+    const state = { wrap, map: null, orbit: true, spin: false, night: false, saved: {}, layer: null, st };
     _cur = state;
     state.t0 = performance.now();
     state.osmP = getOSM(st); state.osmP.catch(() => {});      // เริ่มโหลดข้อมูลเมืองพร้อมกับแผนที่
@@ -907,7 +1045,7 @@
     const ml = window.maplibregl;
     const map = new ml.Map({
       container: wrap.querySelector('#frc3d-map'), style: CFG.styleUrl,
-      center: [st.lon, st.lat], zoom: NEAR_Z, pitch: 62, bearing: -25, maxPitch: 80, maxZoom: 22,
+      center: [st.lon, st.lat], zoom: INTRO_Z, pitch: 48, bearing: -30, maxPitch: 80, maxZoom: 22,
       antialias: true, attributionControl: false,
     });
     state.map = map;
@@ -935,10 +1073,11 @@
         mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
       };
       map.on('move', lift); lift();
-      setTimeout(() => fly(state), 700);
+      neutralLanduse(map);
+      intro(state);                                   // ภาพมุมสูงหมุนช้าๆ ระหว่างโหลดเมือง แล้วบินเข้าหน้าตู้
       loadCity(state, mk);
     });
-    ['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvas().addEventListener(ev, () => setOrbit(state, false), { passive: true }));
+    ['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvas().addEventListener(ev, () => { state.userTook = true; state.phase = 'user'; setOrbit(state, false); }, { passive: true }));
   }
 
   // ── โหลดข้อมูลอาคาร OSM แล้วสร้างเมืองมีสี ─────────────────────────────────
@@ -953,16 +1092,31 @@
       if (_cur !== state) return;
       const tLoad = performance.now() - state.t0;
       const t0 = performance.now();
-      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null });
+      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null, hideR: st.hideR || 0, fixed: !!st.fixed });
+      state.cabYaw = c.cabYaw;
       if (_cur !== state) return;
       state.layer.setCity(c); hideBase(map, st, R_CITY);
-      const [cx, cz] = c.cabXZ; if (cx || cz) mk.setLngLat([st.lon + cx / kx, st.lat - cz / kz]);
+      const [cx, cz] = c.cabXZ; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
+      state.cityReady = true; flyIn(state);
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';
       say('🏙 อาคาร ' + c.nBuild.toLocaleString() + ' หลัง · ต้นไม้ ' + c.nTree.toLocaleString() + ' ต้น · ' + srcTxt + ' · ' + (tLoad / 1000).toFixed(1) + ' วิ', 6000);
     } catch (e) {
       console.warn('[FRC3D] OSM', e);
       say('⚠ ดึงข้อมูลอาคารไม่สำเร็จ (Overpass ไม่ว่าง) — แสดงแบบกล่องไปก่อน ลองกด ✕ แล้วเปิดใหม่', 9000);
+      state.cityReady = true; flyIn(state);
+    }
+  }
+  // สีพื้นที่ รพ./โรงเรียน (ชมพู/เหลือง) ในแผนที่ฐาน → สีลานปูน ให้เข้ากับฉาก 3 มิติ
+  function neutralLanduse(map) {
+    const cv = document.createElement('canvas').getContext('2d');
+    for (const L of map.getStyle().layers) {
+      if (L.type !== 'fill' || /water|park|grass|wood|forest|green|ocean/i.test(L.id)) continue;
+      let v; try { v = map.getPaintProperty(L.id, 'fill-color'); } catch (e) { continue; }
+      if (typeof v !== 'string') continue;
+      cv.fillStyle = '#000'; cv.fillStyle = v; const hx = cv.fillStyle; if (!/^#[0-9a-f]{6}$/i.test(hx)) continue;
+      const r = parseInt(hx.slice(1, 3), 16), g = parseInt(hx.slice(3, 5), 16), b = parseInt(hx.slice(5, 7), 16);
+      if ((r - g > 12 && b - g > 4) || /hospital|school|university|college|education/i.test(L.id)) { try { map.setPaintProperty(L.id, 'fill-color', '#ece7de'); } catch (e) {} }
     }
   }
   // ซ่อนกล่องอาคารของแผนที่ฐานในรัศมีที่เราสร้างเมืองเอง (กันซ้อนกัน)
@@ -976,30 +1130,55 @@
     }
   }
 
-  function fly(state) {
-    const m = state.map, st = state.st; if (!m) return;
-    m.stop();
-    m.jumpTo({ center: [st.lon, st.lat], zoom: NEAR_Z, pitch: 62, bearing: -25 });
-    m.easeTo({ zoom: FAR_Z, pitch: 60, bearing: 65, duration: 10000, easing: t => t < 0.12 ? 0 : 1 - Math.pow(1 - (t - 0.12) / 0.88, 3) });
-    m.once('moveend', () => { if (state.orbit) orbitStep(state); });
+  // ── การเคลื่อนกล้อง: ภาพมุมสูง → บินโค้งเข้าหาหน้าตู้ → แกว่งช้าๆ ──────────────
+  const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  function frontBearing(state) { const y = state.cabYaw != null ? state.cabYaw : (state.st.yaw || 0) * Math.PI / 180; return Math.atan2(-Math.sin(y), Math.cos(y)) * 180 / Math.PI; }
+  function intro(state) {
+    const m = state.map; if (!m) return;
+    state.phase = 'intro';
+    const spin = () => { if (_cur !== state || state.phase !== 'intro') return; m.rotateTo(m.getBearing() + 18, { duration: 6000, easing: t => t }); m.once('moveend', spin); };
+    spin();
+    setTimeout(() => { if (_cur === state && state.phase === 'intro' && !state.cityReady) { state.cityReady = true; flyIn(state); } }, 25000);   // กันรอนานเกิน
+  }
+  function flyIn(state) {
+    const m = state.map; if (!m || _cur !== state || state.userTook) return;
+    state.phase = 'fly'; m.stop();
+    const c = state.cabLL || [state.st.lon, state.st.lat], fb = frontBearing(state);
+    m.flyTo({ center: c, zoom: 18.2, pitch: 60, bearing: fb - 75, duration: 6000, curve: 1.25, essential: true, easing: easeIO });
+    m.once('moveend', () => {
+      if (_cur !== state || state.phase !== 'fly') return;
+      m.easeTo({ center: c, zoom: NEAR_Z, pitch: 73, bearing: fb, duration: 4500, easing: easeIO });
+      m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; if (state.orbit) sway(state, fb, 1); });
+    });
+  }
+  function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
+    const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
+    m.rotateTo(fb + dir * 14, { duration: 7000, easing: easeIO }); m.once('moveend', () => sway(state, fb, -dir));
+  }
+  function fly(state) {                              // ▶ บินใหม่: กลับไปมุมสูงแล้วบินเข้าอีกรอบ
+    const m = state.map; if (!m) return;
+    state.userTook = false; state.spin = false; m.stop();
+    const c = state.cabLL || [state.st.lon, state.st.lat];
+    m.jumpTo({ center: c, zoom: INTRO_Z, pitch: 48, bearing: frontBearing(state) - 160 });
+    state.phase = 'intro'; setTimeout(() => flyIn(state), 900);
   }
   function orbitStep(state) {
-    const m = state.map; if (!m || !state.orbit || _cur !== state) return;
+    const m = state.map; if (!m || !state.orbit || !state.spin || _cur !== state) return;
     m.rotateTo(m.getBearing() + 12, { duration: 4000, easing: t => t });
     m.once('moveend', () => orbitStep(state));
   }
-  function setOrbit(state, on) {
-    state.orbit = on;
+  function setOrbit(state, on) {                    // 🔄 หมุนรอบตู้ 360°
+    state.orbit = on; state.spin = on;
     const b = state.wrap.querySelector('[data-a="orbit"]'); if (b) b.classList.toggle('on', on);
-    if (on) orbitStep(state); else if (state.map) state.map.stop();
+    if (on) { state.phase = 'idle'; orbitStep(state); } else if (state.map) state.map.stop();
   }
   function act(a, btn) {
     const s = _cur; if (!s) return;
     if (a === 'close') return close();
     if (!s.map) return;
-    if (a === 'replay') { s.orbit = true; s.wrap.querySelector('[data-a="orbit"]').classList.add('on'); fly(s); }
+    if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
-    else if (a === 'near') { setOrbit(s, false); s.map.easeTo({ center: [s.st.lon, s.st.lat], zoom: NEAR_Z, pitch: 62, bearing: s.map.getBearing() + 30, duration: 3000 }); }
+    else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); s.map.easeTo({ center: s.cabLL || [s.st.lon, s.st.lat], zoom: NEAR_Z, pitch: 73, bearing: frontBearing(s), duration: 3000, easing: easeIO }); }
     else if (a === 'night') {
       s.night = !s.night; btn.classList.toggle('on', s.night); btn.textContent = s.night ? '☀ กลางวัน' : '🌙 กลางคืน';
       s.wrap.classList.toggle('frc3d-night', s.night);
