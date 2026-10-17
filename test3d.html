@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดลองมุมมอง 3 มิติ — ตู้วัดคุณภาพน้ำ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:Sarabun,sans-serif;background:#f3f5f8;color:#1a1a1a}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px}
+  h1{font-size:22px;margin:0 0 4px}
+  p{color:#555;margin:0 0 18px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .st{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(0,0,0,.08);cursor:pointer;border-left:6px solid var(--c);transition:transform .1s}
+  .st:hover{transform:translateY(-2px)}
+  .st b{display:block;font-size:14px;line-height:1.3}
+  .st span{font-size:12px;color:#666}
+  .st .v{font:700 20px ui-monospace,monospace;color:var(--c);margin-top:6px}
+  .note{margin-top:18px;font-size:12px;color:#777}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏙 ทดลองมุมมอง 3 มิติ — ตู้วัดคุณภาพน้ำ</h1>
+  <p>กดสถานีเพื่อเปิดภาพ 3 มิติ: เริ่มซูมใกล้ที่ตู้ แล้วถอยออกให้เห็นเมือง · ลากเมาส์ขวา/สองนิ้วเพื่อเอียง-หมุน · Esc ปิด</p>
+  <div class="grid" id="list"></div>
+  <div class="note">ค่าในหน้านี้เป็นค่าตัวอย่าง — เมื่อใส่ใน FRCContour จะใช้ค่าล่าสุดของสถานีจริง</div>
+</div>
+<script src="frc3d.js"></script>
+<script>
+  const STATIONS = [
+    { name: 'บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)', lat: 13.655181, lon: 100.645761, frc: 0.88, ec: 249 },
+    { name: 'โรงพยาบาลศิริราช', lat: 13.759399, lon: 100.484423, frc: 0.65, ec: 238 },
+    { name: 'พระราชวังดุสิต สวนจิตรลดา', lat: 13.772542, lon: 100.520972, frc: 0.70, ec: 241 },
+    { name: 'โรงพยาบาลซีจีเอช สายไหม', lat: 13.924336, lon: 100.684037, frc: 0.42, ec: 252 },
+    { name: 'บริษัท ท่าอากาศยานไทย (สุวรรณภูมิ)', lat: 13.713374, lon: 100.76257, frc: 0.17, ec: 255 },
+  ];
+  const list = document.getElementById('list');
+  STATIONS.forEach(s => {
+    const d = document.createElement('div'); d.className = 'st'; d.style.setProperty('--c', FRC3D.frcHex(s.frc));
+    d.innerHTML = '<b>' + s.name + '</b><span>' + s.lat.toFixed(4) + ', ' + s.lon.toFixed(4) + '</span><div class="v">' + s.frc.toFixed(2) + ' mg/L</div>';
+    d.onclick = () => FRC3D.open(Object.assign({ ts: Date.now(), sample: true }, s));
+    list.appendChild(d);
+  });
+  // เปิดด้วยพารามิเตอร์ได้: test3d.html?lat=..&lon=..&name=..&frc=..&ec=..
+  const q = new URLSearchParams(location.search);
+  if (q.get('lat') && q.get('lon')) FRC3D.open({ name: q.get('name') || 'สถานี', lat: +q.get('lat'), lon: +q.get('lon'),
+    frc: q.get('frc') != null ? +q.get('frc') : null, ec: q.get('ec') != null ? +q.get('ec') : null, ts: Date.now() });
+  else if (q.get('open') != null) FRC3D.open(Object.assign({ ts: Date.now(), sample: true }, STATIONS[+q.get('open') || 0]));
+</script>
+</body>
+</html>
