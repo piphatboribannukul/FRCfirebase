@@ -182,8 +182,9 @@
         const cx = (p.x1 + p.x2) / 2, cz = (p.z1 + p.z2) / 2, w = p.x2 - p.x1, d = p.z2 - p.z1;
         add(B(w, p.h, d), L('#cfc8bc'), cx, p.h / 2, cz);
         add(B(w - 0.3, 0.06, d - 0.3), L('#7fae5a'), cx, p.h + 0.03, cz - 0.1);
-        add(B(w, p.h + 0.05, 0.25), L('#d8d2c6'), cx, (p.h + 0.05) / 2, p.z2 - 0.12);
-        for (let x = p.x1; x < p.x2; x += 1.0) add(B(0.98, 0.18, 0.3), L(Math.round((x - p.x1)) % 2 ? '#c23b2e' : '#f2f2f2'), x + 0.5, 0.09, p.z2 + 0.6);
+        add(B(w, p.h + 0.05, 0.25), L(p.wall || '#d8d2c6'), cx, (p.h + 0.05) / 2, p.z2 - 0.12);
+        if (p.curb !== false) for (let x = p.x1; x < p.x2; x += 1.0) add(B(0.98, 0.18, 0.3), L(Math.round((x - p.x1)) % 2 ? '#c23b2e' : '#f2f2f2'), x + 0.5, 0.09, p.z2 + (p.curbOff || 2.6));
+        add(B(w, 0.12, (p.curbOff || 2.6) - 0.1), L('#cfc9bf'), cx, 0.06, p.z2 + (p.curbOff || 2.6) / 2);   // ทางเท้าหน้าแนวกำแพง
         if (p.cab) raise = p.h;
       } else if (p.type === 'shrine') {            // ศาลพระภูมิ/ศาลพระพรหม (ฐาน + เรือนทรงไทยทอง)
         const s = p.s || 1, gold = L('#e1ad3a'), red = L('#b4351f'), white = L('#f5f1e8');
@@ -226,19 +227,47 @@
         for (let s = 0; s <= len; s += 0.25) add(B(0.06, h, 0.06), m, p.x1 + (p.x2 - p.x1) * s / len, h / 2, p.z1 + (p.z2 - p.z1) * s / len);
         add(B(0.08, 0.1, len), m, (p.x1 + p.x2) / 2, h, (p.z1 + p.z2) / 2, a); add(B(0.08, 0.1, len), m, (p.x1 + p.x2) / 2, 0.3, (p.z1 + p.z2) / 2, a);
         add(B(0.2, 0.35, len), L('#d8d2c6'), (p.x1 + p.x2) / 2, 0.17, (p.z1 + p.z2) / 2, a);
-      } else if (p.type === 'skywalk') {           // ทางเชื่อมลอยฟ้า + บันไดเลื่อนขึ้น
-        const g2 = new T.Group(), h = p.h || 6.5, len = p.len || 30, run = p.run || 11, w = 3.6;
-        const conc = L('#d7d5d0'), glass = new T.MeshLambertMaterial({ color: '#7fb3c8', transparent: true, opacity: 0.45, side: T.DoubleSide }), roof = L('#c8ccd0');
-        const deck = new T.Mesh(B(w, 0.8, len), conc); deck.position.set(0, h, -len / 2); g2.add(deck);
-        for (const s of [-1, 1]) { const gl = new T.Mesh(B(0.05, 2.6, len), glass); gl.position.set(s * w / 2, h + 1.7, -len / 2); g2.add(gl); }
-        const rf = new T.Mesh(B(w + 0.4, 0.15, len), roof); rf.position.set(0, h + 3.05, -len / 2); g2.add(rf);
-        for (let z = -6; z > -len; z -= 12) { const c2 = new T.Mesh(B(0.8, h, 0.8), conc); c2.position.set(0, h / 2, z); g2.add(c2); }
-        const ang = Math.atan2(h, run), slope = Math.hypot(h, run);                    // บันไดเลื่อน (ลาดลงมาทางถนน)
-        const esc = new T.Mesh(B(2.4, 0.5, slope), L('#9aa3aa')); esc.position.set(0, h / 2, run / 2); esc.rotation.x = ang; g2.add(esc);
-        for (const s of [-1, 1]) { const gl = new T.Mesh(B(0.05, 1.1, slope), glass); gl.position.set(s * 1.2, h / 2 + 0.8, run / 2); gl.rotation.x = ang; g2.add(gl); }
-        const box2 = new T.Mesh(B(w + 1, 4.4, 4.5), glass); box2.position.set(0, h + 1.8, 1.2); g2.add(box2);       // โถงกระจกด้านบน
-        const fr = new T.Mesh(B(w + 1.1, 0.25, 4.6), roof); fr.position.set(0, h + 4.1, 1.2); g2.add(fr);
-        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'skywalk') {           // ทางเชื่อมลอยฟ้า: โถงกระจกด้านบน + บันไดเลื่อนลงมาที่ทางเท้า + สะพานต่อเข้าอาคาร
+        const h = p.h || 7, conc = L('#d9d7d2'), concD = L('#bdbab3'), glass = new T.MeshLambertMaterial({ color: '#86b9cc', transparent: true, opacity: 0.5, side: T.DoubleSide }), roof = L('#cfd3d6');
+        const dir = deg => { const r = deg * Math.PI / 180; return [Math.sin(r), Math.cos(r)]; };   // 0 = ไปทางถนน (+z), 90 = ขวา (+x), 180 = หลังตู้
+        const piece = (x, z, rotDeg, len, mk) => { const g2 = new T.Group(); mk(g2); g2.position.set(x, 0, z); g2.rotation.y = rotDeg * Math.PI / 180; grp.add(g2); };
+        // บันไดเลื่อน (ลาดลงตามทิศ esc.rot ยาว run)
+        const run = p.run || 12, er = p.escRot != null ? p.escRot : 0, ang = Math.atan2(h, run), slope = Math.hypot(h, run);
+        piece(p.x, p.z, er, run, g2 => {
+          const e1 = new T.Mesh(B(p.escW || 4.2, 0.6, slope), concD); e1.position.set(0, h / 2, run / 2); e1.rotation.x = ang; g2.add(e1);
+          for (const sx of [-1, 1]) { const gl = new T.Mesh(B(0.06, 1.2, slope), glass); gl.position.set(sx * (p.escW || 4.2) / 2, h / 2 + 0.9, run / 2); gl.rotation.x = ang; g2.add(gl); }
+          const rf = new T.Mesh(B((p.escW || 4.2) + 0.8, 0.2, slope), roof); rf.position.set(0, h / 2 + 3.2, run / 2); rf.rotation.x = ang; g2.add(rf);
+          for (const sx of [-1, 1]) { const c2 = new T.Mesh(B(0.4, h * 0.55 + 3, 0.4), conc); c2.position.set(sx * ((p.escW || 4.2) / 2 + 0.3), (h * 0.55 + 3) / 2, run * 0.45); g2.add(c2); }
+          const land = new T.Mesh(B((p.escW || 4.2) + 1, 0.2, 2.5), concD); land.position.set(0, 0.1, run + 1.1); g2.add(land);
+        });
+        // โถงกระจกด้านบน (หัวบันได)
+        const hb = new T.Mesh(B(p.hallW || 8, 5, p.hallD || 7), glass); hb.position.set(p.x, h + 2.5, p.z); grp.add(hb);
+        const hf = new T.Mesh(B((p.hallW || 8) + 0.4, 0.6, (p.hallD || 7) + 0.4), conc); hf.position.set(p.x, h - 0.1, p.z); grp.add(hf);
+        const hr = new T.Mesh(B((p.hallW || 8) + 0.6, 0.35, (p.hallD || 7) + 0.6), roof); hr.position.set(p.x, h + 5.1, p.z); grp.add(hr);
+        for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const c2 = new T.Mesh(B(0.7, h, 0.7), conc); c2.position.set(p.x + sx * ((p.hallW || 8) / 2 - 0.4), h / 2, p.z + sz * ((p.hallD || 7) / 2 - 0.4)); grp.add(c2); }
+        // สะพานเชื่อม (ทิศ bridgeRot ยาว len)
+        const br = p.bridgeRot != null ? p.bridgeRot : 180, bl = p.len || 30, bw = p.bridgeW || 4;
+        piece(p.x, p.z, br, bl, g2 => {
+          const d0 = (p.hallD || 7) / 2;
+          const deck = new T.Mesh(B(bw, 1.0, bl), conc); deck.position.set(0, h, d0 + bl / 2); g2.add(deck);
+          for (const sx of [-1, 1]) { const w2 = new T.Mesh(B(0.25, 1.3, bl), concD); w2.position.set(sx * bw / 2, h + 1.1, d0 + bl / 2); g2.add(w2); }
+          const rf = new T.Mesh(B(bw + 0.6, 0.2, bl), roof); rf.position.set(0, h + 3.3, d0 + bl / 2); g2.add(rf);
+          for (const sx of [-1, 1]) for (let zz = d0 + 2; zz < d0 + bl; zz += 3) { const pst = new T.Mesh(B(0.12, 2.0, 0.12), concD); pst.position.set(sx * (bw / 2 + 0.2), h + 2.3, zz); g2.add(pst); }
+          for (let zz = d0 + 8; zz < d0 + bl; zz += 11) { const c2 = new T.Mesh(B(0.9, h, 0.9), conc); c2.position.set(0, h / 2, zz); g2.add(c2); }
+        });
+        void dir;
+      } else if (p.type === 'tower') {             // อาคารสูง (ใช้ลายผนังเดียวกับเมือง)
+        const tx = facade(T, p.facade || 'hosp'), mats = [];
+        for (const [fw] of [[p.d], [p.d], [p.w], [p.w], [p.w], [p.w]]) { const m2 = tx.day.clone(); m2.needsUpdate = true; m2.repeat.set(fw / 3.6 / 4, p.h / 3.2 / 4); mats.push(new T.MeshLambertMaterial({ color: p.color || '#f5f5f2', map: m2 })); }
+        mats[2] = mats[3] = new T.MeshLambertMaterial({ color: p.roof || '#cfcac2' });
+        const m3 = new T.Mesh(B(p.w, p.h, p.d), mats); m3.position.set(p.x, p.h / 2, p.z); m3.rotation.y = ry; grp.add(m3);
+      } else if (p.type === 'glass') {             // ผนังกระจก/กันสาดกระจกสีเขียวน้ำทะเล (ชั้นล่างอาคาร)
+        const gm = new T.MeshLambertMaterial({ color: p.color || '#1f9a8a', transparent: true, opacity: 0.85 });
+        add(B(p.w, p.h, 0.15), gm, p.x, (p.y || 0) + p.h / 2, p.z, ry);
+        for (let k = -p.w / 2; k <= p.w / 2 + 0.01; k += 2.4) add(B(0.1, p.h, 0.2), L('#e9eceb'), p.x + k * Math.cos(ry), (p.y || 0) + p.h / 2, p.z - k * Math.sin(ry), ry);
+        if (p.canopy) add(B(p.w + 1, 0.4, p.canopy), L('#f2f2ef'), p.x + Math.sin(ry) * p.canopy / 2, (p.y || 0) + p.h + 0.2, p.z + Math.cos(ry) * p.canopy / 2, ry);
+      } else if (p.type === 'hedge') {
+        add(B(Math.abs(p.x2 - p.x1), p.h || 1.0, p.d || 1.0), L('#3f7f35'), (p.x1 + p.x2) / 2, (p.y || 0) + (p.h || 1) / 2, p.z);
       } else if (p.type === 'tree') {
         const s = p.s || 1.6, tr = new T.Mesh(new T.CylinderGeometry(0.25 * s, 0.4 * s, 4 * s, 7), L('#6f5236')); tr.position.set(p.x, 2 * s, p.z); grp.add(tr);
         for (const [dx, dy, dz, r] of [[0, 4.8, 0, 2.6], [1.5, 4.2, 0.6, 1.9], [-1.4, 4.4, -0.5, 2.0], [0.3, 5.9, -0.3, 1.8]]) add(new T.IcosahedronGeometry(r * s, 0), L('#4f8d3c'), p.x + dx * s, dy * s, p.z + dz * s);
@@ -254,29 +283,34 @@
 
   // ── ตำแหน่ง/มุมหัน/ฉากของตู้ที่ยืนยันจากหน้างาน (Street View) ───────────────
   //   yaw = ทิศหน้าตู้ (องศา, 0 = หันลงใต้, 90 = ตะวันออก, -90 = ตะวันตก, 180 = เหนือ) · hide = ลบอาคาร OSM ในรัศมี (ม.) แล้วใช้ฉากที่จัดเองแทน
+  //   จัดตาม OSM จริง (ถนน/ทางเท้า/อาคาร) + ภาพ Street View · bld = ปรับรูปแบบอาคาร OSM รายหลัง (id): style shed/pavilion/hospital, h ความสูง, noSign
   const CAB_FIX = [
-    { match: /ศิริราช/, lat: 13.759400, lon: 100.484400, yaw: -90, hide: 16,        // ถ.รถไฟ ข้างบันไดเลื่อนทางเชื่อมเข้า รพ. (Street View เม.ย. 2024)
+    { match: /ศิริราช/, lat: 13.759400, lon: 100.484400, yaw: 180,                   // ฝั่งใต้ ถ.รถไฟ หน้าอาคารเก่า (ตู้หันขึ้นเหนือออกถนน) · บันไดเลื่อนอยู่ทางตะวันออก (ซ้ายมือคนมอง)
+      bld: { 1549325372: { style: 'shed', h: 5.5 } },
       props: [
-        { type: 'shed', x: 5.5, z: -6, w: 14, d: 9, h: 4.2 },                        // อาคารเปิด หลังคาเมทัลชีท ด้านหลังตู้
-        { type: 'skywalk', x: -16, z: -1.5, rot: 90, h: 7, len: 34, run: 10 },        // บันไดเลื่อน + ทางเชื่อมลอยฟ้า ด้านซ้าย
-        { type: 'bus', x: 15, z: 7, rot: 90, color: '#f4f4f2' },
+        { type: 'skywalk', x: -17, z: 1.2, h: 7.5, escRot: 90, run: 11, escW: 4.4, bridgeRot: 180, len: 26, hallW: 8, hallD: 7 },
+        { type: 'bus', x: 14, z: 10, rot: 90, color: '#f4f4f2' },
       ] },
-    { match: /ศิครินทร์/, lat: 13.655194, lon: 100.645806, yaw: 0, hide: 0,          // ทางเท้าหน้า รพ.ศิครินทร์ ข้างสวนศาลพระภูมิ
+    { match: /ศิครินทร์/, lat: 13.655194, lon: 100.645806, yaw: 180,                 // ฝั่งใต้ ถ.ลาซาล บนสวนยกสูงหน้า รพ. (ตู้หันขึ้นเหนือออกถนน) · ทางรถออกอยู่ทางตะวันออก (ซ้ายมือ)
+      bld: { 34584267: { style: 'hospital', h: 13, noSign: true } },
       props: [
-        { type: 'platform', x1: -2.5, x2: 16, z1: -14, z2: 0.9, h: 0.75, cab: true },
-        { type: 'shrine', x: 5.5, z: -6, s: 1.0, y: 0.75 }, { type: 'shrine', x: 9.5, z: -8, s: 0.85, y: 0.75 },
-        { type: 'canopyBuilding', x: -13, z: -30, w: 26, d: 8, y: 5 },
-        { type: 'sign', x: -13, z: -25.9, y: 5.05, w: 15, h: 1.6, text: 'โรงพยาบาลศิครินทร์', fg: '#11896b', bg: '#f4f4f2' },
-        { type: 'sign', x: -6.5, z: -1, y: 1.2, w: 1.6, h: 0.9, text: 'ทางออก OUT', fg: '#ffffff', bg: '#16613f', post: true },
+        { type: 'platform', x1: -3.6, x2: 15, z1: -15, z2: 0.7, h: 0.8, cab: true, wall: '#d7b9a6', curbOff: 3.2 },
+        { type: 'hedge', x1: 11, x2: 15, z: -0.2, h: 1.1, d: 1.2, y: 0.8 },
+        { type: 'shrine', x: -2.4, z: -4.5, s: 1.05, y: 0.8 }, { type: 'shrine', x: 0.6, z: -8.5, s: 0.8, y: 0.8 },
+        { type: 'glass', x: -16.8, z: -22.6, w: 10.4, h: 4.2, canopy: 5 },
+        { type: 'sign', x: -15, z: -22.75, y: 8.4, w: 12, h: 1.4, text: 'โรงพยาบาลศิครินทร์', fg: '#11896b', bg: '#f6f6f3' },
+        { type: 'sign', x: -10, z: -22.75, y: 6.1, w: 3.2, h: 0.9, text: 'SIKARIN HOSPITAL', fg: '#ffffff', bg: '#1f9a8a' },
+        { type: 'tower', x: -14, z: -62, w: 30, d: 18, h: 44, facade: 'apt', color: '#f4f2ee' },
+        { type: 'sign', x: -5.6, z: 1.6, y: 1.3, w: 1.3, h: 1.0, text: 'OUT', sub: '← ทางออก', fg: '#ffffff', bg: '#165c3d', post: true },
       ] },
-    { match: /จิตรลดา/, lat: 13.772500, lon: 100.521000, yaw: 163, hide: 26,           // ถ.ราชวิถี มุมอาคารโถงโล่งติดรั้วขาว
+    { match: /จิตรลดา/, lat: 13.772638, lon: 100.520912, yaw: 153,                    // ริมรั้ว (ตะแกรง) มุมเหนืออาคารโถงโล่ง ถ.ราชวิถี (ตู้หันออกถนน)
+      bld: { 1537116220: { style: 'pavilion', h: 7 } }, noBarrierR: 18,
       props: [
-        { type: 'pavilion', x: -13, z: -6.5, w: 24, d: 11, h: 6.5 },
-        { type: 'fence', x1: 0.9, z1: -0.6, x2: 18, z2: -2.2, h: 2.4 },
-        { type: 'tree', x: -13, z: 3.5, s: 1.6 }, { type: 'tree', x: 11, z: 4, s: 1.7 }, { type: 'tree', x: 24, z: 3, s: 1.6 }, { type: 'tree', x: -27, z: 4, s: 1.5 },
+        { type: 'fence', x1: 0.8, z1: 0, x2: 16, z2: 0, h: 2.3 },
+        { type: 'tree', x: -13, z: 3.2, s: 1.4 }, { type: 'tree', x: 14, z: 3.2, s: 1.5 }, { type: 'tree', x: 27, z: 3, s: 1.4 }, { type: 'tree', x: -26, z: 3, s: 1.3 },
       ] },
   ];
-  function cabFix(st) { const f = CAB_FIX.find(x => x.match.test(st.name || '')); return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, canopy: f.canopy, props: f.props, hideR: f.hide, fixed: true }) : st; }
+  function cabFix(st) { const f = CAB_FIX.find(x => x.match.test(st.name || '')); return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, canopy: f.canopy, props: f.props, hideR: f.hide || 0, bld: f.bld, noBarrierR: f.noBarrierR || 0, fixed: true }) : st; }
 
   // ═════════════════════════════════════════════════════════════════════════
   //  เมือง 3 มิติมีสี — สร้างจากข้อมูล OpenStreetMap รอบสถานี (แนวเดียวกับ Longdo: procedural จาก OSM)
@@ -299,7 +333,7 @@
       `way["highway"~"^(trunk|primary|secondary|tertiary|residential|unclassified|living_street)$"]${A};` +
       `node["man_made"="stupa"]${A};way["man_made"="stupa"]${A};` +
       `way["amenity"="place_of_worship"]${A};relation["amenity"="place_of_worship"]${A};` +
-      `way["railway"~"^(light_rail|subway|monorail|rail)$"]${A};` +
+      `way["railway"~"^(light_rail|subway|monorail|rail)$"]${A};way["barrier"~"^(fence|wall|retaining_wall)$"]${A};` +
       `way["amenity"~"^(hospital|school|university|college|clinic)$"]${A};relation["amenity"~"^(hospital|school|university|college|clinic)$"]${A};` +
       `);out body geom qt;`;
     let lastErr;
@@ -645,6 +679,8 @@
           h = kind === 'ind' ? 7 + rnd() * 4 : kind === 'temple' ? 7 : kind === 'roof' ? 4.5 : lv * 3.2 + 0.4;
         }
         h = Math.max(h, minH + 2.5);
+        const ov = opts.bld && opts.bld[el.id];
+        if (ov && ov.h) h = ov.h;
         let shape = (t['roof:shape'] || '').toLowerCase();
         if (kind === 'temple') shape = 'thai';
         else if (kind === 'roof') shape = 'slab';
@@ -655,7 +691,26 @@
         let wallC, roofC;
         try { wallC = C(t['building:colour'] || t['building:color'] || pick(WALL[kind] || WALL.shop, rnd())); } catch (e) { wallC = C(pick(WALL.shop, rnd())); }
         try { roofC = C(t['roof:colour'] || t['roof:color'] || (shape === 'flat' ? pick(ROOF_FLAT, rnd()) : kind === 'ind' ? pick(['#7d97ab', '#8aa0b0', '#6f8a9e'], rnd()) : pick(ROOF_TILE, rnd()))); } catch (e) { roofC = C(pick(ROOF_FLAT, rnd())); }
-        bInfo.push({ outer, inners, h, kind, area, name: t.name });
+        if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
+        bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
+        if (ov && (ov.style === 'shed' || ov.style === 'pavilion')) {     // อาคารเปิดโล่ง: เสารอบอาคาร + ผนังเฉพาะบางส่วน
+          const pil = ov.style === 'pavilion' ? 0.3 : 0.12, step = ov.style === 'pavilion' ? 4.5 : 3.5;
+          for (let i = 0; i < outer.length; i++) { const a = outer[i], b = outer[(i + 1) % outer.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let d = 0; d < L; d += step) pillars.push({ x: a[0] + (b[0] - a[0]) * d / L, z: a[1] + (b[1] - a[1]) * d / L, h: ov.style === 'pavilion' ? 3.8 : h, r: pil }); }
+          const cx0 = outer.reduce((s2, q) => s2 + q[0], 0) / outer.length, cz0 = outer.reduce((s2, q) => s2 + q[1], 0) / outer.length;
+          if (ov.style === 'pavilion') {
+            const wc = C('#f6f5f1'), core = outer.map(q => [cx0 + (q[0] - cx0) * 0.55, cz0 + (q[1] - cz0) * 0.55]);
+            walls(core, 0, 3.8, C('#ece7dd'), 'win', null); walls(outer, 3.8, h, wc, 'ind', null);
+            roofC = C('#e4e0d8'); wallC = wc;
+          } else {
+            const back = outer.map(q => [cx0 + (q[0] - cx0) * 0.7, cz0 + (q[1] - cz0) * 0.7]);
+            walls(back, 0, h * 0.7, C('#cfc6b6'), 'ind', null); walls(outer, h - 0.8, h, C('#c8c2b6'), 'ind', null);
+            roofC = C('#9eaab2'); wallC = C('#c8c2b6');
+          }
+          const v2s = outer.map(q => new T.Vector2(q[0], q[1])); let tr2 = []; try { tr2 = T.ShapeUtils.triangulateShape(v2s, []); } catch (e) {}
+          for (const f of tr2) tri(bucket('plain'), [outer[f[0]][0], h, outer[f[0]][1]], [outer[f[1]][0], h, outer[f[1]][1]], [outer[f[2]][0], h, outer[f[2]][1]], roofC, [0, 1, 0]);
+          if (ov.style === 'shed' && ob) pitched(ob, 'gabled', h, roofC, wallC, 0.6, 0.18, 2);
+          continue;
+        }
         // ผนัง
         const ftype = kind === 'office' ? 'glass' : kind === 'hosp' ? 'hosp' : kind === 'ind' ? 'ind' : kind === 'temple' ? 'temple' : kind === 'house' ? 'house' : kind === 'apt' ? 'apt' : 'win';
         const gtype = (isRow || kind === 'shop' || (kind === 'apt' && rnd() < 0.4) || (kind === 'yes' && area < 600 && rnd() < 0.5)) ? 'shopG' : null;
@@ -718,7 +773,7 @@
       const t = el.tags || {}; const w = ROADW[t.highway]; if (!w || el.type !== 'way' || !el.geometry) continue;
       const line = el.geometry.map(p => P(p.lat, p.lon));
       if (!line.some((q, i) => i < line.length - 1 && segDist(r0[0], r0[1], q, line[i + 1])[0] < hideR + 40)) continue;
-      for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1]]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
+      for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1], w >= 16 ? 3 : w >= 12 ? 2.5 : w >= 9 ? 2 : 1]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
       const elev = /^(yes|viaduct)$/.test(t.bridge || '') ? 7 : 0, G = bucket('road'), yA = elev + 0.2, yW = elev + 0.05;
       if (t.tunnel) continue;
       for (let i = 0; i < line.length - 1; i++) {
@@ -750,7 +805,7 @@
       for (const el of els) {                                              // พื้นที่ รพ./โรงเรียน ที่มีชื่อ → อาคารใหญ่สุดในพื้นที่
         const t = el.tags || {}; if (t.building || !t.name || !/^(hospital|school|university|college|clinic|place_of_worship)$/.test(t.amenity || '')) continue;
         const rr = toRings(el, P); if (!rr) continue;
-        for (const o of rr.outer) { let best = null; for (const b of bInfo) { if (b.name) continue; const cx = b.outer.reduce((s2, q) => s2 + q[0], 0) / b.outer.length, cz = b.outer.reduce((s2, q) => s2 + q[1], 0) / b.outer.length; if (pip(cx, cz, o) && (!best || b.area > best.area)) best = b; } if (best) best.areaName = t.name; }
+        for (const o of rr.outer) { let best = null; for (const b of bInfo) { if (b.name || b.noSign) continue; const cx = b.outer.reduce((s2, q) => s2 + q[0], 0) / b.outer.length, cz = b.outer.reduce((s2, q) => s2 + q[1], 0) / b.outer.length; if (pip(cx, cz, o) && (!best || b.area > best.area)) best = b; } if (best) best.areaName = t.name; }
       }
       for (const b of bInfo) { const nm = b.name || b.areaName; if (nm && b.area > 120 && b.h > 3) named.push([b, nm]); }
       named.sort((a, b) => b[0].area - a[0].area);
@@ -759,11 +814,27 @@
         for (let i = 0; i < b.outer.length; i++) {
           const a = b.outer[i], c = b.outer[(i + 1) % b.outer.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < 6) continue;
           const nx = (c[1] - a[1]) / L, nz = -(c[0] - a[0]) / L, mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
-          let dmin = 1e9, rx = 0, rz = 0; for (const sg of roadSegs) { const d = segDist(mx, mz, sg[0], sg[1]); if (d[0] < dmin) { dmin = d[0]; rx = d[1] - mx; rz = d[2] - mz; } }
-          const rl = Math.hypot(rx, rz) || 1, face = (nx * rx + nz * rz) / rl, sc2 = L * Math.max(0.05, face) / (1 + dmin / 60);
+          let best2 = -1, rx = 0, rz = 0, dmin = 1e9;
+          for (const sg of roadSegs) { const d = segDist(mx, mz, sg[0], sg[1]); const v = sg[2] / (1 + d[0] / 40); if (v > best2) { best2 = v; dmin = d[0]; rx = d[1] - mx; rz = d[2] - mz; } }
+          const rl = Math.hypot(rx, rz) || 1, face = (nx * rx + nz * rz) / rl, sc2 = L * Math.max(0.05, face) * best2;
           if (!best || sc2 > best.sc) best = { sc: sc2, a, c, L, nx, nz, mx, mz };
         }
         if (best) signs.push({ b, nm, ...best });
+      }
+    }
+
+    // ── รั้ว/กำแพง (barrier) ──
+    const fences = [];
+    for (const el of els) {
+      const t = el.tags || {}; if (!/^(fence|wall|retaining_wall)$/.test(t.barrier || '') || el.type !== 'way' || !el.geometry) continue;
+      const line = el.geometry.map(p => P(p.lat, p.lon));
+      for (let i = 0; i < line.length - 1; i++) {
+        const a = line[i], b = line[i + 1];
+        if (segDist(r0[0], r0[1], a, b)[0] > hideR) continue;
+        if (opts.noBarrierR && segDist(opts.cabXZ[0], opts.cabXZ[1], a, b)[0] < opts.noBarrierR) continue;
+        if (t.barrier === 'fence') fences.push([a, b]);
+        else { const hh = t.barrier === 'retaining_wall' ? 1.0 : 2.2, wc = C('#d9d3c9'), n = [b[1] - a[1], 0, -(b[0] - a[0])];
+          quad(bucket('plain'), [a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], hh, b[1]], [a[0], hh, a[1]], wc, n); quad(bucket('plain'), [a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], hh, b[1]], [a[0], hh, a[1]], wc, [-n[0], 0, -n[2]]); }
       }
     }
 
@@ -807,6 +878,8 @@
     const addTree = (x, z, s, seed) => {
       if (trees.length >= 4500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < Math.max(15, (opts.hideR || 0) + 4)) return;
       if (inBuilding(x, z, 1.2)) return;
+      { const fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0), dx = x - opts.cabXZ[0], dz = z - opts.cabXZ[1], fwd = dx * fx + dz * fz, lat = Math.abs(-dx * fz + dz * fx);
+        if (fwd > 0 && fwd < 45 && lat < 7 + fwd * 0.25) return; }                 // ไม่ให้ต้นไม้บังมุมกล้องหน้าตู้
       trees.push({ x, z, s: s * (0.8 + hash(seed) * 0.5), c: hash(seed + 7), type: hash(seed + 3) < 0.12 ? 'palm' : hash(seed + 5) < 0.35 ? 'round' : 'tall' });
     };
     for (const el of els) {
@@ -907,6 +980,14 @@
       [[0, 0], [1.05, 0], [1.05, 0.06], [0.9, 0.1], [0.92, 0.2], [0.95, 0.34], [0.82, 0.5], [0.46, 0.58], [0.34, 0.64], [0.36, 0.67], [0.24, 0.72], [0.14, 0.86], [0.04, 0.97], [0.01, 1]].forEach(([r, y]) => pts.push(new T.Vector2(r * Rr, y * H)));
       const m = new T.Mesh(new T.LatheGeometry(pts, 24), new T.MeshLambertMaterial({ color: s.gold ? '#e0b142' : '#f4f1ea' })); m.position.set(s.x, 0, s.z); grp.add(m);
       if (!s.gold) { const sp = new T.Mesh(new T.ConeGeometry(Rr * 0.16, H * 0.3, 12), goldM); sp.position.set(s.x, H * 0.85, s.z); grp.add(sp); }
+    }
+    if (fences.length) {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64; const g = c.getContext('2d');
+      g.clearRect(0, 0, 64, 64); g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 6); g.fillRect(0, 50, 64, 5); for (let x = 2; x < 64; x += 16) g.fillRect(x, 0, 6, 64);
+      const tx = new T.CanvasTexture(c); tx.wrapS = tx.wrapT = T.RepeatWrapping;
+      const G = { p: [], n: [], c: [], uv: [] }, wc = C('#f1f1ee');
+      for (const [a, b] of fences) { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), u = L / 0.8; push(G, [a[0], 0.3, a[1]], [b[0], 2.2, b[1]], [b[0], 0.3, b[1]], wc, [0, 0, u, 1, u, 0]); push(G, [a[0], 0.3, a[1]], [a[0], 2.2, a[1]], [b[0], 2.2, b[1]], wc, [0, 0, 0, 1, u, 1]); }
+      grp.add(new T.Mesh(geo(G), new T.MeshLambertMaterial({ vertexColors: true, map: tx, alphaTest: 0.5, side: T.DoubleSide })));
     }
     for (const sg of signs) {
       const kind = sg.b.kind, w = Math.min(sg.L * 0.85, Math.max(6, sg.nm.length * 0.95), 34), hgt = Math.max(1.1, Math.min(3.2, w / 6.5));
@@ -1092,7 +1173,7 @@
       if (_cur !== state) return;
       const tLoad = performance.now() - state.t0;
       const t0 = performance.now();
-      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null, hideR: st.hideR || 0, fixed: !!st.fixed });
+      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null, hideR: st.hideR || 0, fixed: !!st.fixed, bld: st.bld || null, noBarrierR: st.noBarrierR || 0 });
       state.cabYaw = c.cabYaw;
       if (_cur !== state) return;
       state.layer.setCity(c); hideBase(map, st, R_CITY);
