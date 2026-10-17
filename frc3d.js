@@ -171,14 +171,22 @@
     if (sub) { g.font = 'bold 60px Sarabun, sans-serif'; g.fillText(sub, 512, 200, 960); }
     const t = new T.CanvasTexture(c); t.anisotropy = 8; return t;
   }
-  function buildProps(T, props) {
+  function buildProps(T, props, yawDeg) {
     const grp = new T.Group(); let raise = 0;
+    const th = (yawDeg || 0) * Math.PI / 180, toF = (e, n) => { const X = e, Z = -n; return [X * Math.cos(th) - Z * Math.sin(th), X * Math.sin(th) + Z * Math.cos(th)]; };   // พิกัดจริง (ตอ., เหนือ) → กรอบฉาก
     const L = (c, o) => new T.MeshLambertMaterial(Object.assign({ color: c }, o || {}));
     const add = (geo, mat, x, y, z, ry) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; grp.add(m); return m; };
     const B = (w, h, d) => new T.BoxGeometry(w, h, d);
     for (const p of props || []) {
       const ry = (p.rot || 0) * Math.PI / 180;
-      if (p.type === 'platform') {                 // พื้นยกสูง (สนามหญ้า/สวน) + กำแพงกันดิน + ขอบฟุตบาทแดงขาว
+      if (p.type === 'road') {                     // ถนนเสริม (ถนนในพื้นที่ที่ OSM ไม่ได้ดึงมา) · pts = [[ตอ., เหนือ], ...] พิกัดจริงจากตู้
+        const w = p.w || 6, pts = p.pts.map(q => toF(q[0], q[1])), asphM = L('#686c71'), edgeM = L('#c9c3b8'), lineM = L('#f2f2ee');
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+          add(B(w + 1.0, 0.12, len + 0.4), edgeM, mx, 0.16, mz, ang); add(B(w, 0.14, len + 1.0), asphM, mx, 0.2, mz, ang);
+          for (let d = 1; d < len - 1; d += 4) add(B(0.12, 0.02, 2), lineM, a[0] + (b[0] - a[0]) * d / len, 0.28, a[1] + (b[1] - a[1]) * d / len, ang);
+        }
+      } else if (p.type === 'platform') {                 // พื้นยกสูง (สนามหญ้า/สวน) + กำแพงกันดิน + ขอบฟุตบาทแดงขาว
         const cx = (p.x1 + p.x2) / 2, cz = (p.z1 + p.z2) / 2, w = p.x2 - p.x1, d = p.z2 - p.z1;
         add(B(w, p.h, d), L('#cfc8bc'), cx, p.h / 2, cz);
         add(B(w - 0.3, 0.06, d - 0.3), L('#7fae5a'), cx, p.h + 0.03, cz - 0.1);
@@ -255,9 +263,10 @@
           const land = new T.Mesh(B((p.escW || 4.2) + 1, 0.2, 2.5), concD); land.position.set(0, 0.1, run + 1.1); g2.add(land);
         });
         // โถงกระจกด้านบน (หัวบันได)
-        const hb = new T.Mesh(B(p.hallW || 8, 5, p.hallD || 7), glass); hb.position.set(p.x, h + 2.5, p.z); grp.add(hb);
+        const hH = p.hallH || 5;
+        const hb = new T.Mesh(B(p.hallW || 8, hH, p.hallD || 7), glass); hb.position.set(p.x, h + hH / 2, p.z); grp.add(hb);
         const hf = new T.Mesh(B((p.hallW || 8) + 0.4, 0.6, (p.hallD || 7) + 0.4), conc); hf.position.set(p.x, h - 0.1, p.z); grp.add(hf);
-        const hr = new T.Mesh(B((p.hallW || 8) + 0.6, 0.35, (p.hallD || 7) + 0.6), roof); hr.position.set(p.x, h + 5.1, p.z); grp.add(hr);
+        const hr = new T.Mesh(B((p.hallW || 8) + 0.6, 0.35, (p.hallD || 7) + 0.6), roof); hr.position.set(p.x, h + hH + 0.1, p.z); grp.add(hr);
         for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const c2 = new T.Mesh(B(0.7, h, 0.7), conc); c2.position.set(p.x + sx * ((p.hallW || 8) / 2 - 0.4), h / 2, p.z + sz * ((p.hallD || 7) / 2 - 0.4)); grp.add(c2); }
         // สะพานเชื่อม (ทิศ bridgeRot ยาว len)
         const br = p.bridgeRot != null ? p.bridgeRot : 180, bl = p.len || 30, bw = p.bridgeW || 4;
@@ -301,12 +310,11 @@
   //   propYaw = หมุนกรอบของฉากประกอบแยกจากตู้ (เช่น propYaw 180: x = ไปทางตะวันตก, z = ไปทางเหนือ) · camOff = เลื่อนมุมกล้องตอนจบ (องศา)
   //   roadW = ความกว้างถนนจริงราย way id (ม.) · palace = เส้นแบ่งเขตวัง a→b [ตอ., เหนือ] (ม. จากตู้) อาคารฝั่งขวาของเส้นเป็นอาคารเตี้ยสีขาว
   const CAB_FIX = [
-    { match: /ศิริราช/, lat: 13.7594094, lon: 100.4841039, yaw: 180, propYaw: 180, camOff: -25,             // ทางเท้าริม ถ.รถไฟ หน้าศูนย์อาหารวัดอมรินทร์ · ตู้หันหน้าออกถนน (ทิศเหนือ)
-      bld: { 1549325372: { style: 'hospital', h: 15, noSign: true },                            // ตึก รพ. (บันไดเลื่อนต่อออกจากตึกนี้)
-             1549325363: { style: 'shed', h: 5.5 } },                                            // ศูนย์อาหารวัดอมรินทร์ (อาคารเปิดไม่สูง) ด้านหลังตู้
+    { match: /ศิริราช/, lat: 13.7594094, lon: 100.4841687, yaw: 180, propYaw: 180, camOff: -25,  // ทางเท้าริม ถ.รถไฟ ปลายด้านตะวันออกของศูนย์อาหารวัดอมรินทร์ (ไม่มีหลังคาคลุม) · ตู้หันหน้าออกถนน
+      bld: { 1549325372: { style: 'hospital', h: 15, noSign: true },                            // ตึก รพ. (บันไดเลื่อนขึ้นชั้น 2 ของตึกนี้)
+             1549325363: { style: 'shed', h: 2.8, rise: 0.5, maxX: -2.5 } },                     // ศูนย์อาหาร: หลังคาเตี้ยระดับหลังคาตู้ และสิ้นสุดก่อนถึงตู้
       props: [   // กรอบ propYaw 180: x+ = ตะวันตก, z+ = เหนือ · จุดอ้างอิง = ตู้
-        { type: 'skywalk', x: -31, z: -1.1, h: 6.2, escRot: 90, run: 10, escW: 3.2, bridgeRot: 180, len: 2, hallW: 5, hallD: 4 },   // หัวบันไดติดตึก รพ. → ลาดลงไปทางตะวันตก (เข้าหาตู้)
-        { type: 'bus', x: -24, z: 8.6, rot: 90, color: '#f4f4f2' },
+        { type: 'skywalk', x: -39, z: -2.1, h: 5, hallH: 3.2, escRot: 90, run: 9, escW: 3.2, bridgeRot: 180, len: 2.5, hallW: 5, hallD: 4 },   // ขึ้นจากทางเท้าไปทางตะวันออก → หัวบันไดชนผนังด้านเหนือของตึก รพ. ที่ชั้น 2
       ] },
     { match: /ศิครินทร์/, lat: 13.655194, lon: 100.645690, yaw: 165, propYaw: 165,               // ในเขต รพ. ปลายด้านขวา (ตะวันตก) ของสนามหญ้ายกสูง · ตู้หันออกถนนลาซาลตรงๆ
       roadW: { 1408375209: 14 },                                                                  // ถ.ลาซาล 4 ช่องจราจร
@@ -321,12 +329,13 @@
         { type: 'tower', x: -41.7, z: -53, rot: 15, w: 30, d: 18, h: 44, facade: 'apt', color: '#f4f2ee' },
         { type: 'sign', x: -16.9, z: 6.8, rot: 15, y: 1.3, w: 1.3, h: 1.0, text: 'OUT', sub: '← ทางออก', fg: '#ffffff', bg: '#165c3d', post: true },
       ] },
-    { match: /จิตรลดา/, lat: 13.772614, lon: 100.520909, yaw: 153,                                // ดันเข้าไปในซอกข้างปลายอาคารเสาเรียงชั้นเดียว (ไม่มีรั้ว) · ตู้หันออกถนน
+    { match: /จิตรลดา/, lat: 13.772549, lon: 100.520876, yaw: 153, camOff: -27,                 // ในซอกด้านหลัง ระหว่างปลายอาคารเสาเรียง กับอาคารด้านหลัง (ไม่มีรั้ว) · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true } }, noBarrierR: 45,
       palace: { a: [-183.5, 74.8], b: [39.8, -6.8], r: 450 },
       props: [   // กรอบตามตู้: x+ = ขวามือคนยืนหน้าตู้ (ตอ.เฉียงเหนือ), z+ = ไปทางถนน
-        { type: 'tree', x: -12.1, z: 5.9, s: 1.4 }, { type: 'tree', x: 14.9, z: 5.9, s: 1.5 }, { type: 'tree', x: 27.9, z: 5.7, s: 1.4 }, { type: 'tree', x: -25.1, z: 5.7, s: 1.3 },
-        { type: 'tree', x: 7.9, z: -4.5, s: 1.5 }, { type: 'tree', x: -35.1, z: -3.5, s: 1.6 },
+        { type: 'road', w: 6, pts: [[-19.0, 26.0],[-18.9, 24.2],[-18.7, 19.4],[-18.4, 11.0],[-18.0, 2.0],[-17.7, -4.4],[-14.1, -87.2]] },   // ถ.พระกุเวชมรรคา (ทางเข้าในพระราชวัง ฝั่งขวา)
+        { type: 'tree', x: -12.0, z: 14.0, s: 1.4 }, { type: 'tree', x: 15.0, z: 14.0, s: 1.5 }, { type: 'tree', x: -25.0, z: 13.8, s: 1.3 },
+        { type: 'tree', x: -35.0, z: 4.5, s: 1.6 },
       ] },
   ];
 
@@ -691,7 +700,14 @@
       const t = el.tags || {};
       if (!t.building || t.building === 'no' || t['building:part']) continue;
       const rr = toRings(el, P); if (!rr || !rr.outer.length) continue;
+      const ovC = opts.bld && opts.bld[el.id];
       for (let outer of rr.outer) {
+        if (ovC && ovC.maxX != null) {                                              // ตัดอาคารส่วนที่เกินแนว x (ม. ทางตะวันออกของตู้) ออก
+          const m = ovC.maxX, o2 = [];
+          for (let i = 0; i < outer.length; i++) { const a = outer[i], b = outer[(i + 1) % outer.length], ia = a[0] <= m, ib = b[0] <= m;
+            if (ia) o2.push(a); if (ia !== ib) { const t = (m - a[0]) / (b[0] - a[0]); o2.push([m, a[1] + (b[1] - a[1]) * t]); } }
+          outer = o2;
+        }
         if (outer.length < 3 || ringDist(r0[0], r0[1], outer) > hideR) continue;
         if (opts.hideR > 0 && ringDist(opts.cabXZ[0], opts.cabXZ[1], outer) < opts.hideR) continue;   // พื้นที่ฉากจัดเองรอบตู้
         if (areaXZ(outer) < 0) outer = outer.slice().reverse();
@@ -778,7 +794,7 @@
           }
           const v2s = outer.map(q => new T.Vector2(q[0], q[1])); let tr2 = []; try { tr2 = T.ShapeUtils.triangulateShape(v2s, []); } catch (e) {}
           for (const f of tr2) tri(bucket('plain'), [outer[f[0]][0], h, outer[f[0]][1]], [outer[f[1]][0], h, outer[f[1]][1]], [outer[f[2]][0], h, outer[f[2]][1]], roofC, [0, 1, 0]);
-          if (ov.style === 'shed' && ob) pitched(ob, 'gabled', h, roofC, wallC, 0.6, 0.18, 2);
+          if (ov.style === 'shed' && ob) pitched(ob, 'gabled', h, roofC, wallC, 0.6, 0.18, ov.rise != null ? ov.rise : 2);
           continue;
         }
         // ผนัง
@@ -1095,7 +1111,7 @@
         cabRoot = new T.Group(); scene.add(cabRoot);
         cab = buildCabinet(T, color, { canopy: st.canopy }); cabRoot.add(cab.grp);
         propsRoot = new T.Group(); scene.add(propsRoot);
-        if (st.props) { const pr = buildProps(T, st.props); propsRoot.add(pr.grp); cab.grp.position.y = pr.raise; }
+        if (st.props) { const pr = buildProps(T, st.props, st.propYaw != null ? st.propYaw : st.yaw); propsRoot.add(pr.grp); cab.grp.position.y = pr.raise; }
         cabRoot.rotation.y = st.yaw != null ? st.yaw * Math.PI / 180 : 0; cab.grp.rotation.y = 0;
         propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : cabRoot.rotation.y;     // ฉากประกอบวางตามกรอบของตัวเอง (หมุนตู้ได้โดยฉากไม่หมุนตาม)
         // ลำแสงเหนือตู้ — หาตำแหน่งได้เมื่อซูมออก
