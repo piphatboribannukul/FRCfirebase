@@ -26,7 +26,7 @@ UA = 'FRCContour-3D-city-builder/1.0 (MWA water quality; github.com/piphatboriba
 KEEP_TAGS = {'building', 'building:levels', 'height', 'building:height', 'min_height', 'building:min_level',
              'roof:shape', 'roof:colour', 'roof:color', 'building:colour', 'building:color', 'colour',
              'amenity', 'religion', 'natural', 'leisure', 'landuse', 'highway', 'bridge', 'tunnel', 'man_made',
-             'railway', 'layer'}
+             'railway', 'layer', 'barrier'}
 
 
 def load_stations():
@@ -53,7 +53,7 @@ def query(lat, lon, r):
             f'way["highway"~"^(trunk|primary|secondary|tertiary|residential|unclassified|living_street)$"]{A};'
             f'node["man_made"="stupa"]{A};way["man_made"="stupa"]{A};'
             f'way["amenity"="place_of_worship"]{A};relation["amenity"="place_of_worship"]{A};'
-            f'way["railway"~"^(light_rail|subway|monorail|rail)$"]{A};'
+            f'way["railway"~"^(light_rail|subway|monorail|rail)$"]{A};way["barrier"~"^(fence|wall|retaining_wall)$"]{A};'
             f'way["amenity"~"^(hospital|school|university|college|clinic)$"]{A};relation["amenity"~"^(hospital|school|university|college|clinic)$"]{A};'
             ');out body geom qt;')
 
