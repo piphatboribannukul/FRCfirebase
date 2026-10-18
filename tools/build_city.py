@@ -8,10 +8,11 @@
 ใช้:  python tools/build_city.py            (สร้างเฉพาะไฟล์ที่ยังไม่มี/เก่ากว่า 25 วัน)
       python tools/build_city.py --force    (สร้างใหม่ทั้งหมด)
       python tools/build_city.py --only SP12,59
-ไม่ต้องติดตั้งไลบรารีเพิ่ม (ใช้ไลบรารีมาตรฐานของ Python)
-ข้อมูล © OpenStreetMap contributors (ODbL)
+เติมอาคารที่ OSM ยังไม่มี จาก Overture Maps (รวมรูปอาคารที่ Google/Microsoft สกัดจากภาพดาวเทียม)
+  ต้องติดตั้ง: pip install overturemaps   (ถ้าไม่มี จะข้ามขั้นนี้และใช้ OSM อย่างเดียว · ปิดได้ด้วย --no-overture)
+ข้อมูล © OpenStreetMap contributors (ODbL) · Overture Maps Foundation (ODbL/CDLA) · Google Open Buildings (CC BY 4.0) · Microsoft (ODbL)
 """
-import argparse, json, math, os, re, sys, time, urllib.parse, urllib.request
+import argparse, json, math, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +20,7 @@ OUT = os.path.join(ROOT, 'data', 'city')
 RADIUS = 670            # ม. (frc3d.js สร้างเมืองมีสี 550 ม. + เผื่อสถานีในกลุ่มเดียวกันห่างกันได้ถึง 120 ม.)
 CLUSTER_M = 120         # สถานีที่ห่างกันไม่เกินนี้ใช้ไฟล์เดียวกัน (เช่น TR1–3, Dis1–2 ที่บางเขน)
 MAX_AGE_DAYS = 25
+OVT_VERSION = 1          # เพิ่มเลขนี้เมื่อเปลี่ยนวิธีรวมอาคาร → สร้างไฟล์ใหม่อัตโนมัติ
 ENDPOINTS = ['https://overpass-api.de/api/interpreter',
              'https://overpass.kumi.systems/api/interpreter',
              'https://overpass.private.coffee/api/interpreter']
@@ -26,7 +28,7 @@ UA = 'FRCContour-3D-city-builder/1.0 (MWA water quality; github.com/piphatboriba
 KEEP_TAGS = {'building', 'building:levels', 'height', 'building:height', 'min_height', 'building:min_level',
              'roof:shape', 'roof:colour', 'roof:color', 'building:colour', 'building:color', 'colour',
              'amenity', 'religion', 'natural', 'leisure', 'landuse', 'highway', 'bridge', 'tunnel', 'man_made',
-             'railway', 'layer', 'barrier'}
+             'railway', 'layer', 'barrier', 'lanes'}
 
 
 def load_stations():
@@ -78,6 +80,100 @@ def fetch(q):
     raise last
 
 
+def overture_buildings(lat, lon, r, sample=None):
+    """อาคารจาก Overture Maps ในกรอบรอบสถานี (GeoJSON features) — ใช้คำสั่ง overturemaps (pip install overturemaps)"""
+    if sample:
+        return json.load(open(sample, encoding='utf-8')).get('features', [])
+    exe = shutil.which('overturemaps')
+    if not exe:
+        print('    (ข้าม Overture: ไม่พบคำสั่ง overturemaps)', flush=True)
+        return []
+    k = 111320 * math.cos(math.radians(lat))
+    bbox = f'{lon - r / k:.6f},{lat - r / 110540:.6f},{lon + r / k:.6f},{lat + r / 110540:.6f}'
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, 'b.geojson')
+        for attempt in range(3):
+            try:
+                subprocess.run([exe, 'download', f'--bbox={bbox}', '-f', 'geojson', '--type=building', '-o', out],
+                               check=True, timeout=900, capture_output=True)
+                return json.load(open(out, encoding='utf-8')).get('features', [])
+            except Exception as e:
+                print(f'    Overture ลองใหม่ ({e})', flush=True)
+                time.sleep(15)
+    return []
+
+
+def _pip(x, z, ring):
+    ins = False
+    for i in range(len(ring)):
+        x1, z1 = ring[i]; x2, z2 = ring[i - 1]
+        if (z1 > z) != (z2 > z) and x < (x2 - x1) * (z - z1) / ((z2 - z1) or 1e-12) + x1:
+            ins = not ins
+    return ins
+
+
+def merge_overture(js, feats):
+    """เพิ่มอาคาร Overture ที่ไม่ได้มาจาก OSM และไม่ทับอาคาร OSM เดิม → elements รูปแบบเดียวกัน (t.src = 'ovt')"""
+    lat0, lon0 = js['c']; kx, kz = js['k']
+    def xz(lon, lat):
+        return (lon - lon0) * kx, (lat - lat0) * kz
+    osm = []
+    for e in js['e']:
+        if e['y'] == 'w' and 'building' in e['t']:
+            pts, x, z = [], 0, 0
+            g = e['g']
+            for i in range(0, len(g), 2):
+                x += g[i]; z += g[i + 1]; pts.append((x / 10, z / 10))
+            xs = [p[0] for p in pts]; zs = [p[1] for p in pts]
+            osm.append((min(xs), min(zs), max(xs), max(zs), pts))
+    cell = {}
+    for i, b in enumerate(osm):
+        for gx in range(int(b[0] // 50), int(b[2] // 50) + 1):
+            for gz in range(int(b[1] // 50), int(b[3] // 50) + 1):
+                cell.setdefault((gx, gz), []).append(i)
+    def inside_osm(x, z):
+        for i in cell.get((int(x // 50), int(z // 50)), []):
+            b = osm[i]
+            if b[0] <= x <= b[2] and b[1] <= z <= b[3] and _pip(x, z, b[4]):
+                return True
+        return False
+    added = 0
+    for n, f in enumerate(feats):
+        p = f.get('properties') or {}
+        src = p.get('sources') or []
+        if isinstance(src, str):
+            try: src = json.loads(src)
+            except Exception: src = []
+        if any('openstreetmap' in str(s.get('dataset', '')).lower() for s in src if isinstance(s, dict)):
+            continue
+        geom = f.get('geometry') or {}
+        polys = [geom['coordinates']] if geom.get('type') == 'Polygon' else geom.get('coordinates', []) if geom.get('type') == 'MultiPolygon' else []
+        for poly in polys:
+            if not poly or len(poly[0]) < 4:
+                continue
+            ring = [xz(c[0], c[1]) for c in poly[0]]
+            cx = sum(q[0] for q in ring[:-1]) / (len(ring) - 1); cz = sum(q[1] for q in ring[:-1]) / (len(ring) - 1)
+            if inside_osm(cx, cz):
+                continue
+            area = abs(sum(ring[i][0] * ring[i - 1][1] - ring[i - 1][0] * ring[i][1] for i in range(len(ring)))) / 2
+            if area < 12:
+                continue
+            g, px, pz = [], 0, 0
+            for i, (x, z) in enumerate(ring):
+                X, Z = round(x * 10), round(z * 10)
+                g += [X, Z] if i == 0 else [X - px, Z - pz]
+                px, pz = X, Z
+            t = {'building': 'yes', 'src': 'ovt'}
+            if p.get('height'):
+                t['height'] = str(round(float(p['height']), 1))
+            if p.get('num_floors'):
+                t['building:levels'] = str(int(p['num_floors']))
+            js['e'].append({'y': 'w', 'id': -(n + 1), 't': t, 'g': g})
+            added += 1
+    js['ovt'] = added
+    return added
+
+
 def slim(j, name, lat0, lon0):
     """ตัดข้อมูลที่ไม่ใช้ + เก็บพิกัดแบบย่อ (เดซิเมตรจากจุดกลาง เข้ารหัสผลต่าง) + เรียงลำดับคงที่ (git diff เล็ก)
     รูปแบบไฟล์ (frc3d.js ถอดกลับ): {"v":2,"c":[lat0,lon0],"k":[kx,kz],"e":[{"y":"w|n|r","id":..,"t":{tags},"g":[x,z,dx,dz,...]}]}
@@ -125,6 +221,8 @@ def main():
     ap.add_argument('--force', action='store_true')
     ap.add_argument('--only', default='')
     ap.add_argument('--sample', help='ทดสอบ: ใช้ไฟล์ Overpass JSON นี้แทนการดึงจริง')
+    ap.add_argument('--overture-sample', help='ทดสอบ: ใช้ไฟล์ GeoJSON อาคาร Overture นี้แทนการดึงจริง')
+    ap.add_argument('--no-overture', action='store_true', help='ไม่เติมอาคารจาก Overture')
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     stations = load_stations()
@@ -156,19 +254,24 @@ def main():
         names = ' / '.join(m['name'] for m in g['members'])
         prev = old.get(fname, {})
         fresh = os.path.exists(path) and prev.get('updated') and \
-            (now - datetime.fromisoformat(prev['updated'])).days < MAX_AGE_DAYS
+            (now - datetime.fromisoformat(prev['updated'])).days < MAX_AGE_DAYS and \
+            (a.no_overture or prev.get('ovt_v') == OVT_VERSION)
         want = (not only) or any(str(m['id']) in only for m in g['members'])
-        updated, n = prev.get('updated'), prev.get('n')
+        updated, n, ovt_v, ovt_n = prev.get('updated'), prev.get('n'), prev.get('ovt_v'), prev.get('ovt')
         if want and (a.force or not fresh):
             print(f'[{gi + 1}/{len(groups)}] {names}', flush=True)
             try:
                 raw = json.load(open(a.sample, encoding='utf-8')) if a.sample else fetch(query(g['lat'], g['lon'], RADIUS))
                 js = slim(raw, names, g['lat'], g['lon'])
+                if not a.no_overture:
+                    k = merge_overture(js, overture_buildings(g['lat'], g['lon'], RADIUS, a.overture_sample))
+                    print(f'    + อาคารจาก Overture {k} หลัง', flush=True)
                 tmp = path + '.tmp'
                 with open(tmp, 'w', encoding='utf-8') as f:
                     json.dump(js, f, ensure_ascii=False, separators=(',', ':'))
                 os.replace(tmp, path)
                 updated, n = now.isoformat(timespec='seconds'), len(js['e'])
+                ovt_v, ovt_n = (None, None) if a.no_overture else (OVT_VERSION, js.get('ovt', 0))
                 print(f'    ✓ {n} รายการ · {os.path.getsize(path) / 1024:.0f} KB', flush=True)
                 done += 1
                 if not a.sample:
@@ -179,7 +282,7 @@ def main():
         if os.path.exists(path):
             for m in g['members']:
                 index.append({'id': str(m['id']), 'name': m['name'], 'lat': m['lat'], 'lon': m['lon'],
-                              'file': fname, 'updated': updated, 'n': n})
+                              'file': fname, 'updated': updated, 'n': n, 'ovt_v': ovt_v, 'ovt': ovt_n})
     with open(idx_path, 'w', encoding='utf-8') as f:
         json.dump({'radius': RADIUS, 'stations': index}, f, ensure_ascii=False, indent=0)
     print(f'เสร็จ: สร้างใหม่ {done} · ไม่สำเร็จ {fail} · ในดัชนี {len(index)} สถานี', flush=True)
