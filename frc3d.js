@@ -144,8 +144,8 @@
     box(0.025, 0.16, 0.035, M('#8d949b', { metalness: 0.6, roughness: 0.25 }), BW / 2 - 0.07, B0 + BH * 0.55, BD / 2 + 0.02);
     // ท่อเก็บน้ำตัวอย่าง → มาตรวัดน้ำ
     const pipeMat = M('#7b8189', { metalness: 0.3, roughness: 0.45 });
-    const pp = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, 1.9, 10), pipeMat); pp.position.set(-1.3, 0.05, 0.1); pp.rotation.z = Math.PI / 2; grp.add(pp);
-    box(0.30, 0.12, 0.22, M('#4f565e'), -2.35, 0.06, 0.1);
+    const pp = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, 1.9, 10), pipeMat); const ps = opt.pipeSide || -1; pp.position.set(ps * 1.3, 0.05, 0.1); pp.rotation.z = Math.PI / 2; grp.add(pp);   // pipeSide 1 = ท่อออกขวามือคนมอง
+    box(0.30, 0.12, 0.22, M('#4f565e'), ps * 2.35, 0.06, 0.1);
     // หลังคาเหล็กสีน้ำเงิน (โครงเสาสี่เหลี่ยม 2 ต้นด้านหลัง)
     if (opt.canopy !== false) {
       const blue = M('#1d5bb0', { roughness: 0.45, metalness: 0.2 }), blueD = M('#164a91', { roughness: 0.5 });
@@ -318,6 +318,12 @@
           add(B(bw + 0.6, 0.25, len), roofM, mx, h + 3.3, mz, ang);
           for (let d = 6; d < len - 2; d += 10) add(B(0.8, h, 0.8), conc, a[0] + (b[0] - a[0]) * d / len, h / 2, a[1] + (b[1] - a[1]) * d / len, ang);
         }
+      } else if (p.type === 'stairs') {            // บันไดคอนกรีตภายนอก (ราวเหล็ก) ขึ้นไปสูง h ตามทิศ rot ยาว run
+        const g2 = new T.Group(), h = p.h || 5, run = p.run || 7, w = p.w || 2, ang = Math.atan2(h, run), sl = Math.hypot(h, run);
+        const st2 = new T.Mesh(B(w, 0.35, sl), L('#cfcbc3')); st2.position.set(0, h / 2, run / 2); st2.rotation.x = ang; g2.add(st2);
+        for (const sx of [-1, 1]) { const r = new T.Mesh(B(0.05, 0.05, sl), L('#e6e6e2')); r.position.set(sx * w / 2, h / 2 + 1.0, run / 2); r.rotation.x = ang; g2.add(r); }
+        const land = new T.Mesh(B(w + 0.4, 0.3, 2), L('#cfcbc3')); land.position.set(0, h, -1); g2.add(land);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
       } else if (p.type === 'lift') {              // หอลิฟต์กระจก (สะพานลอย/ทางเชื่อม)
         const w = p.w || 3.6, h = p.h || 10;
         add(B(w, h, w), new T.MeshLambertMaterial({ color: '#5fa3a0', transparent: true, opacity: 0.72 }), p.x, h / 2, p.z, ry);
@@ -396,9 +402,12 @@
         { type: 'skywalk', x: -28.3, z: -1.0, h: 5, hallH: 3.2, escRot: 90, run: 9, escW: 3.2, bridgeRot: -90, len: 12.5, bridgeW: 4, hallW: 5, hallD: 4 },   // ฝั่งตะวันตก: ขึ้นไปทางตะวันออก → สะพานชั้น 2 ข้ามไปฝั่งตะวันออก
         { type: 'skywalk', x: -44.3, z: -1.0, h: 5, hallH: 3.2, escRot: -90, run: 9, escW: 3.2, bridgeRot: 180, len: 1.5, hallW: 5, hallD: 4 },   // ฝั่งตะวันออก: บันไดเลื่อนลงไปทางตะวันออก
         { type: 'lift', x: -35.3, z: -3.6, w: 3.6, h: 10 },                                                                                   // หอลิฟต์กระจกกลางสะพาน
-        { type: 'bridge', h: 5, w: 3.5, pts: [[35.3, -5.4], [40.3, -45]] },                                                                   // ทางเดินชั้น 2 จากหอลิฟต์ไปทางใต้ เข้าตึกอดุลยเดชวิกรม
+        { type: 'bridge', h: 5, w: 3.5, pts: [[35.3, -5.4], [40.3, -45]] },
+        { type: 'tower', world: true, x: 59, z: -21, rot: 0, w: 24, d: 28, h: 21, facade: 'ind', color: '#c3bfb6', roof: '#a9a59d' },   // สถานีไฟฟ้าย่อย รพ.ศิริราช (อาคารคอนกรีต) — หัวบันไดเลื่อนฝั่งตะวันออกต่อเข้าผนังด้านตะวันตก
+        { type: 'stairs', world: true, x: 50.2, z: -11, rot: 90, h: 5, run: 7, w: 2.2 },                                                  // บันไดคอนกรีตภายนอกขึ้นทางเชื่อม                                                                   // ทางเดินชั้น 2 จากหอลิฟต์ไปทางใต้ เข้าตึกอดุลยเดชวิกรม
       ] },
-    { match: /ศิครินทร์/, lat: 13.6552076, lon: 100.6457107, yaw: 165, propYaw: 165,             // ในเขต รพ. มุมหน้า-ขวาของสนามหญ้ายกสูง ติดซอยข้าง Starbucks · ตู้หันออกถนนลาซาลตรงๆ
+    { match: /ศิครินทร์/, lat: 13.6552076, lon: 100.6457107, yaw: 165, propYaw: 165, cabShift: [1.35, -0.36], pipeSide: 1,   // ตู้เลื่อนเข้าในสนาม 1.4 ม. · ท่อออกขวา (ฝั่งซอย)
+                 // ในเขต รพ. มุมหน้า-ขวาของสนามหญ้ายกสูง ติดซอยข้าง Starbucks · ตู้หันออกถนนลาซาลตรงๆ
       roadW: { 1408375209: 14 },                                                                  // ถ.ลาซาล 4 ช่องจราจร
       bld: { 34584267: { style: 'hospital', h: 13, noSign: true } },
       props: [   // ทุกชิ้นเป็นพิกัดจริง (ตอ., เหนือ) ม. จากตู้ — สนามหญ้าเป็นสี่เหลี่ยมคางหมู: ขอบหน้าขนานถนนลาซาล ขอบขวาขนานซอย
@@ -417,7 +426,7 @@
         { type: 'cars', world: true, x: -39.7, z: -42.5, rot: 90, n: 12, gap: 2.7, seed: 2 },
         { type: 'cars', world: true, x: -39.7, z: -49.5, rot: 90, n: 12, gap: 2.7, seed: 3 },
       ] },
-    { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27,                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
+    { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
       palace: { a: [-183.5, 74.8], b: [39.8, -6.8], r: 450 },
       props: [   // กรอบตามตู้: x+ = ขวามือคนยืนหน้าตู้ (ตอ.เฉียงเหนือ), z+ = ไปทางถนน · world: true = พิกัดจริง (ตอ., เหนือ)
@@ -425,15 +434,16 @@
         { type: 'road', w: 13, pts: [[-14.7, 33.6], [-14.4, 25.1]] },                 // ปากทางเข้า (กว้าง)
         { type: 'gate', world: true, x: -13.9, z: 8.6, rot: 0, w: 7.6, h: 4 },                                       // ประตูวัง (เสาครีม + บานเหล็กดัด)
         { type: 'guardhouse', world: true, x: -7.7, z: 6.1, rot: 0 },                                    // ป้อมรักษาการณ์ข้างประตู
-        { type: 'palaceFence', world: true, x1: -2.0, z1: -0.6, x2: -6.0, z2: 9.4, h: 1.9, plinth: 0.7, span: 2.6 },                          // รั้วขาว: จากข้างตู้ ออกมาด้านหน้า
-        { type: 'palaceFence', world: true, x1: -6.0, z1: 9.4, x2: -9.0, z2: 9.0, h: 1.9, plinth: 0.7, span: 2.6 },                           // … แล้วเลี้ยวไปชนเสาประตู
+        { type: 'palaceFence', world: true, x1: -2.0, z1: -3.6, x2: -2.0, z2: 2.3, h: 1.9, plinth: 0.7, span: 2.4 },                          // รั้วขาว: จากข้างตู้ ตรงออกมาด้านหน้า
+        { type: 'palaceFence', world: true, x1: -2.0, z1: 2.3, x2: -6.8, z2: 8.65, h: 1.9, plinth: 0.7, span: 2.6 },                          // … เฉียงออกไปทางประตู
+        { type: 'palaceFence', world: true, x1: -6.8, z1: 8.65, x2: -9.1, z2: 9.0, h: 1.9, plinth: 0.7, span: 2.4 },                          // … แล้วชนเสาประตู
         { type: 'tree', x: -10.7, z: 19.3, s: 1.4 }, { type: 'tree', x: -23.7, z: 19.1, s: 1.3 }, { type: 'tree', x: -33.7, z: 9.8, s: 1.6 },
       ] },
   ];
 
   function cabFix(st) {
     const f = CAB_FIX.find(x => x.match.test(st.name || ''));
-    return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, propYaw: f.propYaw, camOff: f.camOff || 0, canopy: f.canopy, props: f.props, hideR: f.hide || 0,
+    return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, propYaw: f.propYaw, camOff: f.camOff || 0, cabShift: f.cabShift || null, pipeSide: f.pipeSide || null, canopy: f.canopy, props: f.props, hideR: f.hide || 0,
       bld: f.bld, noBarrierR: f.noBarrierR || 0, roadW: f.roadW || null, palace: f.palace || null, fixed: true }) : st;
   }
 
@@ -621,9 +631,9 @@
           } else L(wx, wy, ww, wh);
         } else if (type === 'glass') {
           if (!night) {
-            const gr = g.createLinearGradient(x, y, x + S, y + S); gr.addColorStop(0, q < 0.5 ? '#7fa4bf' : '#6d93b0'); gr.addColorStop(1, '#4d6f8a');
-            g.fillStyle = gr; g.fillRect(x, y, S, S);
-            g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.moveTo(x, y + S * 0.7); g.lineTo(x + S * 0.6, y); g.lineTo(x + S * 0.8, y); g.lineTo(x, y + S); g.fill();
+            const gr = g.createLinearGradient(x, y, x + S * 0.3, y + S); gr.addColorStop(0, q < 0.5 ? '#c9dbe3' : '#bcd1da'); gr.addColorStop(0.55, q < 0.5 ? '#9fbccb' : '#a9c4d0'); gr.addColorStop(1, '#86a6b6');
+            g.fillStyle = gr; g.fillRect(x, y, S, S);                                   // กระจกใส สะท้อนฟ้า (ฟ้าอมเทาอ่อน)
+            g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.moveTo(x, y + S * 0.7); g.lineTo(x + S * 0.6, y); g.lineTo(x + S * 0.8, y); g.lineTo(x, y + S); g.fill();
             g.fillStyle = '#c8d0d6'; g.fillRect(x, y, 4, S); g.fillRect(x + S / 2 - 1, y, 2, S); g.fillRect(x, y + S - 10, S, 10);
           } else { if (lit) { g.fillStyle = warm ? '#ffe3a8' : '#dcecff'; g.fillRect(x + 4, y, S - 4, S - 10); } }
         } else if (type === 'hosp') {
@@ -851,7 +861,7 @@
         try { wallC = C(t['building:colour'] || t['building:color'] || pick(WALL[kind] || WALL.shop, rnd())); } catch (e) { wallC = C(pick(WALL.shop, rnd())); }
         try { roofC = C(t['roof:colour'] || t['roof:color'] || (shape === 'flat' ? pick(ROOF_FLAT, rnd()) : kind === 'ind' ? pick(['#7d97ab', '#8aa0b0', '#6f8a9e'], rnd()) : pick(ROOF_TILE, rnd()))); } catch (e) { roofC = C(pick(ROOF_FLAT, rnd())); }
         if (palB) { wallC = C(pick(['#f6f3ec', '#f1ece1', '#f8f6f0'], rnd())); roofC = C(pick(['#b9532c', '#a3482a', '#7f6a58', '#5d7c68'], rnd())); shape = ob && rect >= 0.62 && ob.hw >= 1.5 ? 'hipped' : 'flat'; }
-        if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#9cc3cc'); roofC = C('#b9c0c4'); shape = 'flat'; }
+        if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
         if (ov && ov.style === 'colonnade') {                               // อาคารชั้นเดียวสีขาว มีระเบียงเสาเรียงด้านหน้า (หันหาถนน/ทิศหน้าตู้)
@@ -1207,7 +1217,7 @@
         lights.hemi = new T.HemisphereLight(0xffffff, 0x6b6b60, 0.78); scene.add(lights.hemi);
         lights.sun = new T.DirectionalLight(0xfff4e0, 0.62); lights.sun.position.set(-40, 70, 25); scene.add(lights.sun);
         cabRoot = new T.Group(); scene.add(cabRoot);
-        cab = buildCabinet(T, color, { canopy: st.canopy }); cabRoot.add(cab.grp);
+        cab = buildCabinet(T, color, { canopy: st.canopy, pipeSide: st.pipeSide }); cabRoot.add(cab.grp);
         propsRoot = new T.Group(); scene.add(propsRoot);
         if (st.props) { const pr = buildProps(T, st.props, st.propYaw != null ? st.propYaw : st.yaw); propsRoot.add(pr.grp); cab.grp.position.y = pr.raise; }
         cabRoot.rotation.y = st.yaw != null ? st.yaw * Math.PI / 180 : 0; cab.grp.rotation.y = 0;
@@ -1224,7 +1234,7 @@
         renderer.autoClear = false;
         this.map = map;
       },
-      setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); cabRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); propsRoot.position.copy(cabRoot.position); cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
+      setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); propsRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); const sh = st.cabShift || [0, 0]; cabRoot.position.set(c.cabXZ[0] + sh[0], 0, c.cabXZ[1] - sh[1]); /* cabShift = เลื่อนตู้ [ตอ., เหนือ] ม. โดยฉากไม่เลื่อนตาม */ cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
       setNight(on) {
         if (!lights.hemi) return;
         if (city) { city.wallMats.forEach(m => { m.emissiveIntensity = on ? 0.85 : 0; }); city.nightMats.forEach(([m, v]) => { m.emissiveIntensity = on ? v : 0; }); }
@@ -1372,7 +1382,7 @@
       state.cabYaw = c.cabYaw;
       if (_cur !== state) return;
       state.layer.setCity(c); hideBase(map, st, R_CITY);
-      const [cx, cz] = c.cabXZ; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
+      const sh = st.cabShift || [0, 0], cx = c.cabXZ[0] + sh[0], cz = c.cabXZ[1] - sh[1]; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
       state.cityReady = true; flyIn(state);
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';
