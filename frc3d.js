@@ -1160,13 +1160,17 @@
     }
 
     // ── 5) ต้นไม้ ──
+    const RG = new Map(), RGS = 20;                                                    // ดัชนีตารางของช่วงถนน (ค้นหาเร็ว)
+    roadSegs.forEach((sg, i) => { const pad = sg[3] / 2 + 4, x0 = Math.floor((Math.min(sg[0][0], sg[1][0]) - pad) / RGS), x1 = Math.floor((Math.max(sg[0][0], sg[1][0]) + pad) / RGS), z0 = Math.floor((Math.min(sg[0][1], sg[1][1]) - pad) / RGS), z1 = Math.floor((Math.max(sg[0][1], sg[1][1]) + pad) / RGS);
+      if ((x1 - x0) * (z1 - z0) > 400) return; for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const k = gx + ',' + gz; if (!RG.has(k)) RG.set(k, []); RG.get(k).push(i); } });
+    const nearRoad = (x, z, extra) => { const l = RG.get(Math.floor(x / RGS) + ',' + Math.floor(z / RGS)); if (!l) return false; for (const i of l) { const sg = roadSegs[i]; if (segDist(x, z, sg[0], sg[1])[0] < sg[3] / 2 + extra) return true; } return false; };
     const grid = new Map(), GS = 25;
     bInfo.forEach((b, i) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const q of b.outer) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); } b.bb = [x0, z0, x1, z1]; for (let gx = Math.floor(x0 / GS); gx <= Math.floor(x1 / GS); gx++) for (let gz = Math.floor(z0 / GS); gz <= Math.floor(z1 / GS); gz++) { const k = gx + ',' + gz; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(i); } });
     const inBuilding = (x, z, pad) => { const l = grid.get(Math.floor(x / GS) + ',' + Math.floor(z / GS)); if (!l) return false; for (const i of l) { const b = bInfo[i]; if (x < b.bb[0] - pad || x > b.bb[2] + pad || z < b.bb[1] - pad || z > b.bb[3] + pad) continue; if (pip(x, z, b.outer)) return true; if (pad > 0 && (pip(x + pad, z, b.outer) || pip(x - pad, z, b.outer) || pip(x, z + pad, b.outer) || pip(x, z - pad, b.outer))) return true; } return false; };
     const addTree = (x, z, s, seed) => {
-      if (trees.length >= 4500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < Math.max(15, (opts.hideR || 0) + 4)) return;
+      if (trees.length >= 7500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < Math.max(15, (opts.hideR || 0) + 4)) return;
       if (inBuilding(x, z, 1.2)) return;
-      for (const sg of roadSegs) if (segDist(x, z, sg[0], sg[1])[0] < sg[3] / 2 + 1.0) return;     // ไม่ให้ต้นไม้ขึ้นบนผิวถนน (ทุกเส้น ตามความกว้างจริง)
+      if (nearRoad(x, z, 1.0)) return;                                                 // ไม่ให้ต้นไม้ขึ้นบนผิวถนน (ทุกเส้น ตามความกว้างจริง)
       { const fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0), dx = x - opts.cabXZ[0], dz = z - opts.cabXZ[1], fwd = dx * fx + dz * fz, lat = Math.abs(-dx * fz + dz * fx);
         if (fwd > 0 && fwd < 45 && lat < 7 + fwd * 0.25) return; }                 // ไม่ให้ต้นไม้บังมุมกล้องหน้าตู้
       trees.push({ x, z, s: s * (0.8 + hash(seed) * 0.5), c: hash(seed + 7), type: hash(seed + 3) < 0.12 ? 'palm' : hash(seed + 5) < 0.35 ? 'round' : 'tall' });
@@ -1199,6 +1203,40 @@
         x0 = Math.max(x0, r0[0] - hideR); x1 = Math.min(x1, r0[0] + hideR); z0 = Math.max(z0, r0[1] - hideR); z1 = Math.min(z1, r0[1] + hideR);
         const rr = rng(el.id >>> 0);
         for (let x = x0; x < x1; x += sp) for (let z = z0; z < z1; z += sp) { const jx = x + (rr() - 0.5) * sp * 0.9, jz = z + (rr() - 0.5) * sp * 0.9; if (pip(jx, jz, line)) addTree(jx, jz, sp <= 7 ? 1.15 : 1.25, Math.round(jx * 13 + jz * 7)); }
+      }
+    }
+
+    // ── 5b) เติมสภาพแวดล้อม: ต้นไม้/พุ่มไม้บนที่ว่าง (เป็นกลุ่มตาม noise) + รถบนถนน ──
+    const nz2 = (x, z) => (Math.sin(x * 0.021 + 1.3) * Math.cos(z * 0.017 - 0.7) + Math.sin((x + z) * 0.011 + 2.1) * 0.7 + Math.sin(x * 0.053 - z * 0.041) * 0.35) / 2.05;
+    const shrubs = [], cars = [];
+    {
+      const step = 8.5, fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0);
+      for (let x = r0[0] - hideR; x < r0[0] + hideR; x += step) for (let z = r0[1] - hideR; z < r0[1] + hideR; z += step) {
+        const sd = Math.round(x * 7.1 + z * 13.7), jx = x + (hash(sd) - 0.5) * step * 0.9, jz = z + (hash(sd + 1) - 0.5) * step * 0.9;
+        if (Math.hypot(jx - r0[0], jz - r0[1]) > hideR - 10) continue;
+        const v = nz2(jx, jz) + (hash(sd + 2) - 0.5) * 0.35;
+        if (v < 0.05) continue;
+        if (opts.fixed && Math.hypot(jx - opts.cabXZ[0], jz - opts.cabXZ[1]) < 45) continue;   // พื้นที่ฉากจัดเองรอบตู้ ไม่เติมต้นไม้
+        if (inBuilding(jx, jz, 3.5)) continue;
+        if (nearRoad(jx, jz, 2.6)) continue;
+        if (v > 0.32) addTree(jx, jz, 1.0 + hash(sd + 3) * 0.3, sd);
+        else if (Math.hypot(jx - opts.cabXZ[0], jz - opts.cabXZ[1]) > 14) { const dx = jx - opts.cabXZ[0], dz = jz - opts.cabXZ[1], fw = dx * fx + dz * fz; if (!(fw > 0 && fw < 40 && Math.abs(-dx * fz + dz * fx) < 6 + fw * 0.25)) shrubs.push([jx, jz, 0.6 + hash(sd + 4) * 0.7, hash(sd + 5)]); }
+      }
+      // รถบนถนน (ถนนตั้งแต่ 9 ม.) — จอด/วิ่งตามช่องจราจร ไม่ใส่ใกล้ตู้
+      const CC = ['#f4f4f2', '#f4f4f2', '#c9ccd0', '#1f2328', '#8f969c', '#b8302a', '#2c4a7a', '#d9d4c8', '#e8e6e0', '#3b5d3a'];
+      for (const sg of roadSegs) {
+        const w = sg[3]; if (w < 9 || cars.length > 700) continue;
+        const a = sg[0], b = sg[1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 8) continue;
+        const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, nx = -uz, nzz = ux, lanes = Math.max(2, Math.floor(w / 3.3)), lw = w / lanes;
+        for (let ln = 0; ln < lanes; ln++) {
+          const off = -w / 2 + lw * (ln + 0.5), dir = off < 0 ? 1 : -1;
+          for (let d = 4 + hash(Math.round(a[0] * 3 + ln)) * 20; d < L - 3; d += 14 + hash(Math.round(d * 7 + a[1] + ln)) * 34) {
+            const x = a[0] + ux * d + nx * off, z = a[1] + uz * d + nzz * off;
+            if (Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < 26 || Math.hypot(x - r0[0], z - r0[1]) > hideR - 5) continue;
+            const hs = hash(Math.round(x * 31 + z * 17));
+            cars.push([x, z, Math.atan2(ux * dir, uz * dir), CC[Math.floor(hs * CC.length)], hs < 0.12 ? 'truck' : hs < 0.2 ? 'van' : 'car']);
+          }
+        }
       }
     }
 
@@ -1264,6 +1302,55 @@
     {                                                                                // เอาเสาไฟที่บังแนวกล้องหน้าตู้ออก
       const fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0);
       for (let i = lamps.length - 1; i >= 0; i--) { const dx = lamps[i].x - opts.cabXZ[0], dz = lamps[i].z - opts.cabXZ[1], fwd = dx * fx + dz * fz, lat = Math.abs(-dx * fz + dz * fx); if (fwd > 0 && fwd < 45 && lat < 3.5 + fwd * 0.2) lamps.splice(i, 1); }
+    }
+    // พื้นดิน: ผิวหญ้า-ดินแบบ procedural + ลานปูนรอบอาคาร (แทนพื้นขาวโล่งของแผนที่ฐาน)
+    {
+      const S = 2048, R = hideR, cv = document.createElement('canvas'); cv.width = cv.height = S; const g = cv.getContext('2d');
+      const X = x => (x - r0[0] + R) / (2 * R) * S, Zc = z => (z - r0[1] + R) / (2 * R) * S, k = S / (2 * R);
+      g.fillStyle = '#d6dcc0'; g.fillRect(0, 0, S, S);
+      const rr = rng(((r0[0] * 1000) | 0) ^ 0x5bd1e995);
+      for (let i = 0; i < 2600; i++) { const x = rr() * S, y = rr() * S, r = (6 + rr() * 40) * k * 4, c = ['rgba(150,178,110,', 'rgba(176,196,128,', 'rgba(198,190,150,', 'rgba(132,160,96,', 'rgba(214,206,170,'][i % 5];
+        const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c + (0.18 + rr() * 0.2) + ')'); gr.addColorStop(1, c + '0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+      for (let i = 0; i < 9000; i++) { g.fillStyle = rr() < 0.5 ? 'rgba(110,140,80,.25)' : 'rgba(225,220,195,.25)'; g.fillRect(rr() * S, rr() * S, 1.5, 1.5); }
+      g.lineJoin = 'round'; g.strokeStyle = '#e4dfd3'; g.fillStyle = '#e4dfd3'; g.lineWidth = 7 * k;          // ลานปูนรอบอาคาร ~3.5 ม.
+      for (const b of bInfo) { g.beginPath(); b.outer.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](X(q[0]), Zc(q[1]))); g.closePath(); g.fill(); g.stroke(); }
+      g.lineWidth = 2.5 * k; g.strokeStyle = 'rgba(160,150,135,.35)';
+      for (const b of bInfo) { g.beginPath(); b.outer.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](X(q[0]), Zc(q[1]))); g.closePath(); g.stroke(); }
+      const tx = new T.CanvasTexture(cv); tx.anisotropy = 8;
+      const gg = new T.CircleGeometry(R, 72); gg.rotateX(-Math.PI / 2);
+      const gm = new T.Mesh(gg, new T.MeshLambertMaterial({ map: tx, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })); gm.position.set(r0[0], 0.015, r0[1]); grp.add(gm);
+    }
+    // พุ่มไม้เตี้ยบนที่ว่าง
+    if (shrubs.length) {
+      const sg = new T.IcosahedronGeometry(1, 0); sg.scale(1, 0.7, 1);
+      const im = new T.InstancedMesh(sg, new T.MeshLambertMaterial({ color: '#ffffff' }), shrubs.length);
+      shrubs.forEach(([x, z, r, c], i) => { m4.makeScale(r, r, r).setPosition(x, r * 0.45, z); im.setMatrixAt(i, m4); im.setColorAt(i, cc.set(c < 0.4 ? '#4f8a3c' : c < 0.75 ? '#6a9a48' : '#8aa85a')); });
+      if (im.instanceColor) im.instanceColor.needsUpdate = true; grp.add(im);
+    }
+    // รถบนถนน (ตัวถัง + ห้องโดยสาร/ตู้ทึบ + กระจก)
+    if (cars.length) {
+      const bodyG = new T.BoxGeometry(1.8, 0.75, 4.4); bodyG.translate(0, 0.62, 0);
+      const cabG = new T.BoxGeometry(1.62, 0.62, 2.3); cabG.translate(0, 1.3, -0.2);
+      const boxG = new T.BoxGeometry(2.0, 2.0, 3.6); boxG.translate(0, 1.6, -0.7);
+      const winG = new T.BoxGeometry(1.64, 0.4, 2.1); winG.translate(0, 1.3, -0.2);
+      const mk = (geo, list, colFn) => { if (!list.length) return; const im = new T.InstancedMesh(geo, new T.MeshLambertMaterial({ color: '#ffffff' }), list.length);
+        list.forEach((c, i) => { m4.makeRotationY(c[2]).setPosition(c[0], 0.2, c[1]); im.setMatrixAt(i, m4); im.setColorAt(i, cc.set(colFn(c))); }); if (im.instanceColor) im.instanceColor.needsUpdate = true; grp.add(im); };
+      mk(bodyG, cars, c => c[3]); mk(cabG, cars.filter(c => c[4] !== 'truck'), c => c[3]); mk(winG, cars.filter(c => c[4] !== 'truck'), () => '#34424c');
+      mk(boxG, cars.filter(c => c[4] === 'truck'), () => '#eeeeea');
+    }
+    // เส้นขอบอาคาร (ขอบดาดฟ้า + มุมตึก) ให้ภาพคมขึ้น
+    {
+      const pv = [];
+      for (const b of bInfo) {
+        const o = b.outer, n = o.length; if (n < 3 || b.h < 2.5) continue;
+        for (let i = 0; i < n; i++) {
+          const a = o[i], c = o[(i + 1) % n], pr = o[(i - 1 + n) % n];
+          pv.push(a[0], b.h + 0.02, a[1], c[0], b.h + 0.02, c[1]);
+          const d1 = Math.atan2(a[1] - pr[1], a[0] - pr[0]), d2 = Math.atan2(c[1] - a[1], c[0] - a[0]); let dd = Math.abs(d2 - d1); if (dd > Math.PI) dd = 2 * Math.PI - dd;
+          if (dd > 0.35) pv.push(a[0], 0.05, a[1], a[0], b.h, a[1]);
+        }
+      }
+      if (pv.length) { const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(pv, 3)); grp.add(new T.LineSegments(lg, new T.LineBasicMaterial({ color: '#5f5b55', transparent: true, opacity: 0.45 }))); }
     }
     if (lamps.length) {
       const pg = new T.CylinderGeometry(0.06, 0.09, 8, 6); pg.translate(0, 4, 0);
