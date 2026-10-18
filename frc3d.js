@@ -334,16 +334,44 @@
           for (const sx of [-1, 1]) for (const sz of [0.4, len - 0.4]) { const c2 = new T.Mesh(B(0.3, hC, 0.3), steel); c2.position.set(sx * (w / 2 - 0.4), hC / 2, sz); g2.add(c2); }
           for (const sz of [0.25, len - 0.25]) { const bm = new T.Mesh(B(w - 0.4, 0.45, 0.25), steel); bm.position.set(0, hC - 0.1, sz); g2.add(bm); }
           for (const sx of [-1, 1]) { const bm = new T.Mesh(B(0.25, 0.45, len), steel); bm.position.set(sx * (w / 2 - 0.4), hC - 0.1, len / 2); g2.add(bm); }
-          const fb = new T.Mesh(B(w - 1.2, 0.5, 0.05), L('#2c3e66')); fb.position.set(0, hC + 0.55, -0.05); g2.add(fb);   // ป้ายชื่อหน้าซุ้ม
+          const fb = new T.Mesh(new T.PlaneGeometry(w - 1.2, 0.7), p.sign ? new T.MeshBasicMaterial({ map: signTexture(T, p.sign, null, '#ffffff', '#2c3e66'), side: T.DoubleSide }) : L('#2c3e66')); fb.position.set(0, hC + 0.5, -0.06); fb.rotation.y = Math.PI; g2.add(fb);   // ป้ายชื่อหน้าซุ้ม
           const q = W(p.s0, lv); g2.position.set(q[0], 0, q[1]); g2.rotation.y = angU; grp.add(g2);
         }
         for (const pv of p.posts || []) {                                             // เสาประตูคอนกรีตเทา มีร่องแนวตั้ง
-          const q = W(p.postS != null ? p.postS : p.s0 - 0.3, pv), g3 = new T.Group();
+          const q = Array.isArray(pv) ? W(pv[0], pv[1]) : W(p.postS != null ? p.postS : p.s0 - 0.3, pv), g3 = new T.Group();
           const b1 = new T.Mesh(B(1.1, 3.2, 1.3), conc); b1.position.y = 1.6; g3.add(b1);
           for (const gx of [-0.25, 0.25]) { const gr = new T.Mesh(B(0.08, 2.6, 1.32), concD); gr.position.set(gx, 1.5, 0); g3.add(gr); }
           const cp = new T.Mesh(B(1.3, 0.2, 1.5), L('#b9b8b2')); cp.position.y = 3.3; g3.add(cp);
           g3.position.set(q[0], 0, q[1]); g3.rotation.y = angU; grp.add(g3);
         }
+      } else if (p.type === 'curbLine') {          // ขอบทางเท้าทาสีแดง-ขาว ตามเส้น · pts พิกัดจริง
+        const pts = p.pts.map(q => toF(q[0], q[1])), red = L('#c23b2e'), wh = L('#f2f2f2'); let k = 0;
+        for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
+          for (let d = 0; d < len - 0.05; d += 1.0, k++) { const dd = Math.min(1.0, len - d) - 0.02; add(B(0.3, 0.2, dd), k % 2 ? red : wh, a[0] + (b[0] - a[0]) * (d + dd / 2) / len, 0.1, a[1] + (b[1] - a[1]) * (d + dd / 2) / len, ang); } }
+      } else if (p.type === 'powerline') {         // เสาไฟฟ้าคอนกรีต + คอน + สายไฟ (หย่อน) ตามเส้น · pts พิกัดจริง
+        const pts = p.pts.map(q => toF(q[0], q[1])), h = p.h || 10, conc = L('#b8b6b0'), wireM = new T.LineBasicMaterial({ color: '#2a2a2a' }), tops = [];
+        for (const q of pts) { add(new T.CylinderGeometry(0.13, 0.2, h, 8), conc, q[0], h / 2, q[1]); tops.push(q); }
+        for (let i = 0; i < tops.length; i++) { const a = tops[i], b = tops[Math.min(i + 1, tops.length - 1)], ang = Math.atan2(b[0] - a[0], b[1] - a[1]) + Math.PI / 2;
+          for (const yy of [h - 0.4, h - 1.6]) add(B(0.1, 0.12, 2.2), L('#6b6b66'), a[0], yy, a[1], ang); }
+        for (let i = 0; i < tops.length - 1; i++) { const a = tops[i], b = tops[i + 1], ang = Math.atan2(b[0] - a[0], b[1] - a[1]) + Math.PI / 2, ox = Math.sin(ang), oz = Math.cos(ang);
+          for (const [yy, off] of [[h - 0.35, -0.9], [h - 0.35, 0], [h - 0.35, 0.9], [h - 1.55, -0.8], [h - 1.55, 0.8], [h - 2.6, 0], [h - 3.0, 0.3]]) {
+            const pv = []; for (let k = 0; k <= 12; k++) { const t = k / 12, sag = 4 * t * (1 - t) * (0.5 + Math.abs(off) * 0.1); pv.push(new T.Vector3(a[0] + (b[0] - a[0]) * t + ox * off, yy - sag, a[1] + (b[1] - a[1]) * t + oz * off)); }
+            grp.add(new T.Line(new T.BufferGeometry().setFromPoints(pv), wireM)); } }
+      } else if (p.type === 'barrierArm') {        // ไม้กั้นรถ (ตู้มอเตอร์ + แขนลายแดงขาว) · พิกัดวัตถุ: แขนยื่นไปทาง +x ยาว len
+        const g2 = new T.Group(), len = p.len || 5;
+        const bx = new T.Mesh(B(0.45, 1.0, 0.45), L('#e6b422')); bx.position.y = 0.5; g2.add(bx);
+        for (let i = 0; i < Math.round(len / 0.5); i++) { const sgm = new T.Mesh(B(0.5, 0.09, 0.09), L(i % 2 ? '#c8202a' : '#f5f5f5')); sgm.position.set(0.25 + i * 0.5, 0.9, 0); g2.add(sgm); }
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'cones') {             // กรวยจราจร · pts พิกัดจริง
+        for (const q of p.pts) { const [fx, fz] = toF(q[0], q[1]); add(new T.ConeGeometry(0.18, 0.7, 10), L('#f26a1b'), fx, 0.42, fz); add(new T.CylinderGeometry(0.135, 0.15, 0.1, 10), L('#f4f4f4'), fx, 0.45, fz); add(B(0.4, 0.06, 0.4), L('#2a2a2a'), fx, 0.03, fz); }
+      } else if (p.type === 'lamp2') {             // เสาไฟถนนสูง โคมคู่ · พิกัดวัตถุ
+        const h = p.h || 9; add(new T.CylinderGeometry(0.09, 0.14, h, 8), L('#a7adb2'), p.x, h / 2, p.z);
+        for (const sx of [-1, 1]) { add(B(1.6, 0.08, 0.08), L('#a7adb2'), p.x + sx * 0.8 * Math.cos(ry), h - 0.2, p.z - sx * 0.8 * Math.sin(ry), ry); add(B(0.6, 0.15, 0.3), new T.MeshLambertMaterial({ color: '#f1f1ec', emissive: '#fff1c4', emissiveIntensity: 0.2 }), p.x + sx * 1.6 * Math.cos(ry), h - 0.3, p.z - sx * 1.6 * Math.sin(ry), ry); }
+      } else if (p.type === 'shrubs') {            // พุ่มไม้กลมเตี้ยเรียงตามเส้น · pts พิกัดจริง
+        const pts = p.pts.map(q => toF(q[0], q[1])), gap = p.gap || 2.2; let k = 0;
+        for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          for (let d = gap / 2; d < len; d += gap, k++) { const r = 0.55 + hash(k * 17 + 3) * 0.3; add(new T.IcosahedronGeometry(r, 0), L(hash(k * 5) < 0.5 ? '#3f8a3a' : '#4f9a40'), a[0] + (b[0] - a[0]) * d / len, (p.y || 0) + r * 0.8, a[1] + (b[1] - a[1]) * d / len);
+            if (p.flowers && hash(k * 11) < 0.6) add(new T.IcosahedronGeometry(0.16, 0), L(['#e8457c', '#f2c230', '#f07c2b'][k % 3]), a[0] + (b[0] - a[0]) * d / len + 0.25, (p.y || 0) + r * 1.45, a[1] + (b[1] - a[1]) * d / len); } }
       } else if (p.type === 'flag') {              // เสาธง (ธงชาติไทย / ธงเหลือง)
         const h = p.h || 6; add(new T.CylinderGeometry(0.05, 0.07, h, 8), L('#d9d9d6'), p.x, h / 2, p.z);
         const fc = document.createElement('canvas'); fc.width = 60; fc.height = 40; const g = fc.getContext('2d');
@@ -363,6 +391,10 @@
         const gl = new T.Mesh(B(w - 1.2, h - 1.4, 0.1), new T.MeshLambertMaterial({ color: '#7fa6b3', transparent: true, opacity: 0.85 })); gl.position.set(0, (h - 1.4) / 2 + 0.1, d / 2 + 0.03); g2.add(gl);
         const sg = new T.Mesh(new T.PlaneGeometry(w - 0.6, 0.8), new T.MeshBasicMaterial({ map: signTexture(T, p.text || 'SHOP', null, p.fg || '#1c7a45', p.bg || '#ffffff'), side: T.DoubleSide })); sg.position.set(0, h - 0.5, d / 2 + 0.06); g2.add(sg);
         const rf = new T.Mesh(B(w + 0.6, 0.25, d + 0.6), L('#cfccc4')); rf.position.y = h + 0.1; g2.add(rf);
+        const cn = new T.Mesh(B(w + 0.4, 0.15, 1.8), L('#e9e7e1')); cn.position.set(0, h - 1.05, d / 2 + 0.9); g2.add(cn);           // กันสาดหน้าร้าน
+        for (const [cx, cc] of [[-0.3, '#f07c2b'], [0, '#1c7a45'], [0.3, '#d6312b']]) { const st = new T.Mesh(B(w + 0.42, 0.12, 0.05), L(cc)); st.position.set(0, h - 1.0 + cx * 0.4, d / 2 + 1.82); g2.add(st); }   // แถบสีขอบกันสาด
+        const dr = new T.Mesh(B(1.8, 2.3, 0.08), new T.MeshLambertMaterial({ color: '#cfe0e6', transparent: true, opacity: 0.9 })); dr.position.set(w * 0.25, 1.15, d / 2 + 0.06); g2.add(dr);
+        const step = new T.Mesh(B(w, 0.15, 2.2), L('#d8d4cb')); step.position.set(0, 0.075, d / 2 + 1.1); g2.add(step);
         g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
       } else if (p.type === 'stairs') {            // บันไดคอนกรีตภายนอก (ราวเหล็ก) ขึ้นไปสูง h ตามทิศ rot ยาว run
         const g2 = new T.Group(), h = p.h || 5, run = p.run || 7, w = p.w || 2, ang = Math.atan2(h, run), sl = Math.hypot(h, run);
@@ -472,19 +504,24 @@
         { type: 'cars', world: true, x: -39.7, z: -42.5, rot: 90, n: 12, gap: 2.7, seed: 2 },
         { type: 'cars', world: true, x: -39.7, z: -49.5, rot: 90, n: 12, gap: 2.7, seed: 3 },
       ] },
-    { match: /ทหารขนส่ง/, lat: 13.9319263, lon: 100.5325784, yaw: -43, camOff: -22, cabShift: [-1.07, 0.90],   // ตู้ถอยหลัง 1.4 ม. (เข้าด้านในแนวรั้ว)
-                       // ขสทบ: บนสนามหญ้าหน้ารั้ว ข้างเสาป้าย 7-Eleven ทางขวาของซุ้มประตู · ตู้หันไปทางตะวันตกเฉียงใต้ (เข้าหาทางเข้า)
-      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ — จัดตามไฟล์ PowerPoint ที่ผู้ใช้วางตำแหน่ง
-        { type: 'lawn', h: 0.12, cab: true, wall: '#c9c4b8', pts: [[2.3, -2.9],[18.9, 16.9],[13.6, 21.2],[-2.9, 1.5]] },                       // สนามหญ้าหน้ารั้วฝั่งขวา
-        { type: 'lawn', h: 0.12, wall: '#c9c4b8', pts: [[-9.1, -16.5],[-13.2, -13.0],[-30.3, -33.3],[-26.1, -36.8]] },                                 // สนามหญ้าฝั่งซ้าย
-        { type: 'archGate', o: [7.8, -13.1], u: 310, lanes: [0, -10.3], w: 8.6, s0: 17.6, s1: 25.6, h: 4.8, rise: 2.0, postS: 11.4, posts: [4.6, -4.4, -5.9, -14.9] },
-        { type: 'palaceFence', world: true, x1: 2.5, z1: -1.7, x2: 18.4, z2: 17.3, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },     // รั้วเหล็กดำบนฐานปูนขาว (ขวา) ริมขอบสนามด้านถนน เริ่มข้างตู้
-        { type: 'palaceFence', world: true, x1: -10.9, z1: -17.7, x2: -26.6, z2: -36.4, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },  // รั้ว (ซ้าย) ริมขอบสนามด้านถนน
-        { type: 'hedgeLine', y: 0.12, h: 1.1, d: 1.2, pts: [[-11.8, -16.9], [-27.5, -35.6]] },                                   // แนวพุ่มไม้หลังรั้วซ้าย
-        { type: 'pylon', world: true, x: 5.3, z: 0.3, rot: 130, h: 7.5 },                                        // เสาป้าย 7-Eleven
-        { type: 'shop', world: true, x: -10.0, z: 20.2, rot: 220, w: 7.7, d: 8.5, h: 4.2, text: '7-ELEVEN' },   // ร้าน 7-Eleven ถอยห่างจากถนนขาเข้า ~10 ม. (มีลานหน้าร้าน) หน้าร้านหันเข้าหาถนน
+    { match: /ทหารขนส่ง/, lat: 13.9319263, lon: 100.5325784, yaw: -43, camOff: -22, cabShift: [-1.07, 0.90],   // ขสทบ: หลังแนวรั้ว ข้างเสาป้าย 7-Eleven ทางขวาของซุ้มประตู · ตู้หันไปทางตะวันตกเฉียงใต้ (เข้าหาทางเข้า)
+      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากจุดอ้างอิง — รั้ว/สนาม/ขอบทางวางขนาน ถ.ติวานนท์ (ห่างเส้นกึ่งกลางถนน 11.4 ม.)
+        { type: 'lawn', h: 0.12, cab: true, wall: '#c9c4b8', pts: [[2.5, -3.4],[22.1, 13.7],[16.2, 18.7],[-3.5, 1.6]] },                       // สนามหญ้าฝั่งขวา
+        { type: 'lawn', h: 0.12, wall: '#c9c4b8', pts: [[-10.8, -15.0],[-15.3, -11.2],[-34.9, -28.3],[-30.4, -32.1]] },                                 // สนามหญ้าฝั่งซ้าย
+        { type: 'curbLine', pts: [[2.4, -3.8], [22.0, 13.3]] }, { type: 'curbLine', pts: [[-10.8, -15.2], [-30.4, -32.3]] },   // ขอบทางเท้าแดง-ขาว
+        { type: 'archGate', o: [7.8, -13.1], u: 310, lanes: [0, -10.3], w: 8.6, s0: 17.6, s1: 25.6, h: 4.8, rise: 2.0, sign: 'โรงเรียนทหารขนส่ง', posts: [[10.82, 4.6], [12.23, -4.4], [12.47, -5.9], [13.88, -14.9]] },
+        { type: 'palaceFence', world: true, x1: 3.0, z1: -2.1, x2: 21.1, z2: 13.7, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },   // รั้วเหล็กดำฐานปูนขาว (ขวา) ขนานถนน
+        { type: 'palaceFence', world: true, x1: -12.9, z1: -16.0, x2: -31.0, z2: -31.8, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },   // รั้ว (ซ้าย) ขนานถนน
+        { type: 'hedgeLine', y: 0.12, h: 1.1, d: 1.2, pts: [[-13.8, -15.2], [-31.9, -31.0]] },                                   // แนวพุ่มไม้หลังรั้วซ้าย
+        { type: 'shrubs', y: 0.12, gap: 2.4, flowers: true, pts: [[3.3, -0.9], [19.9, 13.6]] },                               // ไม้พุ่มหลังรั้วขวา
+        { type: 'pylon', world: true, x: 6.3, z: -0.6, rot: 139, h: 7.5 },                                        // เสาป้าย 7-Eleven (หน้ารั้ว)
+        { type: 'shop', world: true, x: -9.6, z: 23.8, rot: 220, w: 7.7, d: 8.5, h: 4.2, text: '7-ELEVEN' },   // ร้าน 7-Eleven (ถอยห่างถนนขาเข้า) หน้าร้านหันเข้าหาถนน
         { type: 'tower', world: true, x: -38.7, z: -8.0, rot: 130, w: 8.5, d: 45, h: 4.2, facade: 'win', color: '#f3f1ea' },   // อาคารป้อมรักษาการณ์ (ยาวชั้นเดียว)
         { type: 'flag', world: true, x: -18.5, z: -12.5, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -20.1, z: -14.4, rot: 130, kind: 'yellow' }, { type: 'flag', world: true, x: -21.7, z: -16.3, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -23.3, z: -18.3, rot: 130, kind: 'yellow' },
+        { type: 'powerline', h: 10, pts: [[23.0, 13.4], [0.4, -6.3], [-22.3, -26.0], [-44.9, -45.7]] },                                                     // เสาไฟฟ้า + สายไฟ ริม ถ.ติวานนท์
+        { type: 'lamp2', world: true, x: -18.4, z: 2.3, rot: 40, h: 9 },                             // เสาไฟโคมคู่ เกาะกลางหลังซุ้ม
+        { type: 'barrierArm', world: true, x: -13.8, z: 0.4, rot: 310, len: 6.4 }, { type: 'barrierArm', world: true, x: -20.4, z: -7.5, rot: 310, len: 6.4 },   // ไม้กั้นรถ
+        { type: 'cones', pts: [[-5.0, -4.2], [-3.1, -1.9], [-11.2, -12.5], [-9.3, -10.2], [-2.1, -4.7]] },                                                             // กรวยจราจร
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
