@@ -17,7 +17,8 @@
     overpass: ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'],
     cityBase: 'data/city/',                // ข้อมูลเมืองที่สร้างไว้ล่วงหน้า (GitHub Action: tools/build_city.py)
     osmStatic: null,                       // ใช้ทดสอบ: ไฟล์ JSON ของ Overpass แทนการดึงจริง
-    cabImg: 'frc3d_cabinet.jpg',           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
+    cabImg: 'frc3d_cabinet.jpg',
+    cityStyle: 'soft',                     // 'soft' = ผนังสี + หน้าต่าง (ค่าเริ่มต้น) · 'minimal' = อาคารสีอ่อนเรียบแบบโมเดลสถาปัตย์           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
   }, window.FRC3D_CONFIG || {});
 
   // ── เกณฑ์สี FRC (ชุดเดียวกับ contour) ─────────────────────────────────────
@@ -70,7 +71,7 @@
     if (document.getElementById('frc3d-css')) return;
     const st = document.createElement('style'); st.id = 'frc3d-css';
     st.textContent = `
-#frc3d-wrap{position:fixed;inset:0;z-index:100000;background:linear-gradient(#8ec5ef 0%,#cfe6f7 45%,#f3efe7 100%);font-family:Sarabun,'Noto Sans Thai',sans-serif}
+#frc3d-wrap{position:fixed;inset:0;z-index:1000000;background:linear-gradient(#8ec5ef 0%,#cfe6f7 45%,#f3efe7 100%);font-family:Sarabun,'Noto Sans Thai',sans-serif}
 #frc3d-map{position:absolute;inset:0}
 #frc3d-bar{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none;z-index:2}
 #frc3d-bar>*{pointer-events:auto}
@@ -1147,6 +1148,7 @@
         if (modern) { kind = 'office'; wallC = C('#eef3f5'); roofC = C('#cfd5d8'); shape = 'flat'; }
         if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
+        if (CFG.cityStyle === 'minimal' && kind !== 'temple' && !ov) { wallC = C(pick(['#f5f3ef', '#efece6', '#f8f6f2', '#ebe8e2'], rnd())); roofC = C(shape === 'flat' ? '#dfdbd4' : '#cdc6bb'); }   // แบบเรียบ
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
         if (ov && ov.style === 'colonnade') {                               // อาคารชั้นเดียวสีขาว มีระเบียงเสาเรียงด้านหน้า (หันหาถนน/ทิศหน้าตู้)
           const wc = C(ov.color || '#f7f5ef'), fd = opts.yawFix != null ? [Math.sin(opts.yawFix), Math.cos(opts.yawFix)] : [0, 1];
@@ -1428,7 +1430,8 @@
     for (const [k, G] of Object.entries(B)) {
       if (!G.p.length) continue;
       let mat;
-      if (k.startsWith('w_')) { const tx = facade(T, k.slice(2)); mat = new T.MeshLambertMaterial({ vertexColors: true, map: tx.day, emissive: 0xffffff, emissiveMap: tx.night, emissiveIntensity: 0 }); wallMats.push(mat); }
+      if (k.startsWith('w_') && CFG.cityStyle === 'minimal') mat = new T.MeshLambertMaterial({ vertexColors: true });       // แบบเรียบ: ไม่มีลายหน้าต่าง
+      else if (k.startsWith('w_')) { const tx = facade(T, k.slice(2)); mat = new T.MeshLambertMaterial({ vertexColors: true, map: tx.day, emissive: 0xffffff, emissiveMap: tx.night, emissiveIntensity: 0 }); wallMats.push(mat); }
       else if (k === 'tile') mat = new T.MeshLambertMaterial({ vertexColors: true, map: tileTexture(T), side: T.DoubleSide });
       else if (k === 'road') { mat = new T.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); }
       else mat = new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide });
@@ -1686,7 +1689,7 @@
     wrap.innerHTML =
       '<div id="frc3d-map"></div>' +
       '<div id="frc3d-bar">' +
-        '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
+        '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.note ? ' · ' + esc(st.note) : st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
         '<div class="frc3d-sp"></div>' +
         '<button class="frc3d-btn" data-a="replay">▶ บินใหม่</button>' +
         '<button class="frc3d-btn" data-a="orbit">🔄 หมุนรอบ</button>' +
@@ -1748,7 +1751,7 @@
       intro(state);                                   // ภาพมุมสูงหมุนช้าๆ ระหว่างโหลดเมือง แล้วบินเข้าหน้าตู้
       loadCity(state, mk);
     });
-    ['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvas().addEventListener(ev, () => { state.userTook = true; state.phase = 'user'; setOrbit(state, false); }, { passive: true }));
+    ['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvas().addEventListener(ev, () => { state.userTook = true; state.phase = 'user'; setOrbit(state, false); if (state.onUser) state.onUser(); }, { passive: true }));
   }
 
   // ── โหลดข้อมูลอาคาร OSM แล้วสร้างเมืองมีสี ─────────────────────────────────
@@ -1829,7 +1832,7 @@
     const D = 10500;
     m.flyTo({ center: cc, zoom: 22.35, pitch: 76, bearing: ff, duration: D, curve: 1.55, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
     setTimeout(() => { if (_cur === state && state.phase === 'fly') state.layer && state.layer.setShowcase(true); }, D * 0.72);   // เปิดไฟหลังคาตอนใกล้ถึง
-    m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.orbit) setTimeout(() => sway(state, ff, 1), 1200); });
+    m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.onArrive) state.onArrive(); if (state.orbit) setTimeout(() => sway(state, ff, 1), 1200); });
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
@@ -1868,6 +1871,7 @@
   }
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() {
+    if (_tour && !_tour.switching) stopTour();
     if (!_cur) return;
     try { _cur.map && _cur.map.remove(); } catch (e) {}
     _cur.wrap.remove(); _cur = null;
@@ -1875,5 +1879,107 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  window.FRC3D = { open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a) };
+  // ── ทัวร์สถานี: เปิดทีละสถานี → บินเข้าหน้าตู้ → ค้างไว้ → สถานีถัดไป (ใช้กับปุ่ม "3D สถานี" และเล่นเองตอนไม่มีคนใช้) ──
+  //   FRC3D.tour(list, { auto, hold, onEnd })  · auto = แตะ/คลิก/กดแป้น/ขยับเมาส์ ที่ใดก็ได้ → จบทัวร์กลับหน้าเดิม
+  let _tour = null;
+  function tourCss() {
+    if (document.getElementById('frc3d-tour-css')) return;
+    const c = document.createElement('style'); c.id = 'frc3d-tour-css';
+    c.textContent =
+'#frc3d-fade{position:fixed;inset:0;z-index:1000001;background:#0b1220;opacity:0;pointer-events:none;transition:opacity .6s ease}' +
+'#frc3d-fade.on{opacity:1}' +
+'#frc3d-wrap.frc3d-kiosk .frc3d-btn,#frc3d-wrap.frc3d-touring .maplibregl-ctrl-bottom-left{display:none}' +
+'@media (max-width:560px){#frc3d-tour .d{display:none}#frc3d-tour{gap:6px;padding-left:12px}#frc3d-tour button{padding:5px 10px}}' +
+'#frc3d-tour{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);z-index:1000002;display:flex;align-items:center;gap:8px;' +
+'background:rgba(15,20,32,.82);color:#fff;padding:7px 8px 7px 14px;border-radius:999px;font:600 13px Sarabun,"Noto Sans Thai",sans-serif;' +
+'box-shadow:0 6px 22px rgba(0,0,0,.28);backdrop-filter:blur(6px);white-space:nowrap;max-width:calc(100vw - 24px)}' +
+'#frc3d-tour .t{overflow:hidden;text-overflow:ellipsis}#frc3d-tour .d{display:flex;gap:5px;margin:0 4px}' +
+'#frc3d-tour .d i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}#frc3d-tour .d i.on{background:#fff}' +
+'#frc3d-tour button{border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;padding:5px 12px;cursor:pointer}' +
+'#frc3d-tour button:hover{background:rgba(255,255,255,.26)}#frc3d-tour .h{font-weight:400;opacity:.8;font-size:12px;padding-right:6px}' +
+'#frc3d-tour .bar{position:absolute;left:16px;right:16px;bottom:2px;height:2px;border-radius:2px;background:rgba(255,255,255,.15);overflow:hidden}' +
+'#frc3d-tour .bar b{display:block;height:100%;width:0;background:#7fd3ff}';
+    document.head.appendChild(c);
+  }
+  function tour(list, opt) {
+    opt = opt || {};
+    stopTour(true);
+    list = (list || []).filter(s => s && isFinite(s.lat) && isFinite(s.lon));
+    if (!list.length) return null;
+    tourCss();
+    const T = _tour = { list, opt, i: -1, hold: opt.hold || 6000, timers: [], switching: false };
+    T.fade = document.createElement('div'); T.fade.id = 'frc3d-fade';
+    T.hud = document.createElement('div'); T.hud.id = 'frc3d-tour';
+    T.hud.innerHTML = '<span class="t"></span><span class="d">' + list.map(() => '<i></i>').join('') + '</span>' +
+      (opt.auto ? '<span class="h">แตะที่ใดก็ได้เพื่อกลับแผนที่</span>'
+                : '<button data-t="prev" title="สถานีก่อนหน้า">◀</button><button data-t="next">ถัดไป ▶</button><button data-t="stop">✕ จบทัวร์</button>') +
+      '<span class="bar"><b></b></span>';
+    document.body.append(T.fade, T.hud);
+    T.hud.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; e.stopPropagation();
+      if (b.dataset.t === 'next') step(T, 1); else if (b.dataset.t === 'prev') step(T, -1); else stopTour(); });
+    if (opt.auto) {                                    // เล่นเอง: ผู้ใช้กลับมาแตะ/กดอะไรก็ตาม → จบทัวร์ทันที
+      let mx = null;
+      T.onInput = e => {
+        if (e.type === 'mousemove') { if (!mx) { mx = [e.clientX, e.clientY]; return; } if (Math.hypot(e.clientX - mx[0], e.clientY - mx[1]) < 12) return; }
+        e.preventDefault && e.type !== 'wheel' && e.type !== 'mousemove' && e.preventDefault(); e.stopPropagation && e.stopPropagation();
+        stopTour();
+      };
+      T.evs = ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'wheel', 'mousemove'];
+      setTimeout(() => { if (_tour === T) T.evs.forEach(ev => window.addEventListener(ev, T.onInput, { capture: true, passive: false })); }, 400);
+    }
+    step(T, 1);
+    return T;
+  }
+  function tourTimer(T, fn, ms) { const id = setTimeout(fn, ms); T.timers.push(id); return id; }
+  function tourBar(T, ms) {                         // แถบเวลาเล็กๆ ใต้ HUD (นับถอยหลังก่อนไปสถานีถัดไป)
+    const b = T.hud.querySelector('.bar b'); if (!b) return;
+    b.style.transition = 'none'; b.style.width = '0';
+    if (ms) { void b.offsetWidth; b.style.transition = 'width ' + ms + 'ms linear'; b.style.width = '100%'; }
+  }
+  function step(T, d) {
+    if (_tour !== T) return;
+    T.timers.forEach(clearTimeout); T.timers = []; tourBar(T, 0);
+    T.i += d;
+    if (T.i >= T.list.length) return stopTour(false, true);       // ครบรอบ → จบ
+    if (T.i < 0) T.i = T.list.length - 1;
+    const st = T.list[T.i];
+    T.hud.querySelector('.t').textContent = '🏙 ' + (T.i + 1) + '/' + T.list.length + ' · ' + (st.short || st.name || 'สถานี');
+    T.hud.querySelectorAll('.d i').forEach((e, k) => e.classList.toggle('on', k === T.i));
+    const go = () => {
+      if (_tour !== T) return;
+      T.switching = true; open(Object.assign({}, st)); T.switching = false;
+      const S = _cur; if (!S) return;
+      S.wrap.classList.add('frc3d-touring'); if (T.opt.auto) S.wrap.classList.add('frc3d-kiosk');                      // เล่นเอง: ซ่อนปุ่มควบคุม ให้ภาพสะอาด
+      S.onArrive = () => { if (_tour !== T || _cur !== S) return; tourBar(T, T.hold); tourTimer(T, () => step(T, 1), T.hold); };
+      S.onUser = () => { if (_tour !== T || T.opt.auto) return; T.timers.forEach(clearTimeout); T.timers = []; tourBar(T, 0);    // ผู้ใช้หมุน/ซูมเอง → หยุดรอ กด "ถัดไป"
+        T.hud.querySelector('.t').textContent = '⏸ ' + (T.i + 1) + '/' + T.list.length + ' · ' + (st.short || st.name || 'สถานี'); };
+      tourTimer(T, () => T.fade.classList.remove('on'), 450);
+      tourTimer(T, () => { if (_cur === S && S.phase !== 'user') step(T, 1); }, 45000);     // กันค้าง (โหลดแผนที่ไม่ขึ้น ฯลฯ)
+    };
+    if (T.i === 0 && d === 1 && !_cur) { T.fade.classList.add('on'); tourTimer(T, go, 350); }
+    else { T.fade.classList.add('on'); tourTimer(T, go, 650); }
+  }
+  function stopTour(silent, finished) {
+    const T = _tour; if (!T) return;
+    _tour = null;
+    T.timers.forEach(clearTimeout);
+    if (T.evs) T.evs.forEach(ev => window.removeEventListener(ev, T.onInput, { capture: true }));
+    T.hud.remove();
+    if (!silent) {
+      T.fade.classList.add('on');
+      setTimeout(() => { close(); T.fade.classList.remove('on'); setTimeout(() => T.fade.remove(), 650); }, finished ? 650 : 250);
+    } else T.fade.remove();
+    if (T.opt.onEnd) try { T.opt.onEnd({ finished: !!finished }); } catch (e) {}
+  }
+
+  window.FRC3D = {
+    rec: {                                                                             // สำหรับบันทึกคลิป (กำหนดกล้องเองทีละเฟรม)
+      view: () => { const st = _cur; if (!st) return null; const c = st.cabLL || [st.st.lon, st.st.lat], ff = frontBearing(st) - (st.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
+        return { c, ff, cc: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], ready: !!st.cityReady }; },
+      hold: () => { const st = _cur; st.userTook = true; st.phase = 'user'; st.map.stop(); },
+      showcase: on => _cur && _cur.layer && _cur.layer.setShowcase(on),
+      night: on => { const st = _cur; if (!!st.night !== !!on) { const b = st.wrap.querySelector('[data-a="night"]'); b && b.click(); } },
+    },
+    open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a),
+    tour, stopTour: () => stopTour(), isOpen: () => !!_cur, touring: () => !!_tour };
 })();

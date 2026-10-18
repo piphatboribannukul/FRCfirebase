@@ -15,12 +15,26 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '39.0';   // [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
+const APP_VERSION = '40';   // [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 3 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
 // ฤดูฝน มิ.ย.–พ.ย. (ใช้กับคู่ที่เวลาเดินน้ำต่างตามฤดู เช่น สจ.บางพลี → สภ.คลองด่าน แล้ง 17 / ฝน 20.5)
 function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 // [v39 · 3 ต.ค. 2569] ตารางเวลาเดินน้ำปรับใหม่ 47 คู่ จากการเทียบพีค TWQMS รายชั่วโมง ม.ค.–ก.ย. 2569 (7 เดือน, EC+FRC,
 //   ตัดรอบรายวันออกก่อนเทียบ) — รายละเอียด/ระดับหลักฐานรายคู่: travel_time_summary.xlsx · ttRoot คำนวณใหม่ทั้งสาย
+// ── [v40 · 18 ต.ค. 2569] มุมมอง 3 มิติ ตู้วัดคุณภาพน้ำ (frc3d.js — ไฟล์แยก โหลด MapLibre/three เฉพาะตอนเปิด) ──
+//   • ป๊อปอัปจุดตรวจวัด: ปุ่ม "🏙 ดู 3 มิติ" ใช้ค่า FRC/EC ล่าสุดจาก SENSORS (ไม่ใช้ค่าสมมติ)
+//   • contour โซน Dis2 (สายไหม · รพ.ซีจีเอช): ใช้ระยะตามท่อจากบางเขนแทนเส้นตรง × 1.3 — Dis1/Dis2 อยู่ที่ตั้งเดียวกัน
+//     pipe grid จึงติดป้าย SP04 ทั้งพื้นที่ (ดู _pipeMatch) · โซนเป็นตัวกำหนดต้นทาง = Dis2
+//     นอกเส้นโซน ช่องที่ท่อมาจากบางเขน → เป็นของ Dis1 หรือ Dis2 ตามโซนที่ใกล้ที่สุด (_bkOwner) ไม่ต้องวาดโซนใหม่
+//   • เมนูบน "🏙 3D สถานี": ทัวร์ 4 สถานีที่จัดฉากแล้ว (ศิริราช → ศิครินทร์ → ร.ร.ทหารขนส่ง → สวนจิตรลดา)
+//   • ไม่มีการแตะ/คลิก/กดแป้น 3 นาที → เล่นทัวร์เอง 1 รอบ แล้วกลับหน้าเดิม · แตะที่ใดก็ได้ = หยุดทันที
+//     ไม่เล่นเมื่อ: แท็บถูกซ่อน · มีหน้าต่าง/แผงอื่นเปิดอยู่ · จอเล็กแบบมือถือ · ปิดได้ด้วย ?autotour=0 (ทดสอบเร็ว: ?autotour=20 = 20 วิ)
 // ── บันทึกการเปลี่ยนแปลงเวลาเดินน้ำ ─────────────────────────────────────────────
+// [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต นนทบุรี   22.5 → 5 ชม.   (ttRoot แม่กลอง 122.5 → 105)
+//   ข้อมูล: TWQMS รายชั่วโมง 13–15 ต.ค. 69 (MDIS + ราชวินิต 64 ชม.) · K SP12 = 0.058
+//   เทียบระดับ FRC: C₀(MDIS, τ−t)·e^(−K·t) กับค่าวัด → bias ≈ 0 และ RMSE ต่ำสุด (0.08) ที่ t = 5 ชม.
+//     ที่ 22.5 ชม. contour ต่ำกว่าค่าจริง ≈ 0.6 mg/L (แผนที่ 0.33 vs วัดจริง 0.95)
+//   ค่า 22.5 เดิมมาจากเทียบพีค EC แบบ 'แนวโน้ม' — EC sensor ที่ราชวินิตเพี้ยน (ยืนยันจากหน้างาน: น้ำเป็น MDIS ล้วน)
+//   → ไม่ใช้ EC ของราชวินิตหาเวลาเดินน้ำ · ถอดออกจาก V39_TREND (หลักฐานระดับ FRC ชัด ใช้น้ำหนักเต็ม)
 // [3 ต.ค. 2569 · v38.3.1] ปรับเวลาเดินน้ำ 5 คู่ จากการเทียบพีค (cross-correlation)
 //   ข้อมูล: EC รายชั่วโมง 16 ก.ค.–2 ต.ค. 69 (history_ec) + FRC 25 ก.ย.–2 ต.ค. 69 (history)
 //   เลือกเฉพาะคู่ที่หลักฐานชัด (EC+FRC ตรงกัน หรือ EC r สูงและทั้ง 3 ช่วงเวลาตรงกัน)
@@ -1444,6 +1458,30 @@ function frcZone(lat, lon) {
 // Velocity by diameter: 2300-1800mm=1.8m/s, 1500mm=1.5, 1200mm=1.2, 1000mm=1.0, 800mm=0.8, 600mm=0.6, 400mm=0.4
 // (moved to data/)
 const _PIPE_SENSOR_IDS = ["SP04", "SP05", "SP06", "SP07", "SP08", "SP09", "SP10", "SP12", "SW01", "SW02", "SW03", "SW04", "SW05", "SW06", "SW07", "SW08", "SW09", "SW10", "SW11"];
+// [v40] Dis1 (SP04) และ Dis2 (SP05) ตั้งอยู่ที่เดียวกัน (สถานีสูบจ่ายบางเขน) — pipe grid ไล่ Dijkstra จากจุดเดียวกัน
+//   ป้ายต้นทางเลยออกเป็น SP04 ทั้งพื้นที่ แม้อยู่ในโซน Dis2 (เช่น สายไหม · รพ.ซีจีเอช) → เดิมโซน Dis2 ตกไปใช้ระยะเส้นตรง × 1.3
+//   แทนระยะตามท่อจริง (ช่องติดกันนอกโซนใช้ระยะท่อ → contour เป็นรอยหยักที่ขอบโซน)
+//   ตอนนี้: ในโซน Dis2 ใช้ระยะตามท่อจากบางเขน + ค่า/K ของ Dis2 (โซนเป็นตัวกำหนดต้นทาง ตามพื้นที่จ่ายน้ำจริง)
+const _PIPE_SAME_SITE = { SP04: 'BANGKHEN_DIS', SP05: 'BANGKHEN_DIS' };
+function _pipeMatch(pipeId, sid) {
+  const a = String(pipeId), b = String(sid);
+  return a === b || (!!_PIPE_SAME_SITE[a] && _PIPE_SAME_SITE[a] === _PIPE_SAME_SITE[b]);
+}
+// [v40] นอกเส้นโซน: ช่องที่ pipe grid ติดป้ายบางเขน (SP04/SP05) แยกไม่ได้ว่า Dis1 หรือ Dis2 → ให้เป็นของโซนที่ใกล้ที่สุด
+//   (เช่น สายไหมเหนือ รพ.ซีจีเอช และแถบแคบข้าง รพ. ที่เส้นโซนไม่ครอบ → Dis2 ไม่ใช่ Dis1)
+function _bkOwner(lat, lon, fallback) {
+  const Z = window.CUSTOM_ZONES || {}, k = Math.cos(lat * Math.PI / 180), px = lon * k, py = lat;
+  const seg = (ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy; let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const qx = ax + t * dx - px, qy = ay + t * dy - py; return qx * qx + qy * qy; };
+  let best = fallback, bd = Infinity;
+  for (const sid of Object.keys(_PIPE_SAME_SITE)) {
+    const z = Z[sid], c = z && z.coords; if (!c || c.length < 3) continue;
+    let d = Infinity;
+    for (let a = 0, b = c.length - 1; a < c.length; b = a++) d = Math.min(d, seg(c[a][1] * k, c[a][0], c[b][1] * k, c[b][0]));
+    if (d < bd) { bd = d; best = sid; }
+  }
+  return best;
+}
 let _pipeGrid = null; // Float32: [decay_factor, sensor_idx, ...] — decay_factor = exp(-Σ(K×t)) per-segment pipe-property-aware
 
 (async function loadPipeGrid() {
@@ -1516,7 +1554,8 @@ function _pipeAwareFrc(lat, lon, j, i) {
   if (!pd) return null; // no pipe data → fallback to original
 
   // Find the source sensor in SENSORS
-  const sensor = SENSORS.find(s => String(s.id) === pd.sensorId);
+  const _sid = _PIPE_SAME_SITE[pd.sensorId] ? _bkOwner(lat, lon, pd.sensorId) : pd.sensorId;   // [v40] บางเขน: Dis1/Dis2 ตามโซนที่ใกล้สุด
+  const sensor = SENSORS.find(s => String(s.id) === _sid);
   if (!sensor || !sensor.frc) return null;
   // [v38.1] sensor ต้นทาง pipe อยู่ระหว่างซ่อม/ค่าค้าง → สีเทา
   if (typeof _isSensorDown === 'function' && _isSensorDown(sensor)) return GRAY_SENTINEL;
@@ -1618,7 +1657,7 @@ function buildIdwCache() {
               const dKm = Math.sqrt((src.lat-lat)**2+(src.lon-lon)**2)*DEG_TO_KM;
               // ถ้ามี pipe data ในโซนนี้ ใช้ pipe distance แทน Euclidean (แม่นกว่า)
               const pd = _getPipeDist ? _getPipeDist(j, i) : null;
-              if (pd && String(pd.sensorId) === String(sid)) {
+              if (pd && _pipeMatch(pd.sensorId, sid)) {
                 // v6: pipe grid ชี้ไปที่ sensor เดียวกับ zone → ใช้ pipe distance
                 // epanetDecay() ใช้ K จาก CONTOUR_K_OVERRIDE / STATION_K_OVERRIDE
                 // v33-fix: pass _pressureGrid factor as distMult (fallback when no RTU live)
@@ -1728,7 +1767,7 @@ window._frcDiag = function(lat, lon) {
         const dKm = Math.sqrt((src.lat-lat)**2+(src.lon-lon)**2) * DEG_TO_KM;
         const pd = _getPipeDist ? _getPipeDist(j, i) : null;
         const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
-        if (pd && String(pd.sensorId) === String(sid)) {
+        if (pd && _pipeMatch(pd.sensorId, sid)) {
           console.log('  (ใช้ pipe distance เพราะ pipe grid ชี้มาที่ sensor เดียวกับโซนนี้)');
           logDecayDetail(src, pd.dist_km, pGrid);
         } else {
@@ -2677,7 +2716,7 @@ const EC_ROOT_SOURCE_MAP = {
   // ── ธนบุรี (สำแล 44+4=48 + สามเสน→ธนบุรี 2) ──────────────────────
   'โรงพยาบาลศิริราช':                                           { root: 'RAW_SAMLE',  ttRoot: 50   }, // 48+2
   // ── MDIS (เขื่อนแม่กลอง → มหาสวัสดิ์ 100 + MDIS→สถานี) ────────
-  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 122.5 }, // 100+21  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 112)
+  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 105 }, // 100+5  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC (เดิม 122.5)
   'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'RAW_MAEKLONG', ttRoot: 106.5}, // 100+6.5
   'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี':              { root: 'RAW_MAEKLONG', ttRoot: 107.5}, // 100+4.5
   'สำนักงานประปาสาขาบางบัวทอง':                                { root: 'RAW_MAEKLONG', ttRoot: 113.5  }, // 100+14  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 110.5)
@@ -2783,7 +2822,7 @@ function buildMarkers() {
     'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี': { tt_from: '7.5',  tt_label: 'จาก MDIS' },
     'สำนักงานประปาสาขาบางบัวทอง':         { tt_from: '13.5',   tt_label: 'จาก MDIS' },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10.5)
     'สถานีตำรวจภูธรไทรน้อย':              { tt_from: '22.5', tt_label: 'จาก MDIS' },
-    'โรงเรียนราชวินิต นนทบุรี':            { tt_from: '22.5',   tt_label: 'จาก MDIS' },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 12)
+    'โรงเรียนราชวินิต นนทบุรี':            { tt_from: '5',   tt_label: 'จาก MDIS' },  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC TWQMS 13–15 ต.ค. (เดิม 22.5)
     'โรงเรียนตั้งพิรุฬห์ธรรม':             { tt_from: '6-7',   tt_label: 'จาก MDIS' },
   };
 
@@ -2866,7 +2905,7 @@ function buildMarkers() {
     'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี': { root: 'จาก MDIS', ttRoot: 7.5 },
     'สำนักงานประปาสาขาบางบัวทอง':         { root: 'จาก MDIS', ttRoot: 13.5 },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10.5)
     'สถานีตำรวจภูธรไทรน้อย':              { root: 'จาก MDIS', ttRoot: 22.5 },
-    'โรงเรียนราชวินิต นนทบุรี':            { root: 'จาก MDIS', ttRoot: 22.5 },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 12)
+    'โรงเรียนราชวินิต นนทบุรี':            { root: 'จาก MDIS', ttRoot: 5 },  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC TWQMS 13–15 ต.ค. (เดิม 22.5)
     'โรงเรียนตั้งพิรุฬห์ธรรม':             { root: 'จาก MDIS', ttRoot: 6.5 },
   };
 
@@ -4255,6 +4294,7 @@ function buildMarkers() {
     })}).addTo(sensorGroup)
     .bindPopup(`<div class="lpop">
       <h4 style="color:#111">${s.name}</h4>
+      ${s.type === 'monitor' ? _frc3dBtn(s) : ''}
       ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s) : ''}
       <div class="bigval" style="color:${_vcClosed?'#999':c}">${_vcClosed?'— ปิด —':paramFormat(pv)+' <span style="font-size:14px;color:#555">'+paramUnit()+'</span>'}</div>
       <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${_area}</span></div>
@@ -5603,6 +5643,7 @@ async function fetchAndUpdate() {
     }
 
     apiStatus = 'live';
+    window._frcLiveAt = Date.now();
     badge.textContent   = '● Live — ' + new Date().toLocaleTimeString('th-TH');
     badge.style.background = '#f0fff4';
     badge.style.borderColor = '#80e0a0';
@@ -15203,7 +15244,7 @@ function _ecValFor(sensor, lat, lon, j, i) {
     let dKm = Math.sqrt((sensor.lat-lat)**2 + (sensor.lon-lon)**2) * DEG_TO_KM;
     let distMult = null;
     const pd = (typeof _getPipeDist === 'function') ? _getPipeDist(j, i) : null;
-    if (pd && String(pd.sensorId) === String(sensor.id)) {
+    if (pd && _pipeMatch(pd.sensorId, sensor.id)) {
       dKm = pd.dist_km;
     } else {
       dKm *= EUCLID_PIPE_FACTOR;
@@ -15449,7 +15490,7 @@ const LS_V39_KEY = 'v39_cal_tt';
 window.V39_CAL_TT = (function(){ try { return localStorage.getItem(LS_V39_KEY) !== '0'; } catch(e){ return true; } })();
 const V39_D0_DEG = 0.045;            // ~5 กม.
 const V39_V_MIN = 0.05, V39_V_MAX = 2.0;
-const V39_TREND = ['โรงเรียนราชวินิต นนทบุรี','ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)','มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)','บริษัท มหาจักรออโตพาร์ท จำกัด','นิคมอุตสาหกรรมลาดกระบัง'];
+const V39_TREND = [/* [v39.1 · 16 ต.ค. 2569] ถอดราชวินิตออก */ 'ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)','มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)','บริษัท มหาจักรออโตพาร์ท จำกัด','นิคมอุตสาหกรรมลาดกระบัง'];
 window._v39Anchors = {}; window._v39Global = 1; window._v39Memo = {}; window._v39Off = false; window._v39Skipped = [];
 function _v39Norm(n) { return String(n || '').replace(/\s+/g, ' ').trim(); }
 function _v39FindSensor(name) {
@@ -15464,7 +15505,7 @@ function _v39ModelSec(src, lat, lon) {
   if (j < 0 || i < 0 || j >= rows || i >= rows) return null;
   const pd = (typeof _getPipeDist === 'function') ? _getPipeDist(j, i) : null;
   const pGrid = (typeof _getPressureFactor === 'function') ? _getPressureFactor(j, i) : 1;
-  const pipe = pd && String(pd.sensorId) === String(src.id);
+  const pipe = pd && _pipeMatch(pd.sensorId, src.id);
   const dKm = pipe ? pd.dist_km : Math.sqrt((src.lat-lat)**2 + (src.lon-lon)**2) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
   window._v39Off = true;
   try { return { sec: _travelSec(dKm, src, pGrid), dKm, dm: pGrid, how: pipe ? 'pipe' : 'euclid' }; }
@@ -15670,4 +15711,79 @@ window.addEventListener('load', function(){ setTimeout(_v39InjectUI, 4000); });
   const core = buildIdwCache;
   buildIdwCache = function () { try { return core.apply(this, arguments); } finally { window._v39pxLat = window._v39pxLon = null; } };
   if (window.buildIdwCache === core) window.buildIdwCache = buildIdwCache;
+})();
+
+
+// ══════ [v40] 3D สถานี — frc3d.js (ปุ่มในป๊อปอัป · ทัวร์ 4 สถานี · เล่นเองเมื่อไม่มีการใช้งาน 3 นาที) ══════
+const FRC3D_TOUR = [
+  { m: /ศิริราช/,     short: 'โรงพยาบาลศิริราช' },
+  { m: /ศิครินทร์/,    short: 'โรงพยาบาลศิครินทร์' },
+  { m: /ทหารขนส่ง/,   short: 'โรงเรียนทหารขนส่ง' },
+  { m: /จิตรลดา/,     short: 'พระราชวังดุสิต สวนจิตรลดา' },
+];
+function _frc3dBtn(s) {
+  return '<button class="frc3d-pbtn" onclick="open3DStation(\'' + String(s.id).replace(/['"\\<>]/g, '') + '\')">🏙 ดู 3 มิติ</button>';
+}
+function _frc3dSt(s) {                                    // ค่าจริงล่าสุดจาก SENSORS เท่านั้น
+  const live = (typeof apiStatus !== 'undefined' && apiStatus === 'live');
+  const num = v => (v != null && isFinite(v)) ? Number(v) : null;
+  return { name: s.name, lat: s.lat, lon: s.lon, frc: num(s.frc), ec: num(s.ec),
+           ts: live ? (window._frcLiveAt || Date.now()) : (s.liveTs || null),
+           note: live ? '' : 'ข้อมูลสำรอง (ออฟไลน์)' };
+}
+function open3DStation(id) {
+  if (!window.FRC3D) { alert('กำลังโหลดมุมมอง 3 มิติ ลองใหม่อีกครั้ง'); return; }
+  const s = SENSORS.find(x => String(x.id) === String(id)) || (typeof SENSORS_FALLBACK !== 'undefined' && SENSORS_FALLBACK.find(x => String(x.id) === String(id)));
+  if (!s) return;
+  try { map.closePopup(); } catch (e) {}
+  FRC3D.open(_frc3dSt(s));
+}
+function _frc3dTourList() {
+  const out = [];
+  for (const t of FRC3D_TOUR) {
+    const s = SENSORS.find(x => t.m.test(x.name || '')) || (typeof SENSORS_FALLBACK !== 'undefined' && SENSORS_FALLBACK.find(x => t.m.test(x.name || '')));
+    if (s) out.push(Object.assign(_frc3dSt(s), { short: t.short }));
+  }
+  return out;
+}
+function start3DTour(auto) {
+  if (!window.FRC3D || !FRC3D.tour) { if (!auto) alert('กำลังโหลดมุมมอง 3 มิติ ลองใหม่อีกครั้ง'); return false; }
+  try { map.closePopup(); } catch (e) {}
+  const T = FRC3D.tour(_frc3dTourList(), { auto: !!auto, hold: 6000, onEnd: () => { window._frc3dIdleAt = Date.now(); } });
+  return !!T;
+}
+(function initFrc3dUi() {
+  const css = document.createElement('style');
+  css.textContent =
+    '.frc3d-pbtn{display:inline-flex;align-items:center;gap:4px;margin:2px 0 6px;padding:5px 12px;border:0;border-radius:999px;cursor:pointer;' +
+    'background:linear-gradient(135deg,#0f6fb8,#1aa0c8);color:#fff;font:700 12.5px Sarabun,sans-serif;box-shadow:0 2px 6px rgba(15,111,184,.35)}' +
+    '.frc3d-pbtn:hover{filter:brightness(1.08)}';
+  document.head.appendChild(css);
+
+  // เล่นเองเมื่อไม่มีการใช้งาน
+  const q = new URLSearchParams(location.search), qa = q.get('autotour');
+  if (qa === '0' || qa === 'off') return;
+  const IDLE_MS = (qa && +qa > 0) ? +qa * 1000 : 3 * 60 * 1000;
+  window._frc3dIdleAt = Date.now();
+  const poke = () => { window._frc3dIdleAt = Date.now(); };
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => window.addEventListener(ev, poke, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poke(); });   // กลับมาที่แท็บ = เริ่มนับใหม่
+  const BLOCK_IDS = ['about-panel', 'fb-overlay', 'fb-modal', 'src-modal-overlay', 'terrain3d-overlay', 'report-overlay', 'report-panel',
+                     'ai-panel', 'whatif-panel', 'zone-editor-panel', 'v30-panel', 'sidebar-overlay'];
+  const shown = e => { if (!e) return false; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
+    const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight; };
+  window._frc3dIdleBlocked = () => {
+    if (document.hidden) return 'hidden';
+    if (Math.min(innerWidth, innerHeight) < 700) return 'small-screen';           // มือถือ: ใช้ปุ่มเท่านั้น
+    if (window.FRC3D && (FRC3D.isOpen() || FRC3D.touring())) return '3d-open';
+    for (const id of BLOCK_IDS) if (shown(document.getElementById(id))) return id;
+    const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return 'typing';
+    return '';
+  };
+  setInterval(() => {
+    if (Date.now() - window._frc3dIdleAt < IDLE_MS) return;
+    if (window._frc3dIdleBlocked()) return;
+    if (start3DTour(true)) console.log('[FRC3D] ไม่มีการใช้งาน ' + Math.round(IDLE_MS / 1000) + ' วิ → เล่นทัวร์ 3D สถานี');
+    else window._frc3dIdleAt = Date.now();
+  }, 2000);
 })();
