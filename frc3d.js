@@ -1206,22 +1206,11 @@
       }
     }
 
-    // ── 5b) เติมสภาพแวดล้อม: ต้นไม้/พุ่มไม้บนที่ว่าง (เป็นกลุ่มตาม noise) + รถบนถนน ──
+    // ── 5b) รถบนถนน (ของประกอบฉาก) ──
     const nz2 = (x, z) => (Math.sin(x * 0.021 + 1.3) * Math.cos(z * 0.017 - 0.7) + Math.sin((x + z) * 0.011 + 2.1) * 0.7 + Math.sin(x * 0.053 - z * 0.041) * 0.35) / 2.05;
-    const shrubs = [], cars = [];
+    const cars = [];
     {
-      const step = 8.5, fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0);
-      for (let x = r0[0] - hideR; x < r0[0] + hideR; x += step) for (let z = r0[1] - hideR; z < r0[1] + hideR; z += step) {
-        const sd = Math.round(x * 7.1 + z * 13.7), jx = x + (hash(sd) - 0.5) * step * 0.9, jz = z + (hash(sd + 1) - 0.5) * step * 0.9;
-        if (Math.hypot(jx - r0[0], jz - r0[1]) > hideR - 10) continue;
-        const v = nz2(jx, jz) + (hash(sd + 2) - 0.5) * 0.35;
-        if (v < 0.05) continue;
-        if (opts.fixed && Math.hypot(jx - opts.cabXZ[0], jz - opts.cabXZ[1]) < 45) continue;   // พื้นที่ฉากจัดเองรอบตู้ ไม่เติมต้นไม้
-        if (inBuilding(jx, jz, 3.5)) continue;
-        if (nearRoad(jx, jz, 2.6)) continue;
-        if (v > 0.32) addTree(jx, jz, 1.0 + hash(sd + 3) * 0.3, sd);
-        else if (Math.hypot(jx - opts.cabXZ[0], jz - opts.cabXZ[1]) > 14) { const dx = jx - opts.cabXZ[0], dz = jz - opts.cabXZ[1], fw = dx * fx + dz * fz; if (!(fw > 0 && fw < 40 && Math.abs(-dx * fz + dz * fx) < 6 + fw * 0.25)) shrubs.push([jx, jz, 0.6 + hash(sd + 4) * 0.7, hash(sd + 5)]); }
-      }
+      // (ไม่สุ่มต้นไม้/พุ่มไม้บนที่ว่าง — ที่ว่างในข้อมูลอาจเป็นอาคารที่ OSM ยังไม่มี ใช้ข้อมูลจริงเท่านั้น)
       // รถบนถนน (ถนนตั้งแต่ 9 ม.) — จอด/วิ่งตามช่องจราจร ไม่ใส่ใกล้ตู้
       const CC = ['#f4f4f2', '#f4f4f2', '#c9ccd0', '#1f2328', '#8f969c', '#b8302a', '#2c4a7a', '#d9d4c8', '#e8e6e0', '#3b5d3a'];
       for (const sg of roadSegs) {
@@ -1303,29 +1292,35 @@
       const fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0);
       for (let i = lamps.length - 1; i >= 0; i--) { const dx = lamps[i].x - opts.cabXZ[0], dz = lamps[i].z - opts.cabXZ[1], fwd = dx * fx + dz * fz, lat = Math.abs(-dx * fz + dz * fx); if (fwd > 0 && fwd < 45 && lat < 3.5 + fwd * 0.2) lamps.splice(i, 1); }
     }
-    // พื้นดิน: ผิวหญ้า-ดินแบบ procedural + ลานปูนรอบอาคาร (แทนพื้นขาวโล่งของแผนที่ฐาน)
+    // พื้น: ระบายสีเขียวเฉพาะพื้นที่ที่ OSM ระบุว่าเป็นสนาม/สวน/กอล์ฟ/ป่า + ลานปูนรอบอาคาร · ส่วนอื่นโปร่งใส (เห็นแผนที่ฐาน รวมแม่น้ำ/คลองจริง)
     {
       const S = 2048, R = hideR, cv = document.createElement('canvas'); cv.width = cv.height = S; const g = cv.getContext('2d');
       const X = x => (x - r0[0] + R) / (2 * R) * S, Zc = z => (z - r0[1] + R) / (2 * R) * S, k = S / (2 * R);
-      g.fillStyle = '#d6dcc0'; g.fillRect(0, 0, S, S);
+      const path = ring => { g.beginPath(); ring.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](X(q[0]), Zc(q[1]))); g.closePath(); };
       const rr = rng(((r0[0] * 1000) | 0) ^ 0x5bd1e995);
-      for (let i = 0; i < 2600; i++) { const x = rr() * S, y = rr() * S, r = (6 + rr() * 40) * k * 4, c = ['rgba(150,178,110,', 'rgba(176,196,128,', 'rgba(198,190,150,', 'rgba(132,160,96,', 'rgba(214,206,170,'][i % 5];
-        const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c + (0.18 + rr() * 0.2) + ')'); gr.addColorStop(1, c + '0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
-      for (let i = 0; i < 9000; i++) { g.fillStyle = rr() < 0.5 ? 'rgba(110,140,80,.25)' : 'rgba(225,220,195,.25)'; g.fillRect(rr() * S, rr() * S, 1.5, 1.5); }
-      g.lineJoin = 'round'; g.strokeStyle = '#e4dfd3'; g.fillStyle = '#e4dfd3'; g.lineWidth = 7 * k;          // ลานปูนรอบอาคาร ~3.5 ม.
-      for (const b of bInfo) { g.beginPath(); b.outer.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](X(q[0]), Zc(q[1]))); g.closePath(); g.fill(); g.stroke(); }
-      g.lineWidth = 2.5 * k; g.strokeStyle = 'rgba(160,150,135,.35)';
-      for (const b of bInfo) { g.beginPath(); b.outer.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](X(q[0]), Zc(q[1]))); g.closePath(); g.stroke(); }
+      for (const el of els) {
+        const t = el.tags || {};
+        const kind = /^(golf_course)$/.test(t.leisure || '') ? 'golf' : (/^(forest)$/.test(t.landuse || '') || /^(wood)$/.test(t.natural || '')) ? 'wood'
+          : (/^(park|garden|pitch|recreation_ground)$/.test(t.leisure || '') || /^(grass|recreation_ground|cemetery|meadow|village_green|orchard)$/.test(t.landuse || '') || /^(scrub|grassland)$/.test(t.natural || '')) ? 'grass' : null;
+        if (!kind) continue;
+        const rings = toRings(el, P); if (!rings) continue;
+        for (const o of rings.outer) {
+          if (o.length < 3) continue;
+          g.save(); path(o); g.clip();
+          let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const q of o) { x0 = Math.min(x0, X(q[0])); x1 = Math.max(x1, X(q[0])); y0 = Math.min(y0, Zc(q[1])); y1 = Math.max(y1, Zc(q[1])); }
+          g.fillStyle = kind === 'golf' ? '#9cc07a' : kind === 'wood' ? '#7fa463' : '#a9c98a'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+          const n = Math.min(400, ((x1 - x0) * (y1 - y0)) / 900 | 0);
+          for (let i = 0; i < n; i++) { const x = x0 + rr() * (x1 - x0), y = y0 + rr() * (y1 - y0), r = (3 + rr() * 9) * k * 2, c = rr() < 0.5 ? 'rgba(120,160,90,' : 'rgba(190,210,150,';
+            const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c + '0.35)'); gr.addColorStop(1, c + '0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+          if (kind === 'golf') { g.strokeStyle = 'rgba(80,120,60,.25)'; g.lineWidth = 3 * k; for (let yy = y0; yy < y1; yy += 12 * k) { g.beginPath(); g.moveTo(x0, yy); g.lineTo(x1, yy); g.stroke(); } }
+          g.restore(); g.strokeStyle = 'rgba(110,140,85,.55)'; g.lineWidth = 1.2 * k; path(o); g.stroke();
+        }
+      }
+      g.lineJoin = 'round'; g.fillStyle = g.strokeStyle = 'rgba(226,222,212,0.92)'; g.lineWidth = 6 * k;     // ลานปูนรอบอาคาร ~3 ม.
+      for (const b of bInfo) { path(b.outer); g.fill(); g.stroke(); }
       const tx = new T.CanvasTexture(cv); tx.anisotropy = 8;
       const gg = new T.CircleGeometry(R, 72); gg.rotateX(-Math.PI / 2);
-      const gm = new T.Mesh(gg, new T.MeshLambertMaterial({ map: tx, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })); gm.position.set(r0[0], 0.015, r0[1]); grp.add(gm);
-    }
-    // พุ่มไม้เตี้ยบนที่ว่าง
-    if (shrubs.length) {
-      const sg = new T.IcosahedronGeometry(1, 0); sg.scale(1, 0.7, 1);
-      const im = new T.InstancedMesh(sg, new T.MeshLambertMaterial({ color: '#ffffff' }), shrubs.length);
-      shrubs.forEach(([x, z, r, c], i) => { m4.makeScale(r, r, r).setPosition(x, r * 0.45, z); im.setMatrixAt(i, m4); im.setColorAt(i, cc.set(c < 0.4 ? '#4f8a3c' : c < 0.75 ? '#6a9a48' : '#8aa85a')); });
-      if (im.instanceColor) im.instanceColor.needsUpdate = true; grp.add(im);
+      const gm = new T.Mesh(gg, new T.MeshLambertMaterial({ map: tx, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })); gm.position.set(r0[0], 0.015, r0[1]); gm.renderOrder = -1; grp.add(gm);
     }
     // รถบนถนน (ตัวถัง + ห้องโดยสาร/ตู้ทึบ + กระจก)
     if (cars.length) {
@@ -1581,6 +1576,7 @@
   // สีพื้นที่ รพ./โรงเรียน (ชมพู/เหลือง) ในแผนที่ฐาน → สีลานปูน ให้เข้ากับฉาก 3 มิติ
   function neutralLanduse(map) {
     const cv = document.createElement('canvas').getContext('2d');
+    for (const L of map.getStyle().layers) if (L.type === 'background') { try { map.setPaintProperty(L.id, 'background-color', '#e7e3da'); } catch (e) {} }   // พื้นเมืองโทนปูน/ดิน แทนสีขาว
     for (const L of map.getStyle().layers) {
       if (L.type !== 'fill' || /water|park|grass|wood|forest|green|ocean/i.test(L.id)) continue;
       let v; try { v = map.getPaintProperty(L.id, 'fill-color'); } catch (e) { continue; }
