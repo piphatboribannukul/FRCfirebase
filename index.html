@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3a0a20">
-<title>แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map) v39</title>
+<title>แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map) v40</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
@@ -2415,6 +2415,7 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
     <button class="mtab" id="mtab-forecast" onclick="setTab('forecast')">📈 คาดการณ์</button>
     <button class="mtab" id="mtab-report" onclick="setTab('report')">📋 รายงาน</button>
     <button class="mtab" id="mtab-3d" onclick="dashOpen3D()">🧊 3D</button>
+    <button class="mtab" id="mtab-3dst" title="ทัวร์มุมมอง 3 มิติ ตู้วัดคุณภาพน้ำ 4 สถานี" onclick="start3DTour(false)">🏙 3D สถานี</button>
     <button class="mtab" id="mtab-cl2" onclick="dashOpenWhatIf()">Cl₂ จำลอง</button>
   </nav>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
@@ -2929,20 +2930,21 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
       <button id="src-modal-close" onclick="document.getElementById('src-modal-overlay').classList.remove('open')">✕</button>
     </div>
     <div id="src-modal-body">
+<div style="font-size:11px;color:#555;margin:0 0 8px;">tt รวม = เวลาเดินน้ำจากสถานีสูบส่ง/ต้นทาง (ชุด v39 เทียบพีค 7 เดือน · ปรับล่าสุด 16 ต.ค. 2569)</div>
 
       <div class="src-group">
         <div class="src-group-title">TR1 — สถานีสูบส่งน้ำบางเขน 1</div>
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ผ่าน สจ.</th><th class="tt">tt รวม</th></tr>
-          <tr><td>สจ.ลุมพินี</td><td class="via">—</td><td class="tt">6 ชม.</td></tr>
-          <tr><td>สจ.พหลโยธิน</td><td class="via">—</td><td class="tt">5 ชม.</td></tr>
-          <tr><td>สจ.สำโรง</td><td class="via">—</td><td class="tt">7 ชม.</td></tr>
-          <tr><td>สาขาทุ่งมหาเมฆ</td><td class="via">สจ.ลุมพินี</td><td class="tt">7 ชม.</td></tr>
-          <tr><td>รพ.ศิครินทร์</td><td class="via">สจ.สำโรง</td><td class="tt">12 ชม.</td></tr>
-          <tr><td>หาดอมรา</td><td class="via">สจ.สำโรง</td><td class="tt">14 ชม.</td></tr>
-          <tr><td>เอจีซี แฟลทกลาส</td><td class="via">สจ.สำโรง</td><td class="tt">11 ชม.</td></tr>
+          <tr><td>สจ.ลุมพินี</td><td class="via">—</td><td class="tt">5.5 ชม.</td></tr>
+          <tr><td>สจ.พหลโยธิน</td><td class="via">—</td><td class="tt">3 ชม.</td></tr>
+          <tr><td>สจ.สำโรง</td><td class="via">—</td><td class="tt">8 ชม.</td></tr>
+          <tr><td>สาขาทุ่งมหาเมฆ</td><td class="via">สจ.ลุมพินี</td><td class="tt">11.5 ชม.</td></tr>
+          <tr><td>รพ.ศิครินทร์</td><td class="via">สจ.สำโรง</td><td class="tt">12.5 ชม.</td></tr>
+          <tr><td>หาดอมรา</td><td class="via">สจ.สำโรง</td><td class="tt">18 ชม.</td></tr>
+          <tr><td>เอจีซี แฟลทกลาส</td><td class="via">สจ.สำโรง</td><td class="tt">12 ชม.</td></tr>
           <tr><td>สาขาสมุทรปราการ</td><td class="via">สจ.สำโรง</td><td class="tt">10 ชม.</td></tr>
-          <tr><td>โรงไฟฟ้าพระนครใต้</td><td class="via">สจ.สำโรง</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>โรงไฟฟ้าพระนครใต้</td><td class="via">สจ.สำโรง</td><td class="tt">10 ชม.</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC ประชานุกูล (วงสว่าง)</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">2 ชม. (ประมาณการ)</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC เฉลิมพันธ์</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">2 ชม. (ประมาณการ)</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC สามเสน (กำแพงเพชร 5)</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">3 ชม. (ประมาณการ)</td></tr>
@@ -2957,12 +2959,12 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
         <div class="src-group-title">TR2 — สถานีสูบส่งน้ำบางเขน 2</div>
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ผ่าน สจ.</th><th class="tt">tt รวม</th></tr>
-          <tr><td>สจ.ลาดพร้าว</td><td class="via">—</td><td class="tt">3 ชม.</td></tr>
+          <tr><td>สจ.ลาดพร้าว</td><td class="via">—</td><td class="tt">4.5 ชม.</td></tr>
           <tr><td>สจ.คลองเตย</td><td class="via">—</td><td class="tt">4 ชม.</td></tr>
-          <tr><td>โอสถสภา</td><td class="via">สจ.ลาดพร้าว</td><td class="tt">5 ชม.</td></tr>
+          <tr><td>โอสถสภา</td><td class="via">สจ.ลาดพร้าว</td><td class="tt">6.5 ชม.</td></tr>
           <tr><td>เกร็ดตระการ</td><td class="via">สจ.ลาดพร้าว</td><td class="tt">8 ชม.</td></tr>
-          <tr><td>ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ</td><td class="via">สจ.คลองเตย</td><td class="tt">9 ชม.</td></tr>
-          <tr><td>สาขาสุขุมวิท-พระโขนง</td><td class="via">สจ.คลองเตย</td><td class="tt">7 ชม.</td></tr>
+          <tr><td>ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ</td><td class="via">สจ.คลองเตย</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>สาขาสุขุมวิท-พระโขนง</td><td class="via">สจ.คลองเตย</td><td class="tt">7.5 ชม.</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC คลองเตย (สุนทรโกษา)</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">7 ชม. (ประมาณการ)</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC พระราม 9</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">7 ชม. (ประมาณการ)</td></tr>
         </table>
@@ -2973,18 +2975,18 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ผ่าน สจ.</th><th class="tt">tt รวม</th></tr>
           <tr><td>สจ.บางพลี</td><td class="via">—</td><td class="tt">13 ชม.</td></tr>
-          <tr><td>สจ.มีนบุรี</td><td class="via">—</td><td class="tt">7 ชม.</td></tr>
-          <tr><td>สจ.ลาดกระบัง</td><td class="via">—</td><td class="tt">8 ชม.</td></tr>
-          <tr><td>นิคมฯบางพลี</td><td class="via">สจ.บางพลี</td><td class="tt">19 ชม.</td></tr>
-          <tr><td>คลองด่าน</td><td class="via">สจ.บางพลี</td><td class="tt">30 ชม.</td></tr>
-          <tr><td>นิคมฯบางปู</td><td class="via">สจ.บางพลี</td><td class="tt">21 ชม.</td></tr>
-          <tr><td>มหาจักรออโตพาร์ท</td><td class="via">สจ.มีนบุรี</td><td class="tt">22 ชม.</td></tr>
-          <tr><td>สาขามีนบุรี</td><td class="via">สจ.มีนบุรี</td><td class="tt">10 ชม.</td></tr>
-          <tr><td>นิคมฯบางชัน</td><td class="via">สจ.มีนบุรี</td><td class="tt">9 ชม.</td></tr>
-          <tr><td>ศูนย์ไตเทียมเทียนฟ้า</td><td class="via">สจ.มีนบุรี</td><td class="tt">12 ชม.</td></tr>
-          <tr><td>นิคมฯลาดกระบัง</td><td class="via">สจ.ลาดกระบัง</td><td class="tt">13 ชม.</td></tr>
-          <tr><td>สุวรรณภูมิ</td><td class="via">สจ.ลาดกระบัง</td><td class="tt">13 ชม.</td></tr>
-          <tr><td>ม.หัวเฉียว (บางพลี)</td><td class="via">สจ.บางพลี</td><td class="tt">20 ชม.</td></tr>
+          <tr><td>สจ.มีนบุรี</td><td class="via">—</td><td class="tt">9 ชม.</td></tr>
+          <tr><td>สจ.ลาดกระบัง</td><td class="via">—</td><td class="tt">9 ชม.</td></tr>
+          <tr><td>นิคมฯบางพลี</td><td class="via">สจ.บางพลี</td><td class="tt">18.5 ชม.</td></tr>
+          <tr><td>คลองด่าน</td><td class="via">สจ.บางพลี</td><td class="tt">30 / 33.5 ชม. (แล้ง/ฝน)</td></tr>
+          <tr><td>นิคมฯบางปู</td><td class="via">สจ.บางพลี</td><td class="tt">18.5 ชม.</td></tr>
+          <tr><td>มหาจักรออโตพาร์ท</td><td class="via">สจ.มีนบุรี</td><td class="tt">21.5 ชม.</td></tr>
+          <tr><td>สาขามีนบุรี</td><td class="via">สจ.มีนบุรี</td><td class="tt">13 ชม.</td></tr>
+          <tr><td>นิคมฯบางชัน</td><td class="via">สจ.มีนบุรี</td><td class="tt">10.5 ชม.</td></tr>
+          <tr><td>ศูนย์ไตเทียมเทียนฟ้า</td><td class="via">สจ.มีนบุรี</td><td class="tt">13 ชม.</td></tr>
+          <tr><td>นิคมฯลาดกระบัง</td><td class="via">สจ.ลาดกระบัง</td><td class="tt">20 ชม.</td></tr>
+          <tr><td>สุวรรณภูมิ</td><td class="via">สจ.ลาดกระบัง</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>ม.หัวเฉียว (บางพลี)</td><td class="via">สจ.บางพลี</td><td class="tt">17 ชม.</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC มัยลาภ</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">3 ชม. (ประมาณการ)</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC นวมินทร์ (ประเสริฐมนูกิจ)</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">4 ชม. (ประมาณการ)</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC วงแหวนตะวันออก</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">11 ชม. (ประมาณการ)</td></tr>
@@ -2995,14 +2997,14 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
         <div class="src-group-title">MH — สถานีสูบส่งน้ำมหาสวัสดิ์</div>
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ผ่าน สจ.</th><th class="tt">tt รวม</th></tr>
-          <tr><td>สจ.ราษฎร์บูรณะ</td><td class="via">—</td><td class="tt">8 ชม.</td></tr>
-          <tr><td>สจ.เพชรเกษม</td><td class="via">—</td><td class="tt">2 ชม.</td></tr>
-          <tr><td>สจ.ท่าพระ</td><td class="via">—</td><td class="tt">8 ชม.</td></tr>
-          <tr><td>พระจอมเกล้าบางขุนเทียน</td><td class="via">สจ.ราษฎร์บูรณะ</td><td class="tt">19 ชม.</td></tr>
-          <tr><td>ศูนย์กีฬาเฉลิมพระเกียรติ</td><td class="via">สจ.ราษฎร์บูรณะ</td><td class="tt">12 ชม.</td></tr>
-          <tr><td>ม.เอเชียอาคเนย์</td><td class="via">สจ.เพชรเกษม</td><td class="tt">15 ชม.</td></tr>
-          <tr><td>เรือนจำพิเศษธนบุรี</td><td class="via">สจ.เพชรเกษม</td><td class="tt">8 ชม.</td></tr>
-          <tr><td>บ้านพักคนชราบางแค</td><td class="via">สจ.ท่าพระ</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>สจ.ราษฎร์บูรณะ</td><td class="via">—</td><td class="tt">7 ชม.</td></tr>
+          <tr><td>สจ.เพชรเกษม</td><td class="via">—</td><td class="tt">4 ชม.</td></tr>
+          <tr><td>สจ.ท่าพระ</td><td class="via">—</td><td class="tt">9 ชม.</td></tr>
+          <tr><td>พระจอมเกล้าบางขุนเทียน</td><td class="via">สจ.ราษฎร์บูรณะ</td><td class="tt">24 ชม.</td></tr>
+          <tr><td>ศูนย์กีฬาเฉลิมพระเกียรติ</td><td class="via">สจ.ราษฎร์บูรณะ</td><td class="tt">10 ชม.</td></tr>
+          <tr><td>ม.เอเชียอาคเนย์</td><td class="via">สจ.เพชรเกษม</td><td class="tt">10.5 ชม.</td></tr>
+          <tr><td>เรือนจำพิเศษธนบุรี</td><td class="via">สจ.เพชรเกษม</td><td class="tt">7.5 ชม.</td></tr>
+          <tr><td>บ้านพักคนชราบางแค</td><td class="via">สจ.ท่าพระ</td><td class="tt">13 ชม.</td></tr>
           <tr style="background:#f3e8ff;"><td>🔗 VC ราชมนตรี (กัลปพฤกษ์)</td><td class="via" style="color:#6c3483;">simulate</td><td class="tt">3 ชม. (ประมาณการ)</td></tr>
         </table>
       </div>
@@ -3011,10 +3013,10 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
         <div class="src-group-title">MDIS — สถานีสูบจ่ายน้ำมหาสวัสดิ์</div>
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ผ่าน สจ.</th><th class="tt">tt รวม</th></tr>
-          <tr><td>บดินทรเดชา นนทบุรี</td><td class="via">MDis</td><td class="tt">4.5 ชม.</td></tr>
-          <tr><td>สาขาบางบัวทอง</td><td class="via">MDis</td><td class="tt">10.5 ชม.</td></tr>
-          <tr><td>ไทรน้อย</td><td class="via">MDis</td><td class="tt">16.5 ชม.</td></tr>
-          <tr><td>ราชวินิต นนทบุรี</td><td class="via">MDis</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>บดินทรเดชา นนทบุรี</td><td class="via">MDis</td><td class="tt">7.5 ชม.</td></tr>
+          <tr><td>สาขาบางบัวทอง</td><td class="via">MDis</td><td class="tt">13.5 ชม.</td></tr>
+          <tr><td>ไทรน้อย</td><td class="via">MDis</td><td class="tt">22.5 ชม.</td></tr>
+          <tr><td>ราชวินิต นนทบุรี</td><td class="via">MDis</td><td class="tt">5 ชม.</td></tr>
           <tr><td>ตั้งพิรุฬห์ธรรม</td><td class="via">MDis</td><td class="tt">6.5 ชม.</td></tr>
         </table>
       </div>
@@ -3023,14 +3025,14 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
         <div class="src-group-title">Dis1 / Dis2 / โรงงานโดยตรง</div>
         <table class="src-tbl">
           <tr><th>สถานีรับน้ำ (ปลายทาง)</th><th>ต้นทาง</th><th class="tt">tt รวม</th></tr>
-          <tr><td>สาขานนทบุรี</td><td class="via">Dis1</td><td class="tt">4.5 ชม.</td></tr>
-          <tr><td>กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย</td><td class="via">Dis1</td><td class="tt">5 ชม.</td></tr>
-          <tr><td>โรงเรียนทหารขนส่ง</td><td class="via">Dis1</td><td class="tt">12 ชม.</td></tr>
-          <tr><td>เตรียมอุดม น้อมเกล้า</td><td class="via">Dis1</td><td class="tt">17 ชม.</td></tr>
-          <tr><td>รพ.ซีจีเอช สายไหม</td><td class="via">Dis2</td><td class="tt">10 ชม.</td></tr>
-          <tr><td>รพ.ภูมิพล</td><td class="via">Dis2</td><td class="tt">3.5 ชม.</td></tr>
+          <tr><td>สาขานนทบุรี</td><td class="via">Dis1</td><td class="tt">5.5 ชม.</td></tr>
+          <tr><td>กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย</td><td class="via">Dis1</td><td class="tt">4.5 ชม.</td></tr>
+          <tr><td>โรงเรียนทหารขนส่ง</td><td class="via">Dis1</td><td class="tt">5 ชม.</td></tr>
+          <tr><td>เตรียมอุดม น้อมเกล้า</td><td class="via">Dis1</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>รพ.ซีจีเอช สายไหม</td><td class="via">Dis2</td><td class="tt">12 ชม.</td></tr>
+          <tr><td>รพ.ภูมิพล</td><td class="via">Dis2</td><td class="tt">4 ชม.</td></tr>
           <tr><td>รพ.ศิริราช</td><td class="via">โรงงานธนบุรี</td><td class="tt">2 ชม.</td></tr>
-          <tr><td>พระราชวังดุสิต</td><td class="via">โรงงานสามเสน 3</td><td class="tt">1 ชม.</td></tr>
+          <tr><td>พระราชวังดุสิต</td><td class="via">โรงงานสามเสน 3</td><td class="tt">2 ชม.</td></tr>
         </table>
       </div>
 
@@ -3740,6 +3742,9 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <script src="data/assets.js"></script>
 <!-- ── application ── -->
 <script src="app.js"></script>
+<!-- [v40] มุมมอง 3 มิติ ตู้วัด (โหลด MapLibre/three เฉพาะตอนเปิด) · ต้องมี frc3d_cabinet.jpg และ data/city/ ในโฟลเดอร์เดียวกัน -->
+<script>window.FRC3D_CONFIG = { cityBase: 'data/city/', cabImg: 'frc3d_cabinet.jpg' };</script>
+<script src="frc3d.js" defer></script>
 
 <!-- ══ rev26: Pipe Interpolation Layers — ย้ายมาจากตำแหน่งที่วางผิดใน <meta viewport> (27/08/2569) ══
      ต้องรันหลัง app.js เพราะใช้ pipeNetGroup / SENSORS / _rtuLive; ตัวโค้ดหน่วงเอง 5 วิ -->
