@@ -377,7 +377,7 @@
         mats[2] = mats[3] = new T.MeshLambertMaterial({ color: p.roof || '#cfcac2' });
         const m3 = new T.Mesh(B(p.w, p.h, p.d), mats); m3.position.set(p.x, p.h / 2, p.z); m3.rotation.y = ry; grp.add(m3);
       } else if (p.type === 'glass') {             // ผนังกระจก/กันสาดกระจกสีเขียวน้ำทะเล (ชั้นล่างอาคาร)
-        const gm = new T.MeshLambertMaterial({ color: p.color || '#1f9a8a', transparent: true, opacity: 0.85 });
+        const gm = new T.MeshLambertMaterial({ color: p.color || '#1f9a8a', transparent: !p.color, opacity: p.color ? 1 : 0.85 });
         add(B(p.w, p.h, 0.15), gm, p.x, (p.y || 0) + p.h / 2, p.z, ry);
         for (let k = -p.w / 2; k <= p.w / 2 + 0.01; k += 2.4) add(B(0.1, p.h, 0.2), L('#e9eceb'), p.x + k * Math.cos(ry), (p.y || 0) + p.h / 2, p.z - k * Math.sin(ry), ry);
         if (p.canopy) add(B(p.w + 1, 0.4, p.canopy), L('#f2f2ef'), p.x + Math.sin(ry) * p.canopy / 2, (p.y || 0) + p.h + 0.2, p.z + Math.cos(ry) * p.canopy / 2, ry);
@@ -431,6 +431,14 @@
           const cp = new T.Mesh(B(1.3, 0.2, 1.5), L('#b9b8b2')); cp.position.y = 3.3; g3.add(cp);
           g3.position.set(q[0], 0, q[1]); g3.rotation.y = angU; grp.add(g3);
         }
+      } else if (p.type === 'letters') {           // ตัวอักษรติดผนัง (พื้นโปร่งใส) · ด้านหน้า = +z ของวัตถุ
+        const cv = document.createElement('canvas'); cv.width = 2048; cv.height = 256; const g = cv.getContext('2d');
+        g.font = 'bold 190px ' + (p.font || TH_FONT); g.textAlign = 'center'; g.textBaseline = 'middle';
+        let sz = 190; while (g.measureText(p.text).width > 1960 && sz > 40) { sz -= 6; g.font = 'bold ' + sz + 'px ' + (p.font || TH_FONT); }
+        g.lineJoin = 'round'; if (p.stroke) { g.lineWidth = 14; g.strokeStyle = p.stroke; g.strokeText(p.text, 1024, 136); }
+        g.fillStyle = p.fg || '#11896b'; g.fillText(p.text, 1024, 136);
+        const tx = new T.CanvasTexture(cv); tx.anisotropy = 8; const w = p.w || 12;
+        const m = add(new T.PlaneGeometry(w, w / 8), new T.MeshBasicMaterial({ map: tx, transparent: true, side: T.DoubleSide }), p.x, p.y || 4, p.z, ry); void m;
       } else if (p.type === 'planter') {           // กระบะต้นไม้ก่ออิฐ + พุ่มไม้
         const g2 = new T.Group(), w = p.w || 3, d = p.d || 1.4, wh = p.h || 0.6;
         const bx = new T.Mesh(B(w, wh, d), L(p.wall || '#c98f6e')); bx.position.y = wh / 2; g2.add(bx);
@@ -576,7 +584,7 @@
   //   roadW = ความกว้างถนนจริงราย way id (ม.) · palace = เส้นแบ่งเขตวัง a→b [ตอ., เหนือ] (ม. จากตู้) อาคารฝั่งขวาของเส้นเป็นอาคารเตี้ยสีขาว
   const CAB_FIX = [
     { match: /ศิริราช/, lat: 13.7594000, lon: 100.4842724, yaw: 180, propYaw: 180, camOff: -25,  // หน้าปลายหลังคาศูนย์อาหารวัดอมรินทร์ ชิดตึก รพ. · ตู้หันหน้าออก ถ.รถไฟ
-      bld: { 1549325372: { style: 'hospital', h: 15, noSign: true },                            // ตึก รพ.
+      bld: { 1549325372: { style: 'modern', h: 18.5, noSign: true },                            // ตึก รพ.
              1549325363: { style: 'shed', h: 2.8, rise: 0.5 },                                   // ศูนย์อาหาร: หลังคาเตี้ยระดับหลังคาตู้ ยาวเกือบถึงตึก รพ.
              320273873: { style: 'glass' } },                                                    // อาคารฝั่งตรงข้าม (ทิศตะวันออกเฉียงเหนือ): ผนังกระจก
       props: [   // กรอบ propYaw 180: x+ = ตะวันตก, z+ = เหนือ · จุดอ้างอิง = ตู้ · ทางเชื่อมลอยฟ้าตาม Street View: บันไดเลื่อน 2 ฝั่ง + หอลิฟต์กระจก + สะพานชั้น 2
@@ -597,23 +605,23 @@
         { type: 'hedgeLine', y: 0.8, h: 1.1, d: 1.1, pts: [[6.8, 1.5],[11.4, 0.4]] },                           // พุ่มไม้หน้าสนามฝั่งซ้าย
         { type: 'shrine', world: true, x: 2.3, z: -7.5, s: 1.05, y: 0.8 }, { type: 'shrine', world: true, x: 5.8, z: -10.5, s: 0.8, y: 0.8 },
         { type: 'glass', world: true, x: 27.1, z: -24.1, rot: 0, w: 10.4, h: 4.2, canopy: 5 },
-        { type: 'sign', world: true, x: 25.3, z: -23.95, rot: 0, y: 8.4, w: 12, h: 1.4, text: 'โรงพยาบาลศิครินทร์', fg: '#11896b', bg: '#f6f6f3' },
-        { type: 'sign', world: true, x: 20.3, z: -23.95, rot: 0, y: 6.1, w: 3.2, h: 0.9, text: 'SIKARIN HOSPITAL', fg: '#ffffff', bg: '#1f9a8a' },
         { type: 'tower', world: true, x: 24.3, z: -63.5, rot: 0, w: 30, d: 18, h: 44, facade: 'apt', color: '#f4f2ee' },
-        { type: 'road', w: 6.5, pts: [[15.0, 2.4], [15.3, -6], [15.6, -19.5]] },                                                      // ทางรถหลัก (เข้า-ออก รพ.) จาก ถ.ลาซาล ถึงหน้าอาคาร
-        { type: 'road', w: 6.0, pts: [[45.5, -5.5], [44.6, -4.5], [41.5, -9.0], [35.5, -11.2], [26, -11.6], [19, -10.4]] },             // ทางรถเข้า รพ. (โค้งหลังป้าย SIKARIN มาบรรจบทางหลัก)
         { type: 'planter', world: true, x: 19.6, z: -1.1, rot: 14.6, w: 3.0, d: 1.4 },
         { type: 'sign', world: true, x: 19.2, z: -0.1, rot: 14.6, y: 1.6, w: 1.3, h: 1.0, text: 'OUT', sub: '← ทางออก', fg: '#ffffff', bg: '#165c3d', post: true },   // ป้ายทางออก (ตามภาพ: ฝั่งตะวันออกของทางรถ)
         { type: 'sign', world: true, x: 18.6, z: 0.1, rot: 14.6, y: 2.75, w: 0.75, h: 0.75, text: 'H', fg: '#ffffff', bg: '#d62828' },
         { type: 'letterWall', world: true, x: 30.5, z: -3.8, rot: 14.6, w: 15, text: 'SIKARIN' },                                   // ป้าย SIKARIN บนกระบะต้นไม้
         { type: 'curbLine', pts: [[-1.6, 7.3], [12.3, 3.7]] }, { type: 'curbLine', pts: [[18.2, 2.2], [46, -5.0]] },   // ขอบทางเท้าแดง-ขาว
         { type: 'powerline', h: 10, pts: [[-38, 17.3], [-8, 9.6], [22, 1.8], [52, -6.0]] },                        // เสาไฟฟ้า + สายไฟ ริม ถ.ลาซาล
-        { type: 'cones', pts: [[13.2, 1.0], [13.6, -12.5], [15.6, -12.9], [17.6, -13.3]] },                                                   // กรวยจราจร
         { type: 'road', w: 7.5, edgeY: true, pts: [[-5.55, 7.5], [-5.55, -29.5]] },                                    // ซอยคั่นระหว่าง รพ. กับร้านสตาร์บัคส์
         { type: 'starbucks', world: true, x: -11.7, z: -7.5, rot: 90, len: 22, d: 11, over: 2.6 },                      // Starbucks (หน้ากระจกหันเข้าซอย)
         { type: 'cars', world: true, x: -39.7, z: -35.5, rot: 90, n: 12, gap: 2.7, seed: 1 },                           // ลานจอดรถหลังร้าน (ตรงป้าย P)
         { type: 'cars', world: true, x: -39.7, z: -42.5, rot: 90, n: 12, gap: 2.7, seed: 2 },
         { type: 'cars', world: true, x: -39.7, z: -49.5, rot: 90, n: 12, gap: 2.7, seed: 3 },
+        { type: 'glass', world: true, x: 27.1, z: -23.95, rot: 0, y: 8.2, w: 15, h: 2.6, color: '#fbfbf8' }, { type: 'letters', world: true, x: 27.1, z: -23.7, rot: 0, y: 9.5, w: 14, text: 'โรงพยาบาลศิครินทร์', fg: '#0f8a64' },     // ป้ายตัวอักษรเขียวบนผนังขาวเหนือทางเข้า
+        { type: 'sign', world: true, x: 30.9, z: -23.9, rot: 0, y: 5.4, w: 2.6, h: 0.9, text: 'SIKARIN', sub: 'HOSPITAL', fg: '#ffffff', bg: '#1f9a8a' },
+        { type: 'road', w: 6.5, pts: [[15.0, 2.4], [15.2, -6.5], [14.6, -12.5], [11.5, -18.5], [5.8, -25], [2.2, -31], [1.6, -42], [1.2, -58]] },   // ทางรถหลัก: เข้า-ออกจาก ถ.ลาซาล โค้งผ่านข้างอาคาร รพ. ไปลานจอดด้านหลัง
+        { type: 'road', w: 5.6, pts: [[47.5, -6.0], [45.5, -3.6], [42, -6.6], [34, -7.6], [24, -7.6], [18.5, -8.6], [15.4, -11]] },               // ทางรถเข้าจากฝั่งตะวันออก วิ่งหลังป้าย SIKARIN มาบรรจบทางหลัก
+        { type: 'cones', pts: [[13.2, 1.2], [17.3, 0.8]] },
       ] },
     { match: /ทหารขนส่ง/, ovtClear: 45,   // อาคาร Overture: ไม่วางในสนามหญ้าหน้าค่าย / ลานจอด ฮ. โชว์ / รอบฉากหน้าประตู
       ovtHide: [[[2.6, -1.5], [109.6, 91.8], [-40.8, 307.8], [-176.1, 261.7], [-147.9, 199.9], [-108.6, 116.8], [-92.4, 92.2], [-55.2, 47.1], [11.4, -8.8]], [[-65.3, -51.5], [-97.4, -29.6], [-138.8, -58.4], [-157.6, -98.5], [-137.3, -109.9], [-79.7, -75.8]]],
@@ -1088,6 +1096,8 @@
         try { wallC = C(t['building:colour'] || t['building:color'] || pick(WALL[kind] || WALL.shop, rnd())); } catch (e) { wallC = C(pick(WALL.shop, rnd())); }
         try { roofC = C(t['roof:colour'] || t['roof:color'] || (shape === 'flat' ? pick(ROOF_FLAT, rnd()) : kind === 'ind' ? pick(['#7d97ab', '#8aa0b0', '#6f8a9e'], rnd()) : pick(ROOF_TILE, rnd()))); } catch (e) { roofC = C(pick(ROOF_FLAT, rnd())); }
         if (palB) { wallC = C(pick(['#f6f3ec', '#f1ece1', '#f8f6f0'], rnd())); roofC = C(pick(['#b9532c', '#a3482a', '#7f6a58', '#5d7c68'], rnd())); shape = ob && rect >= 0.62 && ob.hw >= 1.5 ? 'hipped' : 'flat'; }
+        const modern = ov && ov.style === 'modern';
+        if (modern) { kind = 'office'; wallC = C('#eef3f5'); roofC = C('#cfd5d8'); shape = 'flat'; }
         if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
@@ -1134,6 +1144,12 @@
         if (shape === 'slab') {
           for (const q of [outer[0], outer[Math.floor(outer.length / 2)]]) pillars.push({ x: q[0], z: q[1], h: h - 0.35, r: 0.15 });
         } else for (const ring of [outer, ...inners]) walls(ring, minH, h, wallC, ftype, gtype);
+        if (modern) {                                                                 // อาคารสมัยใหม่: ผนังกระจก + คิ้วขาวรอบทุกชั้น + ฐานขาว + ครีบแนวตั้ง
+          const wc = C('#f7f8f8'); band(outer, 0, 3.6, C('#e9ecee'), 0.15);
+          for (let y = 3.6; y < h - 0.5; y += 3.6) band(outer, y, y + 0.35, wc, 0.35);
+          band(outer, h - 0.9, h + 0.6, wc, 0.4);
+          for (let i = 0; i < outer.length; i++) { const a = outer[i], b2 = outer[(i + 1) % outer.length], L2 = Math.hypot(b2[0] - a[0], b2[1] - a[1]); for (let d = 3; d < L2 - 1; d += 6) wcols.push({ x: a[0] + (b2[0] - a[0]) * d / L2, z: a[1] + (b2[1] - a[1]) * d / L2, y: 3.6, h: h - 4.4, r: 0.18 }); }
+        }
         // ฝาหลังคา
         const v2 = outer.map(q => new T.Vector2(q[0], q[1])), holes = inners.map(hh => hh.map(q => new T.Vector2(q[0], q[1])));
         let tris = []; try { tris = T.ShapeUtils.triangulateShape(v2, holes); } catch (e) {}
@@ -1752,12 +1768,20 @@
     m.once('moveend', () => {
       if (_cur !== state || state.phase !== 'fly') return;
       m.easeTo({ center: c, zoom: NEAR_Z, pitch: 73, bearing: fb, duration: 4500, easing: easeIO });
-      m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; if (state.orbit) sway(state, fb, 1); });
+      m.once('moveend', () => {
+        if (_cur !== state || state.phase !== 'fly') return;
+        const ff = fb - (state.st.camOff || 0);                                    // มุมหน้าตู้ตรงๆ
+        setTimeout(() => {                                                          // ช็อตจบ: ดันกล้องเข้าหน้าตู้ (เห็นสติกเกอร์ชัด)
+          if (_cur !== state || state.phase !== 'fly') return;
+          m.easeTo({ center: c, zoom: 22.4, pitch: 77, bearing: ff, duration: 2800, easing: easeIO });
+          m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 8; if (state.orbit) sway(state, ff, 1); });
+        }, 700);
+      });
     });
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
-    m.rotateTo(fb + dir * 14, { duration: 7000, easing: easeIO }); m.once('moveend', () => sway(state, fb, -dir));
+    m.rotateTo(fb + dir * (state.swayAmp || 14), { duration: 7000, easing: easeIO }); m.once('moveend', () => sway(state, fb, -dir));
   }
   function fly(state) {                              // ▶ บินใหม่: กลับไปมุมสูงแล้วบินเข้าอีกรอบ
     const m = state.map; if (!m) return;
