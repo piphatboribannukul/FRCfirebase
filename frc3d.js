@@ -17,6 +17,7 @@
     overpass: ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'],
     cityBase: 'data/city/',                // ข้อมูลเมืองที่สร้างไว้ล่วงหน้า (GitHub Action: tools/build_city.py)
     osmStatic: null,                       // ใช้ทดสอบ: ไฟล์ JSON ของ Overpass แทนการดึงจริง
+    cabImg: 'frc3d_cabinet.jpg',           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
   }, window.FRC3D_CONFIG || {});
 
   // ── เกณฑ์สี FRC (ชุดเดียวกับ contour) ─────────────────────────────────────
@@ -37,7 +38,7 @@
   }
 
   // ── ขนาดตู้: ขนาดจริงเมื่อซูม ≥ 19.5 · ซูมออกแล้วขยาย (ไม่งั้นมองไม่เห็นในภาพเมือง) ──
-  const NEAR_Z = 21.3, FAR_Z = 16.9, INTRO_Z = 15.6, BEAM_H = 14;
+  const NEAR_Z = 21.8, FAR_Z = 16.9, INTRO_Z = 15.6, BEAM_H = 14;
   function exag(z) { return Math.min(40, Math.max(1, Math.pow(2, 19.5 - z))); }
   function beamAlpha(z) { return Math.max(0, Math.min(0.6, (18.3 - z) * 0.4)); }
 
@@ -100,64 +101,150 @@
   }
 
   // ── ตู้ตรวจวัดคุณภาพน้ำ (ตู้สเตนเลส + สติกเกอร์ฟ้า + หลังคาเหล็กสีน้ำเงิน ตามตู้จริง) — หน่วยเมตร แกน y ขึ้น ──
-  function wrapTexture(T, side) {
-    const W = 256, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    const st = g.createLinearGradient(0, 0, W, 0); st.addColorStop(0, '#c4c9ce'); st.addColorStop(0.5, '#eceef0'); st.addColorStop(1, '#bfc4c9');
-    g.fillStyle = st; g.fillRect(0, 0, W, H);                                         // สเตนเลส
-    if (!side) { g.fillStyle = '#99a0a7'; for (let y = 20; y < 92; y += 10) g.fillRect(40, y, W - 80, 4); }   // ช่องระบายอากาศ
-    const top = side ? 70 : 108, bg = g.createLinearGradient(0, top, 0, H);
-    bg.addColorStop(0, '#2b8be0'); bg.addColorStop(0.5, '#1660b6'); bg.addColorStop(1, '#0a3d84');
-    g.fillStyle = bg; g.fillRect(10, top, W - 20, H - top - 14);                       // สติกเกอร์ฟ้า
-    if (!side) {                                                                       // แผงขาวด้านบนสติกเกอร์: ตราหยดน้ำ + ชื่อตู้
-      g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(26, top + 16, W - 52, 112, 14) : g.rect(26, top + 16, W - 52, 112); g.fill();
-      g.fillStyle = '#1660b6'; g.beginPath(); g.arc(70, top + 72, 30, 0, 6.283); g.fill();
-      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(70, top + 50); g.bezierCurveTo(86, top + 70, 84, top + 90, 70, top + 90); g.bezierCurveTo(56, top + 90, 54, top + 70, 70, top + 50); g.fill();
-      g.fillStyle = '#0b4f9a'; g.textAlign = 'left'; g.font = 'bold 21px Sarabun, "Noto Sans Thai", sans-serif';
-      g.fillText('ตู้ตรวจวัด', 108, top + 62); g.fillText('คุณภาพน้ำ', 108, top + 88); g.font = '15px Sarabun, sans-serif'; g.fillStyle = '#3d6ea8'; g.fillText('ออนไลน์ 24 ชม.', 108, top + 112);
+  // ── ตู้วัดคุณภาพน้ำ (ตามรูปตู้จริง): ตู้สเตนเลส + สติกเกอร์ กปน. "อยากรู้? คุณภาพน้ำ สแกนเลย · น้ำประปาดื่มได้" + หลังคาเหล็กสีน้ำเงิน + แผงโซลาร์ ──
+  const TH_FONT = 'Sarabun, "Noto Sans Thai", "Leelawadee UI", Tahoma, Loma, sans-serif';
+  function stickerTexture(T) {
+    if (_texCache._sticker) return _texCache._sticker;
+    const W = 640, H = 1440, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+    // พื้นสเตนเลสรอบสติกเกอร์ (ขอบประตู)
+    const st = g.createLinearGradient(0, 0, W, 0); st.addColorStop(0, '#b9bec3'); st.addColorStop(0.45, '#eef0f2'); st.addColorStop(1, '#c2c7cc'); g.fillStyle = st; g.fillRect(0, 0, W, H);
+    g.globalAlpha = 0.07; for (let x = 0; x < W; x += 3) { g.fillStyle = (x / 3) % 2 ? '#ffffff' : '#7d858c'; g.fillRect(x, 0, 1, H); } g.globalAlpha = 1;   // ลายเส้นขัด
+    // ช่องระบายอากาศด้านบน
+    g.fillStyle = '#8f979e'; for (let y = 26; y < 100; y += 13) { rr(150, y, W - 300, 6, 3); g.fill(); }
+    const X0 = 40, Y0 = 118, SW = W - 80, SH = H - Y0 - 70;
+    // สติกเกอร์: พื้นฟ้าไล่สี
+    const bg = g.createLinearGradient(0, Y0, 0, Y0 + SH); bg.addColorStop(0, '#dff2ff'); bg.addColorStop(0.45, '#9fd6fb'); bg.addColorStop(0.8, '#3d9be6'); bg.addColorStop(1, '#1667c4');
+    g.save(); rr(X0, Y0, SW, SH, 18); g.clip(); g.fillStyle = bg; g.fillRect(X0, Y0, SW, SH);
+    g.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 18; i++) { const x = X0 + ((i * 97) % SW), y = Y0 + 380 + ((i * 173) % 700), r = 6 + (i % 5) * 4; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }   // ฟองน้ำ
+    // แถบหัวสีขาว: ตรา + ชื่อหน่วยงาน
+    g.fillStyle = '#ffffff'; g.fillRect(X0, Y0, SW, 170);
+    g.fillStyle = '#1b5fb4'; g.fillRect(X0, Y0 + 166, SW, 6);
+    const ex = X0 + 78, ey = Y0 + 84;
+    g.fillStyle = '#1b5fb4'; g.beginPath(); g.arc(ex, ey, 52, 0, 6.283); g.fill();
+    g.strokeStyle = '#e8b730'; g.lineWidth = 6; g.beginPath(); g.arc(ex, ey, 44, 0, 6.283); g.stroke();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(ex, ey - 30); g.bezierCurveTo(ex + 24, ey - 2, ex + 22, ey + 26, ex, ey + 26); g.bezierCurveTo(ex - 22, ey + 26, ex - 24, ey - 2, ex, ey - 30); g.fill();
+    const fit = (txt, x, y, maxW, size, style, fam) => { let sz = size; do { g.font = style + ' ' + sz + 'px ' + fam; sz -= 1; } while (g.measureText(txt).width > maxW && sz > 8); g.fillText(txt, x, y); };
+    const HW = SW - 148 - 14;
+    g.textAlign = 'left'; g.fillStyle = '#123f86'; fit('สถานีตรวจวัดคุณภาพน้ำประปาระยะไกล', X0 + 140, Y0 + 80, HW, 40, 'bold', TH_FONT);
+    g.fillStyle = '#1b5fb4'; fit('Tap Water Quality Monitoring System', X0 + 140, Y0 + 124, HW, 25, 'bold', 'Arial, sans-serif');
+    // "อยากรู้? คุณภาพน้ำ สแกนเลย" + QR
+    const ty = Y0 + 270; g.lineJoin = 'round';
+    const outline = (txt, x, y, font, fill, stroke, lw) => { g.font = font; g.strokeStyle = stroke; g.lineWidth = lw; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
+    outline('อยากรู้?', X0 + 28, ty, 'bold 86px ' + TH_FONT, '#1b5fb4', '#ffffff', 12);
+    outline('คุณภาพน้ำ', X0 + 40, ty + 64, 'bold 46px ' + TH_FONT, '#123f86', '#ffffff', 9);
+    outline('สแกนเลย', X0 + 120, ty + 116, 'bold 44px ' + TH_FONT, '#ffffff', '#1b5fb4', 9);
+    const qx = X0 + SW - 210, qy = Y0 + 196, qs = 182;
+    g.fillStyle = '#ffffff'; rr(qx - 10, qy - 10, qs + 20, qs + 20, 10); g.fill();
+    const N = 25, m = qs / N; let seed = 1234567; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    g.fillStyle = '#10213d';
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const inF = (a, b) => i >= a && i < a + 7 && j >= b && j < b + 7; if (inF(0, 0) || inF(N - 7, 0) || inF(0, N - 7)) continue; if (rnd() < 0.48) g.fillRect(qx + i * m, qy + j * m, m + 0.4, m + 0.4); }
+    for (const [a, b] of [[0, 0], [N - 7, 0], [0, N - 7]]) { g.fillRect(qx + a * m, qy + b * m, 7 * m, 7 * m); g.fillStyle = '#ffffff'; g.fillRect(qx + (a + 1) * m, qy + (b + 1) * m, 5 * m, 5 * m); g.fillStyle = '#10213d'; g.fillRect(qx + (a + 2) * m, qy + (b + 2) * m, 3 * m, 3 * m); }
+    // "น้ำประปา ดื่มได้"
+    g.textAlign = 'center';
+    outline('น้ำประปา', W / 2 + 40, Y0 + 520, 'bold 74px ' + TH_FONT, '#123f86', '#ffffff', 12);
+    outline('ดื่มได้', W / 2 + 10, Y0 + 640, 'bold 130px ' + TH_FONT, '#1b5fb4', '#ffffff', 16);
+    // มาสคอตหยดน้ำ + แก้วน้ำ
+    const mx = X0 + 200, my = Y0 + 930, ms = 160;
+    const dropPath = (x, y, s) => { g.beginPath(); g.moveTo(x, y - s * 1.25); g.bezierCurveTo(x + s * 0.55, y - s * 0.55, x + s, y - s * 0.05, x + s, y + s * 0.38); g.bezierCurveTo(x + s, y + s * 0.95, x + s * 0.5, y + s * 1.2, x, y + s * 1.2); g.bezierCurveTo(x - s * 0.5, y + s * 1.2, x - s, y + s * 0.95, x - s, y + s * 0.38); g.bezierCurveTo(x - s, y - s * 0.05, x - s * 0.55, y - s * 0.55, x, y - s * 1.25); g.closePath(); };
+    const dg = g.createRadialGradient(mx - ms * 0.35, my - ms * 0.2, ms * 0.1, mx, my + ms * 0.2, ms * 1.4); dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.35, '#bfe6ff'); dg.addColorStop(1, '#3f9fe8');
+    dropPath(mx, my, ms); g.fillStyle = dg; g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.stroke(); g.strokeStyle = '#1b5fb4'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.ellipse(mx - ms * 0.45, my - ms * 0.35, ms * 0.12, ms * 0.28, -0.5, 0, 6.283); g.fill();   // ประกายแสง
+    for (const sx of [-1, 1]) {                                                                                     // ตา
+      g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(mx + sx * ms * 0.32, my + ms * 0.22, ms * 0.2, ms * 0.25, 0, 0, 6.283); g.fill();
+      g.fillStyle = '#123f86'; g.beginPath(); g.ellipse(mx + sx * ms * 0.3, my + ms * 0.27, ms * 0.13, ms * 0.17, 0, 0, 6.283); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(mx + sx * ms * 0.26, my + ms * 0.2, ms * 0.05, 0, 6.283); g.fill();
+      g.fillStyle = 'rgba(255,130,150,.55)'; g.beginPath(); g.ellipse(mx + sx * ms * 0.62, my + ms * 0.55, ms * 0.12, ms * 0.07, 0, 0, 6.283); g.fill();   // แก้มชมพู
     }
-    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 5;                          // คลื่นน้ำ
-    for (let k = 0; k < 3; k++) { const y = H - 64 - k * 24; g.beginPath(); g.moveTo(10, y); for (let x = 10; x <= W - 10; x += 14) g.lineTo(x, y + Math.sin(x / 24 + k) * 6); g.stroke(); }
-    const drop = (x, y, s, a) => { g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.beginPath(); g.moveTo(x, y - s); g.bezierCurveTo(x + s * 0.7, y - s * 0.2, x + s * 0.6, y + s * 0.6, x, y + s * 0.6); g.bezierCurveTo(x - s * 0.6, y + s * 0.6, x - s * 0.7, y - s * 0.2, x, y - s); g.fill(); };
-    if (side) { drop(W * 0.5, top + 150, 58, 0.95); drop(W * 0.25, top + 80, 18, 0.6); drop(W * 0.76, top + 110, 24, 0.7); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = 'bold 26px Sarabun, sans-serif'; g.fillText('น้ำประปา', W / 2, top + 250); g.fillText('ดื่มได้', W / 2, top + 284); }
-    else { drop(W * 0.5, top + 230, 44, 0.95); drop(W * 0.22, top + 190, 16, 0.6); drop(W * 0.8, top + 205, 20, 0.7); }
-    const t = new T.CanvasTexture(c); t.anisotropy = 8; return t;
+    g.fillStyle = '#123f86'; g.beginPath(); g.arc(mx, my + ms * 0.6, ms * 0.22, 0.1, Math.PI - 0.1); g.closePath(); g.fill();   // ปากยิ้ม
+    g.fillStyle = '#ff7f93'; g.beginPath(); g.ellipse(mx, my + ms * 0.74, ms * 0.1, ms * 0.05, 0, 0, 6.283); g.fill();
+    const gx = X0 + SW - 150, gy = my - 40, gw = 120, gh = 230;                                                        // แก้วน้ำ + หลอด
+    g.strokeStyle = '#ffffff'; g.lineWidth = 9; g.beginPath(); g.moveTo(gx + gw * 0.55, gy + 30); g.lineTo(gx + gw * 0.9, gy - 70); g.lineTo(gx + gw * 1.15, gy - 70); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + gw, gy); g.lineTo(gx + gw * 0.88, gy + gh); g.lineTo(gx + gw * 0.12, gy + gh); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(70,160,235,.75)'; g.beginPath(); g.moveTo(gx + gw * 0.04, gy + 50); g.lineTo(gx + gw * 0.96, gy + 50); g.lineTo(gx + gw * 0.88, gy + gh); g.lineTo(gx + gw * 0.12, gy + gh); g.closePath(); g.fill();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + gw * 0.12, gy + gh); g.lineTo(gx + gw * 0.88, gy + gh); g.lineTo(gx + gw, gy); g.stroke();
+    // แถบล่างสีน้ำเงินเข้ม
+    g.fillStyle = '#0f4f9e'; g.fillRect(X0, Y0 + SH - 80, SW, 80);
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; for (let k = 0; k < 2; k++) { const y = Y0 + SH - 98 - k * 22; g.beginPath(); for (let x = X0; x <= X0 + SW; x += 10) g[x === X0 ? 'moveTo' : 'lineTo'](x, y + Math.sin(x / 30 + k) * 7); g.stroke(); }
+    g.restore();
+    g.strokeStyle = 'rgba(80,90,100,.35)'; g.lineWidth = 3; rr(X0, Y0, SW, SH, 18); g.stroke();
+    // รอยต่อบานประตู
+    g.strokeStyle = 'rgba(70,78,86,.55)'; g.lineWidth = 3; g.strokeRect(14, 12, W - 28, H - 24);
+    const t = new T.CanvasTexture(c); t.anisotropy = 16; t.minFilter = T.LinearMipmapLinearFilter; return (_texCache._sticker = t);
+  }
+  function steelTexture(T) {
+    if (_texCache._steel) return _texCache._steel;
+    const c = document.createElement('canvas'); c.width = 256; c.height = 512; const g = c.getContext('2d');
+    const st = g.createLinearGradient(0, 0, 256, 0); st.addColorStop(0, '#b4b9be'); st.addColorStop(0.5, '#e6e8ea'); st.addColorStop(1, '#bcc1c6'); g.fillStyle = st; g.fillRect(0, 0, 256, 512);
+    g.globalAlpha = 0.08; for (let x = 0; x < 256; x += 2) { g.fillStyle = (x / 2) % 2 ? '#ffffff' : '#6f777e'; g.fillRect(x, 0, 1, 512); } g.globalAlpha = 1;
+    g.strokeStyle = 'rgba(80,88,96,.4)'; g.lineWidth = 2; g.strokeRect(8, 8, 240, 496);
+    const t = new T.CanvasTexture(c); t.anisotropy = 8; return (_texCache._steel = t);
+  }
+  function solarTexture(T) {
+    if (_texCache._solar) return _texCache._solar;
+    const c = document.createElement('canvas'); c.width = 512; c.height = 384; const g = c.getContext('2d');
+    g.fillStyle = '#d9dde1'; g.fillRect(0, 0, 512, 384);
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) {
+      const x = 12 + i * 82, y = 12 + j * 90, gr = g.createLinearGradient(x, y, x + 78, y + 86); gr.addColorStop(0, '#2f4f8c'); gr.addColorStop(1, '#16274d');
+      g.fillStyle = gr; g.fillRect(x, y, 78, 86); g.strokeStyle = 'rgba(190,205,230,.35)'; g.lineWidth = 1; for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo(x + k * 19.5, y); g.lineTo(x + k * 19.5, y + 86); g.stroke(); }
+    }
+    const t = new T.CanvasTexture(c); t.anisotropy = 8; return (_texCache._solar = t);
   }
   function buildCabinet(T, color, opt) {
     opt = opt || {};
     const grp = new T.Group();
     const M = (c, o) => new T.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.5, metalness: 0.15 }, o || {}));
     const box = (w, h, d, mat, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); grp.add(m); return m; };
-    const steel = M('#d3d7db', { metalness: 0.35, roughness: 0.32 }), steelD = M('#b4bac0', { metalness: 0.35, roughness: 0.4 }), conc = M('#cfcbc3', { roughness: 0.95 });
-    const BW = 0.72, BD = 0.5, BH = 1.62, B0 = 0.22;
-    box(1.6, B0, 1.3, conc, 0, B0 / 2, -0.15);                                   // ฐานคอนกรีตยกสูง
-    box(BW, BH, BD, steel, 0, B0 + BH / 2, 0);
-    box(BW + 0.06, 0.035, BD + 0.06, steelD, 0, B0 + BH + 0.018, 0);
-    const front = new T.Mesh(new T.PlaneGeometry(BW - 0.04, BH - 0.06), new T.MeshLambertMaterial({ map: wrapTexture(T, false) }));
-    front.position.set(0, B0 + BH / 2, BD / 2 + 0.003); grp.add(front);
-    for (const s of [-1, 1]) {
-      const side = new T.Mesh(new T.PlaneGeometry(BD - 0.04, BH - 0.06), new T.MeshLambertMaterial({ map: wrapTexture(T, true) }));
-      side.position.set(s * (BW / 2 + 0.003), B0 + BH / 2, 0); side.rotation.y = s * Math.PI / 2; grp.add(side);
+    const steelM = new T.MeshLambertMaterial({ map: steelTexture(T) }), steelD = M('#a9afb5', { metalness: 0.4, roughness: 0.35 }), conc = M('#c9c5bd', { roughness: 0.95 });
+    const BW = 0.66, BD = 0.45, BH = 1.65, B0 = 0.22;                             // ขนาดตู้จริง 66 × 165 ซม. (รวมฐาน) บนแท่นคอนกรีต
+    box(1.7, B0, 1.4, conc, 0, B0 / 2, -0.15);                                   // แท่นคอนกรีตยกสูง
+    box(1.74, 0.03, 1.44, M('#bdb9b1', { roughness: 0.95 }), 0, B0 - 0.01, -0.15);
+    const Y1 = B0;
+    const body = new T.Mesh(new T.BoxGeometry(BW, BH, BD), [steelM, steelM, steelD, steelD, steelM, steelM]); body.position.set(0, Y1 + BH / 2, 0); grp.add(body);
+    box(BW + 0.03, 0.075, BD + 0.02, steelD, 0, Y1 + BH - 0.0375, 0);           // ฝาบนยื่น
+    box(BW - 0.01, 0.147, BD - 0.01, M('#55585c', { roughness: 0.7 }), 0, Y1 + 0.0735, 0.004);   // ฐานตู้สีเข้ม
+    // หน้าตู้: ภาพแบบตู้จริง (โหลดไม่ได้ → ลายวาด)
+    const frontMat = new T.MeshLambertMaterial({ map: stickerTexture(T) });
+    const front = new T.Mesh(new T.PlaneGeometry(BW, BH), frontMat); front.position.set(0, Y1 + BH / 2, BD / 2 + 0.004); grp.add(front);
+    // กล่องมือจับ (ยื่นจากบานประตู) ใช้ภาพส่วนเดียวกัน
+    const u0 = 0.059, u1 = 0.379, v0 = 0.345, v1 = 0.461, hw = (u1 - u0) * BW, hh = (v1 - v0) * BH;
+    const hg = new T.PlaneGeometry(hw, hh), uv = hg.attributes.uv;
+    for (let i = 0; i < uv.count; i++) { uv.setXY(i, uv.getX(i) ? u1 : u0, uv.getY(i) ? 1 - v0 : 1 - v1); }
+    const hx = -BW / 2 + (u0 + u1) / 2 * BW, hy = Y1 + BH * (1 - (v0 + v1) / 2);
+    box(hw, hh, 0.035, M('#b4b7ba', { metalness: 0.3, roughness: 0.45 }), hx, hy, BD / 2 + 0.021);
+    const hFront = new T.Mesh(hg, frontMat); hFront.position.set(hx, hy, BD / 2 + 0.04); grp.add(hFront);
+    box(0.03, 0.13, 0.03, M('#2b2f33', { roughness: 0.4 }), hx - hw * 0.12, hy, BD / 2 + 0.056);   // คันโยก
+    if (CFG.cabImg) {
+      const ld = new T.TextureLoader(); ld.setCrossOrigin('anonymous');
+      ld.load(CFG.cabImg, tx => { tx.anisotropy = 16; frontMat.map = tx; frontMat.needsUpdate = true; }, undefined, () => {});
     }
+    // ไฟสถานะเล็กบนฝาตู้ (สีตามค่าคลอรีน)
     const ledMat = M(color, { emissive: color, emissiveIntensity: 0.6, roughness: 0.2 });
-    const led = new T.Mesh(new T.SphereGeometry(0.035, 12, 8), ledMat); led.position.set(BW / 2 - 0.09, B0 + BH - 0.1, BD / 2 + 0.02); grp.add(led);
-    box(0.025, 0.16, 0.035, M('#8d949b', { metalness: 0.6, roughness: 0.25 }), BW / 2 - 0.07, B0 + BH * 0.55, BD / 2 + 0.02);
-    // ท่อเก็บน้ำตัวอย่าง → มาตรวัดน้ำ
-    const pipeMat = M('#7b8189', { metalness: 0.3, roughness: 0.45 });
-    const pp = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, 1.9, 10), pipeMat); const ps = opt.pipeSide || -1; pp.position.set(ps * 1.3, 0.05, 0.1); pp.rotation.z = Math.PI / 2; grp.add(pp);   // pipeSide 1 = ท่อออกขวามือคนมอง
+    const led = new T.Mesh(new T.SphereGeometry(0.025, 12, 8), ledMat); led.position.set(BW / 2 - 0.06, Y1 + BH + 0.02, BD / 2 - 0.05); grp.add(led);
+    // ท่อน้ำตัวอย่างสีฟ้า (ขึ้นจากพื้นเข้าตู้ด้านข้าง) → มาตรวัดน้ำ
+    const pipeMat = M('#2f86d6', { roughness: 0.45 }), ps = opt.pipeSide || -1;
+    const riser = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 0.55, 10), pipeMat); riser.position.set(ps * (BW / 2 + 0.08), B0 + 0.27, 0.05); grp.add(riser);
+    const elbow = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 0.1, 10), pipeMat); elbow.rotation.z = Math.PI / 2; elbow.position.set(ps * (BW / 2 + 0.03), B0 + 0.54, 0.05); grp.add(elbow);
+    const pp = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 1.9, 10), pipeMat); pp.position.set(ps * 1.3, 0.05, 0.1); pp.rotation.z = Math.PI / 2; grp.add(pp);
     box(0.30, 0.12, 0.22, M('#4f565e'), ps * 2.35, 0.06, 0.1);
-    // หลังคาเหล็กสีน้ำเงิน (โครงเสาสี่เหลี่ยม 2 ต้นด้านหลัง)
+    // หลังคาเหล็กสีน้ำเงิน: เสาเหลี่ยม 4 ต้น + โครงหลังคา + แผ่นโปร่งแสง + แผงโซลาร์
     if (opt.canopy !== false) {
-      const blue = M('#1d5bb0', { roughness: 0.45, metalness: 0.2 }), blueD = M('#164a91', { roughness: 0.5 });
-      for (const x of [-0.6, 0.6]) box(0.08, 2.55, 0.08, blue, x, B0 + 1.27, -0.5);
-      box(1.28, 0.08, 0.08, blue, 0, B0 + 2.5, -0.5);
-      const cr = new T.Mesh(new T.BoxGeometry(1.5, 0.04, 1.35), blue); cr.position.set(0, B0 + 2.58, 0.02); cr.rotation.x = 0.13; grp.add(cr);
-      box(1.5, 0.16, 0.03, blueD, 0, B0 + 2.43, 0.7);
-      for (const x of [-0.75, 0.75]) box(0.03, 0.16, 1.35, blueD, x, B0 + 2.5, 0.02);
+      const blue = M('#1e6fd0', { roughness: 0.4, metalness: 0.25 }), blueD = M('#175bb0', { roughness: 0.45 });
+      const PX = 0.66, PZf = 0.42, PZb = -0.52, PH = 2.55;
+      for (const x of [-PX, PX]) for (const z of [PZf, PZb]) box(0.08, PH, 0.08, blue, x, B0 + PH / 2, z);
+      for (const z of [PZf, PZb]) box(PX * 2 + 0.08, 0.1, 0.08, blue, 0, B0 + PH - 0.05, z);
+      for (const x of [-PX, PX]) box(0.08, 0.1, PZf - PZb + 0.08, blue, x, B0 + PH - 0.05, (PZf + PZb) / 2);
+      const rg = new T.Group(); rg.position.set(0, B0 + PH + 0.06, -0.05); rg.rotation.x = 0.1; grp.add(rg);
+      const fr = (w, h, d, m, x, y, z) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(x, y, z); rg.add(o); };
+      fr(1.62, 0.08, 0.06, blueD, 0, 0, 0.66); fr(1.62, 0.08, 0.06, blueD, 0, 0, -0.66); fr(0.06, 0.08, 1.38, blueD, -0.78, 0, 0); fr(0.06, 0.08, 1.38, blueD, 0.78, 0, 0);
+      fr(1.56, 0.02, 1.3, new T.MeshLambertMaterial({ color: '#cfe6f5', transparent: true, opacity: 0.45, side: T.DoubleSide }), 0, 0.02, 0);
+      const sp = new T.Mesh(new T.BoxGeometry(1.5, 0.04, 1.08), [steelD, steelD, new T.MeshLambertMaterial({ map: solarTexture(T) }), steelD, steelD, steelD]);
+      sp.position.set(0, 0.16, -0.04); sp.rotation.x = -0.12; rg.add(sp);
+      for (const x of [-0.6, 0.6]) for (const z of [-0.4, 0.35]) fr(0.03, 0.14, 0.03, steelD, x, 0.08, z);
     }
-    const lampLight = new T.PointLight(0xffe2b0, 0, 6, 1.6); lampLight.position.set(0, B0 + 2.3, 0.6); grp.add(lampLight);
+    const lampLight = new T.PointLight(0xffe2b0, 0, 6, 1.6); lampLight.position.set(0, B0 + 2.4, 0.6); grp.add(lampLight);
     const lampMat = M('#ffffff', { emissive: '#fff1c9', emissiveIntensity: 0 });
-    const lamp = new T.Mesh(new T.BoxGeometry(0.5, 0.03, 0.1), lampMat); lamp.position.set(0, B0 + 2.38, 0.35); grp.add(lamp);
+    const lamp = new T.Mesh(new T.BoxGeometry(0.5, 0.03, 0.1), lampMat); lamp.position.set(0, B0 + 2.5, 0.3); grp.add(lamp);
     return { grp, dropMat: ledMat, lampMat, lampLight };
   }
 
@@ -1518,7 +1605,7 @@
     const ml = window.maplibregl;
     const map = new ml.Map({
       container: wrap.querySelector('#frc3d-map'), style: CFG.styleUrl,
-      center: [st.lon, st.lat], zoom: INTRO_Z, pitch: 48, bearing: -30, maxPitch: 80, maxZoom: 22,
+      center: [st.lon, st.lat], zoom: INTRO_Z, pitch: 48, bearing: -30, maxPitch: 82, maxZoom: 23.6,
       antialias: true, attributionControl: false,
     });
     state.map = map;
@@ -1543,7 +1630,8 @@
         const h = (beamAlpha(z) > 0.05 ? (2 + BEAM_H) : 4.4) * k;
         const px = h / mpp * Math.sin(map.getPitch() * Math.PI / 180);
         const y = map.project(mk.getLngLat()).y, room = y - el.offsetHeight - 78;   // ไม่ให้ป้ายชนแถบเมนูด้านบน
-        mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
+        if (px + 14 > room && z > 20.5) { const cabPx = 0.95 * k / mpp; mk.setOffset([Math.round(el.offsetWidth / 2 + cabPx + 18), -Math.round(Math.max(30, Math.min(room, px * 0.7)))]); }   // ซูมใกล้: ย้ายป้ายไปข้างตู้ ไม่บังตู้
+        else mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
       };
       map.on('move', lift); lift();
       neutralLanduse(map);
@@ -1652,7 +1740,7 @@
     if (!s.map) return;
     if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
-    else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); s.map.easeTo({ center: s.cabLL || [s.st.lon, s.st.lat], zoom: NEAR_Z, pitch: 73, bearing: frontBearing(s), duration: 3000, easing: easeIO }); }
+    else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); s.map.easeTo({ center: s.cabLL || [s.st.lon, s.st.lat], zoom: 22.8, pitch: 78, bearing: frontBearing(s) - (s.st.camOff || 0) * 0.5, duration: 3000, easing: easeIO }); }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
     else if (a === 'night') {
       s.night = !s.night; btn.classList.toggle('on', s.night); btn.textContent = s.night ? '☀ กลางวัน' : '🌙 กลางคืน';
       s.wrap.classList.toggle('frc3d-night', s.night);
@@ -1668,5 +1756,5 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  window.FRC3D = { open, close, frcHex, map: () => _cur && _cur.map };
+  window.FRC3D = { open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a) };
 })();
