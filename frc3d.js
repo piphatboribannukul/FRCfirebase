@@ -204,7 +204,7 @@
     box(BW + 0.03, 0.075, BD + 0.02, steelD, 0, Y1 + BH - 0.0375, 0);           // ฝาบนยื่น
     box(BW - 0.01, 0.147, BD - 0.01, M('#55585c', { roughness: 0.7 }), 0, Y1 + 0.0735, 0.004);   // ฐานตู้สีเข้ม
     // หน้าตู้: ภาพแบบตู้จริง (โหลดไม่ได้ → ลายวาด)
-    const frontMat = new T.MeshLambertMaterial({ map: stickerTexture(T) });
+    const frontMat = new T.MeshLambertMaterial({ map: stickerTexture(T), emissive: 0xffffff, emissiveMap: stickerTexture(T), emissiveIntensity: 0 });
     const front = new T.Mesh(new T.PlaneGeometry(BW, BH), frontMat); front.position.set(0, Y1 + BH / 2, BD / 2 + 0.004); grp.add(front);
     // กล่องมือจับ (ยื่นจากบานประตู) ใช้ภาพส่วนเดียวกัน
     const u0 = 0.059, u1 = 0.379, v0 = 0.345, v1 = 0.461, hw = (u1 - u0) * BW, hh = (v1 - v0) * BH;
@@ -216,7 +216,7 @@
     box(0.03, 0.13, 0.03, M('#2b2f33', { roughness: 0.4 }), hx - hw * 0.12, hy, BD / 2 + 0.056);   // คันโยก
     if (CFG.cabImg) {
       const ld = new T.TextureLoader(); ld.setCrossOrigin('anonymous');
-      ld.load(CFG.cabImg, tx => { tx.anisotropy = 16; frontMat.map = tx; frontMat.needsUpdate = true; }, undefined, () => {});
+      ld.load(CFG.cabImg, tx => { tx.anisotropy = 16; frontMat.map = tx; frontMat.emissiveMap = tx; frontMat.needsUpdate = true; }, undefined, () => {});
     }
     // ไฟสถานะเล็กบนฝาตู้ (สีตามค่าคลอรีน)
     const ledMat = M(color, { emissive: color, emissiveIntensity: 0.6, roughness: 0.2 });
@@ -242,10 +242,22 @@
       sp.position.set(0, 0.16, -0.04); sp.rotation.x = -0.12; rg.add(sp);
       for (const x of [-0.6, 0.6]) for (const z of [-0.4, 0.35]) fr(0.03, 0.14, 0.03, steelD, x, 0.08, z);
     }
-    const lampLight = new T.PointLight(0xffe2b0, 0, 6, 1.6); lampLight.position.set(0, B0 + 2.4, 0.6); grp.add(lampLight);
-    const lampMat = M('#ffffff', { emissive: '#fff1c9', emissiveIntensity: 0 });
-    const lamp = new T.Mesh(new T.BoxGeometry(0.5, 0.03, 0.1), lampMat); lamp.position.set(0, B0 + 2.5, 0.3); grp.add(lamp);
-    return { grp, dropMat: ledMat, lampMat, lampLight };
+    // ไฟ LED ใต้หลังคา (ส่องลงหน้าตู้) + ไฟส่องเน้นตู้จากด้านหน้า + เงาสัมผัสพื้น
+    const lampLight = new T.PointLight(0xfff0d6, 0, 5, 1.4); lampLight.position.set(0, B0 + 2.35, 0.45); grp.add(lampLight);
+    const lampMat = M('#ffffff', { emissive: '#fff4dc', emissiveIntensity: 0 });
+    const lamp = new T.Mesh(new T.BoxGeometry(0.9, 0.035, 0.12), lampMat); lamp.position.set(0, B0 + 2.47, 0.32); grp.add(lamp);
+    const lampHous = new T.Mesh(new T.BoxGeometry(0.98, 0.05, 0.18), M('#2b4f86')); lampHous.position.set(0, B0 + 2.51, 0.32); grp.add(lampHous);
+    const tgt = new T.Object3D(); tgt.position.set(0, B0 + 0.9, 0.2); grp.add(tgt);
+    const spot = new T.SpotLight(0xfff3e0, 0, 7, 0.75, 0.6, 1.2); spot.position.set(0, B0 + 2.4, 0.55); spot.target = tgt; grp.add(spot);
+    const key = new T.SpotLight(0xffffff, 0, 9, 0.5, 0.8, 1.0); key.position.set(0.9, B0 + 2.2, 3.4); key.target = tgt; grp.add(key);
+    const glowC = document.createElement('canvas'); glowC.width = glowC.height = 128; { const g = glowC.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(255,244,214,0.95)'); gr.addColorStop(0.5, 'rgba(255,236,190,0.35)'); gr.addColorStop(1, 'rgba(255,236,190,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+    const poolMat = new T.MeshBasicMaterial({ map: new T.CanvasTexture(glowC), transparent: true, opacity: 0, depthWrite: false });
+    const pool = new T.Mesh(new T.PlaneGeometry(1.9, 1.5), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.set(0, B0 + 0.006, 0.45); grp.add(pool);   // วงแสงไฟตกบนแท่น
+    const shC = document.createElement('canvas'); shC.width = shC.height = 128; { const g = shC.getContext('2d'), gr = g.createRadialGradient(64, 64, 10, 64, 64, 62); gr.addColorStop(0, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+    const shadow = new T.Mesh(new T.PlaneGeometry(1.25, 0.95), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, B0 + 0.004, 0); grp.add(shadow);
+    const shadow2 = new T.Mesh(new T.PlaneGeometry(2.6, 2.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, opacity: 0.6, depthWrite: false })); shadow2.rotation.x = -Math.PI / 2; shadow2.position.set(0, 0.012, -0.15); grp.add(shadow2);
+    const setShowcase = (on, nt) => { lampMat.emissiveIntensity = on ? 1.5 : 0; lampLight.intensity = on ? (nt ? 1.6 : 0.5) : 0; spot.intensity = on ? (nt ? 1.6 : 0.45) : 0; key.intensity = on ? (nt ? 0.6 : 0.2) : 0; frontMat.emissiveIntensity = on ? (nt ? 0.3 : 0.04) : 0; poolMat.opacity = on ? (nt ? 0.7 : 0.35) : 0; };
+    return { grp, dropMat: ledMat, lampMat, lampLight, setShowcase, spot };
   }
 
   // ── ฉากรอบตู้ที่จัดเองตามภาพ Street View (ส่วนที่ OSM ไม่มีรายละเอียด) ──────
@@ -1596,13 +1608,14 @@
         this.map = map;
       },
       setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); propsRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); const sh = st.cabShift || [0, 0]; cabRoot.position.set(c.cabXZ[0] + sh[0], 0, c.cabXZ[1] - sh[1]); /* cabShift = เลื่อนตู้ [ตอ., เหนือ] ม. โดยฉากไม่เลื่อนตาม */ cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
+      setShowcase(on) { if (!cab) return; this._show = on; cab.setShowcase(on || night, night); this.map && this.map.triggerRepaint(); },
       setNight(on) {
         if (!lights.hemi) return;
         if (city) { city.wallMats.forEach(m => { m.emissiveIntensity = on ? 0.85 : 0; }); city.nightMats.forEach(([m, v]) => { m.emissiveIntensity = on ? v : 0; }); }
         night = on; beamMat.blending = on ? T.AdditiveBlending : T.NormalBlending; beamMat.needsUpdate = true;
         lights.hemi.intensity = on ? 0.42 : 0.78; lights.sun.intensity = on ? 0.18 : 0.62;
         cab.dropMat.emissiveIntensity = on ? 0.9 : 0.15;
-        cab.lampMat.emissiveIntensity = on ? 1.2 : 0.0; cab.lampLight.intensity = on ? 2.2 : 0;
+        cab.setShowcase(on || this._show, on);
       },
       render(gl, matrix) {
         const z = this.map.getZoom();
@@ -1610,7 +1623,7 @@
         const k = exag(z), a = beamAlpha(z);
         beamMat.opacity = a; beam.visible = a > 0.01;
         const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 450);
-        ringMat.opacity = (0.35 + 0.35 * pulse) * (night ? 1 : 0.8);
+        ringMat.opacity = (0.35 + 0.35 * pulse) * (night ? 1 : 0.8) * (z > 21.5 ? Math.max(0, 1 - (z - 21.5) * 1.2) : 1);   // ซูมใกล้หน้าตู้: จางวงแสงพื้นออก ให้ตู้เด่น
         ring.scale.setScalar(1 + 0.25 * pulse);
         cabRoot.scale.setScalar(k);              // ขยายเฉพาะตู้ — เมืองคงขนาดจริง
         const s = mpu;
@@ -1717,7 +1730,7 @@
         const h = (beamAlpha(z) > 0.05 ? (2 + BEAM_H) : 4.4) * k;
         const px = h / mpp * Math.sin(map.getPitch() * Math.PI / 180);
         const y = map.project(mk.getLngLat()).y, room = y - el.offsetHeight - 78;   // ไม่ให้ป้ายชนแถบเมนูด้านบน
-        if (px + 14 > room && z > 20.5) { const cabPx = 0.95 * k / mpp; mk.setOffset([Math.round(el.offsetWidth / 2 + cabPx + 18), -Math.round(Math.max(30, Math.min(room, px * 0.7)))]); }   // ซูมใกล้: ย้ายป้ายไปข้างตู้ ไม่บังตู้
+        if ((px + 14 > room && z > 20.5) || z > 21.9) { const cabPx = 1.1 * k / mpp; mk.setOffset([Math.round(el.offsetWidth / 2 + cabPx + 30), -Math.round(Math.max(30, Math.min(room, px * 0.7)))]); }   // ซูมใกล้: ย้ายป้ายไปข้างตู้ ไม่บังตู้
         else mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
       };
       map.on('move', lift); lift();
@@ -1808,8 +1821,11 @@
         const ff = fb - (state.st.camOff || 0);                                    // มุมหน้าตู้ตรงๆ
         setTimeout(() => {                                                          // ช็อตจบ: ดันกล้องเข้าหน้าตู้ (เห็นสติกเกอร์ชัด)
           if (_cur !== state || state.phase !== 'fly') return;
-          m.easeTo({ center: c, zoom: 22.4, pitch: 77, bearing: ff, duration: 2800, easing: easeIO });
-          m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 8; if (state.orbit) sway(state, ff, 1); });
+          const br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180), back = 6.8;   // จุดกลางจอ = พื้นด้านหลังตู้ ~H·tan(pitch) → ตัวตู้ (สูง ~2 ม.) อยู่กลางจอพอดี   // ตั้งจุดกลางภาพไว้หลังตู้เล็กน้อย → ตู้อยู่กลางจอทั้งตัว
+          const cc = [c[0] + Math.sin(br) * back / kxm, c[1] + Math.cos(br) * back / 110540];
+          state.layer && state.layer.setShowcase(true);                            // เปิดไฟหลังคา + ไฟส่องเน้นตู้
+          m.easeTo({ center: cc, zoom: 22.35, pitch: 76, bearing: ff, duration: 3200, easing: easeIO });
+          m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.orbit) sway(state, ff, 1); });
         }, 700);
       });
     });
@@ -1841,7 +1857,8 @@
     if (!s.map) return;
     if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
-    else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); s.map.easeTo({ center: s.cabLL || [s.st.lon, s.st.lat], zoom: 22.8, pitch: 78, bearing: frontBearing(s) - (s.st.camOff || 0) * 0.5, duration: 3000, easing: easeIO }); }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
+    else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); { const c = s.cabLL || [s.st.lon, s.st.lat], ff = frontBearing(s) - (s.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
+      s.layer && s.layer.setShowcase(true); s.map.easeTo({ center: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], zoom: 22.35, pitch: 76, bearing: ff, duration: 3000, easing: easeIO }); } }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
     else if (a === 'night') {
       s.night = !s.night; btn.classList.toggle('on', s.night); btn.textContent = s.night ? '☀ กลางวัน' : '🌙 กลางคืน';
       s.wrap.classList.toggle('frc3d-night', s.night);
