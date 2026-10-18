@@ -318,6 +318,52 @@
           add(B(bw + 0.6, 0.25, len), roofM, mx, h + 3.3, mz, ang);
           for (let d = 6; d < len - 2; d += 10) add(B(0.8, h, 0.8), conc, a[0] + (b[0] - a[0]) * d / len, h / 2, a[1] + (b[1] - a[1]) * d / len, ang);
         }
+      } else if (p.type === 'archGate') {          // ซุ้มประตูหลังคาโค้ง (เมทัลชีทโค้งคร่อมแต่ละช่องทาง) + เสาเหล็ก + เสาประตูคอนกรีต · พิกัดจริง
+        // o = จุดอ้างอิงบนแนวกึ่งกลางช่องทางแรก [ตอ., เหนือ], u = ทิศตามถนน (องศา, ชี้เข้าด้านใน), lanes = [v กึ่งกลางช่อง], w = กว้างหลังคา, s0/s1 = ช่วงหลังคาตามถนน, posts = [v เสาคอนกรีต]
+        const ub = p.u * Math.PI / 180, U = [Math.sin(ub), Math.cos(ub)], V = [Math.cos(ub), -Math.sin(ub)];
+        const W = (sv, vv) => toF(p.o[0] + U[0] * sv + V[0] * vv, p.o[1] + U[1] * sv + V[1] * vv);
+        const f0 = W(0, 0), f1 = W(1, 0), angU = Math.atan2(f1[0] - f0[0], f1[1] - f0[1]);
+        const steel = L('#5d6670'), roofM = L('#d9dcdf', { side: T.DoubleSide }), roofU = L('#aeb4ba', { side: T.DoubleSide }), conc = L('#c7c6c1'), concD = L('#8e8f8c');
+        const hC = p.h || 4.6, rise = p.rise || 2.0, len = p.s1 - p.s0, w = p.w || 8.4;
+        for (const lv of p.lanes) {
+          const R = (w * w / 4 + rise * rise) / (2 * rise), a0 = Math.asin(w / 2 / R), sh = new T.Shape(), N = 18;
+          for (let i = 0; i <= N; i++) { const a = -a0 + 2 * a0 * i / N; sh[i ? 'lineTo' : 'moveTo'](R * Math.sin(a), R * Math.cos(a) - R * Math.cos(a0)); }
+          for (let i = N; i >= 0; i--) { const a = -a0 + 2 * a0 * i / N; sh.lineTo((R - 0.12) * Math.sin(a), (R - 0.12) * Math.cos(a) - R * Math.cos(a0) - 0.04); }
+          const geo = new T.ExtrudeGeometry(sh, { depth: len, bevelEnabled: false });
+          const g2 = new T.Group(), roof = new T.Mesh(geo, [roofM, roofU]); roof.position.set(0, hC, 0); g2.add(roof);
+          for (const sx of [-1, 1]) for (const sz of [0.4, len - 0.4]) { const c2 = new T.Mesh(B(0.3, hC, 0.3), steel); c2.position.set(sx * (w / 2 - 0.4), hC / 2, sz); g2.add(c2); }
+          for (const sz of [0.25, len - 0.25]) { const bm = new T.Mesh(B(w - 0.4, 0.45, 0.25), steel); bm.position.set(0, hC - 0.1, sz); g2.add(bm); }
+          for (const sx of [-1, 1]) { const bm = new T.Mesh(B(0.25, 0.45, len), steel); bm.position.set(sx * (w / 2 - 0.4), hC - 0.1, len / 2); g2.add(bm); }
+          const fb = new T.Mesh(B(w - 1.2, 0.5, 0.05), L('#2c3e66')); fb.position.set(0, hC + 0.55, -0.05); g2.add(fb);   // ป้ายชื่อหน้าซุ้ม
+          const q = W(p.s0, lv); g2.position.set(q[0], 0, q[1]); g2.rotation.y = angU; grp.add(g2);
+        }
+        for (const pv of p.posts || []) {                                             // เสาประตูคอนกรีตเทา มีร่องแนวตั้ง
+          const q = W(p.s0 - 0.3, pv), g3 = new T.Group();
+          const b1 = new T.Mesh(B(1.1, 3.2, 1.3), conc); b1.position.y = 1.6; g3.add(b1);
+          for (const gx of [-0.25, 0.25]) { const gr = new T.Mesh(B(0.08, 2.6, 1.32), concD); gr.position.set(gx, 1.5, 0); g3.add(gr); }
+          const cp = new T.Mesh(B(1.3, 0.2, 1.5), L('#b9b8b2')); cp.position.y = 3.3; g3.add(cp);
+          g3.position.set(q[0], 0, q[1]); g3.rotation.y = angU; grp.add(g3);
+        }
+      } else if (p.type === 'flag') {              // เสาธง (ธงชาติไทย / ธงเหลือง)
+        const h = p.h || 6; add(new T.CylinderGeometry(0.05, 0.07, h, 8), L('#d9d9d6'), p.x, h / 2, p.z);
+        const fc = document.createElement('canvas'); fc.width = 60; fc.height = 40; const g = fc.getContext('2d');
+        if (p.kind === 'yellow') { g.fillStyle = '#f2c230'; g.fillRect(0, 0, 60, 40); }
+        else { const st = ['#a51931', '#f4f5f8', '#2d2a4a', '#2d2a4a', '#f4f5f8', '#a51931']; [0, 1, 2, 2, 3, 4].forEach((c, i) => { g.fillStyle = ['#a51931', '#f4f5f8', '#2d2a4a', '#f4f5f8', '#a51931'][c]; g.fillRect(0, i * 40 / 6, 60, 40 / 6 + 0.5); }); void st; }
+        const fm = new T.MeshBasicMaterial({ map: new T.CanvasTexture(fc), side: T.DoubleSide });
+        const fl = add(new T.PlaneGeometry(1.5, 1.0), fm, p.x + 0.78 * Math.cos(ry), h - 0.6, p.z - 0.78 * Math.sin(ry), ry); void fl;
+      } else if (p.type === 'pylon') {             // เสาป้ายร้านสะดวกซื้อ (เสาสูง + กล่องป้าย)
+        const h = p.h || 7.5, g2 = new T.Group();
+        const pole = new T.Mesh(B(0.35, h, 0.35), L('#9aa0a5')); pole.position.y = h / 2; g2.add(pole);
+        const bx = new T.Mesh(B(2.0, 2.0, 0.4), L('#f4f4f2')); bx.position.y = h + 0.6; g2.add(bx);
+        for (const sz of [-0.21, 0.21]) { const fc = new T.Mesh(new T.PlaneGeometry(1.9, 1.9), new T.MeshBasicMaterial({ map: signTexture(T, p.text || '7-ELEVEN', null, '#1c7a45', '#ffffff'), side: T.DoubleSide })); fc.position.set(0, h + 0.6, sz); if (sz < 0) fc.rotation.y = Math.PI; g2.add(fc); }
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'shop') {              // ร้านค้าชั้นเดียว (หน้ากระจก + ป้ายบนชายคา) ด้านหน้า = +z ของวัตถุ
+        const g2 = new T.Group(), w = p.w || 8, d = p.d || 8, h = p.h || 4;
+        const bd = new T.Mesh(B(w, h, d), L(p.color || '#f2f1ec')); bd.position.y = h / 2; g2.add(bd);
+        const gl = new T.Mesh(B(w - 1.2, h - 1.4, 0.1), new T.MeshLambertMaterial({ color: '#7fa6b3', transparent: true, opacity: 0.85 })); gl.position.set(0, (h - 1.4) / 2 + 0.1, d / 2 + 0.03); g2.add(gl);
+        const sg = new T.Mesh(new T.PlaneGeometry(w - 0.6, 0.8), new T.MeshBasicMaterial({ map: signTexture(T, p.text || 'SHOP', null, p.fg || '#1c7a45', p.bg || '#ffffff'), side: T.DoubleSide })); sg.position.set(0, h - 0.5, d / 2 + 0.06); g2.add(sg);
+        const rf = new T.Mesh(B(w + 0.6, 0.25, d + 0.6), L('#cfccc4')); rf.position.y = h + 0.1; g2.add(rf);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
       } else if (p.type === 'stairs') {            // บันไดคอนกรีตภายนอก (ราวเหล็ก) ขึ้นไปสูง h ตามทิศ rot ยาว run
         const g2 = new T.Group(), h = p.h || 5, run = p.run || 7, w = p.w || 2, ang = Math.atan2(h, run), sl = Math.hypot(h, run);
         const st2 = new T.Mesh(B(w, 0.35, sl), L('#cfcbc3')); st2.position.set(0, h / 2, run / 2); st2.rotation.x = ang; g2.add(st2);
@@ -425,6 +471,19 @@
         { type: 'cars', world: true, x: -39.7, z: -35.5, rot: 90, n: 12, gap: 2.7, seed: 1 },                           // ลานจอดรถหลังร้าน (ตรงป้าย P)
         { type: 'cars', world: true, x: -39.7, z: -42.5, rot: 90, n: 12, gap: 2.7, seed: 2 },
         { type: 'cars', world: true, x: -39.7, z: -49.5, rot: 90, n: 12, gap: 2.7, seed: 3 },
+      ] },
+    { match: /ทหารขนส่ง/, lat: 13.9319263, lon: 100.5325784, yaw: -43, camOff: -38,                  // ขสทบ: บนสนามหญ้าหน้ารั้ว ข้างเสาป้าย 7-Eleven ทางขวาของซุ้มประตู · ตู้หันไปทางตะวันตกเฉียงใต้ (เข้าหาทางเข้า)
+      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ — จัดตามไฟล์ PowerPoint ที่ผู้ใช้วางตำแหน่ง
+        { type: 'lawn', h: 0.12, cab: true, wall: '#c9c4b8', pts: [[2.3, -2.9],[18.9, 16.9],[13.6, 21.2],[-2.9, 1.5]] },                       // สนามหญ้าหน้ารั้วฝั่งขวา
+        { type: 'lawn', h: 0.12, wall: '#c9c4b8', pts: [[-9.1, -16.5],[-13.2, -13.0],[-30.3, -33.3],[-26.1, -36.8]] },                                 // สนามหญ้าฝั่งซ้าย
+        { type: 'archGate', o: [7.8, -13.1], u: 310, lanes: [0, -10.3], w: 8.6, s0: 17.6, s1: 25.6, h: 4.8, rise: 2.0, posts: [4.6, -4.4, -5.9, -14.9] },
+        { type: 'palaceFence', world: true, x1: -2.5, z1: 2.5, x2: 13.4, z2: 21.4, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },     // รั้วเหล็กดำบนฐานปูนขาว (ขวา)
+        { type: 'palaceFence', world: true, x1: -15.9, z1: -13.5, x2: -31.6, z2: -32.2, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },  // รั้ว (ซ้าย)
+        { type: 'hedgeLine', y: 0.12, h: 1.1, d: 1.2, pts: [[-14.6, -14.0], [-30.6, -33.0]] },                                   // แนวพุ่มไม้หน้ารั้วซ้าย
+        { type: 'pylon', world: true, x: 4.3, z: 0.2, rot: 130, h: 7.5 },                                        // เสาป้าย 7-Eleven
+        { type: 'shop', world: true, x: 1.4, z: 15.6, rot: 130, w: 7.7, d: 8.5, h: 4.2, text: '7-ELEVEN' },   // ร้าน 7-Eleven (หลังรั้ว)
+        { type: 'tower', world: true, x: -38.7, z: -8.0, rot: 130, w: 8.5, d: 45, h: 4.2, facade: 'win', color: '#f3f1ea' },   // อาคารป้อมรักษาการณ์ (ยาวชั้นเดียว)
+        { type: 'flag', world: true, x: -18.5, z: -12.5, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -20.1, z: -14.4, rot: 130, kind: 'yellow' }, { type: 'flag', world: true, x: -21.7, z: -16.3, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -23.3, z: -18.3, rot: 130, kind: 'yellow' },
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
