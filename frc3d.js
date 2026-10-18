@@ -338,7 +338,7 @@
           const q = W(p.s0, lv); g2.position.set(q[0], 0, q[1]); g2.rotation.y = angU; grp.add(g2);
         }
         for (const pv of p.posts || []) {                                             // เสาประตูคอนกรีตเทา มีร่องแนวตั้ง
-          const q = W(p.s0 - 0.3, pv), g3 = new T.Group();
+          const q = W(p.postS != null ? p.postS : p.s0 - 0.3, pv), g3 = new T.Group();
           const b1 = new T.Mesh(B(1.1, 3.2, 1.3), conc); b1.position.y = 1.6; g3.add(b1);
           for (const gx of [-0.25, 0.25]) { const gr = new T.Mesh(B(0.08, 2.6, 1.32), concD); gr.position.set(gx, 1.5, 0); g3.add(gr); }
           const cp = new T.Mesh(B(1.3, 0.2, 1.5), L('#b9b8b2')); cp.position.y = 3.3; g3.add(cp);
@@ -472,16 +472,17 @@
         { type: 'cars', world: true, x: -39.7, z: -42.5, rot: 90, n: 12, gap: 2.7, seed: 2 },
         { type: 'cars', world: true, x: -39.7, z: -49.5, rot: 90, n: 12, gap: 2.7, seed: 3 },
       ] },
-    { match: /ทหารขนส่ง/, lat: 13.9319263, lon: 100.5325784, yaw: -43, camOff: -38,                  // ขสทบ: บนสนามหญ้าหน้ารั้ว ข้างเสาป้าย 7-Eleven ทางขวาของซุ้มประตู · ตู้หันไปทางตะวันตกเฉียงใต้ (เข้าหาทางเข้า)
+    { match: /ทหารขนส่ง/, lat: 13.9319263, lon: 100.5325784, yaw: -43, camOff: -22, cabShift: [-1.07, 0.90],   // ตู้ถอยหลัง 1.4 ม. (เข้าด้านในแนวรั้ว)
+                       // ขสทบ: บนสนามหญ้าหน้ารั้ว ข้างเสาป้าย 7-Eleven ทางขวาของซุ้มประตู · ตู้หันไปทางตะวันตกเฉียงใต้ (เข้าหาทางเข้า)
       props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ — จัดตามไฟล์ PowerPoint ที่ผู้ใช้วางตำแหน่ง
         { type: 'lawn', h: 0.12, cab: true, wall: '#c9c4b8', pts: [[2.3, -2.9],[18.9, 16.9],[13.6, 21.2],[-2.9, 1.5]] },                       // สนามหญ้าหน้ารั้วฝั่งขวา
         { type: 'lawn', h: 0.12, wall: '#c9c4b8', pts: [[-9.1, -16.5],[-13.2, -13.0],[-30.3, -33.3],[-26.1, -36.8]] },                                 // สนามหญ้าฝั่งซ้าย
-        { type: 'archGate', o: [7.8, -13.1], u: 310, lanes: [0, -10.3], w: 8.6, s0: 17.6, s1: 25.6, h: 4.8, rise: 2.0, posts: [4.6, -4.4, -5.9, -14.9] },
-        { type: 'palaceFence', world: true, x1: -2.5, z1: 2.5, x2: 13.4, z2: 21.4, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },     // รั้วเหล็กดำบนฐานปูนขาว (ขวา)
-        { type: 'palaceFence', world: true, x1: -15.9, z1: -13.5, x2: -31.6, z2: -32.2, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },  // รั้ว (ซ้าย)
-        { type: 'hedgeLine', y: 0.12, h: 1.1, d: 1.2, pts: [[-14.6, -14.0], [-30.6, -33.0]] },                                   // แนวพุ่มไม้หน้ารั้วซ้าย
-        { type: 'pylon', world: true, x: 4.3, z: 0.2, rot: 130, h: 7.5 },                                        // เสาป้าย 7-Eleven
-        { type: 'shop', world: true, x: 1.4, z: 15.6, rot: 130, w: 7.7, d: 8.5, h: 4.2, text: '7-ELEVEN' },   // ร้าน 7-Eleven (หลังรั้ว)
+        { type: 'archGate', o: [7.8, -13.1], u: 310, lanes: [0, -10.3], w: 8.6, s0: 17.6, s1: 25.6, h: 4.8, rise: 2.0, postS: 11.4, posts: [4.6, -4.4, -5.9, -14.9] },
+        { type: 'palaceFence', world: true, x1: 2.5, z1: -1.7, x2: 18.4, z2: 17.3, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },     // รั้วเหล็กดำบนฐานปูนขาว (ขวา) ริมขอบสนามด้านถนน เริ่มข้างตู้
+        { type: 'palaceFence', world: true, x1: -10.9, z1: -17.7, x2: -26.6, z2: -36.4, h: 2.2, plinth: 0.55, span: 3.2, color: '#f1f0ec', bar: '#1f2326' },  // รั้ว (ซ้าย) ริมขอบสนามด้านถนน
+        { type: 'hedgeLine', y: 0.12, h: 1.1, d: 1.2, pts: [[-11.8, -16.9], [-27.5, -35.6]] },                                   // แนวพุ่มไม้หลังรั้วซ้าย
+        { type: 'pylon', world: true, x: 5.3, z: 0.3, rot: 130, h: 7.5 },                                        // เสาป้าย 7-Eleven
+        { type: 'shop', world: true, x: -10.0, z: 20.2, rot: 220, w: 7.7, d: 8.5, h: 4.2, text: '7-ELEVEN' },   // ร้าน 7-Eleven ถอยห่างจากถนนขาเข้า ~10 ม. (มีลานหน้าร้าน) หน้าร้านหันเข้าหาถนน
         { type: 'tower', world: true, x: -38.7, z: -8.0, rot: 130, w: 8.5, d: 45, h: 4.2, facade: 'win', color: '#f3f1ea' },   // อาคารป้อมรักษาการณ์ (ยาวชั้นเดียว)
         { type: 'flag', world: true, x: -18.5, z: -12.5, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -20.1, z: -14.4, rot: 130, kind: 'yellow' }, { type: 'flag', world: true, x: -21.7, z: -16.3, rot: 130, kind: 'thai' }, { type: 'flag', world: true, x: -23.3, z: -18.3, rot: 130, kind: 'yellow' },
       ] },
@@ -1023,7 +1024,7 @@
       if (opts.roadW && opts.roadW[el.id]) w = opts.roadW[el.id]; else if (+t.lanes > 0) w = Math.max(w, +t.lanes * 3.3);
       const line = el.geometry.map(p => P(p.lat, p.lon));
       if (!line.some((q, i) => i < line.length - 1 && segDist(r0[0], r0[1], q, line[i + 1])[0] < hideR + 40)) continue;
-      for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1], w >= 16 ? 3 : w >= 12 ? 2.5 : w >= 9 ? 2 : 1]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
+      for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1], w >= 16 ? 3 : w >= 12 ? 2.5 : w >= 9 ? 2 : 1, w]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
       const elev = /^(yes|viaduct)$/.test(t.bridge || '') ? 7 : 0, G = bucket('road'), yA = elev + 0.2, yW = elev + 0.05;
       if (t.tunnel) continue;
       for (let i = 0; i < line.length - 1; i++) {
@@ -1128,6 +1129,7 @@
     const addTree = (x, z, s, seed) => {
       if (trees.length >= 4500 || Math.hypot(x - r0[0], z - r0[1]) > hideR + 20 || Math.hypot(x - opts.cabXZ[0], z - opts.cabXZ[1]) < Math.max(15, (opts.hideR || 0) + 4)) return;
       if (inBuilding(x, z, 1.2)) return;
+      for (const sg of roadSegs) if (segDist(x, z, sg[0], sg[1])[0] < sg[3] / 2 + 1.0) return;     // ไม่ให้ต้นไม้ขึ้นบนผิวถนน (ทุกเส้น ตามความกว้างจริง)
       { const fx = Math.sin(opts.cabYaw || 0), fz = Math.cos(opts.cabYaw || 0), dx = x - opts.cabXZ[0], dz = z - opts.cabXZ[1], fwd = dx * fx + dz * fz, lat = Math.abs(-dx * fz + dz * fx);
         if (fwd > 0 && fwd < 45 && lat < 7 + fwd * 0.25) return; }                 // ไม่ให้ต้นไม้บังมุมกล้องหน้าตู้
       trees.push({ x, z, s: s * (0.8 + hash(seed) * 0.5), c: hash(seed + 7), type: hash(seed + 3) < 0.12 ? 'palm' : hash(seed + 5) < 0.35 ? 'round' : 'tall' });
