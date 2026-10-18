@@ -38,7 +38,7 @@
   }
 
   // ── ขนาดตู้: ขนาดจริงเมื่อซูม ≥ 19.5 · ซูมออกแล้วขยาย (ไม่งั้นมองไม่เห็นในภาพเมือง) ──
-  const NEAR_Z = 21.8, FAR_Z = 16.9, INTRO_Z = 15.6, BEAM_H = 14;
+  const NEAR_Z = 21.8, FAR_Z = 16.9, INTRO_Z = 16.7, BEAM_H = 14;
   function exag(z) { return Math.min(40, Math.max(1, Math.pow(2, 19.5 - z))); }
   function beamAlpha(z) { return Math.max(0, Math.min(0.6, (18.3 - z) * 0.4)); }
 
@@ -230,7 +230,7 @@
     // หลังคาเหล็กสีน้ำเงิน: เสาเหลี่ยม 4 ต้น + โครงหลังคา + แผ่นโปร่งแสง + แผงโซลาร์
     if (opt.canopy !== false) {
       const blue = M('#1e6fd0', { roughness: 0.4, metalness: 0.25 }), blueD = M('#175bb0', { roughness: 0.45 });
-      const PX = 0.66, PZf = 0.42, PZb = -0.52, PH = 2.55;
+      const PX = 0.66, PZf = 0.42, PZb = -0.52, PH = 2.12;   // หลังคาสูงเหนือตู้ ~45 ซม. (ตามตู้จริง)
       for (const x of [-PX, PX]) for (const z of [PZf, PZb]) box(0.08, PH, 0.08, blue, x, B0 + PH / 2, z);
       for (const z of [PZf, PZb]) box(PX * 2 + 0.08, 0.1, 0.08, blue, 0, B0 + PH - 0.05, z);
       for (const x of [-PX, PX]) box(0.08, 0.1, PZf - PZb + 0.08, blue, x, B0 + PH - 0.05, (PZf + PZb) / 2);
@@ -243,20 +243,20 @@
       for (const x of [-0.6, 0.6]) for (const z of [-0.4, 0.35]) fr(0.03, 0.14, 0.03, steelD, x, 0.08, z);
     }
     // ไฟ LED ใต้หลังคา (ส่องลงหน้าตู้) + ไฟส่องเน้นตู้จากด้านหน้า + เงาสัมผัสพื้น
-    const lampLight = new T.PointLight(0xfff0d6, 0, 5, 1.4); lampLight.position.set(0, B0 + 2.35, 0.45); grp.add(lampLight);
+    const lampLight = new T.PointLight(0xfff0d6, 0, 5, 1.4); lampLight.position.set(0, B0 + 1.92, 0.45); grp.add(lampLight);
     const lampMat = M('#ffffff', { emissive: '#fff4dc', emissiveIntensity: 0 });
-    const lamp = new T.Mesh(new T.BoxGeometry(0.9, 0.035, 0.12), lampMat); lamp.position.set(0, B0 + 2.47, 0.32); grp.add(lamp);
-    const lampHous = new T.Mesh(new T.BoxGeometry(0.98, 0.05, 0.18), M('#2b4f86')); lampHous.position.set(0, B0 + 2.51, 0.32); grp.add(lampHous);
+    const lamp = new T.Mesh(new T.BoxGeometry(0.9, 0.035, 0.12), lampMat); lamp.position.set(0, B0 + 2.04, 0.32); grp.add(lamp);
+    const lampHous = new T.Mesh(new T.BoxGeometry(0.98, 0.05, 0.18), M('#2b4f86')); lampHous.position.set(0, B0 + 2.08, 0.32); grp.add(lampHous);
     const tgt = new T.Object3D(); tgt.position.set(0, B0 + 0.9, 0.2); grp.add(tgt);
-    const spot = new T.SpotLight(0xfff3e0, 0, 7, 0.75, 0.6, 1.2); spot.position.set(0, B0 + 2.4, 0.55); spot.target = tgt; grp.add(spot);
-    const key = new T.SpotLight(0xffffff, 0, 9, 0.5, 0.8, 1.0); key.position.set(0.9, B0 + 2.2, 3.4); key.target = tgt; grp.add(key);
+    const spot = new T.SpotLight(0xfff3e0, 0, 7, 0.75, 0.6, 1.2); spot.position.set(0, B0 + 1.97, 0.55); spot.target = tgt; grp.add(spot);
+    const key = new T.SpotLight(0xffffff, 0, 9, 0.5, 0.8, 1.0); key.position.set(0.9, B0 + 1.9, 3.4); key.target = tgt; grp.add(key);
     const glowC = document.createElement('canvas'); glowC.width = glowC.height = 128; { const g = glowC.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(255,244,214,0.95)'); gr.addColorStop(0.5, 'rgba(255,236,190,0.35)'); gr.addColorStop(1, 'rgba(255,236,190,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
     const poolMat = new T.MeshBasicMaterial({ map: new T.CanvasTexture(glowC), transparent: true, opacity: 0, depthWrite: false });
     const pool = new T.Mesh(new T.PlaneGeometry(1.9, 1.5), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.set(0, B0 + 0.006, 0.45); grp.add(pool);   // วงแสงไฟตกบนแท่น
     const shC = document.createElement('canvas'); shC.width = shC.height = 128; { const g = shC.getContext('2d'), gr = g.createRadialGradient(64, 64, 10, 64, 64, 62); gr.addColorStop(0, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
     const shadow = new T.Mesh(new T.PlaneGeometry(1.25, 0.95), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, B0 + 0.004, 0); grp.add(shadow);
     const shadow2 = new T.Mesh(new T.PlaneGeometry(2.6, 2.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, opacity: 0.6, depthWrite: false })); shadow2.rotation.x = -Math.PI / 2; shadow2.position.set(0, 0.012, -0.15); grp.add(shadow2);
-    const setShowcase = (on, nt) => { lampMat.emissiveIntensity = on ? 1.5 : 0; lampLight.intensity = on ? (nt ? 1.6 : 0.5) : 0; spot.intensity = on ? (nt ? 1.6 : 0.45) : 0; key.intensity = on ? (nt ? 0.6 : 0.2) : 0; frontMat.emissiveIntensity = on ? (nt ? 0.3 : 0.04) : 0; poolMat.opacity = on ? (nt ? 0.7 : 0.35) : 0; };
+    const setShowcase = (on, nt) => { lampMat.emissiveIntensity = on ? 1.2 : 0; lampLight.intensity = on ? (nt ? 0.7 : 0.18) : 0; spot.intensity = on ? (nt ? 0.75 : 0.15) : 0; key.intensity = on ? (nt ? 0.28 : 0.06) : 0; frontMat.emissiveIntensity = on ? (nt ? 0.1 : 0) : 0; poolMat.opacity = on ? (nt ? 0.45 : 0.18) : 0; };   // ไฟพอดี ไม่กลบรายละเอียดสติกเกอร์
     return { grp, dropMat: ledMat, lampMat, lampLight, setShowcase, spot };
   }
 
