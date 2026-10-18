@@ -88,7 +88,7 @@
 .frc3d-card .v b{font-size:22px;color:var(--c);font-family:'JetBrains Mono',ui-monospace,monospace}
 .frc3d-card .v span{font-size:11px;color:#444}
 .frc3d-card .s{font-size:11px;color:#555;margin-top:1px}
-.frc3d-card:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:rgba(255,255,255,.96);border-bottom:0}
+.frc3d-card:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:rgba(255,255,255,.96);border-bottom:0}\n.frc3d-card.side{transform:none;border-top:0;border-left:5px solid var(--c)}\n.frc3d-card.side:after{left:-13px;top:50%;bottom:auto;margin:-8px 0 0;border:8px solid transparent;border-right-color:rgba(255,255,255,.96);border-left:0}
 .frc3d-night{background:linear-gradient(#05070d 0%,#141b2b 60%,#1b2233 100%)!important}
 .frc3d-night .frc3d-card{background:rgba(20,24,32,.92);color:#eef2f7}
 .frc3d-night .frc3d-card .v span,.frc3d-night .frc3d-card .s{color:#b9c2cf}
@@ -256,7 +256,7 @@
     const shC = document.createElement('canvas'); shC.width = shC.height = 128; { const g = shC.getContext('2d'), gr = g.createRadialGradient(64, 64, 10, 64, 64, 62); gr.addColorStop(0, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
     const shadow = new T.Mesh(new T.PlaneGeometry(1.25, 0.95), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, B0 + 0.004, 0); grp.add(shadow);
     const shadow2 = new T.Mesh(new T.PlaneGeometry(2.6, 2.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(shC), transparent: true, opacity: 0.6, depthWrite: false })); shadow2.rotation.x = -Math.PI / 2; shadow2.position.set(0, 0.012, -0.15); grp.add(shadow2);
-    const setShowcase = (on, nt) => { lampMat.emissiveIntensity = on ? 1.2 : 0; lampLight.intensity = on ? (nt ? 0.7 : 0.18) : 0; spot.intensity = on ? (nt ? 0.75 : 0.15) : 0; key.intensity = on ? (nt ? 0.28 : 0.06) : 0; frontMat.emissiveIntensity = on ? (nt ? 0.1 : 0) : 0; poolMat.opacity = on ? (nt ? 0.45 : 0.18) : 0; };   // ไฟพอดี ไม่กลบรายละเอียดสติกเกอร์
+    const setShowcase = (on, nt) => { lampMat.emissiveIntensity = on ? 1.2 : 0; lampLight.intensity = on ? (nt ? 0.7 : 0.18) : 0; spot.intensity = on ? (nt ? 0.75 : 0.15) : 0; key.intensity = on ? (nt ? 0.28 : 0.06) : 0; frontMat.emissiveIntensity = on ? (nt ? 0.14 : 0.13) : 0.06; poolMat.opacity = on ? (nt ? 0.45 : 0.18) : 0; };   // ไฟพอดี ไม่กลบรายละเอียดสติกเกอร์
     return { grp, dropMat: ledMat, lampMat, lampLight, setShowcase, spot };
   }
 
@@ -1632,6 +1632,11 @@
           .scale(new T.Vector3(s, -s, s))
           .multiply(new T.Matrix4().makeRotationX(Math.PI / 2));
         camera.projectionMatrix = new T.Matrix4().fromArray(matrix).multiply(l);
+        if (this.onFrame) {                                                          // ตำแหน่งจอจริงของตู้ (ใช้วางป้ายค่าให้ตรงตู้)
+          cabRoot.updateMatrixWorld(true); const cv = this.map.getCanvas(), W = cv.clientWidth, H = cv.clientHeight, y0 = cab.grp.position.y;
+          const pj = (x, y, zz) => { const v = new T.Vector3(x, y0 + y, zz).applyMatrix4(cabRoot.matrixWorld).applyMatrix4(camera.projectionMatrix); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, ok: v.z < 1 }; };
+          this.onFrame({ top: pj(0, 2.5, 0), side: pj(0.78, 1.25, 0.42), z });
+        }
         renderer.resetState();
         renderer.render(scene, camera);
         this.map.triggerRepaint();
@@ -1730,8 +1735,13 @@
         const h = (beamAlpha(z) > 0.05 ? (2 + BEAM_H) : 4.4) * k;
         const px = h / mpp * Math.sin(map.getPitch() * Math.PI / 180);
         const y = map.project(mk.getLngLat()).y, room = y - el.offsetHeight - 78;   // ไม่ให้ป้ายชนแถบเมนูด้านบน
-        if ((px + 14 > room && z > 20.5) || z > 21.9) { const cabPx = 1.1 * k / mpp; mk.setOffset([Math.round(el.offsetWidth / 2 + cabPx + 30), -Math.round(Math.max(30, Math.min(room, px * 0.7)))]); }   // ซูมใกล้: ย้ายป้ายไปข้างตู้ ไม่บังตู้
-        else mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
+        mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
+      };
+      state.layer.onFrame = P => {                                                   // ซูมใกล้: ปักป้ายด้วยตำแหน่งจอจริงของตู้ (ไม่คลาดเมื่อมองหน้าตู้)
+        if (P.z < 20.3 || !P.top.ok) { if (el.classList.contains('side')) el.classList.remove('side'); return; }
+        const base = map.project(mk.getLngLat()), w = el.offsetWidth, hh = el.offsetHeight;
+        if (P.top.y - hh - 16 > 78) { el.classList.remove('side'); mk.setOffset([Math.round(P.top.x - base.x), Math.round(P.top.y - base.y - 10)]); }
+        else { el.classList.add('side'); mk.setOffset([Math.round(P.side.x - base.x + 16 + w / 2), Math.round(P.side.y - base.y + hh / 2)]); }
       };
       map.on('move', lift); lift();
       neutralLanduse(map);
@@ -1808,27 +1818,18 @@
     spin();
     setTimeout(() => { if (_cur === state && state.phase === 'intro' && !state.cityReady) { state.cityReady = true; flyIn(state); } }, 25000);   // กันรอนานเกิน
   }
-  function flyIn(state) {
+  function flyIn(state) {                            // บินต่อเนื่องช็อตเดียว: ภาพสูง → หมุนโค้งลง → หยุดที่มุมหน้าตู้ (front view)
     const m = state.map; if (!m || _cur !== state || state.userTook) return;
     state.phase = 'fly'; m.stop();
-    const c = state.cabLL || [state.st.lon, state.st.lat], fb = frontBearing(state);
-    m.flyTo({ center: c, zoom: 18.2, pitch: 60, bearing: fb - 75, duration: 6000, curve: 1.25, essential: true, easing: easeIO });
-    m.once('moveend', () => {
-      if (_cur !== state || state.phase !== 'fly') return;
-      m.easeTo({ center: c, zoom: NEAR_Z, pitch: 73, bearing: fb, duration: 4500, easing: easeIO });
-      m.once('moveend', () => {
-        if (_cur !== state || state.phase !== 'fly') return;
-        const ff = fb - (state.st.camOff || 0);                                    // มุมหน้าตู้ตรงๆ
-        setTimeout(() => {                                                          // ช็อตจบ: ดันกล้องเข้าหน้าตู้ (เห็นสติกเกอร์ชัด)
-          if (_cur !== state || state.phase !== 'fly') return;
-          const br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180), back = 6.8;   // จุดกลางจอ = พื้นด้านหลังตู้ ~H·tan(pitch) → ตัวตู้ (สูง ~2 ม.) อยู่กลางจอพอดี   // ตั้งจุดกลางภาพไว้หลังตู้เล็กน้อย → ตู้อยู่กลางจอทั้งตัว
-          const cc = [c[0] + Math.sin(br) * back / kxm, c[1] + Math.cos(br) * back / 110540];
-          state.layer && state.layer.setShowcase(true);                            // เปิดไฟหลังคา + ไฟส่องเน้นตู้
-          m.easeTo({ center: cc, zoom: 22.35, pitch: 76, bearing: ff, duration: 3200, easing: easeIO });
-          m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.orbit) sway(state, ff, 1); });
-        }, 700);
-      });
-    });
+    const c = state.cabLL || [state.st.lon, state.st.lat], ff = frontBearing(state) - (state.st.camOff || 0);
+    const br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180), back = 6.8;   // จุดกลางจอ = พื้นด้านหลังตู้ → ตัวตู้อยู่กลางจอพอดี
+    const cc = [c[0] + Math.sin(br) * back / kxm, c[1] + Math.cos(br) * back / 110540];
+    let b0 = m.getBearing(); while (b0 - ff > 180) b0 -= 360; while (ff - b0 > 180) b0 += 360;
+    if (Math.abs(ff - b0) < 90) m.setBearing(ff - 140);                              // ให้มีการหมุนโค้งเข้าหา (สวยกว่าพุ่งตรง)
+    const D = 10500;
+    m.flyTo({ center: cc, zoom: 22.35, pitch: 76, bearing: ff, duration: D, curve: 1.55, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
+    setTimeout(() => { if (_cur === state && state.phase === 'fly') state.layer && state.layer.setShowcase(true); }, D * 0.72);   // เปิดไฟหลังคาตอนใกล้ถึง
+    m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.orbit) setTimeout(() => sway(state, ff, 1), 1200); });
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
