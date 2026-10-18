@@ -18,7 +18,7 @@
     cityBase: 'data/city/',                // ข้อมูลเมืองที่สร้างไว้ล่วงหน้า (GitHub Action: tools/build_city.py)
     osmStatic: null,                       // ใช้ทดสอบ: ไฟล์ JSON ของ Overpass แทนการดึงจริง
     cabImg: 'frc3d_cabinet.jpg',
-    cityStyle: 'soft',                     // 'soft' = ผนังสี + หน้าต่าง (ค่าเริ่มต้น) · 'minimal' = อาคารสีอ่อนเรียบแบบโมเดลสถาปัตย์           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
+    cityStyle: 'clean',                    // 'clean' = ผนังขาวเทา + หน้าต่างกระจกใสสีเดียว (ค่าเริ่มต้น) · 'soft' = ผนังหลายสี + หลังคากระเบื้อง · 'minimal' = ขาวเรียบไม่มีหน้าต่าง           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
   }, window.FRC3D_CONFIG || {});
 
   // ── เกณฑ์สี FRC (ชุดเดียวกับ contour) ─────────────────────────────────────
@@ -646,7 +646,7 @@
         { type: 'hedgeLine', y: 0.74, h: 1.1, d: 1.1, pts: [[6.8, 1.5],[11.4, 0.4]] },                           // พุ่มไม้หน้าสนามฝั่งซ้าย
         { type: 'shrine', world: true, x: 2.3, z: -7.5, s: 1.05, y: 0.74 }, { type: 'shrine', world: true, x: 5.8, z: -10.5, s: 0.8, y: 0.74 },
         { type: 'glass', world: true, liftY: 0.7, x: 27.1, z: -24.1, rot: 0, w: 10.4, h: 4.2, canopy: 5 },
-        { type: 'tower', world: true, x: 24.3, z: -63.5, rot: 0, w: 30, d: 18, h: 44, facade: 'apt', color: '#f4f2ee' },
+        { type: 'tower', world: true, x: 24.3, z: -63.5, rot: 0, w: 30, d: 18, h: 44, facade: 'apt', color: CFG.cityStyle === 'clean' ? '#eceeee' : '#f4f2ee' },
         { type: 'planter', world: true, liftY: 0.7, x: 19.6, z: -1.1, rot: 14.6, w: 3.0, d: 1.4 },
         { type: 'sign', world: true, liftY: 0.7, x: 19.2, z: -0.1, rot: 14.6, y: 1.6, w: 1.3, h: 1.0, text: 'OUT', sub: '← ทางออก', fg: '#ffffff', bg: '#165c3d', post: true },   // ป้ายทางออก (ตามภาพ: ฝั่งตะวันออกของทางรถ)
         { type: 'sign', world: true, liftY: 0.7, x: 18.6, z: 0.1, rot: 14.6, y: 2.75, w: 0.75, h: 0.75, text: 'H', fg: '#ffffff', bg: '#d62828' },
@@ -887,6 +887,8 @@
   const _texCache = {};
   function facade(T, type) {
     if (_texCache[type]) return _texCache[type];
+    const CL = CFG.cityStyle === 'clean';
+    const NT = { '#dad6cf': '#d9dcde', '#c9c4ba': '#c6cbce', '#e8e5df': '#e7e9ea', '#d9d4cb': '#d7dadc', '#e3dfd8': '#e3e5e6', '#d7d2c9': '#d5d8da' }, NC = c => CL && NT[c] ? NT[c] : c;   // โทนเทาเย็นแทนครีม                                   // แบบขาวเทา: กระจกใสสีเดียว ไม่มีม่าน/ป้ายสี
     const N = 4, S = 128;
     const make = night => {
       const c = document.createElement('canvas'); c.width = c.height = N * S; const g = c.getContext('2d');
@@ -898,14 +900,16 @@
         if (type === 'win' || type === 'apt' || type === 'house') {
           const ww = type === 'house' ? 46 : 62, wh = type === 'house' ? 50 : 56, wx = x + (S - ww) / 2, wy = y + 30;
           if (!night) {
-            g.fillStyle = '#dad6cf'; g.fillRect(wx - 6, wy - 6, ww + 12, wh + 12);          // กรอบปูน
-            g.fillStyle = q < 0.25 ? '#7f95a8' : '#5f7486'; g.fillRect(wx, wy, ww, wh);   // กระจก
+            g.fillStyle = NC('#dad6cf'); g.fillRect(wx - 6, wy - 6, ww + 12, wh + 12);          // กรอบปูน
+            if (CL) { const gr = g.createLinearGradient(wx, wy, wx + ww * 0.4, wy + wh); gr.addColorStop(0, '#c4d4dc'); gr.addColorStop(0.55, '#a3b9c5'); gr.addColorStop(1, '#8ea6b3'); g.fillStyle = gr; }
+            else g.fillStyle = q < 0.25 ? '#7f95a8' : '#5f7486';
+            g.fillRect(wx, wy, ww, wh);   // กระจก
             g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(wx, wy, ww, 9);
-            g.fillStyle = '#c9c4ba'; g.fillRect(wx + ww / 2 - 2, wy, 4, wh);
-            if (q2 < 0.35) { g.fillStyle = '#e8e5df'; g.fillRect(wx + ww - 6, wy + wh + 10, 30, 20); g.fillStyle = '#aab0b5'; for (let k = 0; k < 4; k++) g.fillRect(wx + ww - 2, wy + wh + 13 + k * 4, 22, 1.5); }   // คอมแอร์
-            if (type === 'apt') { g.fillStyle = '#d9d4cb'; g.fillRect(x + 6, y + 96, S - 12, 8); g.fillStyle = '#9aa0a6'; for (let k = 10; k < S - 10; k += 9) g.fillRect(x + k, y + 98, 2, -22); g.fillRect(x + 6, y + 74, S - 12, 3); }   // ระเบียง
-            if (q3 < 0.2 && type !== 'house') { g.fillStyle = '#b07a52'; g.fillRect(wx, wy, ww, wh); }      // ม่าน
-            g.fillStyle = '#e3dfd8'; g.fillRect(x, y + S - 6, S, 6);                                          // แนวพื้นชั้น
+            g.fillStyle = NC('#c9c4ba'); g.fillRect(wx + ww / 2 - 2, wy, 4, wh);
+            if (q2 < 0.35) { g.fillStyle = NC('#e8e5df'); g.fillRect(wx + ww - 6, wy + wh + 10, 30, 20); g.fillStyle = '#aab0b5'; for (let k = 0; k < 4; k++) g.fillRect(wx + ww - 2, wy + wh + 13 + k * 4, 22, 1.5); }   // คอมแอร์
+            if (type === 'apt') { g.fillStyle = NC('#d9d4cb'); g.fillRect(x + 6, y + 96, S - 12, 8); g.fillStyle = '#9aa0a6'; for (let k = 10; k < S - 10; k += 9) g.fillRect(x + k, y + 98, 2, -22); g.fillRect(x + 6, y + 74, S - 12, 3); }   // ระเบียง
+            if (!CL && q3 < 0.2 && type !== 'house') { g.fillStyle = '#b07a52'; g.fillRect(wx, wy, ww, wh); }      // ม่าน
+            g.fillStyle = NC('#e3dfd8'); g.fillRect(x, y + S - 6, S, 6);                                          // แนวพื้นชั้น
           } else L(wx, wy, ww, wh);
         } else if (type === 'glass') {
           if (!night) {
@@ -919,11 +923,11 @@
           else L(x, y + 34, S - 6, 50);
         } else if (type === 'shopG') {                       // ชั้นล่างตึกแถว: ประตูเหล็กม้วน / หน้าร้านกระจก + กันสาดสี + ป้าย
           if (!night) {
-            const aw = AWNING[Math.floor(q * AWNING.length)];
+            const aw = CL ? '#d3d7d9' : AWNING[Math.floor(q * AWNING.length)];
             g.fillStyle = aw; g.fillRect(x, y + 6, S, 22);                                               // ป้ายร้าน
-            g.fillStyle = 'rgba(255,255,255,.85)'; for (let k = 0; k < 3; k++) g.fillRect(x + 18 + k * 30, y + 13, 20, 7);
+            g.fillStyle = CL ? 'rgba(120,132,140,.55)' : 'rgba(255,255,255,.85)'; for (let k = 0; k < 3; k++) g.fillRect(x + 18 + k * 30, y + 13, 20, 7);
             if (q2 < 0.45) { g.fillStyle = '#a7adb3'; g.fillRect(x + 6, y + 34, S - 12, S - 34); g.fillStyle = '#8c9298'; for (let k = y + 38; k < y + S; k += 6) g.fillRect(x + 6, k, S - 12, 2); }   // ประตูม้วน
-            else { g.fillStyle = '#41505c'; g.fillRect(x + 6, y + 34, S - 12, S - 34); g.fillStyle = 'rgba(255,240,200,.35)'; g.fillRect(x + 12, y + 44, S - 24, S - 54); g.fillStyle = '#d7d2c9'; g.fillRect(x + S / 2 - 2, y + 34, 4, S - 34); }
+            else { g.fillStyle = CL ? '#8fa5b1' : '#41505c'; g.fillRect(x + 6, y + 34, S - 12, S - 34); g.fillStyle = CL ? 'rgba(255,255,255,.3)' : 'rgba(255,240,200,.35)'; g.fillRect(x + 12, y + 44, S - 24, S - 54); g.fillStyle = NC('#d7d2c9'); g.fillRect(x + S / 2 - 2, y + 34, 4, S - 34); }
           } else if (q2 >= 0.45 || lit) { g.fillStyle = '#ffd48a'; g.fillRect(x + 8, y + 36, S - 16, S - 36); g.fillStyle = '#fff2c4'; g.fillRect(x, y + 6, S, 22); }
         } else if (type === 'ind') {                          // โกดัง: ลอนเมทัลชีท
           if (!night) { g.fillStyle = '#c3cad0'; for (let k = 0; k < S; k += 10) g.fillRect(x + k, y, 4, S); if (j === 0 && q < 0.3) { g.fillStyle = '#7d868e'; g.fillRect(x + 20, y + 40, 88, 88); } }
@@ -1148,6 +1152,7 @@
         if (modern) { kind = 'office'; wallC = C('#eef3f5'); roofC = C('#cfd5d8'); shape = 'flat'; }
         if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
+        if (CFG.cityStyle === 'clean' && kind !== 'temple' && !ov && !palB) { wallC = C(pick(['#f1f2f1', '#ebeceb', '#f5f5f4', '#e6e8e8', '#eff0f0'], rnd())); roofC = C(shape === 'flat' ? pick(['#c8cbcc', '#c1c5c7', '#cdd0d1'], rnd()) : pick(['#b9bec2', '#aab1b6', '#c3c7ca'], rnd())); }   // ขาวเทา
         if (CFG.cityStyle === 'minimal' && kind !== 'temple' && !ov) { wallC = C(pick(['#f5f3ef', '#efece6', '#f8f6f2', '#ebe8e2'], rnd())); roofC = C(shape === 'flat' ? '#dfdbd4' : '#cdc6bb'); }   // แบบเรียบ
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
         if (ov && ov.style === 'colonnade') {                               // อาคารชั้นเดียวสีขาว มีระเบียงเสาเรียงด้านหน้า (หันหาถนน/ทิศหน้าตู้)
