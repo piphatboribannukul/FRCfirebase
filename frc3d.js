@@ -522,6 +522,13 @@
         { type: 'lamp2', world: true, x: -18.4, z: 2.3, rot: 40, h: 9 },                             // เสาไฟโคมคู่ เกาะกลางหลังซุ้ม
         { type: 'barrierArm', world: true, x: -13.8, z: 0.4, rot: 310, len: 6.4 }, { type: 'barrierArm', world: true, x: -20.4, z: -7.5, rot: 310, len: 6.4 },   // ไม้กั้นรถ
         { type: 'cones', pts: [[-5.0, -4.2], [-3.1, -1.9], [-11.2, -12.5], [-9.3, -10.2], [-2.1, -4.7]] },                                                             // กรวยจราจร
+        // รั้วรอบ รร.ทหารขนส่ง (ผู้ใช้ลากแนวจาก Google Earth บนแผนที่มุมบน) — แบบเดียวกับรั้วหน้าประตู
+        { type: 'palaceFence', world: true, x1: 21.1, z1: 13.7, x2: 110.1, z2: 91.1, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
+        { type: 'palaceFence', world: true, x1: 110.1, z1: 91.1, x2: -41.4, z2: 307.4, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
+        { type: 'palaceFence', world: true, x1: -31.0, z1: -31.8, x2: -145.2, z2: -131.3, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
+        { type: 'palaceFence', world: true, x1: -145.2, z1: -131.3, x2: -182.5, z2: -65.9, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
+        { type: 'palaceFence', world: true, x1: -182.5, z1: -65.9, x2: -234.4, z2: -108.0, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
+        { type: 'palaceFence', world: true, x1: -234.4, z1: -108.0, x2: -351.6, z2: 59.0, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
