@@ -338,6 +338,14 @@
           const back = new T.Mesh(B(w, h * 0.6, 0.1), L('#c9c3b6')); back.position.set(0, h * 0.3, -d / 2); g2.add(back);
         }
         g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'wall') {              // กำแพงปูนทึบ + เสาเอ็นทุก span ม. + คิ้วบน · pts พิกัดจริง
+        const pts = p.pts.map(q => toF(q[0], q[1])), h = p.h || 2.0, th = p.t || 0.2, sp = p.span || 3.2, wm = L(p.color || '#f1f1ee'), pm = L(p.post || '#e6e6e2');
+        for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+          add(B(th, h, len), wm, mx, h / 2, mz, ang); add(B(th + 0.08, 0.08, len + 0.08), pm, mx, h + 0.04, mz, ang);
+          for (let d = 0; d <= len + 0.01; d += sp) add(B(th + 0.14, h + 0.06, 0.3), pm, a[0] + (b[0] - a[0]) * d / len, (h + 0.06) / 2, a[1] + (b[1] - a[1]) * d / len, ang); }
+      } else if (p.type === 'bollard') {           // ไฟสนามเตี้ย (เสาดำหัวไฟ) · pts พิกัดจริง
+        const bm = L('#2b2d30'), lm = new T.MeshBasicMaterial({ color: '#fff3c4' });
+        for (const q of p.pts) { const [fx, fz] = toF(q[0], q[1]), h = p.h || 0.6; add(B(0.11, h, 0.11), bm, fx, h / 2, fz); add(B(0.09, 0.08, 0.09), lm, fx, h - 0.1, fz); add(B(0.14, 0.03, 0.14), bm, fx, h + 0.015, fz); }
       } else if (p.type === 'fence') {             // รั้วโปร่งสีขาว
         const len = Math.hypot(p.x2 - p.x1, p.z2 - p.z1), a = Math.atan2(p.x2 - p.x1, p.z2 - p.z1), h = p.h || 2.2, m = L(p.color || '#f3f3f0');
         for (let s = 0; s <= len; s += 0.25) add(B(0.06, h, 0.06), m, p.x1 + (p.x2 - p.x1) * s / len, h / 2, p.z1 + (p.z2 - p.z1) * s / len);
@@ -704,6 +712,23 @@
         { type: 'palaceFence', world: true, x1: -182.5, z1: -65.9, x2: -234.4, z2: -108.0, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
         { type: 'palaceFence', world: true, x1: -234.4, z1: -108.0, x2: -351.6, z2: 59.0, h: 2.2, plinth: 0.55, span: 4.0, color: '#f1f0ec', bar: '#1f2326' },
         { type: 'lawn', h: 0.05, wall: '#9fbf7c', pts: [[2.6, -1.5], [109.6, 91.8], [-40.8, 307.8], [-176.1, 261.7], [-147.9, 199.9], [-108.6, 116.8], [-92.4, 92.2], [-55.2, 47.1], [11.4, -8.8]] },   // ลานหญ้ากว้างหลังร้าน 7-Eleven (ระหว่างถนนขาเข้า รั้วหน้า และรั้วด้านตะวันออกเฉียงเหนือ)
+      ] },
+    { match: /เทียนฟ้า/, lat: 13.8283225, lon: 100.7201234, yaw: 180, propYaw: 180, ovtClear: 0,   // ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์ (ถ.หทัยราษฎร์)
+                 // ตู้ชิดกำแพงขาวด้านใต้ของสนามหญ้าหน้าศูนย์ (กำแพงกั้นตึกแถว 5 ชั้นหัวมุม) หันหน้าเข้าสนาม (ทิศเหนือ) · ห่างแนวพุ่มไม้ริมถนน ~1.2 ม.
+      ovtHide: [[[-20, 0.3], [-0.5, 0.3], [-0.5, 18], [-20, 18]], [[-50, 3], [-29, 3], [-29, 19], [-50, 19]]],   // อาคาร Overture ที่วางทับสนามหญ้า (ภาพจริงเป็นสนามโล่ง)
+      bld: { '-1534': { h: 16 }, '-1535': { h: 16 } },                                     // ตึกแถวหัวมุม 5 ชั้น (ผนังข้างติดป้ายโฆษณา)
+      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ · ถ.หทัยราษฎร์อยู่ทางตะวันออก (ขอบถนน ~ตอ. 5.9)
+        { type: 'lawn', h: 0.04, pts: [[1.0, -0.4], [1.0, 46], [-45, 46], [-45, -0.4]] },
+        { type: 'wall', h: 2.05, pts: [[1.3, -0.55], [-40, -0.55]] },                                          // กำแพงขาวหลังตู้
+        { type: 'slab', liftY: 2.15, h: 0.07, top: '#5e8c6a', wall: '#557f60', pts: [[0.9, -0.7], [0.9, -2.9], [-38, -2.9], [-38, -0.7]] },   // หลังคาเมทัลชีทเขียว (เพิงหลังกำแพง)
+        { type: 'hedgeLine', h: 1.25, d: 1.1, pts: [[1.65, -0.4], [1.65, 40]] },                               // แนวพุ่มไม้ริมรั้วหน้า
+        { type: 'fence', world: true, x1: 2.7, z1: -0.5, x2: 2.7, z2: 40, h: 1.9, color: '#a7afb3' },         // รั้วตะแกรงริมทางเท้า
+        { type: 'bollard', pts: [[0.55, 1.7], [0.65, 3.7], [0.75, 5.7], [0.85, 7.7]] },                         // ไฟสนามเตี้ย (แนวระหว่างตู้กับพุ่มไม้)
+        { type: 'shrubs', flowers: true, gap: 3.4, pts: [[0.2, 9], [0.2, 38]] },                                // พุ่มไม้ดอกในสนาม (ตามภาพถนน)
+        { type: 'curbLine', pts: [[5.9, -60], [5.9, 80]] },                                                     // ขอบทางเท้าแดง-ขาว
+        { type: 'powerline', h: 10, pts: [[5.0, -58], [5.0, -22], [5.0, 14], [5.0, 50], [5.0, 86]] },           // เสาไฟฟ้า + สายไฟ ริม ถ.หทัยราษฎร์
+        { type: 'sign', world: true, x: 3.2, z: 43.5, rot: 90, y: 1.1, w: 6.5, h: 1.5, text: 'เทียนฟ้าประชาการุณย์', sub: 'ศูนย์ไตเทียม', fg: '#b3261e', bg: '#efe8da', box: '#e2dccf' },   // กำแพงป้ายหน้าศูนย์ (ตำแหน่งโดยประมาณ)
+        { type: 'fence', world: true, x1: 2.9, z1: 47, x2: 2.9, z2: 55, h: 2.2, color: '#7d878d' },          // ประตูเหล็กบานเลื่อน (ตำแหน่งโดยประมาณ)
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
@@ -1153,7 +1178,7 @@
         if (modern) { kind = 'office'; wallC = C('#eef3f5'); roofC = C('#cfd5d8'); shape = 'flat'; }
         if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
-        if (CFG.cityStyle === 'clean' && kind !== 'temple' && !ov && !palB) { wallC = C(pick(['#f1f2f1', '#ebeceb', '#f5f5f4', '#e6e8e8', '#eff0f0'], rnd())); roofC = C(shape === 'flat' ? pick(['#c8cbcc', '#c1c5c7', '#cdd0d1'], rnd()) : pick(['#b9bec2', '#aab1b6', '#c3c7ca'], rnd())); }   // ขาวเทา
+        if (CFG.cityStyle === 'clean' && kind !== 'temple' && (!ov || !ov.style) && !palB) { wallC = C(pick(['#f1f2f1', '#ebeceb', '#f5f5f4', '#e6e8e8', '#eff0f0'], rnd())); roofC = C(shape === 'flat' ? pick(['#c8cbcc', '#c1c5c7', '#cdd0d1'], rnd()) : pick(['#b9bec2', '#aab1b6', '#c3c7ca'], rnd())); }   // ขาวเทา
         if (CFG.cityStyle === 'minimal' && kind !== 'temple' && !ov) { wallC = C(pick(['#f5f3ef', '#efece6', '#f8f6f2', '#ebe8e2'], rnd())); roofC = C(shape === 'flat' ? '#dfdbd4' : '#cdc6bb'); }   // แบบเรียบ
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
         if (ov && ov.style === 'colonnade') {                               // อาคารชั้นเดียวสีขาว มีระเบียงเสาเรียงด้านหน้า (หันหาถนน/ทิศหน้าตู้)
