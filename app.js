@@ -25,7 +25,7 @@ function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 //   • contour โซน Dis2 (สายไหม · รพ.ซีจีเอช): ใช้ระยะตามท่อจากบางเขนแทนเส้นตรง × 1.3 — Dis1/Dis2 อยู่ที่ตั้งเดียวกัน
 //     pipe grid จึงติดป้าย SP04 ทั้งพื้นที่ (ดู _pipeMatch) · โซนเป็นตัวกำหนดต้นทาง = Dis2
 //     นอกเส้นโซน ช่องที่ท่อมาจากบางเขน → เป็นของ Dis1 หรือ Dis2 ตามโซนที่ใกล้ที่สุด (_bkOwner) ไม่ต้องวาดโซนใหม่
-//   • เมนูบน "🏙 3D สถานี": ทัวร์ 5 สถานีที่จัดฉากแล้ว (ศิริราช → ศิครินทร์ → ร.ร.ทหารขนส่ง → สวนจิตรลดา → ศูนย์ไตเทียมเทียนฟ้าฯ)
+//   • เมนูบน "🏙 3D สถานี": เปิดเมนูเลือกสถานี + ปุ่ม ▶ เล่นทั้งหมด · ทัวร์ 5 สถานีที่จัดฉากแล้ว (ศิริราช → ศิครินทร์ → ร.ร.ทหารขนส่ง → สวนจิตรลดา → ศูนย์ไตเทียมเทียนฟ้าฯ)
 //   • ไม่มีการแตะ/คลิก/กดแป้น 2 นาที → เล่นทัวร์เอง 1 รอบ แล้วกลับหน้าเดิม · แตะที่ใดก็ได้ = หยุดทันที
 //     ไม่เล่นเมื่อ: แท็บถูกซ่อน · มีหน้าต่าง/แผงอื่นเปิดอยู่ · จอเล็กแบบมือถือ · ปิดได้ด้วย ?autotour=0 (ทดสอบเร็ว: ?autotour=20 = 20 วิ)
 // ── บันทึกการเปลี่ยนแปลงเวลาเดินน้ำ ─────────────────────────────────────────────
@@ -15753,13 +15753,46 @@ function start3DTour(auto) {
   const T = FRC3D.tour(_frc3dTourList(), { auto: !!auto, hold: 6000, onEnd: () => { window._frc3dIdleAt = Date.now(); } });
   return !!T;
 }
+// เมนู "3D สถานี": เลือกดูทีละสถานี หรือ ▶ เล่นทั้งหมด
+function close3DPicker() { const el = document.getElementById('frc3d-picker'); if (el) el.remove(); document.removeEventListener('pointerdown', _frc3dPickOut, true); document.removeEventListener('keydown', _frc3dPickKey, true); }
+function _frc3dPickOut(e) { const el = document.getElementById('frc3d-picker'), b = document.getElementById('mtab-3dst'); if (el && !el.contains(e.target) && !(b && b.contains(e.target))) close3DPicker(); }
+function _frc3dPickKey(e) { if (e.key === 'Escape') close3DPicker(); }
+function open3DPicker() {
+  if (document.getElementById('frc3d-picker')) { close3DPicker(); return; }
+  if (!window.FRC3D) { alert('กำลังโหลดมุมมอง 3 มิติ ลองใหม่อีกครั้ง'); return; }
+  const list = _frc3dTourList(), btn = document.getElementById('mtab-3dst');
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const el = document.createElement('div'); el.id = 'frc3d-picker';
+  el.innerHTML = '<div class="fp-h">🏙 มุมมอง 3 มิติ ตู้วัดคุณภาพน้ำ</div>' +
+    '<button class="fp-all" data-i="all">▶ เล่นทั้งหมด <span>' + list.length + ' สถานี · ต่อกันอัตโนมัติ</span></button>' +
+    '<div class="fp-sub">หรือเลือกดูทีละสถานี</div>' +
+    list.map((s, i) => '<button class="fp-st" data-i="' + i + '"><i style="background:' + FRC3D.frcHex(s.frc) + '"></i><b>' + esc(s.short || s.name) + '</b>' +
+      '<em>' + (s.frc != null ? s.frc.toFixed(2) + ' <small>mg/L</small>' : '—') + '</em></button>').join('');
+  document.body.appendChild(el);
+  const r = btn ? btn.getBoundingClientRect() : { left: 20, bottom: 60, width: 0 };
+  const w = Math.min(340, innerWidth - 24); el.style.width = w + 'px';
+  el.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px'; el.style.top = (r.bottom + 8) + 'px';
+  el.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; close3DPicker();
+    if (b.dataset.i === 'all') start3DTour(false); else { try { map.closePopup(); } catch (er) {} FRC3D.open(list[+b.dataset.i]); } });
+  setTimeout(() => { document.addEventListener('pointerdown', _frc3dPickOut, true); document.addEventListener('keydown', _frc3dPickKey, true); }, 0);
+}
 (function initFrc3dUi() {
   const css = document.createElement('style');
   css.textContent =
     '.frc3d-pbtn{display:inline-flex;align-items:center;gap:4px;margin:2px 0 6px;padding:5px 12px;border:0;border-radius:999px;cursor:pointer;' +
     'background:linear-gradient(135deg,#0f6fb8,#1aa0c8);color:#fff;font:700 12.5px Sarabun,sans-serif;box-shadow:0 2px 6px rgba(15,111,184,.35)}' +
-    '.frc3d-pbtn:hover{filter:brightness(1.08)}';
+    '.frc3d-pbtn:hover{filter:brightness(1.08)}' +
+    '#frc3d-picker{position:fixed;z-index:99998;background:#fff;border-radius:16px;box-shadow:0 12px 36px rgba(15,23,42,.22);padding:12px;font-family:Sarabun,sans-serif;max-height:calc(100vh - 100px);overflow:auto}' +
+    '#frc3d-picker .fp-h{font-weight:700;font-size:14px;color:#1d3557;margin:2px 4px 10px}' +
+    '#frc3d-picker .fp-all{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;background:linear-gradient(135deg,#0f6fb8,#1aa0c8);color:#fff;font:700 15px Sarabun,sans-serif;box-shadow:0 3px 10px rgba(15,111,184,.3)}' +
+    '#frc3d-picker .fp-all span{font-weight:400;font-size:12px;opacity:.9}#frc3d-picker .fp-all:hover{filter:brightness(1.07)}' +
+    '#frc3d-picker .fp-sub{font-size:12px;color:#7a8594;margin:12px 4px 6px}' +
+    '#frc3d-picker .fp-st{width:100%;display:flex;align-items:center;gap:10px;border:0;background:#f6f8fa;border-radius:10px;padding:9px 12px;margin-bottom:6px;cursor:pointer;font:600 13.5px Sarabun,sans-serif;color:#222;text-align:left}' +
+    '#frc3d-picker .fp-st:hover{background:#eaf3fb}#frc3d-picker .fp-st i{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.08)}' +
+    '#frc3d-picker .fp-st b{flex:1;font-weight:600}#frc3d-picker .fp-st em{font-style:normal;font-weight:700;color:#334;white-space:nowrap}#frc3d-picker .fp-st em small{font-weight:400;color:#889}' +
+    'body.dark #frc3d-picker{background:#1c1f2a}body.dark #frc3d-picker .fp-st{background:#262a38;color:#e8e8f0}body.dark #frc3d-picker .fp-st em{color:#dfe3ea}body.dark #frc3d-picker .fp-h{color:#cfe0ff}';
   document.head.appendChild(css);
+  const b3 = document.getElementById('mtab-3dst'); if (b3) { b3.onclick = open3DPicker; b3.title = 'มุมมอง 3 มิติ ตู้วัด — เลือกสถานี หรือเล่นทั้งหมด'; }
 
   // เล่นเองเมื่อไม่มีการใช้งาน
   const q = new URLSearchParams(location.search), qa = q.get('autotour');
@@ -15769,7 +15802,7 @@ function start3DTour(auto) {
   const poke = () => { window._frc3dIdleAt = Date.now(); };
   ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => window.addEventListener(ev, poke, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poke(); });   // กลับมาที่แท็บ = เริ่มนับใหม่
-  const BLOCK_IDS = ['about-panel', 'fb-overlay', 'fb-modal', 'src-modal-overlay', 'terrain3d-overlay', 'report-overlay', 'report-panel',
+  const BLOCK_IDS = ['frc3d-picker', 'about-panel', 'fb-overlay', 'fb-modal', 'src-modal-overlay', 'terrain3d-overlay', 'report-overlay', 'report-panel',
                      'ai-panel', 'whatif-panel', 'zone-editor-panel', 'v30-panel', 'sidebar-overlay'];
   const shown = e => { if (!e) return false; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
     const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight; };
