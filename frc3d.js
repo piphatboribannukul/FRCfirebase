@@ -717,13 +717,14 @@
     { match: /เทียนฟ้า/, lat: 13.8283225, lon: 100.7201234, yaw: 180, propYaw: 180, ovtClear: 0,   // ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์ (ถ.หทัยราษฎร์)
                  // ตู้ชิดกำแพงขาวด้านใต้ของสนามหญ้าหน้าศูนย์ (กำแพงกั้นตึกแถว 5 ชั้นหัวมุม) หันหน้าเข้าสนาม (ทิศเหนือ) · ห่างแนวพุ่มไม้ริมถนน ~1.2 ม.
       ovtHide: [[[-20, 0.3], [-0.5, 0.3], [-0.5, 18], [-20, 18]], [[-50, 3], [-29, 3], [-29, 19], [-50, 19]]],   // อาคาร Overture ที่วางทับสนามหญ้า (ภาพจริงเป็นสนามโล่ง)
-      bld: { '-1534': { h: 16 }, '-1535': { h: 16 } },                                     // ตึกแถวหัวมุม 5 ชั้น (ผนังข้างติดป้ายโฆษณา)
+      bld: { '-1534': { h: 16 }, '-1535': { h: 16 } },
+      roadKeep: { 381278834: 3 }, roadHide: [872943347],                                   // ทางรถเข้าศูนย์เป็นทางตัน จบในศูนย์ (ไม่มีทางออกด้านหลัง)                                     // ตึกแถวหัวมุม 5 ชั้น (ผนังข้างติดป้ายโฆษณา)
       props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ · ถ.หทัยราษฎร์อยู่ทางตะวันออก (ขอบถนน ~ตอ. 5.9)
         { type: 'lawn', h: 0.04, round: 1.5, pts: [[1.0, -0.4], [1.0, 44.5], [-112, 44.5], [-112, -0.4]] },                   // สนามหญ้ายาวจากรั้วหน้าถึงตัวอาคารศูนย์ (ทิศตะวันตก)
         { type: 'lawn', h: 0.04, round: 14, pts: [[-585, 80], [-333, 80], [-333, 42], [-262, 42], [-262, 31], [-288, 31], [-288, 10], [-333, 10], [-333, -11], [-585, -11]] },   // สนามหญ้าใหญ่หลังอาคารศูนย์ (ตามที่ผู้ใช้วาด)
         { type: 'lawn', h: 0.04, round: 9, pts: [[-249, 52], [-132, 52], [-132, 89], [-249, 89]] },                                                                    // สนามหญ้าเหนือทางรถเข้า (ตามที่ผู้ใช้วาด)
-        { type: 'wall', h: 2.05, pts: [[1.3, -0.55], [-112, -0.55], [-112, -4.65], [-228, -4.65], [-228, -7.0], [-291, -7.0], [-291, 47.0]] },   // กำแพงศูนย์ ด้านใต้ (หลังตู้) + ด้านตะวันตก (ตามเส้นที่ผู้ใช้ขีด)
-        { type: 'wall', h: 2.05, pts: [[2.9, 50.6], [-25, 50.2], [-271, 46.9]] }, { type: 'wall', h: 2.05, pts: [[-279, 47.0], [-291, 47.0]] },   // กำแพงด้านเหนือ ริมทางรถเข้า (เว้นช่องซอยที่แยกขึ้นเหนือ)                                          // กำแพงขาวหลังตู้
+        { type: 'wall', h: 2.05, pts: [[1.3, -0.55], [-112, -0.55], [-112, -4.65], [-228, -4.65], [-228, -7.0], [-291, -7.0], [-291, 47.6]] },   // กำแพงศูนย์ ด้านใต้ (หลังตู้) + ด้านตะวันตก (ตามเส้นที่ผู้ใช้ขีด)
+        { type: 'wall', h: 2.05, pts: [[2.9, 51.0], [-25, 50.6], [-274, 47.4], [-291, 47.6]] },   // กำแพงด้านเหนือ ริมทางรถเข้า ปิดยาวถึงกำแพงด้านตะวันตก (ทางรถตัน ไม่มีทางออกด้านหลัง)                                          // กำแพงขาวหลังตู้
         { type: 'slab', liftY: 2.15, h: 0.07, top: '#5e8c6a', wall: '#557f60', pts: [[0.9, -0.7], [0.9, -2.9], [-38, -2.9], [-38, -0.7]] },   // หลังคาเมทัลชีทเขียว (เพิงหลังกำแพง)
         { type: 'hedgeLine', h: 1.25, d: 1.1, pts: [[1.65, -0.4], [1.65, 36.5]] },                               // แนวพุ่มไม้ริมรั้วหน้า
         { type: 'fence', world: true, x1: 2.7, z1: -0.5, x2: 2.7, z2: 36.5, h: 1.9, color: '#a7afb3' },         // รั้วตะแกรงริมทางเท้า
@@ -732,7 +733,7 @@
         { type: 'curbLine', pts: [[5.9, -60], [5.9, 80]] },                                                     // ขอบทางเท้าแดง-ขาว
         { type: 'powerline', h: 10, pts: [[5.0, -58], [5.0, -22], [5.0, 14], [5.0, 50], [5.0, 86]] },           // เสาไฟฟ้า + สายไฟ ริม ถ.หทัยราษฎร์
         { type: 'sign', world: true, x: 3.2, z: 40.2, rot: 90, y: 1.1, w: 6.5, h: 1.5, text: 'เทียนฟ้าประชาการุณย์', sub: 'ศูนย์ไตเทียม', fg: '#b3261e', bg: '#efe8da', box: '#e2dccf' },   // กำแพงป้ายหน้าศูนย์ ข้างประตู
-        { type: 'fence', world: true, x1: 2.9, z1: 44.6, x2: 2.9, z2: 50.6, h: 2.2, color: '#7d878d' },      // ประตูเหล็กบานเลื่อน ปิดปากทางรถเข้าศูนย์
+        { type: 'fence', world: true, x1: 2.9, z1: 44.6, x2: 2.9, z2: 51.0, h: 2.2, color: '#7d878d' },      // ประตูเหล็กบานเลื่อน ปิดปากทางรถเข้าศูนย์
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
@@ -752,7 +753,7 @@
   function cabFix(st) {
     const f = CAB_FIX.find(x => x.match.test(st.name || ''));
     return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, propYaw: f.propYaw, camOff: f.camOff || 0, cabShift: f.cabShift || null, pipeSide: f.pipeSide || null, extra: f.extra || null, ovtClear: f.ovtClear != null ? f.ovtClear : 30, ovtHide: f.ovtHide || null, canopy: f.canopy, props: f.props, hideR: f.hide || 0,
-      bld: f.bld, noBarrierR: f.noBarrierR || 0, roadW: f.roadW || null, palace: f.palace || null, fixed: true }) : st;
+      bld: f.bld, noBarrierR: f.noBarrierR || 0, roadW: f.roadW || null, roadHide: f.roadHide || null, roadKeep: f.roadKeep || null, palace: f.palace || null, fixed: true }) : st;
   }
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -1296,11 +1297,13 @@
       const nx = -(b[1] - a[1]) / L * w / 2, nz = (b[0] - a[0]) / L * w / 2;
       quad(G, [a[0] + nx, y, a[1] + nz], [b[0] + nx, y, b[1] + nz], [b[0] - nx, y, b[1] - nz], [a[0] - nx, y, a[1] - nz], col, [0, 1, 0]);
     };
-    const disc = (G, p, r, y, col) => { const n = 10; for (let i = 0; i < n; i++) { const a1 = i / n * 6.283, a2 = (i + 1) / n * 6.283; tri(G, [p[0], y, p[1]], [p[0] + Math.cos(a1) * r, y, p[1] + Math.sin(a1) * r], [p[0] + Math.cos(a2) * r, y, p[1] + Math.sin(a2) * r], col, [0, 1, 0]); } };
+    const disc = (G, p, r, y, col, nSeg) => { const n = nSeg || 10; for (let i = 0; i < n; i++) { const a1 = i / n * 6.283, a2 = (i + 1) / n * 6.283; tri(G, [p[0], y, p[1]], [p[0] + Math.cos(a1) * r, y, p[1] + Math.sin(a1) * r], [p[0] + Math.cos(a2) * r, y, p[1] + Math.sin(a2) * r], col, [0, 1, 0]); } };
     for (const el of els) {
       const t = el.tags || {}; let w = ROADW[t.highway]; if (!w || el.type !== 'way' || !el.geometry) continue;
       if (opts.roadW && opts.roadW[el.id]) w = opts.roadW[el.id]; else if (+t.lanes > 0) w = Math.max(w, +t.lanes * 3.3);
+      if (opts.roadHide && opts.roadHide.includes(el.id)) continue;                   // ถนนที่ไม่มีจริง (ฉากจัดเอง)
       const line = el.geometry.map(p => P(p.lat, p.lon));
+      if (opts.roadKeep && opts.roadKeep[el.id]) line.length = Math.min(line.length, opts.roadKeep[el.id]);   // ตัดถนนให้จบที่จุดที่ n (เช่น ทางรถตันในศูนย์)
       if (!line.some((q, i) => i < line.length - 1 && segDist(r0[0], r0[1], q, line[i + 1])[0] < hideR + 40)) continue;
       for (let i = 0; i < line.length - 1; i++) { roadSegs.push([line[i], line[i + 1], w >= 16 ? 3 : w >= 12 ? 2.5 : w >= 9 ? 2 : 1, w]); const d = segDist(opts.cabXZ[0], opts.cabXZ[1], line[i], line[i + 1]); if (!bestRoad || d[0] < bestRoad[0]) bestRoad = d; }
       const elev = /^(yes|viaduct)$/.test(t.bridge || '') ? 7 : 0, G = bucket('road'), yA = elev + 0.2, yW = elev + 0.05;
@@ -1324,6 +1327,7 @@
         }
       }
       for (let i = 1; i < line.length - 1; i++) { if (!elev) disc(G, line[i], (w + 5) / 2, yW, walk); disc(G, line[i], w / 2, yA, w >= 12 ? asph : asph2); }   // รอยต่อโค้ง
+      if (opts.roadKeep && opts.roadKeep[el.id]) { const e = line[line.length - 1]; disc(G, e, (w + 5) / 2, yW, walk, 28); disc(G, e, (w + 0.5) / 2, yA - 0.07, curb, 28); disc(G, e, w / 2, yA, w >= 12 ? asph : asph2, 28); }   // ปลายทางตัน: หัวมน
     }
     opts.cabYaw = opts.yawFix != null ? opts.yawFix : bestRoad && bestRoad[0] > 0.5 && bestRoad[0] < 60 ? Math.atan2(bestRoad[1] - opts.cabXZ[0], bestRoad[2] - opts.cabXZ[1]) : 0;
 
@@ -1817,7 +1821,7 @@
       if (_cur !== state) return;
       const tLoad = performance.now() - state.t0;
       const t0 = performance.now();
-      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null, hideR: st.hideR || 0, fixed: !!st.fixed, bld: st.bld || null, noBarrierR: st.noBarrierR || 0, roadW: st.roadW, palace: st.palace, ovtClear: st.fixed ? st.ovtClear : 0,
+      const c = buildCity(osm, P, { stationXZ: [0, 0], radius: R_CITY, cabXZ: [0, 0], yawFix: st.yaw != null ? st.yaw * Math.PI / 180 : null, hideR: st.hideR || 0, fixed: !!st.fixed, bld: st.bld || null, noBarrierR: st.noBarrierR || 0, roadW: st.roadW, roadHide: st.roadHide, roadKeep: st.roadKeep, palace: st.palace, ovtClear: st.fixed ? st.ovtClear : 0,
         ovtHide: [...(st.ovtHide || []), ...((st.extra && st.extra.b) || []).map(b => b[2])].map(r => r.map(q => [q[0], -q[1]])) });
       state.cabYaw = c.cabYaw;
       if (_cur !== state) return;
