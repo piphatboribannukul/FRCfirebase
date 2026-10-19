@@ -40,6 +40,7 @@
 
   // ── ขนาดตู้: ขนาดจริงเมื่อซูม ≥ 19.5 · ซูมออกแล้วขยาย (ไม่งั้นมองไม่เห็นในภาพเมือง) ──
   const NEAR_Z = 21.8, FAR_Z = 16.9, INTRO_Z = 16.7, BEAM_H = 14;
+  const INTRO_HOLD = 2000;                 // ค้างภาพมุมสูงให้เห็นเมืองก่อนบินเข้า (มิลลิวินาที)
   function exag(z) { return Math.min(40, Math.max(1, Math.pow(2, 19.5 - z))); }
   function beamAlpha(z) { return Math.max(0, Math.min(0.6, (18.3 - z) * 0.4)); }
 
@@ -1782,7 +1783,7 @@
       if (_cur !== state) return;
       state.layer.setCity(c); hideBase(map, st, R_CITY);
       const sh = st.cabShift || [0, 0], cx = c.cabXZ[0] + sh[0], cz = c.cabXZ[1] - sh[1]; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
-      state.cityReady = true; flyIn(state);
+      state.cityReady = true; setTimeout(() => flyIn(state), INTRO_HOLD);   // เมืองขึ้นแล้ว → ค้างภาพมุมสูง 2 วิ ก่อนบิน
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';
       say('🏙 อาคาร ' + c.nBuild.toLocaleString() + ' หลัง · ต้นไม้ ' + c.nTree.toLocaleString() + ' ต้น · ' + srcTxt + ' · ' + (tLoad / 1000).toFixed(1) + ' วิ', 6000);
@@ -1848,7 +1849,7 @@
     state.userTook = false; state.spin = false; m.stop();
     const c = state.cabLL || [state.st.lon, state.st.lat];
     m.jumpTo({ center: c, zoom: INTRO_Z, pitch: 48, bearing: frontBearing(state) - 160 });
-    state.phase = 'intro'; setTimeout(() => flyIn(state), 900);
+    state.phase = 'intro'; setTimeout(() => flyIn(state), INTRO_HOLD);
   }
   function orbitStep(state) {
     const m = state.map; if (!m || !state.orbit || !state.spin || _cur !== state) return;
