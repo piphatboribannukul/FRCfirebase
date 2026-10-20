@@ -26,7 +26,7 @@ function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 //     pipe grid จึงติดป้าย SP04 ทั้งพื้นที่ (ดู _pipeMatch) · โซนเป็นตัวกำหนดต้นทาง = Dis2
 //     นอกเส้นโซน ช่องที่ท่อมาจากบางเขน → เป็นของ Dis1 หรือ Dis2 ตามโซนที่ใกล้ที่สุด (_bkOwner) ไม่ต้องวาดโซนใหม่
 //   • เมนูบน "🏙 3D สถานี": เปิดเมนูเลือกสถานี + ปุ่ม ▶ เล่นทั้งหมด · ทัวร์ 6 สถานีที่จัดฉากแล้ว (ศิริราช → ศิครินทร์ → ร.ร.ทหารขนส่ง → สวนจิตรลดา → ศูนย์ไตเทียมเทียนฟ้าฯ → ท้องฟ้าจำลอง)
-//   • ไม่มีการแตะ/คลิก/กดแป้น 2 นาที → เล่นทัวร์เอง 1 รอบ แล้วกลับหน้าเดิม · แตะที่ใดก็ได้ = หยุดทันที
+//   • ไม่มีการแตะ/คลิก/กดแป้น 1 นาที (ค่าเริ่มต้น · เลือก ปิด/1/2/3/5 นาทีได้ในเมนู 3D สถานี) → เล่นทัวร์เอง 1 รอบ แล้วกลับหน้าเดิม · แตะที่ใดก็ได้ = หยุดทันที
 //     ไม่เล่นเมื่อ: แท็บถูกซ่อน · มีหน้าต่าง/แผงอื่นเปิดอยู่ · จอเล็กแบบมือถือ · ปิดได้ด้วย ?autotour=0 (ทดสอบเร็ว: ?autotour=20 = 20 วิ)
 // ── บันทึกการเปลี่ยนแปลงเวลาเดินน้ำ ─────────────────────────────────────────────
 // [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต นนทบุรี   22.5 → 5 ชม.   (ttRoot แม่กลอง 122.5 → 105)
@@ -15755,6 +15755,9 @@ function start3DTour(auto) {
   return !!T;
 }
 // เมนู "3D สถานี": เลือกดูทีละสถานี หรือ ▶ เล่นทั้งหมด
+const FRC3D_IDLE_CHOICES = [0, 1, 2, 3, 5];          // นาที (0 = ปิด)
+function _frc3dIdleMin() { try { const v = localStorage.getItem('frc3d_idle_min'); if (v != null && FRC3D_IDLE_CHOICES.includes(+v)) return +v; } catch (e) {} return 1; }
+function _frc3dSetIdle(v) { try { localStorage.setItem('frc3d_idle_min', String(v)); } catch (e) {} window._frc3dIdleAt = Date.now(); }
 function close3DPicker() { const el = document.getElementById('frc3d-picker'); if (el) el.remove(); document.removeEventListener('pointerdown', _frc3dPickOut, true); document.removeEventListener('keydown', _frc3dPickKey, true); }
 function _frc3dPickOut(e) { const el = document.getElementById('frc3d-picker'), b = document.getElementById('mtab-3dst'); if (el && !el.contains(e.target) && !(b && b.contains(e.target))) close3DPicker(); }
 function _frc3dPickKey(e) { if (e.key === 'Escape') close3DPicker(); }
@@ -15768,12 +15771,16 @@ function open3DPicker() {
     '<button class="fp-all" data-i="all">▶ เล่นทั้งหมด <span>' + list.length + ' สถานี · ต่อกันอัตโนมัติ</span></button>' +
     '<div class="fp-sub">หรือเลือกดูทีละสถานี</div>' +
     list.map((s, i) => '<button class="fp-st" data-i="' + i + '"><i style="background:' + FRC3D.frcHex(s.frc) + '"></i><b>' + esc(s.short || s.name) + '</b>' +
-      '<em>' + (s.frc != null ? s.frc.toFixed(2) + ' <small>mg/L</small>' : '—') + '</em></button>').join('');
+      '<em>' + (s.frc != null ? s.frc.toFixed(2) + ' <small>mg/L</small>' : '—') + '</em></button>').join('') +
+    '<div class="fp-idle"><span>เล่นเองเมื่อไม่มีการใช้งาน</span><div>' + FRC3D_IDLE_CHOICES.map(v => '<button data-idle="' + v + '"' + (v === _frc3dIdleMin() ? ' class="on"' : '') + '>' + (v ? v + ' นาที' : 'ปิด') + '</button>').join('') + '</div>' +
+    (/[?&]autotour=/.test(location.search) ? '<small>ลิงก์นี้กำหนดเวลาไว้แล้ว (autotour)</small>' : '<small>จำค่าไว้ในเครื่องนี้ · มือถือไม่เล่นเอง</small>') + '</div>';
   document.body.appendChild(el);
   const r = btn ? btn.getBoundingClientRect() : { left: 20, bottom: 60, width: 0 };
   const w = Math.min(340, innerWidth - 24); el.style.width = w + 'px';
   el.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px'; el.style.top = (r.bottom + 8) + 'px';
-  el.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; close3DPicker();
+  el.addEventListener('click', e => { const ib = e.target.closest('[data-idle]');
+    if (ib) { _frc3dSetIdle(+ib.dataset.idle); el.querySelectorAll('[data-idle]').forEach(x => x.classList.toggle('on', x === ib)); return; }
+    const b = e.target.closest('[data-i]'); if (!b) return; close3DPicker();
     if (b.dataset.i === 'all') start3DTour(false); else { try { map.closePopup(); } catch (er) {} FRC3D.open(list[+b.dataset.i]); } });
   setTimeout(() => { document.addEventListener('pointerdown', _frc3dPickOut, true); document.addEventListener('keydown', _frc3dPickKey, true); }, 0);
 }
@@ -15791,6 +15798,11 @@ function open3DPicker() {
     '#frc3d-picker .fp-st{width:100%;display:flex;align-items:center;gap:10px;border:0;background:#f6f8fa;border-radius:10px;padding:9px 12px;margin-bottom:6px;cursor:pointer;font:600 13.5px Sarabun,sans-serif;color:#222;text-align:left}' +
     '#frc3d-picker .fp-st:hover{background:#eaf3fb}#frc3d-picker .fp-st i{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.08)}' +
     '#frc3d-picker .fp-st b{flex:1;font-weight:600}#frc3d-picker .fp-st em{font-style:normal;font-weight:700;color:#334;white-space:nowrap}#frc3d-picker .fp-st em small{font-weight:400;color:#889}' +
+    '#frc3d-picker .fp-idle{margin-top:10px;padding-top:10px;border-top:1px solid #e6eaef;font-size:12px;color:#5d6876}' +
+    '#frc3d-picker .fp-idle>div{display:flex;gap:5px;margin:6px 0 4px;flex-wrap:wrap}#frc3d-picker .fp-idle small{color:#98a1ac}' +
+    '#frc3d-picker .fp-idle button{border:1px solid #d5dbe2;background:#fff;border-radius:999px;padding:4px 10px;font:600 12px Sarabun,sans-serif;color:#334;cursor:pointer}' +
+    '#frc3d-picker .fp-idle button.on{background:#0f6fb8;border-color:#0f6fb8;color:#fff}' +
+    'body.dark #frc3d-picker .fp-idle{border-color:#33384a;color:#b8c0cc}body.dark #frc3d-picker .fp-idle button:not(.on){background:#262a38;border-color:#3a4052;color:#dfe3ea}' +
     'body.dark #frc3d-picker{background:#1c1f2a}body.dark #frc3d-picker .fp-st{background:#262a38;color:#e8e8f0}body.dark #frc3d-picker .fp-st em{color:#dfe3ea}body.dark #frc3d-picker .fp-h{color:#cfe0ff}';
   document.head.appendChild(css);
   const b3 = document.getElementById('mtab-3dst'); if (b3) { b3.onclick = open3DPicker; b3.title = 'มุมมอง 3 มิติ ตู้วัด — เลือกสถานี หรือเล่นทั้งหมด'; }
@@ -15798,7 +15810,8 @@ function open3DPicker() {
   // เล่นเองเมื่อไม่มีการใช้งาน
   const q = new URLSearchParams(location.search), qa = q.get('autotour');
   if (qa === '0' || qa === 'off') return;
-  const IDLE_MS = (qa && +qa > 0) ? +qa * 1000 : 2 * 60 * 1000;   // ไม่มีการใช้งาน 2 นาที → เล่นทัวร์
+  // เวลารอก่อนเล่นเอง: ?autotour=วินาที (ทดสอบ/จอโชว์) > ค่าที่เลือกในเมนู 3D สถานี (จำไว้ในเครื่องนี้) > ค่าเริ่มต้น 1 นาที · 0 = ปิด
+  const idleMs = () => (qa && +qa > 0) ? +qa * 1000 : _frc3dIdleMin() * 60 * 1000;
   window._frc3dIdleAt = Date.now();
   const poke = () => { window._frc3dIdleAt = Date.now(); };
   ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => window.addEventListener(ev, poke, { capture: true, passive: true }));
@@ -15816,6 +15829,7 @@ function open3DPicker() {
     return '';
   };
   setInterval(() => {
+    const IDLE_MS = idleMs(); if (!(IDLE_MS > 0)) return;                          // ปิดเล่นเอง
     if (Date.now() - window._frc3dIdleAt < IDLE_MS) return;
     if (window._frc3dIdleBlocked()) return;
     if (start3DTour(true)) console.log('[FRC3D] ไม่มีการใช้งาน ' + Math.round(IDLE_MS / 1000) + ' วิ → เล่นทัวร์ 3D สถานี');
