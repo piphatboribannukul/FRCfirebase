@@ -343,6 +343,9 @@
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
           add(B(th, h, len), wm, mx, h / 2, mz, ang); add(B(th + 0.08, 0.08, len + 0.08), pm, mx, h + 0.04, mz, ang);
           for (let d = 0; d <= len + 0.01; d += sp) add(B(th + 0.14, h + 0.06, 0.3), pm, a[0] + (b[0] - a[0]) * d / len, (h + 0.06) / 2, a[1] + (b[1] - a[1]) * d / len, ang); }
+      } else if (p.type === 'hydrant') {           // หัวดับเพลิงสีแดงริมทาง · พิกัดวัตถุ (world: true ได้)
+        const rm = L('#c8202a'); add(new T.CylinderGeometry(0.13, 0.15, 0.75, 10), rm, p.x, 0.375, p.z); add(new T.SphereGeometry(0.15, 10, 6), rm, p.x, 0.78, p.z);
+        add(new T.CylinderGeometry(0.06, 0.06, 0.42, 8), L('#e8e8e8'), p.x, 0.5, p.z, 0).rotation.z = Math.PI / 2; add(new T.CylinderGeometry(0.2, 0.2, 0.06, 10), L('#9a9a9a'), p.x, 0.03, p.z);
       } else if (p.type === 'bollard') {           // ไฟสนามเตี้ย (เสาดำหัวไฟ) · pts พิกัดจริง
         const bm = L('#2b2d30'), lm = new T.MeshBasicMaterial({ color: '#fff3c4' });
         for (const q of p.pts) { const [fx, fz] = toF(q[0], q[1]), h = p.h || 0.6; add(B(0.11, h, 0.11), bm, fx, h / 2, fz); add(B(0.09, 0.08, 0.09), lm, fx, h - 0.1, fz); add(B(0.14, 0.03, 0.14), bm, fx, h + 0.015, fz); }
@@ -362,8 +365,9 @@
         grp.add(bi);
         for (let d = 0; d <= len + 0.01; d += sp) {
           const x = p.x1 + ux * d, z = p.z1 + uz * d;
-          add(B(0.5, h + 0.15, 0.5), wM, x, (h + 0.15) / 2, z, a); add(B(0.68, 0.16, 0.68), L('#ebe8e0'), x, h + 0.23, z, a);
-          add(new T.ConeGeometry(0.26, 0.35, 4), wM, x, h + 0.48, z, a + Math.PI / 4);
+          const ps = p.post || 0.5;                                                 // post = ขนาดเสา (ม.) · cap: false = หัวเสาเรียบ
+          add(B(ps, h + 0.15, ps), wM, x, (h + 0.15) / 2, z, a); add(B(ps + 0.18 * ps / 0.5, 0.16 * ps / 0.5, ps + 0.18 * ps / 0.5), L('#ebe8e0'), x, h + 0.15 + 0.08 * ps / 0.5, z, a);
+          if (p.cap !== false) add(new T.ConeGeometry(0.26, 0.35, 4), wM, x, h + 0.48, z, a + Math.PI / 4);
         }
       } else if (p.type === 'skywalk') {           // ทางเชื่อมลอยฟ้า: โถงกระจกด้านบน + บันไดเลื่อนลงมาที่ทางเท้า + สะพานต่อเข้าอาคาร
         const h = p.h || 7, conc = L('#d9d7d2'), concD = L('#bdbab3'), glass = new T.MeshLambertMaterial({ color: '#86b9cc', transparent: true, opacity: 0.5, side: T.DoubleSide }), roof = L('#cfd3d6');
@@ -734,6 +738,18 @@
         { type: 'powerline', h: 10, pts: [[5.0, -58], [5.0, -22], [5.0, 14], [5.0, 50], [5.0, 86]] },           // เสาไฟฟ้า + สายไฟ ริม ถ.หทัยราษฎร์
         { type: 'sign', world: true, x: 3.2, z: 40.2, rot: 90, y: 1.1, w: 6.5, h: 1.5, text: 'เทียนฟ้าประชาการุณย์', sub: 'ศูนย์ไตเทียม', fg: '#b3261e', bg: '#efe8da', box: '#e2dccf' },   // กำแพงป้ายหน้าศูนย์ ข้างประตู
         { type: 'fence', world: true, x1: 2.9, z1: 44.6, x2: 2.9, z2: 51.0, h: 2.2, color: '#7d878d' },      // ประตูเหล็กบานเลื่อน ปิดปากทางรถเข้าศูนย์
+      ] },
+    { match: /ท้องฟ้าจำลอง|ศูนย์วิทยาศาสตร์เพื่อการศึกษา/, lat: 13.7200931, lon: 100.5824038, yaw: -90, propYaw: -90, ovtClear: 0,   // ศูนย์วิทยาศาสตร์เพื่อการศึกษา (ท้องฟ้าจำลอง) ถ.สุขุมวิท ซ.40–42
+                 // ตามแบบติดตั้ง (PICO, as-built) + ภาพถนน: ตู้อยู่ในรั้วเหล็กเขียวริมถนนทางเข้าศูนย์ ชิดมุมใต้ของอาคารทางเข้า (หลังคาขาวลาดเอียง) หันหน้าออกถนน (ทิศตะวันตก)
+      bld: { '-1015': { h: 6.5 } },                                                         // อาคารทางเข้าศูนย์ (ผนังขาว หลังคาลาด)
+      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ · ถนนทางเข้าวิ่งเหนือ-ใต้ (เอียงไปทางตะวันออกเฉียงเหนือเล็กน้อย) อยู่ทางทิศตะวันตก
+        { type: 'lawn', h: 0.04, round: 3, pts: [[-0.9, 0.7], [20, 0.7], [20, -30], [-4.9, -30]] },                                    // สนามหญ้าในรั้ว (ทิศใต้ของตู้)
+        { type: 'palaceFence', world: true, x1: -1.0, z1: 1.2, x2: -5.4, z2: -32, h: 1.7, plinth: 0.25, span: 2.6, post: 0.28, cap: false, color: '#f2f2ef', bar: '#6fa57c' },   // รั้วเหล็กเขียว เสาปูนขาว ริมถนน
+        { type: 'hydrant', world: true, x: -2.6, z: -0.6 },                                                                              // หัวดับเพลิงหน้ารั้ว
+        { type: 'curbLine', pts: [[-6.4, 12], [-11.2, -25]] },                                                                          // ขอบทางแดง-ขาว ริมถนนทางเข้า
+        { type: 'powerline', h: 10, pts: [[-1.0, 28], [-2.3, 2.6], [-6.2, -28]] },                                                      // เสาไฟฟ้า + สายไฟ ริมรั้ว
+        { type: 'tree', world: true, x: -2.6, z: -10, s: 1.5 }, { type: 'tree', world: true, x: -3.6, z: -18, s: 1.7 }, { type: 'tree', world: true, x: -4.6, z: -26, s: 1.6 },   // ต้นไม้ใหญ่ริมรั้ว (ตามแบบ/ภาพมุมบน)
+        { type: 'tree', world: true, x: 9, z: -20, s: 1.5 },
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
