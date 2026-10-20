@@ -357,6 +357,24 @@
         const gw = new T.BufferGeometry(); gw.setAttribute('position', new T.Float32BufferAttribute(tris, 3)); gw.computeVertexNormals();
         grp.add(new T.Mesh(gw, new T.MeshLambertMaterial({ color: p.color || '#f4f5f4', side: T.DoubleSide })));
         if (p.door) { const d0 = toF(p.e1 - 0.05, (p.n1 + p.n2) / 2); add(B(0.1, 2.4, (p.n2 - p.n1) * 0.55), L('#3e4a52'), d0[0], 1.2, d0[1], -(yawDeg || 0) * Math.PI / 180); }   // ช่องทางเข้ากระจกด้านถนน
+      } else if (p.type === 'heli') {              // เฮลิคอปเตอร์เล็ก (จอดแสดง) · world x,z · rot = ทิศหัว
+        const g2 = new T.Group(), bm = L(p.color || '#eef0f0'), sm = L(p.stripe || '#1f5fa8'), dk = L('#2c3136'), gl = new T.MeshLambertMaterial({ color: '#4d6a7a' });
+        const body = new T.Mesh(new T.SphereGeometry(1, 20, 12), bm); body.scale.set(1.15, 1.0, 2.1); body.position.set(0, 1.55, 0.2); g2.add(body);
+        const cab = new T.Mesh(new T.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), gl); cab.scale.set(1.0, 0.85, 1.25); cab.position.set(0, 1.75, 0.95); g2.add(cab);
+        const st = new T.Mesh(new T.CylinderGeometry(1.17, 1.17, 0.22, 20), sm); st.scale.set(1, 1, 1.8); st.position.set(0, 1.3, 0.2); g2.add(st);
+        const boom = new T.Mesh(new T.CylinderGeometry(0.16, 0.34, 4.4, 10), bm); boom.rotation.x = Math.PI / 2; boom.position.set(0, 1.85, -3.6); g2.add(boom);
+        const fin = new T.Mesh(B(0.12, 1.2, 0.7), sm); fin.position.set(0, 2.35, -5.7); g2.add(fin);
+        const tr = new T.Mesh(B(0.05, 1.3, 0.12), dk); tr.position.set(0.12, 2.45, -5.75); g2.add(tr);
+        const mast = new T.Mesh(new T.CylinderGeometry(0.12, 0.16, 0.6, 8), dk); mast.position.set(0, 2.75, 0.1); g2.add(mast);
+        for (const a of [0, Math.PI / 2]) { const bl = new T.Mesh(B(0.28, 0.05, 9.4), dk); bl.rotation.y = a + 0.4; bl.position.set(0, 3.05, 0.1); g2.add(bl); }
+        for (const sx of [-0.85, 0.85]) { const sk = new T.Mesh(B(0.09, 0.09, 3.2), dk); sk.position.set(sx, 0.12, 0.25); g2.add(sk);
+          for (const zz of [-0.5, 1.0]) { const lg = new T.Mesh(B(0.07, 0.8, 0.07), dk); lg.position.set(sx * 0.8, 0.5, zz); lg.rotation.z = -sx * 0.25; g2.add(lg); } }
+        g2.position.set(p.x, p.y || 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'goal') {              // ประตูฟุตบอล (โครงขาว) · world x,z · rot = ทิศที่ปากประตูหัน
+        const wm = L('#f4f4f2'), w = p.w || 7.3, h = p.h || 2.44, dx = Math.cos(ry), dz = -Math.sin(ry);
+        for (const sd of [-1, 1]) add(B(0.12, h, 0.12), wm, p.x + dx * sd * w / 2, h / 2, p.z + dz * sd * w / 2);
+        add(B(w, 0.12, 0.12), wm, p.x, h, p.z, ry);
+        const nm = new T.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, side: T.DoubleSide }); add(B(w, h, 0.02), nm, p.x - Math.sin(ry) * 1.2, h / 2, p.z - Math.cos(ry) * 1.2, ry);
       } else if (p.type === 'hydrant') {           // หัวดับเพลิงสีแดงริมทาง · พิกัดวัตถุ (world: true ได้)
         const rm = L('#c8202a'); add(new T.CylinderGeometry(0.13, 0.15, 0.75, 10), rm, p.x, 0.375, p.z); add(new T.SphereGeometry(0.15, 10, 6), rm, p.x, 0.78, p.z);
         add(new T.CylinderGeometry(0.06, 0.06, 0.42, 8), L('#e8e8e8'), p.x, 0.5, p.z, 0).rotation.z = Math.PI / 2; add(new T.CylinderGeometry(0.2, 0.2, 0.06, 10), L('#9a9a9a'), p.x, 0.03, p.z);
@@ -770,10 +788,12 @@
         { type: 'powerline', h: 10, pts: [[-1.0, 28], [-2.3, 2.6], [-6.2, -28]] },                                                      // เสาไฟฟ้า + สายไฟ ริมรั้ว
         { type: 'flag', world: true, x: 0.3, z: 22, rot: 270, h: 9, kind: 'thai' }, { type: 'flag', world: true, x: 0.6, z: 24.5, rot: 270, h: 9, kind: 'yellow' },
         { type: 'flag', world: true, x: 0.9, z: 27, rot: 270, h: 9, kind: 'thai' }, { type: 'flag', world: true, x: 1.2, z: 29.5, rot: 270, h: 9, kind: 'yellow' },   // เสาธงหน้าศูนย์ (ตามภาพถนน · ตำแหน่งโดยประมาณ)
-        { type: 'tree', world: true, x: -2.6, z: -10, s: 1.5 }, { type: 'tree', world: true, x: -3.6, z: -18, s: 1.7 }, { type: 'tree', world: true, x: -4.6, z: -26, s: 1.6 },   // ต้นไม้ใหญ่ริมรั้ว (ตามแบบ/ภาพมุมบน)
-        { type: 'tree', world: true, x: 18, z: -6, s: 1.4 }, { type: 'tree', world: true, x: 18.5, z: -24, s: 1.6 }, { type: 'tree', world: true, x: 2, z: -26, s: 1.3 },
-        { type: 'tree', world: true, x: 24, z: -14, s: 1.5 }, { type: 'tree', world: true, x: 26, z: -30, s: 1.4 },
-        { type: 'lawn', h: 0.03, round: 6, color: '#b4b083', pts: [[-115, 10], [-25, 10], [-25, -58], [-115, -58]] },                   // สนามฟุตบอล (ดินปนหญ้า) ฝั่งตะวันตกของถนน
+        { type: 'tree', world: true, x: -3.2, z: -16, s: 0.95 }, { type: 'tree', world: true, x: -4.0, z: -23, s: 1.05 }, { type: 'tree', world: true, x: -4.7, z: -29, s: 1.0 },   // ต้นไม้ริมรั้ว (เว้นช่วงหน้าตู้ ไม่บังตู้)
+        { type: 'tree', world: true, x: 18, z: -5, s: 0.95 }, { type: 'tree', world: true, x: 18.5, z: -25, s: 1.05 }, { type: 'tree', world: true, x: 2.5, z: -27.5, s: 0.9 },
+        { type: 'tree', world: true, x: 24, z: -14, s: 1.0 }, { type: 'tree', world: true, x: 26, z: -30, s: 0.95 },
+        { type: 'heli', world: true, x: 10, z: -15, rot: 300 },                                                                            // เฮลิคอปเตอร์เล็กจอดแสดงกลางวงกลม (สีโดยประมาณ)
+        { type: 'lawn', h: 0.03, round: 6, color: '#8fc06a', pts: [[-115, 10], [-25, 10], [-25, -58], [-115, -58]] },                   // สนามหญ้า ศูนย์บริการวิทยาศาสตร์สุขภาพ (ฝั่งตรงข้ามถนน)
+        { type: 'sign', world: true, x: -20.5, z: -22, rot: 90, y: 1.3, w: 7, h: 1.4, text: 'ศูนย์บริการวิทยาศาสตร์สุขภาพ', fg: '#1d4f91', bg: '#f4f5f2', box: '#dfe2de', post: true },   // ป้ายหน้าศูนย์ (ตำแหน่งโดยประมาณ)
         { type: 'shrubs', gap: 3.2, pts: [[-23, 12], [-23, -60]] }, { type: 'shrubs', gap: 3.2, pts: [[-117, 12], [-23, 12]] },          // แนวต้นไม้รอบสนาม
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
