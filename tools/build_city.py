@@ -21,6 +21,7 @@ RADIUS = 670            # ม. (frc3d.js สร้างเมืองมีส
 CLUSTER_M = 120         # สถานีที่ห่างกันไม่เกินนี้ใช้ไฟล์เดียวกัน (เช่น TR1–3, Dis1–2 ที่บางเขน)
 MAX_AGE_DAYS = 25
 OVT_VERSION = 1          # เพิ่มเลขนี้เมื่อเปลี่ยนวิธีรวมอาคาร → สร้างไฟล์ใหม่อัตโนมัติ
+DATA_VERSION = 2         # 2 = เก็บชื่อถนน (name / name:th) สำหรับป้ายชื่อถนนใน frc3d · เพิ่มเลขเมื่อเปลี่ยนข้อมูลที่เก็บ → สร้างใหม่ทุกสถานี
 ENDPOINTS = ['https://overpass-api.de/api/interpreter',
              'https://overpass.kumi.systems/api/interpreter',
              'https://overpass.private.coffee/api/interpreter']
@@ -195,6 +196,8 @@ def slim(j, name, lat0, lon0):
         if tags_all.get('name') and (tags_all.get('building') or tags_all.get('amenity') in
                                      ('place_of_worship', 'hospital', 'school', 'university', 'college', 'clinic')):
             t['name'] = tags_all['name']                     # ใช้ทำป้ายชื่ออาคาร
+        if tags_all.get('highway') and (tags_all.get('name') or tags_all.get('name:th')):
+            t['name'] = tags_all.get('name:th') or tags_all['name']   # ชื่อถนน → ป้ายชื่อถนนใน frc3d
         if not t:
             continue
         e = {'y': el['type'][0], 'id': el['id'], 't': t}
@@ -255,7 +258,7 @@ def main():
         prev = old.get(fname, {})
         fresh = os.path.exists(path) and prev.get('updated') and \
             (now - datetime.fromisoformat(prev['updated'])).days < MAX_AGE_DAYS and \
-            (a.no_overture or prev.get('ovt_v') == OVT_VERSION)
+            (a.no_overture or prev.get('ovt_v') == OVT_VERSION) and prev.get('data_v') == DATA_VERSION
         want = (not only) or any(str(m['id']) in only for m in g['members'])
         updated, n, ovt_v, ovt_n = prev.get('updated'), prev.get('n'), prev.get('ovt_v'), prev.get('ovt')
         if want and (a.force or not fresh):
@@ -282,7 +285,8 @@ def main():
         if os.path.exists(path):
             for m in g['members']:
                 index.append({'id': str(m['id']), 'name': m['name'], 'lat': m['lat'], 'lon': m['lon'],
-                              'file': fname, 'updated': updated, 'n': n, 'ovt_v': ovt_v, 'ovt': ovt_n})
+                              'file': fname, 'updated': updated, 'n': n, 'ovt_v': ovt_v, 'ovt': ovt_n,
+                              'data_v': DATA_VERSION if updated == now.isoformat(timespec='seconds') else prev.get('data_v')})
     with open(idx_path, 'w', encoding='utf-8') as f:
         json.dump({'radius': RADIUS, 'stations': index}, f, ensure_ascii=False, indent=0)
     print(f'เสร็จ: สร้างใหม่ {done} · ไม่สำเร็จ {fail} · ในดัชนี {len(index)} สถานี', flush=True)
