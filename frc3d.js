@@ -286,7 +286,7 @@
       }
       const ry = (p.rot || 0) * Math.PI / 180;
       if (p.type === 'road') {                     // ถนนเสริม (ถนนในพื้นที่ที่ OSM ไม่ได้ดึงมา) · pts = [[ตอ., เหนือ], ...] พิกัดจริงจากตู้
-        const w = p.w || 6, pts = p.pts.map(q => toF(q[0], q[1])), asphM = L('#686c71'), edgeM = L('#c9c3b8'), lineM = L('#f2f2ee');
+        const w = p.w || 6, pts = p.pts.map(q => toF(q[0], q[1])), asphM = L(p.color || '#686c71'), edgeM = L(p.edge || '#c9c3b8'), lineM = L('#f2f2ee');
         for (let i = 0; i < pts.length - 1; i++) {
           const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
           const yo = p.y || 0;
@@ -343,6 +343,20 @@
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
           add(B(th, h, len), wm, mx, h / 2, mz, ang); add(B(th + 0.08, 0.08, len + 0.08), pm, mx, h + 0.04, mz, ang);
           for (let d = 0; d <= len + 0.01; d += sp) add(B(th + 0.14, h + 0.06, 0.3), pm, a[0] + (b[0] - a[0]) * d / len, (h + 0.06) / 2, a[1] + (b[1] - a[1]) * d / len, ang); }
+      } else if (p.type === 'dome') {              // โดม (ท้องฟ้าจำลอง) · world x,z = ศูนย์กลาง · r รัศมี · y ความสูงฐาน
+        const dm = L(p.color || '#eef0f1'), y0 = p.y || 0;
+        add(new T.SphereGeometry(p.r, 40, 16, 0, Math.PI * 2, 0, Math.PI / 2), dm, p.x, y0, p.z);
+        add(new T.CylinderGeometry(p.r * 1.04, p.r * 1.06, 0.9, 40), L('#d9dcde'), p.x, y0 + 0.2, p.z);
+        for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, rib = new T.Mesh(new T.TorusGeometry(p.r * 1.003, 0.06, 4, 24, Math.PI / 2), L('#cfd4d7')); rib.rotation.set(0, a, Math.PI / 2); rib.position.set(p.x, y0, p.z); grp.add(rib); }
+        add(new T.CylinderGeometry(0.6, 0.9, 1.2, 12), L('#d0d4d6'), p.x, y0 + p.r + 0.5, p.z);
+      } else if (p.type === 'wedge') {             // อาคารหลังคาลาดเอียงทึบ (ผนังขาว) · world: ตอ. e1..e2 · เหนือ n1..n2 · สูง h1 (ด้าน n1) → h2 (ด้าน n2)
+        const c = [[p.e1, p.n1], [p.e2, p.n1], [p.e2, p.n2], [p.e1, p.n2]].map(q => toF(q[0], q[1])), hh = [p.h1, p.h1, p.h2, p.h2];
+        const V = (i, top) => [c[i][0], top ? hh[i] : 0, c[i][1]], tris = [], push = (...v) => v.forEach(x => tris.push(...x));
+        push(V(0, 0), V(1, 0), V(2, 0), V(0, 0), V(2, 0), V(3, 0)); push(V(0, 1), V(2, 1), V(1, 1), V(0, 1), V(3, 1), V(2, 1));
+        for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; push(V(i, 0), V(j, 1), V(j, 0), V(i, 0), V(i, 1), V(j, 1)); }
+        const gw = new T.BufferGeometry(); gw.setAttribute('position', new T.Float32BufferAttribute(tris, 3)); gw.computeVertexNormals();
+        grp.add(new T.Mesh(gw, new T.MeshLambertMaterial({ color: p.color || '#f4f5f4', side: T.DoubleSide })));
+        if (p.door) { const d0 = toF(p.e1 - 0.05, (p.n1 + p.n2) / 2); add(B(0.1, 2.4, (p.n2 - p.n1) * 0.55), L('#3e4a52'), d0[0], 1.2, d0[1], -(yawDeg || 0) * Math.PI / 180); }   // ช่องทางเข้ากระจกด้านถนน
       } else if (p.type === 'hydrant') {           // หัวดับเพลิงสีแดงริมทาง · พิกัดวัตถุ (world: true ได้)
         const rm = L('#c8202a'); add(new T.CylinderGeometry(0.13, 0.15, 0.75, 10), rm, p.x, 0.375, p.z); add(new T.SphereGeometry(0.15, 10, 6), rm, p.x, 0.78, p.z);
         add(new T.CylinderGeometry(0.06, 0.06, 0.42, 8), L('#e8e8e8'), p.x, 0.5, p.z, 0).rotation.z = Math.PI / 2; add(new T.CylinderGeometry(0.2, 0.2, 0.06, 10), L('#9a9a9a'), p.x, 0.03, p.z);
@@ -445,7 +459,7 @@
         const pl = p.round ? roundPoly(p.pts, p.round) : p.pts;
         const sh = new T.Shape(pl.map(q => { const [fx, fz] = toF(q[0], q[1]); return new T.Vector2(fx, -fz); }));
         const geo = new T.ExtrudeGeometry(sh, { depth: p.h, bevelEnabled: false }); geo.rotateX(-Math.PI / 2);
-        const m = new T.Mesh(geo, [L('#7fae5a'), L(p.wall || '#d7b9a6')]); grp.add(m);
+        const m = new T.Mesh(geo, [L(p.color || '#7fae5a'), L(p.wall || '#d7b9a6')]); grp.add(m);
         if (p.cab) raise = p.h;
       } else if (p.type === 'hedgeLine') {         // แนวพุ่มไม้ตามเส้น · pts พิกัดจริง
         const pts = p.pts.map(q => toF(q[0], q[1])), hh = p.h || 1.0, dd = p.d || 0.9;
@@ -739,17 +753,28 @@
         { type: 'sign', world: true, x: 3.2, z: 40.2, rot: 90, y: 1.1, w: 6.5, h: 1.5, text: 'เทียนฟ้าประชาการุณย์', sub: 'ศูนย์ไตเทียม', fg: '#b3261e', bg: '#efe8da', box: '#e2dccf' },   // กำแพงป้ายหน้าศูนย์ ข้างประตู
         { type: 'fence', world: true, x1: 2.9, z1: 44.6, x2: 2.9, z2: 51.0, h: 2.2, color: '#7d878d' },      // ประตูเหล็กบานเลื่อน ปิดปากทางรถเข้าศูนย์
       ] },
-    { match: /ท้องฟ้าจำลอง|ศูนย์วิทยาศาสตร์เพื่อการศึกษา/, lat: 13.7200931, lon: 100.5824038, yaw: -90, propYaw: -90, ovtClear: 0,   // ศูนย์วิทยาศาสตร์เพื่อการศึกษา (ท้องฟ้าจำลอง) ถ.สุขุมวิท ซ.40–42
-                 // ตามแบบติดตั้ง (PICO, as-built) + ภาพถนน: ตู้อยู่ในรั้วเหล็กเขียวริมถนนทางเข้าศูนย์ ชิดมุมใต้ของอาคารทางเข้า (หลังคาขาวลาดเอียง) หันหน้าออกถนน (ทิศตะวันตก)
-      bld: { '-1015': { h: 6.5 } },                                                         // อาคารทางเข้าศูนย์ (ผนังขาว หลังคาลาด)
+    { match: /ท้องฟ้าจำลอง|ศูนย์วิทยาศาสตร์เพื่อการศึกษา/, lat: 13.7200931, lon: 100.5824038, yaw: 0, propYaw: -90, ovtClear: 0,   // ศูนย์วิทยาศาสตร์เพื่อการศึกษา (ท้องฟ้าจำลอง) ถ.สุขุมวิท ซ.40–42
+                 // ตามแบบติดตั้ง (PICO, as-built) + ภาพถนน: ตู้อยู่ในรั้วเหล็กเขียวริมถนนทางเข้าศูนย์ ชิดมุมใต้ของอาคารทางเข้า (หลังคาขาวลาดเอียง) · หน้าตู้หันทิศใต้ (เข้าสวน) ตามที่ผู้ใช้ระบุ
+      ovtHide: [[[-1.0, 1.5], [16.5, 1.5], [16.5, 19], [-1.0, 19]]],                        // อาคารทางเข้า (ใช้ทรงหลังคาลาดจัดเองแทน)
+      bld: { 317219712: { h: 10, wall: '#f1f2f1', roof: '#e3e6e7' },                       // ท้องฟ้าจำลอง (ฐานอาคาร + โดมด้านบน)
+             210310810: { h: 16, wall: '#f3f5f4', roof: '#bfe0d2' } },                      // พิพิธภัณฑ์วิทยาศาสตร์ (หลังคาสีเขียวอ่อน)
       props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ · ถนนทางเข้าวิ่งเหนือ-ใต้ (เอียงไปทางตะวันออกเฉียงเหนือเล็กน้อย) อยู่ทางทิศตะวันตก
-        { type: 'lawn', h: 0.04, round: 3, pts: [[-0.9, 0.7], [20, 0.7], [20, -30], [-4.9, -30]] },                                    // สนามหญ้าในรั้ว (ทิศใต้ของตู้)
+        { type: 'lawn', h: 0.04, round: 3, pts: [[-0.9, 0.7], [20, 0.7], [20, -30], [-4.9, -30]] },                                    // สวนในรั้ว (ทิศใต้ของตู้)
+        { type: 'road', w: 1.8, y: -0.13, noLine: true, color: '#d3cdc1', edge: '#bdb6a8', pts: [[17.5, -15.0], [17.13, -12.68], [16.07, -10.59], [14.41, -8.93], [12.32, -7.87], [10.0, -7.5], [7.68, -7.87], [5.59, -8.93], [3.93, -10.59], [2.87, -12.68], [2.5, -15.0], [2.87, -17.32], [3.93, -19.41], [5.59, -21.07], [7.68, -22.13], [10.0, -22.5], [12.32, -22.13], [14.41, -21.07], [16.07, -19.41], [17.13, -17.32], [17.5, -15.0]] },   // ทางเดินวงกลมในสวน
+        { type: 'shrubs', flowers: true, gap: 2.2, pts: [[4.5, -12], [6.5, -9.2], [10, -8.3], [13.5, -9.2], [15.5, -12]] },              // ไม้พุ่มดอกรอบวง
         { type: 'palaceFence', world: true, x1: -1.0, z1: 1.2, x2: -5.4, z2: -32, h: 1.7, plinth: 0.25, span: 2.6, post: 0.28, cap: false, color: '#f2f2ef', bar: '#6fa57c' },   // รั้วเหล็กเขียว เสาปูนขาว ริมถนน
+        { type: 'wedge', e1: -1.0, e2: 16.5, n1: 1.6, n2: 19, h1: 3.6, h2: 9.5, door: true },                                         // อาคารทางเข้า หลังคาขาวลาดเอียง (ต่ำด้านใต้ สูงด้านเหนือ)
+        { type: 'dome', world: true, x: 36, z: -62, r: 13, y: 10 },                                                                        // โดมท้องฟ้าจำลอง
         { type: 'hydrant', world: true, x: -2.6, z: -0.6 },                                                                              // หัวดับเพลิงหน้ารั้ว
         { type: 'curbLine', pts: [[-6.4, 12], [-11.2, -25]] },                                                                          // ขอบทางแดง-ขาว ริมถนนทางเข้า
         { type: 'powerline', h: 10, pts: [[-1.0, 28], [-2.3, 2.6], [-6.2, -28]] },                                                      // เสาไฟฟ้า + สายไฟ ริมรั้ว
+        { type: 'flag', world: true, x: 0.3, z: 22, rot: 270, h: 9, kind: 'thai' }, { type: 'flag', world: true, x: 0.6, z: 24.5, rot: 270, h: 9, kind: 'yellow' },
+        { type: 'flag', world: true, x: 0.9, z: 27, rot: 270, h: 9, kind: 'thai' }, { type: 'flag', world: true, x: 1.2, z: 29.5, rot: 270, h: 9, kind: 'yellow' },   // เสาธงหน้าศูนย์ (ตามภาพถนน · ตำแหน่งโดยประมาณ)
         { type: 'tree', world: true, x: -2.6, z: -10, s: 1.5 }, { type: 'tree', world: true, x: -3.6, z: -18, s: 1.7 }, { type: 'tree', world: true, x: -4.6, z: -26, s: 1.6 },   // ต้นไม้ใหญ่ริมรั้ว (ตามแบบ/ภาพมุมบน)
-        { type: 'tree', world: true, x: 9, z: -20, s: 1.5 },
+        { type: 'tree', world: true, x: 18, z: -6, s: 1.4 }, { type: 'tree', world: true, x: 18.5, z: -24, s: 1.6 }, { type: 'tree', world: true, x: 2, z: -26, s: 1.3 },
+        { type: 'tree', world: true, x: 24, z: -14, s: 1.5 }, { type: 'tree', world: true, x: 26, z: -30, s: 1.4 },
+        { type: 'lawn', h: 0.03, round: 6, color: '#b4b083', pts: [[-115, 10], [-25, 10], [-25, -58], [-115, -58]] },                   // สนามฟุตบอล (ดินปนหญ้า) ฝั่งตะวันตกของถนน
+        { type: 'shrubs', gap: 3.2, pts: [[-23, 12], [-23, -60]] }, { type: 'shrubs', gap: 3.2, pts: [[-117, 12], [-23, 12]] },          // แนวต้นไม้รอบสนาม
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
@@ -1211,6 +1236,7 @@
         if (ov && ov.style === 'glass') { kind = 'office'; wallC = C(ov.color || '#f4f7f8'); roofC = C('#b9c0c4'); shape = 'flat'; }
         if (ov && ov.style === 'hospital') { kind = 'hosp'; wallC = C(ov.color || '#f6f6f3'); roofC = C('#cfcbc4'); shape = 'flat'; }
         if (CFG.cityStyle === 'clean' && kind !== 'temple' && (!ov || !ov.style) && !palB) { wallC = C(pick(['#f1f2f1', '#ebeceb', '#f5f5f4', '#e6e8e8', '#eff0f0'], rnd())); roofC = C(shape === 'flat' ? pick(['#c8cbcc', '#c1c5c7', '#cdd0d1'], rnd()) : pick(['#b9bec2', '#aab1b6', '#c3c7ca'], rnd())); }   // ขาวเทา
+        if (ov && ov.wall) wallC = C(ov.wall); if (ov && ov.roof) roofC = C(ov.roof);           // สีผนัง/หลังคาจริงรายอาคาร
         if (CFG.cityStyle === 'minimal' && kind !== 'temple' && !ov) { wallC = C(pick(['#f5f3ef', '#efece6', '#f8f6f2', '#ebe8e2'], rnd())); roofC = C(shape === 'flat' ? '#dfdbd4' : '#cdc6bb'); }   // แบบเรียบ
         bInfo.push({ outer, inners, h, kind, area, name: ov && ov.noSign ? null : t.name, noSign: ov && ov.noSign });
         if (ov && ov.style === 'colonnade') {                               // อาคารชั้นเดียวสีขาว มีระเบียงเสาเรียงด้านหน้า (หันหาถนน/ทิศหน้าตู้)
