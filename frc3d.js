@@ -78,6 +78,10 @@
 #frc3d-bar>*{pointer-events:auto}
 .frc3d-title{background:rgba(255,255,255,.94);color:#1a1a1a;border-radius:12px;padding:8px 14px;font-weight:700;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.25);max-width:min(520px,100%)}
 .frc3d-title small{display:block;font-weight:400;font-size:11.5px;color:#555}
+.frc3d-title .rm{display:block;font-weight:600;font-size:12px;color:#0f6fb8;margin-top:1px}
+.frc3d-road{pointer-events:none;white-space:nowrap;font:700 12.5px Sarabun,'Noto Sans Thai',sans-serif;color:#24303c;background:rgba(255,255,255,.9);border:1.5px solid #8a96a3;border-radius:6px;padding:2px 8px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.frc3d-road:before{content:'🛣 ';font-size:11px}
+.frc3d-night .frc3d-road{background:rgba(20,26,38,.85);color:#e8eef6;border-color:#5b6878}
 .frc3d-sp{flex:1}
 .frc3d-btn{background:rgba(255,255,255,.94);color:#1a1a1a;border:0;border-radius:10px;padding:8px 12px;font:600 13px Sarabun,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .frc3d-btn:hover{background:#fff}
@@ -848,7 +852,7 @@
   function cabFix(st) {
     const f = CAB_FIX.find(x => x.match.test(st.name || ''));
     return f ? Object.assign({}, st, { lat: f.lat, lon: f.lon, yaw: f.yaw, propYaw: f.propYaw, camOff: f.camOff || 0, cabShift: f.cabShift || null, pipeSide: f.pipeSide || null, extra: f.extra || null, ovtClear: f.ovtClear != null ? f.ovtClear : 30, ovtHide: f.ovtHide || null, canopy: f.canopy, props: f.props, hideR: f.hide || 0,
-      bld: f.bld, noBarrierR: f.noBarrierR || 0, roadW: f.roadW || null, roadHide: f.roadHide || null, roadKeep: f.roadKeep || null, palace: f.palace || null, fixed: true }) : st;
+      bld: f.bld, noBarrierR: f.noBarrierR || 0, roadW: f.roadW || null, roadHide: f.roadHide || null, roadKeep: f.roadKeep || null, roadNames: f.roadNames || null, palace: f.palace || null, fixed: true }) : st;
   }
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -1835,7 +1839,7 @@
     wrap.innerHTML =
       '<div id="frc3d-map"></div>' +
       '<div id="frc3d-bar">' +
-        '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.note ? ' · ' + esc(st.note) : st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
+        '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<span class="rm">ภาพจำลองจุดติดตั้งสถานีตรวจวัดคุณภาพน้ำประปาออนไลน์</span><small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.note ? ' · ' + esc(st.note) : st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
         '<div class="frc3d-sp"></div>' +
         '<button class="frc3d-btn" data-a="replay">▶ บินใหม่</button>' +
         '<button class="frc3d-btn" data-a="orbit">🔄 หมุนรอบ</button>' +
@@ -1923,6 +1927,7 @@
       if (_cur !== state) return;
       state.layer.setCity(c); hideBase(map, st, R_CITY);
       const sh = st.cabShift || [0, 0], cx = c.cabXZ[0] + sh[0], cz = c.cabXZ[1] - sh[1]; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
+      try { roadLabels(state, osm, P, cx, cz, kx, kz); } catch (e) { console.warn('[FRC3D] ชื่อถนน', e); }
       state.cityReady = true; setTimeout(() => flyIn(state), INTRO_HOLD);   // เมืองขึ้นแล้ว → ค้างภาพมุมสูง 2 วิ ก่อนบิน
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';
@@ -1932,6 +1937,56 @@
       say('⚠ ดึงข้อมูลอาคารไม่สำเร็จ (Overpass ไม่ว่าง) — แสดงแบบกล่องไปก่อน ลองกด ✕ แล้วเปิดใหม่', 9000);
       state.cityReady = true; flyIn(state);
     }
+  }
+  // ── ป้ายชื่อถนน (จากชื่อใน OSM · ข้อมูลเมืองรุ่นที่เก็บชื่อถนน) + ชื่อที่กำหนดเองรายสถานี (roadNames) ──
+  function roadLabels(state, osm, P, cx, cz, kx, kz) {
+    const map = state.map, st = state.st, ml = window.maplibregl, out = new Map();
+    const MAJOR = /^(motorway|trunk|primary|secondary|tertiary)/;
+    for (const el of osm.elements || []) {
+      const t = el.tags || {}, nm = t['name:th'] || t.name;
+      if (!t.highway || !nm || el.type !== 'way' || !el.geometry || el.geometry.length < 2 || t.tunnel) continue;
+      const line = el.geometry.map(q => P(q.lat, q.lon));
+      let best = null;                                   // จุดบนถนนที่ใกล้ตู้ที่สุด
+      for (let i = 0; i < line.length - 1; i++) {
+        const a = line[i], b = line[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz || 1;
+        const u = Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cz - a[1]) * dz) / L2)), px = a[0] + dx * u, pz = a[1] + dz * u, d = Math.hypot(px - cx, pz - cz);
+        if (!best || d < best.d) best = { d, i, u, px, pz };
+      }
+      const lim = MAJOR.test(t.highway) ? 380 : 220;
+      if (!best || best.d > lim) continue;
+      // เลื่อนป้ายไปตามถนนห่างจากตู้ ~32 ม. (ไม่ทับป้ายค่าตู้) ไปทางที่ถนนยาวกว่า
+      const walk = (dir, dist) => { let i = best.i, x = best.px, z = best.pz, left = dist;
+        while (left > 0) { const j = dir > 0 ? i + 1 : i; const q = line[j]; if (!q) break; const seg = Math.hypot(q[0] - x, q[1] - z);
+          if (seg >= left) { x += (q[0] - x) * left / seg; z += (q[1] - z) * left / seg; left = 0; break; } left -= seg; x = q[0]; z = q[1]; i = dir > 0 ? i + 1 : i - 1; if (i < 0 || i >= line.length - 1) break; }
+        return { x, z, left }; };
+      const sh = best.d < 25 ? 32 : 0, fw = walk(1, sh), bw = walk(-1, sh), pick = fw.left <= bw.left ? fw : bw;
+      const alt = [pick, walk(1, sh + 55), walk(-1, sh + 55), walk(1, sh + 110), walk(-1, sh + 110)].filter(q => q.left <= 0 || q === pick);   // ตำแหน่งสำรอง (หลบป้ายค่าตู้)
+      const prev = out.get(nm); if (!prev || best.d < prev.d) out.set(nm, { d: best.d, alt, major: MAJOR.test(t.highway) });
+    }
+    for (const r of st.roadNames || []) out.set(r.text, { d: 0, alt: [{ x: cx + r.e, z: cz - r.n }], major: true });   // กำหนดเองรายสถานี (ตอ., เหนือ จากตู้)
+    const list = [...out.entries()].sort((a, b) => (b[1].major - a[1].major) || a[1].d - b[1].d).slice(0, 6);
+    state.roadMk = list.map(([nm, r]) => { const el = document.createElement('div'); el.className = 'frc3d-road'; el.textContent = nm; el.style.zIndex = 1;
+      const lls = r.alt.map(q => [st.lon + q.x / kx, st.lat - q.z / kz]); return { mk: new ml.Marker({ element: el, anchor: 'center' }).setLngLat(lls[0]).addTo(map), lls, ll: lls[0], el }; });
+    const upd = () => { const c = map.getCenter(), b = map.getBearing() * Math.PI / 180, z = map.getZoom(), kxm = 111320 * Math.cos(c.lat * Math.PI / 180);
+      const card = state.wrap.querySelector('.frc3d-card'), cr = card && card.getBoundingClientRect(), shown = [], W = state.wrap.clientWidth, H = state.wrap.clientHeight;
+      for (const m of state.roadMk) {
+        let ok = false;
+        for (const ll of z > 15 ? m.lls : []) {                                        // ลองทีละตำแหน่ง: อยู่หน้ากล้อง · อยู่ในจอ · ไม่ทับป้ายค่าตู้/ป้ายถนนอื่น
+          const dx = (ll[0] - c.lng) * kxm, dy = (ll[1] - c.lat) * 110540, d = Math.hypot(dx, dy);
+          if (!(d < 12 || (dx * Math.sin(b) + dy * Math.cos(b)) / d > -0.25)) continue;
+          const pt = map.project(ll), w = m.w || (m.w = m.el.offsetWidth || 120), h = 22;
+          if (pt.x < 10 || pt.y < 90 || pt.x > W - 10 || pt.y > H - 40) continue;
+          const r = { left: pt.x - w / 2, right: pt.x + w / 2, top: pt.y - h / 2, bottom: pt.y + h / 2 }, ro = state.wrap.getBoundingClientRect();
+          const rr = { left: r.left + ro.left, right: r.right + ro.left, top: r.top + ro.top, bottom: r.bottom + ro.top };
+          const hit = q => q && rr.left < q.right + 6 && rr.right > q.left - 6 && rr.top < q.bottom + 6 && rr.bottom > q.top - 6;
+          if (hit(cr) || shown.some(hit)) continue;
+          if (m.ll !== ll) { m.ll = ll; m.mk.setLngLat(ll); }
+          shown.push(rr); ok = true; break;
+        }
+        m.el.style.display = ok ? '' : 'none';
+      } };
+    map.on('move', upd); upd();
+    if (list.length) console.log('[FRC3D] ชื่อถนน:', list.map(x => x[0]).join(', '));
   }
   // สีพื้นที่ รพ./โรงเรียน (ชมพู/เหลือง) ในแผนที่ฐาน → สีลานปูน ให้เข้ากับฉาก 3 มิติ
   function neutralLanduse(map) {
