@@ -15704,8 +15704,96 @@ function _v39InjectUI() {
         '<span>📐 ใช้ความเร็วจริงรายสถานี <span style="color:#6080a0;">(ปิด = contour เดิม)</span></span></label>' +
       '<button onclick="event.stopPropagation();window._v39Validate()" style="width:100%;padding:5px;font-size:10.5px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;border:1px solid #0b63c4;background:#eef5ff;color:#0b3d7a;cursor:pointer;">ตรวจ contour เทียบค่าวัดจริง</button>' +
       '<div id="v39-result" style="font-size:10px;color:#0b3d7a;margin-top:5px;line-height:1.45;"></div>' +
+      '<button onclick="event.stopPropagation();window._v40TravelCheck()" style="width:100%;margin-top:6px;padding:5px;font-size:10.5px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;border:1px solid #1d7a4f;background:#eefaf3;color:#145c3a;cursor:pointer;">⏱ ตรวจเวลาเดินน้ำ (พีค) + K แนะนำ</button>' +
+      '<div id="v40-tt-result" style="font-size:10px;color:#145c3a;margin-top:5px;line-height:1.45;"></div>' +
     '</div>');
 }
+
+// ══════ [v40] ตรวจเวลาเดินน้ำ (พีค) + K แนะนำ — แสดงผลอย่างเดียว ไม่เปลี่ยนค่าในระบบ ══════
+//   ขั้น 1  t: จับคู่พีคบน/พีคล่างของ ต้นทาง → ปลายทาง ด้วย cross-correlation ทั้ง EC และ FRC
+//            (ถังละ 30 นาที · ตัดรอบรายวันออก [ค่าเฉลี่ยรายช่วงเวลาของวัน] + ตัดแนวโน้มช้า [ค่าเฉลี่ยเคลื่อนที่ 24 ชม.])
+//            แล้วเทียบกับเวลาในตาราง v39 → ยืนยัน (r ≥ 0.5 และห่างไม่เกิน 1.5 ชม./15%) / ต่าง (พีคชัดแต่ห่าง) / ไม่ชัด (r < 0.5)
+//   ขั้น 2  K: ตรึง t ตามตาราง แล้วหา K ที่ทำให้ค่าเอียงเป็นศูนย์  K = −ln(Σค่าวัดปลายทาง / ΣC₀(เวลา − t)) / t
+//            รวมเป็นค่าแนะนำรายสถานีต้นทาง (ค่ามัธยฐานถ่วงด้วยจำนวนจุด) เทียบกับ K ปัจจุบัน (EPANET Parameters)
+//   ข้อมูล: history ใน Firebase (FRC + EC ทุก 15 นาที ย้อนหลัง 7 วัน)
+window._v40TravelCheck = async function () {
+  const el = document.getElementById('v40-tt-result'); if (el) el.innerHTML = 'กำลังคำนวณ…';
+  let H = {};
+  try { H = await fbLoadHistory(); } catch (e) {}
+  const loc = loadHistory() || {};
+  for (const [k, a] of Object.entries(loc)) { if (!H[k] || H[k].length < a.length) H[k] = a; }
+  const BIN = 1800000, now = Date.now(), t0 = now - 168 * 3600000, NB = Math.ceil((now - t0) / BIN), DAY = 48;
+  const series = (code, key, lo, hi) => {                 // ค่าเฉลี่ยรายถัง 30 นาที
+    const arr = H[code] || H[String(code).replace(/-/g, '_')] || [], sum = new Float64Array(NB), cnt = new Uint16Array(NB);
+    for (const p of arr) { const v = p && p[key]; if (!(p && p.ts >= t0) || !(v >= lo && v <= hi)) continue; const i = Math.floor((p.ts - t0) / BIN); if (i >= 0 && i < NB) { sum[i] += v; cnt[i]++; } }
+    const out = new Array(NB).fill(null); for (let i = 0; i < NB; i++) if (cnt[i]) out[i] = sum[i] / cnt[i]; return out;
+  };
+  const anomaly = x => {                                   // ตัดรอบรายวัน + แนวโน้มช้า
+    const prof = new Float64Array(DAY), pc = new Uint16Array(DAY), slot0 = Math.floor(((t0 + 7 * 3600000) % 86400000) / BIN);
+    x.forEach((v, i) => { if (v != null) { const k = (slot0 + i) % DAY; prof[k] += v; pc[k]++; } });
+    const d = x.map((v, i) => v == null ? null : v - (pc[(slot0 + i) % DAY] >= 3 ? prof[(slot0 + i) % DAY] / pc[(slot0 + i) % DAY] : 0));
+    return d.map((v, i) => { if (v == null) return null; let s2 = 0, c = 0; for (let j = Math.max(0, i - 24); j <= Math.min(NB - 1, i + 24); j++) if (d[j] != null) { s2 += d[j]; c++; } return c >= 12 ? v - s2 / c : null; });
+  };
+  const xcorr = (a, b, lagBins) => {                       // r ระหว่าง ต้นทาง[i] กับ ปลายทาง[i+lag]
+    let n = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
+    for (let i = 0; i + lagBins < NB; i++) { const x = a[i], y = b[i + lagBins]; if (x == null || y == null) continue; n++; sa += x; sb += y; saa += x * x; sbb += y * y; sab += x * y; }
+    if (n < 60) return null; const cov = sab / n - (sa / n) * (sb / n), va = saa / n - (sa / n) ** 2, vb = sbb / n - (sb / n) ** 2;
+    return va > 1e-12 && vb > 1e-12 ? { r: cov / Math.sqrt(va * vb), n } : null;
+  };
+  const prevC = window.V39_CAL_TT; window.V39_CAL_TT = true; _v39BuildAnchors(); const base = JSON.parse(JSON.stringify(window._v39Anchors)); window.V39_CAL_TT = prevC; _v39BuildAnchors(); window._v39Memo = {};
+  const tf = window._tempKFactor || 1, kNow = sid => CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid] : (STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : K_total * 3600);
+  const rows = [], perSrc = {};
+  for (const [sid, A] of Object.entries(base)) {
+    const srcS = SENSORS.find(s => String(s.id) === sid);
+    if (srcS && typeof _isSensorDown === 'function' && _isSensorDown(srcS)) continue;
+    const sF = series(sid, 'frc', 0.02, 5), sE = series(sid, 'ec', 50, 3000), aF = anomaly(sF), aE = anomaly(sE);
+    for (const a of A) {
+      const dstS = SENSORS.find(s => String(s.id) === a.id);
+      if (dstS && typeof _isSensorDown === 'function' && _isSensorDown(dstS)) continue;
+      const dF = series(a.id, 'frc', 0.02, 3), dE = series(a.id, 'ec', 50, 3000), bF = anomaly(dF), bE = anomaly(dE);
+      const tt = a.tt, Lmax = Math.min(96, Math.max(24, Math.ceil(tt * 2 * 2) + 12)), tol = Math.max(1.5, 0.15 * tt);   // ยืนยัน = พีคห่างจากตารางไม่เกิน 1.5 ชม. หรือ 15%
+      const scan = (x, y) => { let best = null, atT = null; for (let L = 0; L <= Lmax; L++) { const c = xcorr(x, y, L); if (!c) continue; if (!best || c.r > best.r) best = { r: c.r, lag: L / 2, n: c.n }; if (Math.abs(L / 2 - tt) < 0.26) atT = c.r; } return best ? Object.assign(best, { atT }) : null; };
+      const pe = scan(aE, bE), pf = scan(aF, bF);
+      const strong = q => q && q.r >= 0.5, near = q => q && Math.abs(q.lag - tt) <= tol;
+      let verdict = 'ไม่ชัด';
+      if ((strong(pe) && near(pe)) || (strong(pf) && near(pf))) verdict = 'ยืนยัน';
+      else if (strong(pe) || strong(pf)) verdict = 'ต่าง';
+      // ขั้น 2: K ที่ทำให้ค่าเอียง = 0 (ตรึง t ตามตาราง)
+      const sh = Math.round(tt * 2); let so = 0, sc = 0, n = 0;
+      for (let i = sh; i < NB; i++) { const o = dF[i], c0 = sF[i - sh]; if (o == null || c0 == null) continue; so += o; sc += c0; n++; }
+      let kFit = null, flag = '';
+      if (n >= 24) { const ratio = so / sc; if (ratio >= 1) flag = 'ปลายทาง ≥ ต้นทาง (ตรวจเซนเซอร์)'; else kFit = -Math.log(ratio) / (tt * tf); }
+      const k0 = kNow(sid);
+      const row = { สถานี: a.name.slice(0, 26), ต้นทาง: sid, 'ชม.ตาราง': +tt.toFixed(1),
+        'พีค EC (ชม.)': pe ? pe.lag : null, 'r EC': pe ? +pe.r.toFixed(2) : null, 'พีค FRC (ชม.)': pf ? pf.lag : null, 'r FRC': pf ? +pf.r.toFixed(2) : null,
+        ผล: verdict, 'K ปัจจุบัน': +k0.toFixed(3), 'K ที่เอียง=0': kFit != null ? +kFit.toFixed(3) : null, n, หมายเหตุ: flag };
+      rows.push(row);
+      if (kFit != null && kFit < 0.6) (perSrc[sid] = perSrc[sid] || { k0, list: [] }).list.push([kFit, n, a.name]);
+    }
+  }
+  const wmed = L => { const s2 = [...L].sort((x, y) => x[0] - y[0]), tot = s2.reduce((t, x) => t + x[1], 0); let c = 0; for (const x of s2) { c += x[1]; if (c >= tot / 2) return x[0]; } return null; };
+  const kTab = Object.entries(perSrc).map(([sid, o]) => { const km = wmed(o.list), sp = Math.max(...o.list.map(x => x[0])) - Math.min(...o.list.map(x => x[0]));
+    return { ต้นทาง: sid, 'K ปัจจุบัน': +o.k0.toFixed(3), 'K แนะนำ': +km.toFixed(3), 'เปลี่ยน %': Math.round((km / o.k0 - 1) * 100), 'จำนวนคู่': o.list.length, 'ช่วงรายคู่': +sp.toFixed(3) }; })
+    .sort((a, b) => Math.abs(b['เปลี่ยน %']) - Math.abs(a['เปลี่ยน %']));
+  window._v40TT = { rows, kTab };
+  console.log('%c[ตรวจเวลาเดินน้ำ] ขั้น 1 เวลา (พีค) + ขั้น 2 K ที่เอียง=0 · ย้อนหลัง 7 วัน · ไม่ได้เปลี่ยนค่าใดในระบบ', 'font-weight:bold;color:#145c3a');
+  console.table(rows); console.table(kTab);
+  const cnt = v => rows.filter(r => r.ผล === v).length, diff = rows.filter(r => r.ผล === 'ต่าง');
+  const td = 'style="padding:1px 3px;text-align:right;"';
+  if (el) el.innerHTML = 'ย้อนหลัง 7 วัน · ' + rows.length + ' คู่ · <b>ยืนยัน ' + cnt('ยืนยัน') + '</b> · ต่าง ' + cnt('ต่าง') + ' · ไม่ชัด ' + cnt('ไม่ชัด') +
+    (diff.length ? '<div style="margin-top:4px;font-weight:700;">เวลาพีครอบนี้ต่างจากตาราง</div><table style="width:100%;font-size:9.5px;border-collapse:collapse;"><tr style="color:#5d7a6a;"><td>สถานี</td><td ' + td + '>ตาราง</td><td ' + td + '>EC</td><td ' + td + '>FRC</td></tr>' +
+      diff.map(r => '<tr><td>' + r.สถานี.slice(0, 18) + '</td><td ' + td + '>' + r['ชม.ตาราง'] + '</td><td ' + td + '>' + (r['r EC'] >= 0.5 ? r['พีค EC (ชม.)'] : '—') + '</td><td ' + td + '>' + (r['r FRC'] >= 0.5 ? r['พีค FRC (ชม.)'] : '—') + '</td></tr>').join('') + '</table>' : '') +
+    (kTab.length ? '<div style="margin-top:4px;font-weight:700;">K แนะนำรายต้นทาง (t ตามตาราง)</div><table style="width:100%;font-size:9.5px;border-collapse:collapse;"><tr style="color:#5d7a6a;"><td>ต้นทาง</td><td ' + td + '>ปัจจุบัน</td><td ' + td + '>แนะนำ</td><td ' + td + '>คู่</td></tr>' +
+      kTab.map(k => '<tr><td>' + k.ต้นทาง + '</td><td ' + td + '>' + k['K ปัจจุบัน'] + '</td><td ' + td + ' title="' + k['เปลี่ยน %'] + '%"><b>' + k['K แนะนำ'] + '</b></td><td ' + td + '>' + k['จำนวนคู่'] + '</td></tr>').join('') + '</table>' : '') +
+    '<div style="color:#6b8a78;margin-top:3px;">ตารางเต็มใน Console (F12) · ค่าแนะนำเท่านั้น — ปรับ K เองที่ EPANET Parameters · <a href="#" onclick="event.preventDefault();event.stopPropagation();window._v40TTcsv()">ดาวน์โหลด CSV</a></div>';
+  return window._v40TT;
+};
+window._v40TTcsv = function () {
+  const R = (window._v40TT && window._v40TT.rows) || []; if (!R.length) return;
+  const keys = Object.keys(R[0]), esc = v => v == null ? '' : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  const csv = '﻿' + keys.join(',') + '\n' + R.map(r => keys.map(k => esc(r[k])).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'travel_time_check_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+};
 window.addEventListener('load', function(){ setTimeout(_v39InjectUI, 4000); });
 (function(){
   const core = buildIdwCache;
