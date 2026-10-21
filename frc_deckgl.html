@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบตรวจสอบคุณภาพน้ำระบบจ่ายคลอรีนปลายสาย</title>
+<script src="https://unpkg.com/deck.gl@8.9.36/dist.min.js" crossorigin="anonymous" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/deck.gl@8.9.36/dist.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js" crossorigin="anonymous"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:#04070f;color:#c8d6e5;overflow:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+#map{position:fixed;inset:0;width:100vw;height:100vh}
+
+.header{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:12px 22px;background:linear-gradient(180deg,rgba(4,7,15,0.95) 0%,rgba(4,7,15,0.6) 60%,transparent);pointer-events:none}
+.header h1{font-family:'IBM Plex Sans Thai',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.3px;background:linear-gradient(90deg,#22d3ee,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 12px rgba(34,211,238,0.35))}
+.header .sub{font-size:9px;color:#5b7089;letter-spacing:3px;text-transform:uppercase;margin-top:2px}
+.theme-btn{background:transparent;border:none;color:#7d93ab;padding:4px 12px;border-radius:16px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;transition:all 0.15s}
+.theme-btn.active{background:rgba(34,211,238,0.22);color:#67e8f9}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;padding:4px 12px;border-radius:20px;border:1px solid rgba(251,191,36,0.35);color:#fbbf24;background:rgba(10,18,34,0.75);pointer-events:auto;backdrop-filter:blur(8px)}
+.dot{width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+.clock{font-family:'JetBrains Mono';font-size:19px;color:#22d3ee;font-weight:700;text-shadow:0 0 14px rgba(34,211,238,0.5)}
+.clock-date{font-size:9px;color:#5b7089}
+
+.glass{background:rgba(7,13,26,0.82);border:1px solid rgba(34,211,238,0.14);border-radius:14px;backdrop-filter:blur(14px);box-shadow:0 8px 32px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.04)}
+
+.rank-panel{position:fixed;top:70px;left:16px;z-index:10;padding:12px 14px;width:196px}
+.rank-title{font-size:9px;color:#5b7089;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:9px}
+.rank-item{display:flex;align-items:center;gap:7px;font-size:11px;padding:3px 2px;cursor:pointer;border-radius:6px;transition:background 0.15s}
+.rank-item:hover{background:rgba(34,211,238,0.08)}
+.rank-code{width:25px;font-weight:700;color:#67e8f9}
+.rank-bar{flex:1;height:5px;background:#141f33;border-radius:3px;overflow:hidden}
+.rank-bar-f{height:100%;border-radius:3px;box-shadow:0 0 6px currentColor}
+.rank-val{width:33px;text-align:right;font-weight:700;font-size:10px}
+
+.info-panel{position:fixed;top:70px;right:16px;width:296px;z-index:10;padding:16px;max-height:calc(100vh - 90px);overflow-y:auto;display:none}
+.info-panel.show{display:block}
+.info-panel::-webkit-scrollbar{width:4px}
+.info-panel::-webkit-scrollbar-thumb{background:rgba(34,211,238,0.3);border-radius:2px}
+.info-panel .close{position:absolute;top:12px;right:14px;cursor:pointer;color:#5b7089;font-size:17px;transition:color 0.15s}
+.info-panel .close:hover{color:#f87171}
+.info-panel .code{font-family:'Orbitron';font-size:24px;font-weight:900;color:#67e8f9;text-shadow:0 0 16px rgba(103,232,249,0.4)}
+.info-panel .name{font-size:11px;color:#7d93ab;margin-bottom:11px}
+.stat-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(51,65,85,0.22)}
+.stat-label{color:#7d93ab}.stat-value{font-weight:700}
+.section-t{font-size:10px;color:#5b7089;font-weight:700;text-transform:uppercase;letter-spacing:1.6px;margin:13px 0 7px}
+.calc-card{background:rgba(15,25,45,0.55);border:1px solid rgba(34,211,238,0.08);border-radius:10px;padding:11px;margin-top:6px}
+.slider-row{margin-bottom:9px}
+.slider-row label{font-size:10px;color:#7d93ab;display:block;margin-bottom:3px}
+.slider-row input[type=range]{width:100%;height:4px;-webkit-appearance:none;background:#141f33;border-radius:2px;outline:none}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:#22d3ee;cursor:pointer;box-shadow:0 0 8px rgba(34,211,238,0.6)}
+.slider-val{text-align:center;font-weight:700;font-size:12px;margin-top:2px}
+.result-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px}
+.result-box{background:rgba(20,31,51,0.6);border:1px solid rgba(34,211,238,0.06);border-radius:8px;padding:7px;text-align:center}
+.result-box .rl{font-size:9px;color:#5b7089}.result-box .rv{font-size:16px;font-weight:700}.result-box .ru{font-size:8px;color:#48596e}
+.bar-c{position:relative;height:19px;background:#141f33;border-radius:10px;overflow:hidden;margin-top:5px}
+.bar-f{position:absolute;left:0;top:0;height:100%;border-radius:10px;transition:width 0.5s}
+.bar-th{position:absolute;top:0;height:100%;border-left:2px dashed #fbbf24}
+.bar-t{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6)}
+.formula{font-size:9px;color:#5b7089;background:rgba(20,31,51,0.6);border-radius:8px;padding:6px 9px;margin-top:6px}
+
+.legend{position:fixed;bottom:16px;left:16px;z-index:10;padding:10px 13px;font-size:10px}
+/* ===== มือถือ ===== */
+@media(max-width:640px){
+  .rank-panel{display:none}
+  .legend{display:none}
+  .header{padding:8px 10px;flex-wrap:wrap;gap:6px}
+  .header h1,.header .title{font-size:13px!important}
+  .header .sub{display:none}
+  .info-panel{top:auto;bottom:0;left:0;right:0;width:100vw;max-height:62vh;border-radius:18px 18px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom))}
+  .open-st-btn{display:block!important;text-align:center;font-size:14px!important;padding:11px!important;margin-top:10px;background:rgba(34,211,238,0.14);font-weight:700}
+  .dp-wrap{padding:8px}
+  .dp-head{flex-wrap:wrap;gap:8px}
+}
+.legend-item{display:flex;align-items:center;gap:7px;margin:3px 0}
+.legend-dot{width:9px;height:9px;border-radius:3px;box-shadow:0 0 6px currentColor}
+.legend-line{width:15px;height:3px;border-radius:2px;box-shadow:0 0 5px currentColor}
+
+.ctrl{position:fixed;bottom:16px;right:16px;z-index:10;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.ctrl button{background:rgba(7,13,26,0.85);border:1px solid rgba(34,211,238,0.22);color:#67e8f9;padding:7px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;backdrop-filter:blur(8px);transition:all 0.15s}
+.ctrl button:hover{background:rgba(34,211,238,0.12);box-shadow:0 0 12px rgba(34,211,238,0.25)}
+.ctrl button.active{background:rgba(34,211,238,0.22);box-shadow:0 0 14px rgba(34,211,238,0.3)}
+
+.mock-badge{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);z-index:10;font-size:9px;color:#fbbf24;background:rgba(251,191,36,0.09);border:1px solid rgba(251,191,36,0.22);padding:4px 12px;border-radius:12px;backdrop-filter:blur(6px)}
+
+/* ===== MOBILE ===== */
+@media (max-width:820px){
+  .header{padding:8px 10px;flex-wrap:wrap;gap:6px}
+  .header h1{font-size:12.5px}
+  .sub{display:none}
+  .header>div:last-child .clock{font-size:14px}
+  .clock-date{display:none}
+  .theme-btn{padding:5px 9px;font-size:10px}
+  .badge{display:none}
+  .rank-panel{display:none}
+  .legend{display:none}
+  .mock-badge{display:none}
+  .ctrl{bottom:10px;left:10px;right:10px;gap:5px;justify-content:center}
+  .ctrl button{padding:7px 10px;font-size:10.5px;flex:1 1 auto;max-width:31%}
+  .info-panel{top:auto;bottom:58px;left:8px;right:8px;width:auto;max-height:44vh;padding:12px;border-radius:14px 14px 10px 10px}
+  #alarmBanner{top:auto;bottom:112px;font-size:11.5px;padding:7px 10px;gap:6px}
+  #alCfg{right:8px;left:8px;bottom:58px;width:auto;max-height:70vh;overflow-y:auto}
+  .maplibregl-ctrl-bottom-right{display:none}
+}
+/* ===== ALARM CONFIG PANEL ===== */
+#alCfg{display:none;position:fixed;right:16px;bottom:62px;z-index:57;width:252px;padding:13px 15px;font-size:12px;color:#c8d6e5}
+.alc-h{font-size:9.5px;color:#5b7089;font-weight:800;letter-spacing:1.2px;margin:9px 0 3px}
+.alc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
+.alc-row input[type=number]{width:64px;background:rgba(10,20,36,0.92);border:1px solid rgba(34,211,238,0.3);color:#c8e6f5;border-radius:8px;padding:4px 7px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.alc-row input[type=checkbox]{accent-color:#22d3ee;width:15px;height:15px}
+.alc-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.alc-btn{flex:1;background:rgba(34,211,238,0.14);border:1px solid rgba(34,211,238,0.4);color:#67e8f9;border-radius:9px;padding:6px 0;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px}
+.alc-btn.ghost{background:transparent;border-color:rgba(100,116,139,0.4);color:#8aa3bd}
+/* ===== ALARM ===== */
+#alarmVig{display:none;position:fixed;inset:0;z-index:55;pointer-events:none;animation:alvig 1.1s ease-in-out infinite}
+@keyframes alvig{0%,100%{box-shadow:inset 0 0 90px 18px rgba(239,68,68,0.26)}50%{box-shadow:inset 0 0 160px 46px rgba(239,68,68,0.58)}}
+#alarmBanner{display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:56;align-items:center;gap:9px;background:rgba(68,8,10,0.93);border:1px solid rgba(248,113,113,0.65);border-radius:14px;padding:8px 15px;color:#fecaca;font-size:12.5px;font-weight:700;backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(239,68,68,0.4);max-width:86vw;flex-wrap:wrap}
+.al-dot{width:11px;height:11px;border-radius:50%;background:#ef4444;box-shadow:0 0 14px #ef4444;animation:alblink 0.8s steps(2,start) infinite;flex:none}
+@keyframes alblink{to{visibility:hidden}}
+.al-chip{background:rgba(239,68,68,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:9px;padding:2px 10px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px}
+.al-btn{background:rgba(254,202,202,0.12);border:1px solid rgba(248,113,113,0.5);color:#fecaca;border-radius:9px;padding:3px 12px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700}
+#loading{position:fixed;inset:0;z-index:100;background:#04070f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.6s;overflow:hidden}
+#loading::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 62% 46% at 50% 42%,rgba(34,211,238,0.10),transparent 70%)}
+#loading::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(34,211,238,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,0.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse 72% 62% at 50% 45%,#000 25%,transparent 75%);mask-image:radial-gradient(ellipse 72% 62% at 50% 45%,#000 25%,transparent 75%)}
+.ld-wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:min(360px,84vw)}
+.ld-logo{font-family:monospace;font-size:10.5px;letter-spacing:6px;color:#22d3ee;text-shadow:0 0 18px rgba(34,211,238,0.55);margin-bottom:8px}
+.ld-title{font-size:16.5px;font-weight:800;color:#e8f2fb;letter-spacing:0.4px;margin-bottom:28px;text-align:center}
+.ld-track{width:100%;height:9px;border-radius:99px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);overflow:hidden;position:relative;box-shadow:inset 0 1px 4px rgba(0,0,0,0.65),0 0 22px rgba(34,211,238,0.12)}
+.ld-fill{height:100%;width:3%;border-radius:99px;background:linear-gradient(90deg,#0891b2,#22d3ee 60%,#7dd3fc);box-shadow:0 0 16px rgba(34,211,238,0.8);transition:width 0.45s cubic-bezier(.25,.8,.3,1);position:relative;overflow:hidden}
+.ld-fill::after{content:"";position:absolute;inset:0;width:46%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent);animation:ldsheen 1.15s ease-in-out infinite}
+@keyframes ldsheen{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+.ld-meta{display:flex;justify-content:space-between;width:100%;margin-top:11px;font-size:11.5px}
+.ld-status{color:#5b7089}
+.ld-pct{font-family:monospace;color:#67e8f9;font-weight:700;text-shadow:0 0 10px rgba(34,211,238,0.4)}
+.spin{width:44px;height:44px;border:3px solid rgba(34,211,238,0.15);border-top-color:#22d3ee;border-radius:50%;animation:s 0.9s linear infinite;box-shadow:0 0 20px rgba(34,211,238,0.2)}
+@keyframes s{to{transform:rotate(360deg)}}
+.deck-tooltip{font-family:'IBM Plex Sans Thai'!important;background:rgba(7,13,26,0.95)!important;border:1px solid rgba(34,211,238,0.35)!important;border-radius:10px!important;padding:9px 13px!important;color:#c8d6e5!important;font-size:12px!important;box-shadow:0 6px 24px rgba(0,0,0,0.5)!important}
+</style>
+</head>
+<body>
+<div id="loading"><div class="ld-wrap">
+  <div class="ld-logo">MWA &middot; FRC DIGITAL TWIN</div>
+  <div class="ld-title">ระบบตรวจสอบคุณภาพน้ำระบบจ่ายคลอรีนปลายสาย</div>
+  <div class="ld-track"><div class="ld-fill" id="ldFill"></div></div>
+  <div class="ld-meta"><span class="ld-status" id="ldStatus">กำลังเริ่มระบบ...</span><span class="ld-pct" id="ldPct">0%</span></div>
+</div></div>
+<div id="map"></div>
+<div id="errToast" style="display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:300;background:rgba(127,29,29,0.94);border:1px solid #f87171;color:#fecaca;font-size:11px;padding:7px 15px;border-radius:8px;max-width:84%;backdrop-filter:blur(6px);text-align:center"></div>
+
+<div class="header">
+  <div><h1>ระบบตรวจสอบคุณภาพน้ำระบบจ่ายคลอรีนปลายสาย</h1><div class="sub">FRC Digital Twin • MWA Chlorine Decay Monitoring</div></div>
+  <div style="display:flex;gap:10px;align-items:center;pointer-events:auto">
+    <div style="display:flex;gap:4px;background:rgba(7,13,26,0.82);border:1px solid rgba(34,211,238,0.18);border-radius:20px;padding:3px">
+      <button id="pm-frc" class="theme-btn active" onclick="setParam('frc')"><span style="color:#22d3ee">●</span> คลอรีนอิสระคงเหลือ</button>
+      <button id="pm-turb" class="theme-btn" onclick="setParam('turb')"><span style="color:#eab308">●</span> ความขุ่น</button>
+    </div>
+    <div style="display:flex;gap:4px;background:rgba(7,13,26,0.82);border:1px solid rgba(34,211,238,0.18);border-radius:20px;padding:3px">
+      <button id="btn-dark" class="theme-btn active" onclick="setTheme('dark')">🌑 มืด</button>
+      <button id="btn-white" class="theme-btn" onclick="setTheme('white')">⬜ ขาว</button>
+        <button class="theme-btn" onclick="uiZoom(-0.15)" title="ย่อป้ายสถานี">ก−</button>
+        <button class="theme-btn" onclick="uiZoom(0.15)" title="ขยายป้ายสถานี">ก+</button>
+    </div>
+    <a href="frc_chlorine.html" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(7,13,26,0.82);border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:6px 14px;font-size:11px;color:#fbbf24;text-decoration:none;font-weight:600">🧪 สต็อกคลอรีน (ถัง)</a>
+<a href="frc_dashboard.html" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(7,13,26,0.82);border:1px solid rgba(34,211,238,0.18);border-radius:20px;padding:6px 14px;font-size:11px;color:#67e8f9;text-decoration:none;font-weight:600">📊 Dashboard</a>
+    
+    <div class="badge"><div class="dot"></div><span>DEMO MODE</span></div>
+  </div>
+  <div style="text-align:right"><div class="clock" id="clock">--:--:--</div><div class="clock-date" id="clockDate"></div></div>
+</div>
+
+<div class="rank-panel glass"><div class="rank-title">Decay Rate Ranking (k/day)</div><div id="rankList"></div><div style="font-size:8px;color:#48596e;margin-top:7px">ข้อมูลจริง ม.ค.-มี.ค. 69 · สมมติระดับ 4.0 ม. · SR ข้อมูลน้อย</div></div>
+
+<div class="info-panel glass" id="infoPanel"></div>
+
+<div class="legend glass">
+  <div id="legendParam">
+  <div style="font-size:9px;color:#5b7089;margin-bottom:6px;font-weight:700;letter-spacing:1px">FRC OUTLET STATUS</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22d3ee;color:#22d3ee"></div><span>ผ่านเกณฑ์ (≥0.8 mg/L)</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24;color:#fbbf24"></div><span>ระวัง (0.5–0.8)</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171;color:#f87171"></div><span>ต่ำกว่าเกณฑ์ (<0.5)</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa;color:#a78bfa"></div><span>Booster Active (FRC ออก &gt; เข้า)</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;color:#f59e0b"></div><span>⇄ Bypass (น้ำไม่ผ่านถัง)</span></div>
+  </div>
+  <div class="legend-item" style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(51,65,85,0.3)"><div class="legend-line" style="background:#22c55e;color:#22c55e;height:5px"></div><span>อุโมงค์ MTR → PK TP RB</span></div>
+  <div class="legend-item"><div class="legend-line" style="background:#f97316;color:#f97316;height:5px"></div><span>อุโมงค์ TR1 → LP TP SR (+RB)</span></div>
+  <div class="legend-item"><div class="legend-line" style="background:#eab308;color:#eab308;height:5px"></div><span>อุโมงค์ TR2 → LA KT SR (+BP)</span></div>
+  <div class="legend-item"><div class="legend-line" style="background:#ec4899;color:#ec4899;height:5px"></div><span>อุโมงค์ TR3 → MB LK BP</span></div>
+  <div class="legend-item"><div class="legend-line" style="background:#67e8f9;color:#67e8f9"></div><span>ขอบเขตพื้นที่บริการ กปน.</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(34,211,238,0.14);border:1px solid rgba(34,211,238,0.35);box-shadow:none"></div><span>เขตสาขา 18 เขต (จาง)</span></div>
+</div>
+
+<div class="mock-badge">โหมด LIVE: intranet → public API → demo อัตโนมัติ | k จากข้อมูล ม.ค.-มี.ค. 69</div>
+
+<div id="alarmVig"></div>
+<div id="alarmBanner"></div>
+<div id="alCfg" class="glass">
+  <div style="font-weight:800;color:#e8f2fb;font-size:13px;margin-bottom:2px">⚙ ตั้งค่าแจ้งเตือน</div>
+  <div class="alc-h">FRC ขาออก (mg/L) — เตือนเมื่อต่ำกว่า</div>
+  <div class="alc-row"><span><span class="alc-dot" style="background:#f87171"></span>แดง (วิกฤต) &lt;</span><input type="number" id="alFrcRed" step="0.05" min="0"></div>
+  <div class="alc-row"><span><span class="alc-dot" style="background:#fbbf24"></span>เหลือง (เฝ้าระวัง) &lt;</span><input type="number" id="alFrcYel" step="0.05" min="0"></div>
+  <div class="alc-h">ความขุ่น (NTU) — เตือนเมื่อเกิน</div>
+  <div class="alc-row"><span><span class="alc-dot" style="background:#fbbf24"></span>เหลือง (เฝ้าระวัง) &gt;</span><input type="number" id="alTbYel" step="0.5" min="0"></div>
+  <div class="alc-row"><span><span class="alc-dot" style="background:#f87171"></span>แดง (วิกฤต) &gt;</span><input type="number" id="alTbRed" step="0.5" min="0"></div>
+  <div class="alc-h">พฤติกรรม</div>
+  <div class="alc-row"><span>วาบขอบจอเมื่อระดับแดง</span><input type="checkbox" id="alVig"></div>
+  <div class="alc-row"><span>เสียงเตือนระดับเหลืองด้วย</span><input type="checkbox" id="alSndYel"></div>
+  <button class="alc-btn" style="width:100%;margin-top:10px;background:rgba(239,68,68,0.14);border-color:rgba(248,113,113,0.5);color:#fca5a5" onclick="testAlarm()">🔔 ทดสอบสัญญาณเตือน (10 วินาที)</button>
+  <div style="display:flex;gap:7px;margin-top:8px">
+    <button class="alc-btn" onclick="saveAlCfg()">บันทึก</button>
+    <button class="alc-btn ghost" onclick="resetAlCfg()">ค่าเริ่มต้น</button>
+    <button class="alc-btn ghost" style="flex:0 0 46px" onclick="document.getElementById('alCfg').style.display='none'">ปิด</button>
+  </div>
+  <div style="font-size:10px;color:#48596e;margin-top:8px">ระดับแดง: ไซเรน+วาบจอ+แหวนแดง · ระดับเหลือง: แบนเนอร์+แหวนเหลือง</div>
+</div>
+<div class="ctrl">
+  <button id="btn-snd" onclick="alarmBtn(event)" title="คลิก = เปิด/ปิดเสียง | Shift+คลิก = ทดสอบ alarm">🔔 เสียงเตือน</button>
+  <button onclick="toggleAlCfg()" title="ตั้งค่าแจ้งเตือน">⚙ ตั้งค่าเตือน</button>
+  <button id="btn-pipe" class="active" onclick="toggleLayer('pipe')">ท่อประธาน</button>
+  <button id="btn-area" class="active" onclick="toggleLayer('area')">พื้นที่บริการ</button>
+  <button onclick="resetView()">มุมมองเริ่มต้น</button>
+  <button onclick="topView()">มุมบน</button>
+</div>
+<script>
+const DISTRICTS_GEOJSON={"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"ภาษีเจริญ","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.470498,13.722973],[100.469142,13.72377],[100.467571,13.724798],[100.466339,13.726365],[100.465045,13.728368],[100.463936,13.730386],[100.462755,13.732479],[100.462407,13.734138],[100.462084,13.735969],[100.46158,13.738907],[100.461571,13.741295],[100.461956,13.744373],[100.460158,13.743878],[100.458598,13.743643],[100.457196,13.743952],[100.456954,13.743037],[100.455333,13.741908],[100.454206,13.742285],[100.452743,13.74143],[100.45115,13.741164],[100.449712,13.740466],[100.448357,13.740435],[100.445977,13.740675],[100.443208,13.740142],[100.441196,13.740337],[100.439564,13.740061],[100.434494,13.740157],[100.431664,13.741223],[100.428663,13.742279],[100.42542,13.742971],[100.422981,13.743798],[100.420244,13.745138],[100.416963,13.747124],[100.41354,13.747856],[100.409503,13.748754],[100.404026,13.749751],[100.400736,13.750422],[100.395475,13.75115],[100.388819,13.752059],[100.382332,13.752828],[100.376803,13.753355],[100.370266,13.753673],[100.362534,13.753747],[100.354269,13.752386],[100.348109,13.751187],[100.341882,13.749154],[100.337091,13.74829],[100.331441,13.747587],[100.332764,13.740608],[100.332773,13.73684],[100.334828,13.733012],[100.336272,13.729837],[100.336377,13.727823],[100.336441,13.725963],[100.336314,13.72395],[100.336196,13.72227],[100.33763,13.718836],[100.337901,13.714027],[100.332551,13.712311],[100.333304,13.707791],[100.331593,13.704203],[100.331285,13.702613],[100.330317,13.700952],[100.330403,13.699481],[100.331197,13.697716],[100.33168,13.695158],[100.331922,13.693416],[100.332031,13.692482],[100.332059,13.69076],[100.332464,13.688563],[100.332578,13.687732],[100.332979,13.686323],[100.333426,13.684915],[100.333902,13.683413],[100.333445,13.681564],[100.33612,13.676959],[100.338046,13.675946],[100.338548,13.674008],[100.338604,13.672138],[100.338863,13.670229],[100.339017,13.668868],[100.339644,13.667291],[100.340149,13.665943],[100.340518,13.663973],[100.340784,13.662338],[100.341285,13.661189],[100.340931,13.659877],[100.340931,13.65893],[100.340233,13.65815],[100.339505,13.656901],[100.339358,13.655425],[100.339552,13.654288],[100.338713,13.652027],[100.338595,13.650339],[100.33816,13.64305],[100.338868,13.641603],[100.341145,13.638838],[100.342247,13.639152],[100.343045,13.639181],[100.343824,13.63933],[100.344943,13.639282],[100.346617,13.639751],[100.347829,13.640227],[100.349747,13.640379],[100.350809,13.640104],[100.352091,13.640218],[100.352057,13.6409],[100.354292,13.64086],[100.354192,13.641728],[100.354375,13.642173],[100.35474,13.642022],[100.354995,13.641807],[100.356041,13.642284],[100.356856,13.641092],[100.357963,13.637981],[100.35843,13.636744],[100.358494,13.634595],[100.358942,13.634198],[100.359821,13.634416],[100.360041,13.633895],[100.360176,13.633319],[100.361073,13.633355],[100.361236,13.632858],[100.361634,13.632781],[100.36167,13.631533],[100.362201,13.631507],[100.362698,13.631267],[100.362724,13.630896],[100.363048,13.630212],[100.363002,13.629651],[100.363175,13.629199],[100.363894,13.628764],[100.364446,13.628176],[100.365004,13.627899],[100.365148,13.627416],[100.365709,13.627612],[100.366334,13.627391],[100.366994,13.627303],[100.367275,13.626959],[100.367128,13.626259],[100.367738,13.626031],[100.368911,13.625824],[100.369144,13.625564],[100.369906,13.625493],[100.370468,13.625399],[100.37108,13.625511],[100.371311,13.624761],[100.371561,13.623126],[100.372824,13.620813],[100.37283,13.620153],[100.374696,13.618994],[100.375348,13.6187],[100.37744,13.620574],[100.384571,13.626958],[100.390241,13.632034],[100.396887,13.637984],[100.398314,13.639254],[100.398982,13.639849],[100.399498,13.640309],[100.399807,13.640585],[100.400317,13.64104],[100.40076,13.641437],[100.401273,13.641893],[100.401649,13.642231],[100.401934,13.642486],[100.404934,13.645161],[100.411913,13.651401],[100.415022,13.654184],[100.417674,13.656539],[100.423626,13.661869],[100.429965,13.667952],[100.429497,13.673962],[100.428894,13.679001],[100.428174,13.684267],[100.427655,13.688786],[100.42685,13.693061],[100.426596,13.695467],[100.426524,13.697877],[100.426653,13.699291],[100.426576,13.700894],[100.426339,13.705155],[100.426201,13.707332],[100.436557,13.710967],[100.460484,13.719376],[100.470498,13.722973]]]}},{"type":"Feature","properties":{"name":"บางเขน","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.641749,13.931419],[100.639982,13.93218],[100.639849,13.933872],[100.638761,13.934469],[100.633206,13.934713],[100.625839,13.937889],[100.625408,13.945453],[100.623293,13.949959],[100.622364,13.950353],[100.626434,13.927593],[100.626044,13.925323],[100.61096,13.89978],[100.607045,13.897148],[100.604477,13.894763],[100.596618,13.889476],[100.591715,13.884362],[100.58808,13.87967],[100.587678,13.875301],[100.586479,13.858648],[100.586837,13.857803],[100.587445,13.856323],[100.587484,13.854198],[100.587808,13.851403],[100.58878,13.846309],[100.589726,13.843874],[100.590051,13.843881],[100.591629,13.84437],[100.59326,13.845048],[100.594246,13.845333],[100.595679,13.845665],[100.596771,13.845767],[100.596983,13.84579],[100.597264,13.845945],[100.59772,13.846121],[100.598136,13.846151],[100.598444,13.846241],[100.598984,13.84635],[100.60068,13.846625],[100.602627,13.846985],[100.604332,13.848105],[100.6052,13.84855],[100.606489,13.849124],[100.607008,13.84926],[100.607547,13.849233],[100.608061,13.849169],[100.608567,13.849059],[100.608852,13.84907],[100.609395,13.849081],[100.609929,13.849103],[100.61027,13.849105],[100.610853,13.849067],[100.611443,13.849092],[100.612488,13.849112],[100.613243,13.849089],[100.614539,13.849001],[100.615348,13.848928],[100.616884,13.848775],[100.618919,13.848492],[100.619498,13.848457],[100.620392,13.848198],[100.621213,13.847651],[100.621567,13.847256],[100.621863,13.847061],[100.622087,13.846976],[100.622681,13.84661],[100.623119,13.846225],[100.623471,13.845841],[100.624145,13.84552],[100.624721,13.845223],[100.626028,13.844527],[100.626803,13.844064],[100.627822,13.843543],[100.628443,13.843012],[100.628678,13.842637],[100.629899,13.842721],[100.631127,13.842702],[100.632385,13.84258],[100.634563,13.843173],[100.635961,13.843845],[100.6373,13.844768],[100.639367,13.846169],[100.640904,13.846632],[100.641716,13.846752],[100.643451,13.846968],[100.645039,13.847225],[100.645685,13.84731],[100.646994,13.846986],[100.64805,13.846404],[100.648918,13.846235],[100.649747,13.846315],[100.650756,13.846574],[100.651866,13.846882],[100.65226,13.846953],[100.652783,13.846852],[100.653281,13.846885],[100.654793,13.847268],[100.655464,13.847425],[100.65615,13.847708],[100.656578,13.847801],[100.657125,13.847818],[100.657717,13.847715],[100.658228,13.847751],[100.658684,13.847777],[100.658859,13.848207],[100.658862,13.848508],[100.659184,13.848647],[100.659371,13.848833],[100.660861,13.849051],[100.661367,13.849492],[100.66189,13.850039],[100.663376,13.850519],[100.665134,13.850624],[100.665886,13.850561],[100.667403,13.850889],[100.668443,13.85156],[100.669429,13.852195],[100.670004,13.852489],[100.670804,13.852706],[100.670689,13.853426],[100.670901,13.85366],[100.672027,13.854227],[100.673164,13.854834],[100.674182,13.855384],[100.675345,13.856468],[100.676162,13.857291],[100.677449,13.858074],[100.679158,13.858378],[100.67997,13.858566],[100.680388,13.858768],[100.681495,13.860312],[100.682543,13.861296],[100.683354,13.862769],[100.683644,13.864381],[100.684155,13.866654],[100.685143,13.868279],[100.685673,13.869388],[100.685168,13.870875],[100.684535,13.872826],[100.684482,13.874572],[100.686162,13.876206],[100.687839,13.878513],[100.689794,13.879667],[100.689441,13.882544],[100.690251,13.885196],[100.692049,13.886713],[100.691633,13.887029],[100.691389,13.887194],[100.691382,13.89053],[100.691838,13.893622],[100.692142,13.895961],[100.692047,13.898446],[100.690561,13.900293],[100.690352,13.901287],[100.688796,13.904117],[100.687218,13.90718],[100.686954,13.908599],[100.686872,13.90933],[100.685828,13.910245],[100.683634,13.911335],[100.683539,13.911677],[100.684172,13.914155],[100.686497,13.915864],[100.687541,13.917514],[100.687319,13.919086],[100.687181,13.92072],[100.687614,13.922096],[100.688317,13.923435],[100.688669,13.92424],[100.689103,13.925471],[100.6894,13.926413],[100.689791,13.929025],[100.689823,13.930201],[100.689908,13.930966],[100.687619,13.930935],[100.685187,13.930898],[100.681133,13.930789],[100.677006,13.930878],[100.673248,13.930724],[100.668955,13.93059],[100.663609,13.930526],[100.659606,13.930674],[100.656099,13.930859],[100.651071,13.931095],[100.649677,13.931161],[100.647853,13.931179],[100.646064,13.931316],[100.64244,13.931386],[100.641749,13.931419]]]}},{"type":"Feature","properties":{"name":"มีนบุรี","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.878913,13.737848],[100.89046,13.756108],[100.910431,13.790861],[100.932095,13.806058],[100.927941,13.82261],[100.910703,13.843657],[100.908126,13.84769],[100.905494,13.859096],[100.906235,13.870178],[100.909054,13.906219],[100.914003,13.948599],[100.836983,13.940142],[100.820758,13.936893],[100.770706,13.928842],[100.727744,13.924004],[100.707779,13.92011],[100.687319,13.919086],[100.687541,13.917514],[100.686497,13.915864],[100.684172,13.914155],[100.683539,13.911677],[100.683634,13.911335],[100.685828,13.910245],[100.686872,13.90933],[100.686954,13.908599],[100.687218,13.90718],[100.688796,13.904117],[100.690352,13.901287],[100.690561,13.900293],[100.692047,13.898446],[100.692142,13.895961],[100.691838,13.893622],[100.691382,13.89053],[100.691389,13.887194],[100.691633,13.887029],[100.692049,13.886713],[100.690251,13.885196],[100.689441,13.882544],[100.689794,13.879667],[100.687839,13.878513],[100.686162,13.876206],[100.684482,13.874572],[100.684535,13.872826],[100.685168,13.870875],[100.685673,13.869388],[100.685143,13.868279],[100.684155,13.866654],[100.683644,13.864381],[100.683354,13.862769],[100.682543,13.861296],[100.681495,13.860312],[100.680388,13.858768],[100.67997,13.858566],[100.679158,13.858378],[100.677449,13.858074],[100.676162,13.857291],[100.675345,13.856468],[100.674182,13.855384],[100.673164,13.854834],[100.672027,13.854227],[100.670901,13.85366],[100.670689,13.853426],[100.670804,13.852706],[100.671024,13.852479],[100.672472,13.852235],[100.67432,13.852058],[100.676505,13.851607],[100.677748,13.851096],[100.678918,13.850372],[100.680439,13.850033],[100.682264,13.849086],[100.68376,13.848052],[100.683939,13.847603],[100.684461,13.846637],[100.685204,13.845595],[100.685666,13.844762],[100.686123,13.843285],[100.686284,13.842217],[100.686701,13.840596],[100.687091,13.839543],[100.687814,13.838232],[100.688215,13.836252],[100.688021,13.8354],[100.687801,13.834696],[100.688664,13.834004],[100.690085,13.832875],[100.690547,13.83227],[100.690795,13.831104],[100.691351,13.83056],[100.692671,13.828568],[100.694588,13.82513],[100.695221,13.824184],[100.695396,13.823242],[100.695406,13.821953],[100.695842,13.821109],[100.696863,13.820369],[100.696754,13.818951],[100.696545,13.817013],[100.696751,13.815093],[100.697144,13.813585],[100.697522,13.812575],[100.698729,13.811244],[100.700118,13.810296],[100.700818,13.809942],[100.701609,13.80935],[100.701906,13.808724],[100.702057,13.807871],[100.702028,13.807205],[100.701676,13.806286],[100.701141,13.805427],[100.700504,13.804752],[100.700524,13.804406],[100.701701,13.802632],[100.702289,13.801622],[100.702962,13.80062],[100.703807,13.799466],[100.705869,13.798073],[100.706536,13.797414],[100.707563,13.795616],[100.708204,13.794527],[100.709408,13.792409],[100.71077,13.790011],[100.712287,13.787349],[100.713954,13.784375],[100.715011,13.782229],[100.715421,13.780352],[100.716154,13.778227],[100.717306,13.777715],[100.717702,13.776901],[100.717796,13.775898],[100.717019,13.775394],[100.717399,13.774976],[100.717816,13.774331],[100.719585,13.772924],[100.722139,13.772858],[100.723686,13.776657],[100.725166,13.776151],[100.726864,13.775816],[100.730035,13.775316],[100.732918,13.77478],[100.73764,13.775788],[100.738897,13.775383],[100.746353,13.775816],[100.753875,13.777742],[100.759416,13.775661],[100.761443,13.777594],[100.763707,13.779921],[100.767642,13.781904],[100.771166,13.782576],[100.776331,13.783073],[100.779294,13.782283],[100.782368,13.781718],[100.786454,13.781463],[100.791058,13.781528],[100.795902,13.782794],[100.799999,13.781772],[100.804814,13.781614],[100.808606,13.781587],[100.813332,13.782757],[100.814906,13.783808],[100.819012,13.782274],[100.823326,13.777286],[100.82644,13.774917],[100.829741,13.770489],[100.832298,13.767433],[100.835675,13.767776],[100.840077,13.770102],[100.845093,13.770797],[100.850782,13.770924],[100.857991,13.770377],[100.861718,13.769609],[100.864512,13.765413],[100.865552,13.761855],[100.86654,13.758347],[100.866382,13.753714],[100.868122,13.749703],[100.872174,13.74404],[100.875184,13.738781],[100.878913,13.737848]]]}},{"type":"Feature","properties":{"name":"ทุ่งมหาเมฆ","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.552631,13.722891],[100.550594,13.723735],[100.548544,13.724581],[100.544426,13.726298],[100.540763,13.727832],[100.538691,13.728697],[100.537307,13.729271],[100.536523,13.729608],[100.534972,13.730257],[100.533906,13.730713],[100.533525,13.730876],[100.532112,13.731464],[100.53064,13.732065],[100.529382,13.732599],[100.528724,13.732868],[100.527686,13.733279],[100.525872,13.734011],[100.524446,13.734595],[100.523212,13.735089],[100.520734,13.736062],[100.518742,13.73688],[100.517767,13.737298],[100.516111,13.737905],[100.515691,13.73748],[100.515879,13.736059],[100.515866,13.734724],[100.515688,13.733266],[100.515217,13.731809],[100.514933,13.731281],[100.51365,13.72997],[100.513174,13.729714],[100.512778,13.729513],[100.512318,13.729322],[100.512701,13.7262],[100.512717,13.724312],[100.512425,13.721117],[100.512018,13.719318],[100.510724,13.715962],[100.5085,13.712791],[100.506999,13.711276],[100.504934,13.709332],[100.50283,13.707553],[100.499975,13.705762],[100.498072,13.70474],[100.49373,13.702421],[100.492447,13.701383],[100.491779,13.70066],[100.490885,13.699373],[100.490456,13.69824],[100.49008,13.69666],[100.489914,13.695326],[100.489907,13.69421],[100.489996,13.6933],[100.490878,13.691681],[100.492446,13.690273],[100.496885,13.687662],[100.500012,13.68659],[100.506402,13.685355],[100.509542,13.684912],[100.513358,13.68442],[100.521399,13.679622],[100.526768,13.674997],[100.530903,13.671563],[100.534871,13.669799],[100.536967,13.669305],[100.539166,13.669146],[100.541816,13.669437],[100.545126,13.670907],[100.547682,13.672787],[100.549152,13.674858],[100.551038,13.6772],[100.552464,13.682271],[100.552564,13.6906],[100.551457,13.697086],[100.550434,13.699308],[100.548975,13.700485],[100.547938,13.701587],[100.547653,13.702223],[100.547669,13.703048],[100.54807,13.703903],[100.550479,13.706226],[100.553823,13.709526],[100.554106,13.710235],[100.554118,13.710682],[100.554074,13.711276],[100.55399,13.712002],[100.553911,13.712617],[100.553852,13.712814],[100.553808,13.713033],[100.553794,13.713426],[100.553785,13.713639],[100.553648,13.714911],[100.553468,13.716452],[100.553367,13.717325],[100.55324,13.718428],[100.553227,13.718635],[100.553207,13.718765],[100.553125,13.718936],[100.552972,13.719362],[100.552924,13.719588],[100.552939,13.719683],[100.552979,13.719782],[100.552815,13.721271],[100.552631,13.722891]]]}},{"type":"Feature","properties":{"name":"บางกอกน้อย","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.508209,13.78896],[100.514059,13.795988],[100.516063,13.799332],[100.517596,13.80499],[100.517078,13.81024],[100.515223,13.813212],[100.513253,13.811419],[100.510634,13.809069],[100.508363,13.80696],[100.50627,13.805108],[100.502994,13.802147],[100.501622,13.801057],[100.500197,13.800307],[100.49781,13.799427],[100.494744,13.798325],[100.491772,13.797251],[100.48887,13.796204],[100.485914,13.795141],[100.482713,13.793995],[100.479751,13.792936],[100.475317,13.791345],[100.471892,13.790229],[100.467195,13.789161],[100.467896,13.792081],[100.469749,13.794856],[100.461425,13.797788],[100.451219,13.798776],[100.444355,13.799302],[100.437409,13.799748],[100.432608,13.800108],[100.426437,13.800476],[100.419212,13.800917],[100.412815,13.801245],[100.382719,13.802407],[100.348195,13.8033],[100.32836,13.804131],[100.328962,13.802761],[100.329075,13.802115],[100.328931,13.801019],[100.329295,13.799173],[100.329433,13.796672],[100.329688,13.794672],[100.329927,13.793146],[100.330214,13.790603],[100.330401,13.788023],[100.330387,13.787247],[100.33037,13.786456],[100.330339,13.785299],[100.330119,13.782188],[100.330055,13.780752],[100.330014,13.779462],[100.329958,13.77798],[100.329868,13.776298],[100.329604,13.773018],[100.3294,13.770863],[100.32927,13.769732],[100.329136,13.768826],[100.329104,13.767972],[100.32915,13.76677],[100.329223,13.76581],[100.329794,13.763766],[100.330715,13.76024],[100.33099,13.758206],[100.331373,13.756067],[100.331463,13.754551],[100.331597,13.751388],[100.331257,13.748298],[100.334171,13.747726],[100.336495,13.748195],[100.33875,13.748518],[100.341412,13.749127],[100.344443,13.74925],[100.347628,13.750945],[100.351822,13.751953],[100.35276,13.752143],[100.357333,13.752912],[100.361294,13.753548],[100.36584,13.753854],[100.369901,13.753698],[100.373183,13.753609],[100.375877,13.753405],[100.37943,13.753136],[100.381733,13.752894],[100.385355,13.752459],[100.388056,13.752145],[100.39105,13.751768],[100.395301,13.751171],[100.397528,13.750902],[100.400449,13.750455],[100.401956,13.750231],[100.403417,13.749868],[100.4055,13.749513],[100.408176,13.749069],[100.411759,13.748284],[100.413344,13.7479],[100.414836,13.747581],[100.416818,13.74718],[100.418364,13.746309],[100.419699,13.745581],[100.421219,13.744319],[100.422492,13.743986],[100.42402,13.743568],[100.42504,13.743405],[100.426026,13.742736],[100.428327,13.742288],[100.430306,13.742361],[100.431422,13.741682],[100.432443,13.740307],[100.43396,13.740233],[100.436557,13.740005],[100.439121,13.739995],[100.440299,13.740329],[100.441022,13.740364],[100.442031,13.740293],[100.44303,13.74016],[100.444378,13.740571],[100.445522,13.740634],[100.446687,13.74061],[100.447901,13.74028],[100.448958,13.740841],[100.449543,13.740559],[100.450057,13.740529],[100.450855,13.741175],[100.451893,13.741064],[100.452599,13.741304],[100.4534,13.741849],[100.454111,13.742111],[100.454582,13.742532],[100.455262,13.741978],[100.456361,13.742094],[100.456913,13.742859],[100.456782,13.743466],[100.457044,13.743892],[100.457763,13.743958],[100.458462,13.743705],[100.459152,13.743644],[100.459952,13.74377],[100.460811,13.744119],[100.461891,13.744374],[100.461931,13.744156],[100.461565,13.741746],[100.461582,13.740555],[100.461559,13.739265],[100.461826,13.737443],[100.462037,13.736383],[100.462148,13.735175],[100.462355,13.734282],[100.462544,13.733581],[100.462673,13.732754],[100.463066,13.731903],[100.46378,13.730668],[100.464349,13.72964],[100.464919,13.72859],[100.46556,13.727519],[100.466137,13.726663],[100.466767,13.725696],[100.467419,13.72493],[100.468098,13.724364],[100.46891,13.723887],[100.469659,13.723504],[100.470333,13.723078],[100.47152,13.722566],[100.473835,13.722495],[100.476827,13.722502],[100.481585,13.723638],[100.484949,13.726219],[100.48602,13.7301],[100.486221,13.731948],[100.486522,13.733231],[100.487001,13.734451],[100.487532,13.73582],[100.488234,13.737313],[100.488846,13.738819],[100.489872,13.740308],[100.491883,13.742469],[100.489323,13.745792],[100.488341,13.747601],[100.487563,13.752324],[100.489058,13.759941],[100.494628,13.765409],[100.497904,13.770075],[100.501497,13.779083],[100.504193,13.784519],[100.508209,13.78896]]]}},{"type":"Feature","properties":{"name":"สุวรรณภูมิ","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.72254,13.603008],[100.725978,13.602661],[100.728836,13.602256],[100.732577,13.602068],[100.734897,13.601782],[100.736333,13.601411],[100.740299,13.601188],[100.74317,13.60173],[100.744946,13.601581],[100.748305,13.59936],[100.752107,13.598592],[100.755266,13.599597],[100.759012,13.599351],[100.761087,13.598404],[100.763642,13.597344],[100.768008,13.59674],[100.772096,13.596753],[100.773769,13.596574],[100.776363,13.596203],[100.779107,13.595178],[100.782862,13.593832],[100.788124,13.593034],[100.791735,13.59269],[100.795051,13.59172],[100.796461,13.591298],[100.798958,13.590716],[100.80416,13.587321],[100.803187,13.583933],[100.812888,13.579785],[100.819055,13.57669],[100.823691,13.577401],[100.829925,13.57794],[100.833542,13.577982],[100.834362,13.574628],[100.842265,13.575716],[100.847594,13.577208],[100.853108,13.576332],[100.87242,13.572312],[100.890191,13.56447],[100.898343,13.558144],[100.905221,13.556572],[100.907241,13.559862],[100.909083,13.563124],[100.911796,13.567311],[100.914867,13.570745],[100.914229,13.575722],[100.908581,13.580337],[100.906718,13.585622],[100.90746,13.592144],[100.911417,13.592575],[100.916534,13.593623],[100.921776,13.594257],[100.925085,13.59381],[100.92944,13.59861],[100.937189,13.608076],[100.94028,13.611799],[100.945842,13.618166],[100.951012,13.623021],[100.95503,13.626781],[100.959263,13.630711],[100.962211,13.635891],[100.964711,13.643062],[100.959313,13.645348],[100.95528,13.64657],[100.953485,13.64873],[100.95277,13.65223],[100.954798,13.656355],[100.955612,13.658501],[100.955696,13.66259],[100.946932,13.665563],[100.926427,13.672696],[100.900338,13.682064],[100.881554,13.688481],[100.867763,13.694036],[100.856746,13.702232],[100.877334,13.735317],[100.874088,13.740114],[100.869125,13.748255],[100.866274,13.754568],[100.86564,13.761065],[100.863886,13.766982],[100.858828,13.770319],[100.849062,13.770924],[100.841098,13.770575],[100.834549,13.767909],[100.830027,13.76979],[100.825337,13.77575],[100.822827,13.779721],[100.814635,13.784192],[100.809821,13.781702],[100.803655,13.78169],[100.796501,13.782622],[100.789939,13.78145],[100.782759,13.781925],[100.778447,13.782375],[100.772046,13.7825],[100.767544,13.781556],[100.761838,13.778321],[100.758427,13.775727],[100.746331,13.775835],[100.738834,13.775998],[100.733669,13.77465],[100.729424,13.775332],[100.725581,13.776016],[100.723158,13.775445],[100.720203,13.7722],[100.718017,13.774323],[100.717023,13.775093],[100.717462,13.775901],[100.716927,13.777712],[100.716572,13.777027],[100.716225,13.772594],[100.714433,13.769238],[100.712825,13.766218],[100.711508,13.764275],[100.710292,13.762379],[100.708662,13.760438],[100.706739,13.757427],[100.709186,13.756434],[100.709441,13.751295],[100.709111,13.744688],[100.708828,13.740662],[100.708638,13.737876],[100.708552,13.735752],[100.708304,13.73244],[100.708461,13.728148],[100.70969,13.718387],[100.711394,13.707476],[100.710957,13.70119],[100.709883,13.695155],[100.709569,13.690203],[100.708593,13.687751],[100.707836,13.686094],[100.707198,13.684367],[100.706616,13.680904],[100.705468,13.678846],[100.704957,13.67385],[100.703164,13.670123],[100.702096,13.668313],[100.700704,13.665669],[100.699507,13.663281],[100.698873,13.660857],[100.698423,13.658177],[100.69816,13.655189],[100.697589,13.653606],[100.6929,13.652743],[100.690443,13.651059],[100.688127,13.6491],[100.686833,13.64744],[100.685135,13.64563],[100.682622,13.643003],[100.681813,13.640009],[100.680786,13.637061],[100.679533,13.63488],[100.678633,13.631489],[100.678454,13.628387],[100.676586,13.626348],[100.675532,13.625186],[100.675715,13.62369],[100.675298,13.622493],[100.675082,13.621236],[100.674031,13.620033],[100.67243,13.618811],[100.671584,13.615752],[100.671231,13.61428],[100.675181,13.613438],[100.677102,13.612807],[100.683064,13.611351],[100.687069,13.610493],[100.689923,13.609495],[100.693888,13.608189],[100.697839,13.607263],[100.699075,13.606939],[100.701104,13.606651],[100.703472,13.60612],[100.705201,13.605681],[100.707388,13.60568],[100.709487,13.604719],[100.710385,13.603502],[100.712225,13.603364],[100.715687,13.603261],[100.719265,13.603311],[100.722114,13.603059],[100.72254,13.603008]]]}},{"type":"Feature","properties":{"name":"บางบัวทอง","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.466243,13.914157],[100.466894,13.915773],[100.470008,13.918364],[100.474816,13.918283],[100.4794,13.916689],[100.48473,13.914883],[100.491445,13.914602],[100.494022,13.915833],[100.497297,13.919051],[100.49911,13.923633],[100.4993,13.925672],[100.49984,13.928269],[100.500953,13.934249],[100.499521,13.937812],[100.497764,13.939025],[100.496291,13.939555],[100.495267,13.939842],[100.494778,13.940326],[100.493878,13.940812],[100.492974,13.940577],[100.491787,13.940985],[100.490766,13.941673],[100.489826,13.942239],[100.488642,13.943168],[100.487748,13.944576],[100.487794,13.945217],[100.488578,13.946014],[100.487806,13.94714],[100.486912,13.948508],[100.486307,13.950115],[100.485326,13.950762],[100.483939,13.951932],[100.481779,13.95423],[100.479947,13.956445],[100.478685,13.957975],[100.477054,13.959588],[100.475872,13.960837],[100.474727,13.961445],[100.473258,13.962777],[100.471781,13.962746],[100.470578,13.960669],[100.469301,13.959915],[100.468031,13.960244],[100.466961,13.959809],[100.466462,13.95873],[100.46572,13.958174],[100.464865,13.959141],[100.463805,13.960229],[100.461797,13.960642],[100.459587,13.961537],[100.457833,13.96319],[100.455142,13.966011],[100.454158,13.966097],[100.452604,13.966908],[100.452363,13.967751],[100.450323,13.969647],[100.438275,13.978775],[100.43562,13.980754],[100.425378,13.983459],[100.399133,13.990134],[100.380605,13.988875],[100.365028,13.992131],[100.36274,13.993299],[100.360468,13.995323],[100.35748,13.998808],[100.351052,14.008324],[100.343449,14.022479],[100.337657,14.035883],[100.335605,14.040775],[100.334626,14.04345],[100.332259,14.053105],[100.332047,14.06475],[100.333285,14.069292],[100.336527,14.082009],[100.338801,14.088364],[100.340128,14.092177],[100.341756,14.100288],[100.344413,14.115045],[100.32218,14.12929],[100.308088,14.136059],[100.298846,14.139774],[100.295544,14.139373],[100.293086,14.136069],[100.279725,14.125611],[100.278005,14.1086],[100.276973,14.088699],[100.275473,14.078025],[100.274792,14.075586],[100.273572,14.072724],[100.273945,14.069317],[100.27185,14.06464],[100.266803,14.060483],[100.259957,14.05136],[100.25575,14.038617],[100.256064,14.026535],[100.259495,14.016648],[100.26666,14.006567],[100.267768,13.993178],[100.269104,13.989374],[100.28066,13.976056],[100.284386,13.944239],[100.265054,13.920625],[100.27718,13.911064],[100.284469,13.895939],[100.290548,13.899007],[100.294207,13.900537],[100.298159,13.902369],[100.299484,13.903306],[100.305771,13.904895],[100.310642,13.90614],[100.314408,13.906724],[100.323495,13.909145],[100.328869,13.909735],[100.338492,13.910075],[100.344761,13.909753],[100.347546,13.909345],[100.34868,13.909106],[100.3503,13.908933],[100.35521,13.909381],[100.357139,13.909667],[100.360063,13.909746],[100.362441,13.909734],[100.363722,13.909983],[100.366584,13.910248],[100.372257,13.910469],[100.375755,13.908721],[100.377125,13.908289],[100.379379,13.908826],[100.382154,13.909463],[100.385948,13.908966],[100.38796,13.909689],[100.389969,13.909499],[100.396262,13.907866],[100.399783,13.907985],[100.405994,13.906622],[100.407125,13.905142],[100.407529,13.899406],[100.409939,13.874021],[100.43575,13.875954],[100.448,13.876889],[100.451153,13.876509],[100.454981,13.875362],[100.459371,13.873389],[100.461757,13.872269],[100.464527,13.871138],[100.46712,13.870348],[100.470175,13.86999],[100.471838,13.87013],[100.473152,13.870122],[100.47459,13.870205],[100.476434,13.870386],[100.476156,13.872721],[100.476585,13.875613],[100.477606,13.877861],[100.482765,13.883397],[100.486053,13.887105],[100.489554,13.892174],[100.49056,13.894987],[100.488985,13.899533],[100.481847,13.900747],[100.476845,13.901307],[100.47354,13.902423],[100.469928,13.905576],[100.467069,13.909715],[100.466496,13.911962],[100.466243,13.914157]]]}},{"type":"Feature","properties":{"name":"มหาสวัสดิ์","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.373684,13.910168],[100.369526,13.910545],[100.364568,13.910017],[100.362797,13.909836],[100.361615,13.90969],[100.358194,13.909748],[100.356208,13.909434],[100.350706,13.908961],[100.349018,13.909075],[100.34817,13.90916],[100.346838,13.909616],[100.340629,13.910067],[100.335463,13.909987],[100.324656,13.909464],[100.323639,13.90854],[100.311827,13.906279],[100.307457,13.906145],[100.300428,13.903684],[100.298949,13.90291],[100.297697,13.901887],[100.293469,13.900318],[100.29056,13.898837],[100.292279,13.879731],[100.327871,13.804161],[100.328362,13.804131],[100.333526,13.803788],[100.356991,13.803149],[100.375698,13.802563],[100.394677,13.801933],[100.410698,13.80137],[100.41472,13.80117],[100.417892,13.800995],[100.420376,13.800865],[100.424884,13.8006],[100.427669,13.800357],[100.431184,13.800131],[100.433703,13.799986],[100.435745,13.79988],[100.438806,13.799654],[100.442307,13.799485],[100.444913,13.799254],[100.448403,13.798976],[100.454334,13.798538],[100.459029,13.798187],[100.463995,13.797211],[100.467483,13.795725],[100.469746,13.794853],[100.46855,13.792956],[100.467277,13.790875],[100.46628,13.788954],[100.468396,13.78943],[100.470692,13.789938],[100.472575,13.790423],[100.47447,13.791048],[100.477052,13.791959],[100.478987,13.792662],[100.480419,13.793178],[100.481486,13.793561],[100.483473,13.794266],[100.484877,13.794769],[100.486984,13.795529],[100.48875,13.796161],[100.48977,13.79653],[100.491719,13.797231],[100.492911,13.797663],[100.494277,13.798158],[100.495572,13.798625],[100.497353,13.799265],[100.498897,13.799821],[100.499923,13.800192],[100.500553,13.800468],[100.501304,13.800857],[100.501864,13.801214],[100.502512,13.801701],[100.503167,13.802305],[100.505123,13.804074],[100.50732,13.806029],[100.507921,13.806551],[100.509328,13.807864],[100.510278,13.808742],[100.511023,13.809418],[100.511209,13.809589],[100.514847,13.812872],[100.515221,13.813213],[100.514191,13.814079],[100.507652,13.816023],[100.507538,13.816057],[100.503692,13.817885],[100.502243,13.819778],[100.499631,13.825885],[100.497969,13.828644],[100.492811,13.835466],[100.49112,13.839065],[100.490339,13.842132],[100.489196,13.846875],[100.48662,13.849631],[100.485414,13.850286],[100.481714,13.852137],[100.478783,13.856073],[100.477847,13.859901],[100.476866,13.866815],[100.476438,13.870346],[100.475285,13.870201],[100.473548,13.870066],[100.472605,13.870072],[100.470961,13.869945],[100.468638,13.870193],[100.466112,13.870692],[100.46329,13.871581],[100.460909,13.872554],[100.45768,13.874186],[100.45258,13.876337],[100.44912,13.876756],[100.441013,13.876343],[100.412236,13.874186],[100.40854,13.888761],[100.407229,13.90396],[100.407503,13.906331],[100.402388,13.907057],[100.397352,13.907732],[100.39423,13.908448],[100.388883,13.909748],[100.387347,13.909569],[100.384206,13.90927],[100.380953,13.909298],[100.378342,13.908536],[100.376218,13.908253],[100.373684,13.910168]]]}},{"type":"Feature","properties":{"name":"พระโขนง","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.671021,13.614002],[100.67159,13.615098],[100.67208,13.617175],[100.672951,13.61928],[100.674153,13.620186],[100.675082,13.621236],[100.67523,13.622264],[100.67572,13.62338],[100.675582,13.624268],[100.675418,13.626007],[100.677338,13.626589],[100.678454,13.628387],[100.678559,13.630978],[100.67905,13.634093],[100.680453,13.636176],[100.681033,13.637776],[100.681948,13.640539],[100.682622,13.643003],[100.684605,13.64511],[100.686585,13.646695],[100.687981,13.648245],[100.688353,13.650145],[100.69236,13.650629],[100.6929,13.652743],[100.697303,13.653655],[100.698079,13.654369],[100.698311,13.656834],[100.69858,13.659074],[100.699032,13.661526],[100.699507,13.663281],[100.700408,13.665149],[100.701705,13.667584],[100.702581,13.66915],[100.70355,13.670808],[100.705081,13.674186],[100.705468,13.678846],[100.706557,13.680483],[100.706965,13.683109],[100.707537,13.685282],[100.708191,13.686842],[100.708916,13.68819],[100.709569,13.690203],[100.710193,13.6951],[100.7105,13.698558],[100.712086,13.702969],[100.710724,13.711883],[100.70972,13.718433],[100.708853,13.723972],[100.69448,13.724012],[100.689155,13.723997],[100.683938,13.724007],[100.678996,13.723998],[100.673301,13.723883],[100.668179,13.722554],[100.660072,13.72038],[100.647851,13.717213],[100.636563,13.714718],[100.63262,13.714624],[100.627969,13.714409],[100.625277,13.712763],[100.624412,13.713915],[100.624209,13.714672],[100.623827,13.714732],[100.622897,13.714473],[100.622312,13.714299],[100.622106,13.713229],[100.621428,13.712393],[100.621315,13.711546],[100.621003,13.710319],[100.62007,13.711348],[100.619326,13.711502],[100.618768,13.71128],[100.618472,13.710802],[100.617214,13.710116],[100.615839,13.710194],[100.615852,13.710797],[100.616376,13.711207],[100.6164,13.711527],[100.615806,13.712708],[100.615284,13.713213],[100.614521,13.713243],[100.613959,13.712738],[100.613054,13.712619],[100.612431,13.712977],[100.612403,13.7137],[100.612255,13.714391],[100.612241,13.71529],[100.611935,13.715606],[100.611111,13.715534],[100.608952,13.715839],[100.607374,13.715906],[100.606711,13.715581],[100.605695,13.714363],[100.605086,13.714058],[100.603231,13.713811],[100.60217,13.713394],[100.601863,13.712878],[100.601647,13.711557],[100.601445,13.711134],[100.601038,13.711146],[100.59986,13.711821],[100.598812,13.712175],[100.598073,13.71211],[100.597563,13.711541],[100.595735,13.70985],[100.59234,13.70885],[100.590651,13.706708],[100.589281,13.705386],[100.586722,13.704815],[100.581456,13.703659],[100.580711,13.702252],[100.589324,13.688472],[100.587282,13.679587],[100.571782,13.66139],[100.571711,13.656799],[100.57305,13.657602],[100.574174,13.658358],[100.576222,13.655919],[100.574891,13.655564],[100.575654,13.653958],[100.576447,13.65283],[100.577235,13.653314],[100.577917,13.65272],[100.579348,13.653014],[100.581457,13.652454],[100.584035,13.651865],[100.585437,13.651162],[100.58689,13.650727],[100.588738,13.650498],[100.590046,13.649691],[100.591577,13.649013],[100.591731,13.649516],[100.593172,13.649966],[100.592839,13.649326],[100.593925,13.648452],[100.596941,13.647547],[100.600352,13.645364],[100.603192,13.64348],[100.606856,13.641434],[100.610649,13.638736],[100.614754,13.636235],[100.617577,13.634798],[100.619142,13.633915],[100.620997,13.632747],[100.62273,13.631841],[100.624739,13.630892],[100.626025,13.630131],[100.627233,13.629667],[100.628324,13.629367],[100.629463,13.628479],[100.630435,13.628122],[100.631828,13.627386],[100.634211,13.62638],[100.635675,13.625526],[100.637339,13.62488],[100.638478,13.624045],[100.640055,13.623539],[100.641214,13.622863],[100.642812,13.62214],[100.644452,13.621542],[100.646242,13.620693],[100.6494,13.619773],[100.655295,13.618086],[100.660796,13.616914],[100.662526,13.615573],[100.664624,13.614433],[100.668664,13.614198],[100.671021,13.614002]]]}},{"type":"Feature","properties":{"name":"สุขสวัสดิ์","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.580951,13.698625],[100.563545,13.705733],[100.553762,13.70462],[100.551457,13.697086],[100.55143,13.678006],[100.547682,13.672787],[100.540649,13.669178],[100.534871,13.669799],[100.525979,13.67568],[100.509542,13.684912],[100.498516,13.686996],[100.490878,13.691681],[100.489897,13.694792],[100.487251,13.694758],[100.487038,13.694821],[100.486801,13.694943],[100.485322,13.69474],[100.484137,13.694814],[100.482778,13.694705],[100.482315,13.693654],[100.480808,13.693014],[100.479239,13.692263],[100.476411,13.690273],[100.474345,13.688603],[100.473106,13.688394],[100.471988,13.689986],[100.471285,13.690413],[100.469444,13.689745],[100.468939,13.688544],[100.469264,13.687312],[100.469621,13.686381],[100.470047,13.684493],[100.470531,13.683247],[100.470474,13.682764],[100.47013,13.682541],[100.470304,13.680788],[100.470618,13.679605],[100.470777,13.679063],[100.470335,13.678731],[100.469717,13.678652],[100.468952,13.678445],[100.469893,13.676254],[100.470355,13.675014],[100.467769,13.673955],[100.466728,13.673311],[100.467376,13.670843],[100.467912,13.668716],[100.468967,13.663967],[100.469657,13.661396],[100.470256,13.659033],[100.470683,13.657223],[100.470921,13.655648],[100.471423,13.653223],[100.472351,13.648879],[100.473469,13.639637],[100.474452,13.636211],[100.474985,13.63398],[100.475025,13.632483],[100.475344,13.631529],[100.475585,13.63081],[100.47545,13.629676],[100.474478,13.62925],[100.47401,13.628449],[100.474393,13.627472],[100.473654,13.626961],[100.472999,13.62606],[100.472431,13.62547],[100.449035,13.626281],[100.449966,13.623005],[100.4504,13.621488],[100.450007,13.619752],[100.450088,13.618335],[100.450252,13.616896],[100.450964,13.615626],[100.451322,13.614797],[100.451189,13.613103],[100.451378,13.611164],[100.451909,13.609431],[100.452398,13.607758],[100.453218,13.605977],[100.453713,13.605106],[100.453294,13.603033],[100.452306,13.600849],[100.452165,13.599286],[100.451729,13.597867],[100.451206,13.59712],[100.451016,13.596139],[100.450863,13.594922],[100.450101,13.593448],[100.449143,13.591824],[100.44834,13.58955],[100.446688,13.587278],[100.446307,13.585226],[100.446642,13.582369],[100.44617,13.577687],[100.445851,13.57386],[100.445458,13.56928],[100.445166,13.565355],[100.444852,13.56268],[100.444777,13.561389],[100.444639,13.559873],[100.444486,13.55751],[100.444381,13.555516],[100.444449,13.552899],[100.445116,13.548316],[100.445645,13.54597],[100.446156,13.542837],[100.446623,13.540804],[100.447258,13.536068],[100.448786,13.527712],[100.449625,13.52301],[100.450832,13.515903],[100.451513,13.511857],[100.452092,13.508522],[100.453007,13.503826],[100.453759,13.499848],[100.454112,13.499572],[100.455748,13.500178],[100.458895,13.500012],[100.460259,13.49929],[100.465154,13.495233],[100.466647,13.496497],[100.469142,13.496863],[100.471899,13.497148],[100.475027,13.497014],[100.47751,13.496874],[100.480139,13.496739],[100.480992,13.495764],[100.48322,13.497344],[100.489054,13.497941],[100.489756,13.497264],[100.490938,13.496467],[100.492439,13.499254],[100.493995,13.499666],[100.497702,13.498785],[100.500887,13.499707],[100.503629,13.500388],[100.507263,13.500853],[100.510858,13.501395],[100.512354,13.50064],[100.514235,13.500966],[100.514953,13.501104],[100.516422,13.500312],[100.517708,13.501716],[100.519968,13.501749],[100.522142,13.502869],[100.524269,13.502254],[100.527615,13.502602],[100.528651,13.503212],[100.530557,13.503107],[100.532999,13.50233],[100.534543,13.503149],[100.536898,13.504114],[100.541068,13.505084],[100.545119,13.506045],[100.547501,13.505655],[100.54828,13.506155],[100.549041,13.505685],[100.552177,13.505704],[100.554402,13.506908],[100.557364,13.507563],[100.561304,13.507502],[100.563056,13.509095],[100.56585,13.509013],[100.56699,13.509044],[100.56853,13.51031],[100.569318,13.509142],[100.570057,13.510257],[100.571915,13.5104],[100.572225,13.510058],[100.573625,13.510144],[100.573211,13.509192],[100.574165,13.509119],[100.579119,13.513674],[100.582543,13.516957],[100.586179,13.520401],[100.588999,13.525478],[100.589154,13.535383],[100.577571,13.557136],[100.577915,13.572996],[100.589511,13.589865],[100.591491,13.605086],[100.584758,13.610666],[100.57257,13.611148],[100.556601,13.614679],[100.549909,13.618987],[100.542709,13.627034],[100.534308,13.646126],[100.53415,13.653417],[100.536621,13.65862],[100.539717,13.660651],[100.544965,13.660351],[100.554973,13.656743],[100.558866,13.65575],[100.569417,13.659467],[100.57762,13.667425],[100.589011,13.682195],[100.58737,13.692695],[100.580951,13.698625]]]}},{"type":"Feature","properties":{"name":"นนทบุรี","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.541378,13.955568],[100.541073,13.955625],[100.540675,13.955735],[100.53891,13.95392],[100.537586,13.950741],[100.53305,13.946136],[100.529753,13.944488],[100.52478,13.943668],[100.520277,13.943561],[100.508797,13.943408],[100.503474,13.93931],[100.500953,13.934249],[100.499556,13.926855],[100.49911,13.923633],[100.495767,13.917068],[100.491445,13.914602],[100.48185,13.915631],[100.474816,13.918283],[100.467756,13.917021],[100.466243,13.914157],[100.466777,13.910861],[100.469928,13.905576],[100.475262,13.901842],[100.481847,13.900747],[100.490451,13.896694],[100.489554,13.892174],[100.48493,13.885689],[100.477606,13.877861],[100.476155,13.872723],[100.476434,13.870386],[100.476866,13.866815],[100.477894,13.859708],[100.481714,13.852137],[100.486315,13.849914],[100.489196,13.846875],[100.490341,13.842119],[100.492811,13.835466],[100.499261,13.8265],[100.502243,13.819778],[100.506852,13.816261],[100.506742,13.81797],[100.506338,13.818993],[100.506561,13.819751],[100.506913,13.820466],[100.507121,13.821119],[100.507382,13.821361],[100.507615,13.821726],[100.507585,13.822193],[100.507606,13.822515],[100.507713,13.822822],[100.508102,13.822993],[100.508351,13.823148],[100.508625,13.823378],[100.509002,13.823503],[100.509487,13.823598],[100.50982,13.823794],[100.51011,13.824164],[100.510143,13.824306],[100.509967,13.824507],[100.509601,13.824563],[100.50938,13.824724],[100.50921,13.825055],[100.509296,13.825494],[100.509526,13.825577],[100.510039,13.825401],[100.510455,13.825212],[100.510748,13.82526],[100.510861,13.825631],[100.510937,13.82615],[100.511154,13.826204],[100.511835,13.826072],[100.512141,13.825806],[100.512439,13.825275],[100.512711,13.824779],[100.512911,13.824689],[100.51312,13.824789],[100.51312,13.825321],[100.513133,13.826107],[100.513369,13.826294],[100.513863,13.826449],[100.514737,13.826892],[100.515513,13.827215],[100.515826,13.827937],[100.516428,13.828918],[100.517468,13.829769],[100.518538,13.83053],[100.519599,13.831538],[100.521146,13.832939],[100.522023,13.833671],[100.522546,13.83409],[100.523016,13.834639],[100.523932,13.835485],[100.52491,13.836272],[100.525859,13.837025],[100.526443,13.837524],[100.527976,13.838904],[100.529117,13.839834],[100.529406,13.840152],[100.529798,13.840458],[100.530241,13.840924],[100.530758,13.841428],[100.531249,13.841877],[100.532019,13.842374],[100.532174,13.842638],[100.532645,13.843076],[100.533152,13.843431],[100.533505,13.843848],[100.53401,13.844363],[100.534628,13.844806],[100.535156,13.845271],[100.535644,13.845737],[100.536181,13.846224],[100.536712,13.846364],[100.537414,13.846647],[100.53801,13.847156],[100.539088,13.847629],[100.540146,13.84814],[100.540995,13.848471],[100.541909,13.848918],[100.542724,13.84926],[100.54344,13.849641],[100.54382,13.84982],[100.545201,13.855668],[100.545752,13.858041],[100.546761,13.862362],[100.547152,13.863987],[100.548225,13.868507],[100.549119,13.872225],[100.549457,13.873719],[100.550303,13.87731],[100.55092,13.87991],[100.552846,13.888191],[100.554046,13.893337],[100.554668,13.896031],[100.555418,13.899152],[100.556877,13.905283],[100.557958,13.909822],[100.559032,13.914435],[100.56056,13.920837],[100.562172,13.927873],[100.563647,13.934056],[100.56415,13.936208],[100.565852,13.943416],[100.567278,13.951159],[100.566708,13.950833],[100.566339,13.950358],[100.565413,13.950556],[100.564479,13.950365],[100.563807,13.94975],[100.562838,13.949568],[100.562098,13.949908],[100.561846,13.949476],[100.561316,13.949653],[100.560542,13.950044],[100.559922,13.950723],[100.558434,13.950536],[100.557162,13.949839],[100.556579,13.950137],[100.556035,13.950287],[100.555014,13.951501],[100.554392,13.951121],[100.554068,13.950371],[100.553386,13.951407],[100.552607,13.951119],[100.551335,13.951646],[100.55077,13.951715],[100.550127,13.951919],[100.549529,13.952097],[100.54887,13.952242],[100.548611,13.95252],[100.548206,13.952647],[100.547435,13.952647],[100.546802,13.952651],[100.546091,13.952552],[100.545592,13.952637],[100.545574,13.953094],[100.545375,13.953391],[100.54503,13.953182],[100.544718,13.95294],[100.544438,13.952991],[100.543939,13.953358],[100.543857,13.953577],[100.543987,13.953982],[100.544095,13.954446],[100.542999,13.954119],[100.54242,13.953822],[100.542146,13.953542],[100.541881,13.953679],[100.541646,13.954234],[100.541344,13.954652],[100.541428,13.954815],[100.541896,13.955099],[100.542043,13.955489],[100.54156,13.955535],[100.541378,13.955568]]]}},{"type":"Feature","properties":{"name":"แม้นศรี","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.5302947,13.8086599],[100.5289356,13.8088559],[100.5267035,13.8088539],[100.5261805,13.8076439],[100.5243734,13.8046789],[100.5233834,13.8031429],[100.5209373,13.8002429],[100.5176942,13.7967539],[100.5151241,13.7939309],[100.5139361,13.7922819],[100.512743,13.7897369],[100.511405,13.7867719],[100.5092559,13.7813849],[100.5065898,13.7761909],[100.5051247,13.7742569],[100.5011736,13.7707109],[100.4993765,13.7686359],[100.4982905,13.7658019],[100.4978765,13.7632999],[100.4978615,13.7609519],[100.4985025,13.7569029],[100.4986655,13.7562169],[100.4995085,13.7546199],[100.5000755,13.7538289],[100.5015276,13.7519159],[100.5024266,13.7508479],[100.5033657,13.7499179],[100.5041677,13.7492869],[100.5052037,13.7487369],[100.5064308,13.7482569],[100.5078348,13.7478249],[100.5093609,13.7473899],[100.5103309,13.7471529],[100.5138231,13.7463799],[100.5147241,13.7461549],[100.5165542,13.7456429],[100.5182922,13.7448859],[100.5192753,13.7442209],[100.5199393,13.7436259],[100.5205473,13.7429739],[100.5211023,13.7421049],[100.5216463,13.7408259],[100.5221514,13.7395469],[100.5224104,13.7386829],[100.5226174,13.7379919],[100.5230774,13.7381829],[100.5234734,13.7383839],[100.5239494,13.7386399],[100.5252325,13.7399509],[100.5255165,13.7404789],[100.5259875,13.7419359],[100.5261655,13.7433939],[100.5261785,13.7447289],[100.5259905,13.7461499],[100.5264105,13.7465749],[100.5280666,13.7459679],[100.5290416,13.7455499],[100.5310337,13.7447319],[100.5335118,13.7437589],[100.5347458,13.7432649],[100.5361719,13.7426809],[100.537986,13.7419489],[100.539024,13.7415379],[100.539682,13.7412689],[100.5409401,13.7407349],[100.5424121,13.7401339],[100.5438252,13.7395459],[100.5442062,13.7393829],[100.5452722,13.7389269],[100.5468233,13.7382779],[100.5476073,13.7379409],[100.5489914,13.7373669],[100.5510634,13.7365019],[100.5547266,13.7349679],[100.5588447,13.7332509],[100.5608948,13.7324049],[100.5629319,13.7315609],[100.5626379,13.7350419],[100.5601158,13.7570319],[100.5603828,13.7570239],[100.5643259,13.7567429],[100.565644,13.7568819],[100.5680381,13.7570239],[100.5699441,13.7570479],[100.5712542,13.7568969],[100.5727662,13.7565809],[100.5734453,13.7564789],[100.5737783,13.7579699],[100.5750743,13.7638009],[100.5750723,13.7638069],[100.5745223,13.7639269],[100.5737343,13.7640449],[100.5723252,13.7641409],[100.5720932,13.7641599],[100.5717152,13.7642219],[100.5711652,13.7642799],[100.5704922,13.7642539],[100.5697841,13.7643839],[100.5693231,13.7644199],[100.5686321,13.7644239],[100.5679961,13.7644279],[100.567489,13.7644969],[100.567116,13.7644759],[100.56679,13.7645579],[100.566198,13.7646939],[100.565421,13.7646449],[100.564945,13.7647549],[100.5644859,13.7647579],[100.5642959,13.7646999],[100.5640259,13.7645399],[100.5636359,13.7646319],[100.5632939,13.7646759],[100.5627709,13.7644789],[100.5626689,13.7646319],[100.5623689,13.7652999],[100.5619948,13.7656539],[100.5618318,13.7659979],[100.5616388,13.7662719],[100.5612788,13.7667379],[100.5610378,13.7670379],[100.5606298,13.7673829],[100.5599668,13.7676179],[100.5587807,13.7680939],[100.5584747,13.7682879],[100.5580387,13.7683939],[100.5576497,13.7685079],[100.5575837,13.7689599],[100.5574297,13.7691389],[100.5569367,13.7690639],[100.5564346,13.7690869],[100.5562236,13.7692429],[100.5559166,13.7698059],[100.5557136,13.7700399],[100.5549396,13.7704079],[100.5537325,13.7713259],[100.5530655,13.7719529],[100.5525335,13.7723959],[100.5518215,13.7726529],[100.5514415,13.7729779],[100.5511494,13.7733139],[100.5505674,13.7734959],[100.5503424,13.7739779],[100.5502164,13.7740939],[100.5497624,13.7742579],[100.5492144,13.7746469],[100.5486744,13.7750349],[100.5480813,13.7754169],[100.5477213,13.7755979],[100.5472343,13.7762029],[100.5466973,13.7765079],[100.5462713,13.7769999],[100.5460403,13.7770689],[100.5456082,13.7773809],[100.5442742,13.7785719],[100.5437692,13.7788369],[100.5429551,13.7795769],[100.5425101,13.7798489],[100.5415781,13.7804649],[100.540418,13.7813559],[100.53943,13.7820109],[100.538819,13.7824809],[100.53883,13.7846919],[100.5410681,13.7901919],[100.5422481,13.7931029],[100.5432441,13.7955359],[100.5436072,13.7964489],[100.5438212,13.7970049],[100.5443082,13.7982089],[100.5448852,13.7996249],[100.5454412,13.8010039],[100.5459913,13.8023399],[100.5464593,13.8034929],[100.5469483,13.8046939],[100.5473263,13.8056339],[100.5475613,13.8061779],[100.5475563,13.8062909],[100.5462473,13.8068889],[100.5453122,13.8073679],[100.5435542,13.8082359],[100.5433632,13.8082629],[100.5432001,13.8079899],[100.5429321,13.8074379],[100.5428201,13.8072119],[100.5426191,13.8069119],[100.5417401,13.8070229],[100.5407151,13.8071549],[100.539663,13.8074329],[100.538357,13.8075029],[100.5373079,13.8072939],[100.5368749,13.8074219],[100.5359339,13.8079219],[100.5351578,13.8078779],[100.5342488,13.8082459],[100.5332448,13.8083979],[100.5325738,13.8086389],[100.5316557,13.8086099],[100.5302947,13.8086599]]]}},{"type":"Feature","properties":{"name":"สมุทรปราการ","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.7512947,13.6443638],[100.7481353,13.6445978],[100.7441638,13.6446458],[100.7426396,13.6464258],[100.7400363,13.6473938],[100.7344505,13.6487368],[100.7295069,13.6501658],[100.7261535,13.6512578],[100.7244712,13.6519818],[100.722789,13.6526138],[100.7211868,13.6533148],[100.7200557,13.6540118],[100.7185425,13.6544788],[100.7172963,13.6554398],[100.7156021,13.6560158],[100.7139949,13.6569578],[100.7117776,13.6579368],[100.7104244,13.6585458],[100.7095413,13.6590058],[100.7084262,13.6598308],[100.707237,13.6600588],[100.7061179,13.6606018],[100.7047887,13.6613738],[100.7027814,13.6622728],[100.7006432,13.6636688],[100.699078,13.6643308],[100.6975348,13.6653378],[100.6940893,13.6672998],[100.6899248,13.6696168],[100.6860073,13.6723148],[100.6829179,13.6742098],[100.6802805,13.6759358],[100.6767451,13.6781898],[100.6733456,13.6788538],[100.6733706,13.6798598],[100.6730196,13.6804608],[100.6720765,13.6795978],[100.6716814,13.6794808],[100.6700172,13.6800547],[100.668624,13.6808107],[100.6667168,13.6809787],[100.6652126,13.6816217],[100.6639694,13.6821857],[100.6615231,13.6828167],[100.6588998,13.6834327],[100.6579136,13.6832127],[100.6572786,13.6837467],[100.6565995,13.6830657],[100.6554123,13.6848257],[100.6554173,13.6861197],[100.6565515,13.6865367],[100.6542572,13.6888457],[100.652806,13.6878797],[100.6518999,13.6872337],[100.6496776,13.6898287],[100.6391252,13.6861117],[100.6352317,13.6871047],[100.6252224,13.6907127],[100.6199737,13.6910127],[100.6168773,13.6889817],[100.614406,13.6837787],[100.6145641,13.6764877],[100.6229662,13.6573957],[100.6301671,13.6493487],[100.63686,13.6450407],[100.6528311,13.6415097],[100.6650206,13.6410277],[100.6717545,13.6354478],[100.6697743,13.6202267],[100.6581768,13.6033577],[100.6578328,13.5874977],[100.6784675,13.5680098],[100.6954526,13.5663138],[100.7028426,13.5574948],[100.7054769,13.5507058],[100.7123328,13.5473138],[100.7200148,13.5434418],[100.7321663,13.5411298],[100.7399183,13.5396818],[100.7731766,13.5305308],[100.8676416,13.5177669],[100.9300185,13.5039008],[100.9488419,13.5191998],[100.9524724,13.5230028],[100.9526864,13.5294368],[100.9529865,13.5354328],[100.9519324,13.5434058],[100.9540766,13.5497828],[100.9539226,13.5515768],[100.9529975,13.5558468],[100.9555358,13.5626998],[100.9582992,13.5715318],[100.9593333,13.5758308],[100.9601875,13.5788408],[100.9652301,13.5841908],[100.9693826,13.5879298],[100.9699567,13.5908228],[100.9704928,13.5948318],[100.9542607,13.6021168],[100.9356213,13.6062868],[100.9307167,13.6076708],[100.9271873,13.6071898],[100.9217266,13.6054938],[100.9146567,13.6049898],[100.9141666,13.6079828],[100.9107912,13.6087088],[100.9063776,13.6055448],[100.9024701,13.6084638],[100.8987156,13.6072998],[100.8931799,13.6101468],[100.8850749,13.6135288],[100.8832136,13.6165488],[100.8795102,13.6205408],[100.878598,13.6212788],[100.8765908,13.6217098],[100.8753406,13.6220818],[100.8732054,13.6227589],[100.8699109,13.6233609],[100.8648433,13.6240739],[100.8613548,13.6247809],[100.8590755,13.6256789],[100.8566502,13.6265649],[100.8543169,13.6269239],[100.8527937,13.6270329],[100.8513686,13.6273449],[100.8464259,13.6271299],[100.8435976,13.6277959],[100.8413723,13.6287659],[100.839552,13.6297549],[100.8363246,13.6301809],[100.8338213,13.6290029],[100.831361,13.6292109],[100.8283486,13.6297379],[100.8252292,13.6319429],[100.823663,13.6321079],[100.8216057,13.6317899],[100.8181643,13.6316599],[100.816056,13.6318639],[100.8148989,13.6321879],[100.8128586,13.6324299],[100.8094152,13.6325559],[100.8068128,13.6329629],[100.8048366,13.6331539],[100.8016922,13.6334859],[100.7995449,13.6336729],[100.7971286,13.6334899],[100.7932591,13.6338599],[100.7909948,13.6337919],[100.7902627,13.6341869],[100.7895436,13.6352129],[100.7876664,13.6360419],[100.7857921,13.6360229],[100.784645,13.6361879],[100.7824767,13.6368389],[100.7809075,13.6370949],[100.7788502,13.6373549],[100.7781161,13.6376249],[100.7748627,13.6383928],[100.7708082,13.6397208],[100.769418,13.6400808],[100.7659946,13.6412468],[100.7625691,13.6418328],[100.7573765,13.6431688],[100.7558333,13.6438028],[100.7518208,13.6444468],[100.7512947,13.6443638]]]}},{"type":"Feature","properties":{"name":"ตากสิน","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.512318,13.729322],[100.51062,13.733773],[100.506255,13.736973],[100.497897,13.739044],[100.493067,13.741248],[100.489277,13.739454],[100.487687,13.736068],[100.486522,13.733231],[100.485915,13.729483],[100.478609,13.722784],[100.471542,13.722571],[100.460484,13.719376],[100.435234,13.710527],[100.426251,13.706996],[100.426447,13.702981],[100.426617,13.699923],[100.426561,13.698342],[100.42657,13.69622],[100.426796,13.693672],[100.427655,13.688786],[100.428268,13.683553],[100.429009,13.677915],[100.429621,13.671783],[100.429343,13.666937],[100.418823,13.657562],[100.41547,13.654584],[100.412486,13.651914],[100.404934,13.645161],[100.401886,13.642444],[100.401546,13.642138],[100.401034,13.641678],[100.400521,13.641223],[100.399943,13.640705],[100.399567,13.640371],[100.399122,13.639975],[100.398314,13.639254],[100.395883,13.637085],[100.388946,13.630875],[100.382116,13.62476],[100.376124,13.619395],[100.375688,13.613635],[100.376309,13.609442],[100.377311,13.605788],[100.378387,13.602216],[100.380812,13.598058],[100.382504,13.593305],[100.381078,13.59113],[100.382134,13.590458],[100.382963,13.59005],[100.383686,13.589421],[100.38446,13.588368],[100.384266,13.587655],[100.384692,13.587575],[100.385132,13.587585],[100.385294,13.587288],[100.384836,13.586949],[100.384972,13.586633],[100.385295,13.586286],[100.384982,13.585861],[100.385609,13.58592],[100.385271,13.585485],[100.385703,13.585118],[100.386386,13.58457],[100.386519,13.583353],[100.386978,13.58211],[100.387223,13.580668],[100.387521,13.578656],[100.38802,13.576676],[100.388497,13.575431],[100.389035,13.574784],[100.389548,13.573702],[100.389751,13.572898],[100.389922,13.571759],[100.390353,13.570969],[100.390609,13.570432],[100.390571,13.569582],[100.390538,13.568877],[100.390716,13.568396],[100.390858,13.567786],[100.390861,13.567079],[100.390814,13.566032],[100.390712,13.565498],[100.39081,13.565072],[100.391105,13.564386],[100.391016,13.563494],[100.391038,13.563014],[100.391364,13.562761],[100.391854,13.562933],[100.39222,13.56267],[100.392655,13.562266],[100.39271,13.561637],[100.39317,13.561308],[100.392639,13.560752],[100.392622,13.560432],[100.393149,13.560349],[100.392835,13.559785],[100.393081,13.559201],[100.393308,13.558441],[100.394006,13.558128],[100.39398,13.557786],[100.394149,13.556179],[100.394799,13.555291],[100.394927,13.554485],[100.395377,13.553557],[100.397015,13.552673],[100.398607,13.552808],[100.399491,13.552295],[100.40166,13.553],[100.403139,13.553284],[100.404471,13.555103],[100.405926,13.554557],[100.407005,13.554782],[100.408235,13.554259],[100.409482,13.554696],[100.411112,13.555068],[100.41209,13.556206],[100.412983,13.556812],[100.413944,13.556771],[100.41508,13.555833],[100.414417,13.551644],[100.41668,13.550014],[100.41995,13.544934],[100.418668,13.541433],[100.416519,13.539786],[100.414777,13.538229],[100.412896,13.531379],[100.40985,13.524301],[100.4082,13.522136],[100.40666,13.519878],[100.410266,13.492761],[100.427367,13.494719],[100.442118,13.496687],[100.451859,13.498566],[100.452252,13.49905],[100.453272,13.499645],[100.453269,13.50235],[100.451758,13.510407],[100.450395,13.518468],[100.448512,13.529684],[100.446623,13.540804],[100.445715,13.54548],[100.44473,13.550812],[100.444458,13.556244],[100.444644,13.560121],[100.444852,13.56268],[100.445417,13.568464],[100.446048,13.575971],[100.446625,13.583297],[100.447273,13.587559],[100.449143,13.591824],[100.450862,13.594915],[100.451062,13.596911],[100.452106,13.598253],[100.452307,13.60113],[100.453713,13.605106],[100.452753,13.607339],[100.451695,13.610549],[100.451213,13.61384],[100.450598,13.615849],[100.450088,13.618335],[100.449824,13.620842],[100.449334,13.625113],[100.472654,13.625719],[100.473873,13.627109],[100.47401,13.628449],[100.475312,13.62956],[100.475485,13.631229],[100.475022,13.633048],[100.474296,13.636679],[100.472351,13.648879],[100.471059,13.654767],[100.470403,13.658201],[100.469411,13.662106],[100.467888,13.669012],[100.466728,13.673311],[100.469403,13.674679],[100.469201,13.677871],[100.470102,13.678664],[100.470779,13.679083],[100.470304,13.680788],[100.470384,13.68272],[100.47008,13.68427],[100.469188,13.686789],[100.468689,13.689388],[100.471285,13.690413],[100.472897,13.688632],[100.475634,13.68958],[100.479795,13.692624],[100.482385,13.694153],[100.484137,13.694814],[100.486662,13.694973],[100.487174,13.694766],[100.489971,13.696007],[100.492447,13.701383],[100.503892,13.708352],[100.512018,13.719318],[100.512318,13.729322]]]}},{"type":"Feature","properties":{"name":"สุขุมวิท","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.563144,13.747809],[100.560611,13.748272],[100.555343,13.748212],[100.550082,13.748352],[100.552631,13.722891],[100.552966,13.719733],[100.552972,13.719362],[100.553217,13.718718],[100.553367,13.717325],[100.553736,13.7141],[100.553808,13.713033],[100.553933,13.712489],[100.554118,13.710682],[100.553536,13.709176],[100.547669,13.703048],[100.548266,13.701189],[100.551331,13.699132],[100.556903,13.706268],[100.569128,13.703667],[100.580666,13.702918],[100.582929,13.703911],[100.587092,13.704857],[100.589583,13.70551],[100.590878,13.707169],[100.592767,13.708966],[100.596068,13.709955],[100.597765,13.711855],[100.598154,13.712146],[100.599053,13.712112],[100.600062,13.711722],[100.601124,13.711113],[100.601485,13.711179],[100.601671,13.711673],[100.601878,13.71295],[100.602263,13.713475],[100.60386,13.713921],[100.605172,13.714076],[100.605961,13.714727],[100.606811,13.715655],[100.607521,13.715912],[100.609552,13.715719],[100.611371,13.715551],[100.612027,13.715576],[100.612255,13.715163],[100.612287,13.714289],[100.612389,13.713423],[100.612489,13.712909],[100.613218,13.712568],[100.613997,13.712774],[100.614636,13.713292],[100.615437,13.713144],[100.615986,13.712345],[100.616425,13.711457],[100.616318,13.711148],[100.61581,13.710741],[100.615972,13.710029],[100.617911,13.71038],[100.618538,13.710923],[100.61883,13.711341],[100.619496,13.7115],[100.620154,13.71128],[100.621211,13.710294],[100.621313,13.711789],[100.621527,13.712558],[100.622142,13.713422],[100.622372,13.714391],[100.623082,13.714456],[100.623922,13.714759],[100.624267,13.714583],[100.624493,13.713753],[100.625557,13.712443],[100.628151,13.715068],[100.633531,13.714931],[100.637588,13.714646],[100.650856,13.717944],[100.661524,13.720779],[100.668687,13.722679],[100.673738,13.72391],[100.679889,13.723992],[100.684818,13.723963],[100.690597,13.723991],[100.695804,13.724041],[100.708857,13.723945],[100.708461,13.728148],[100.708255,13.731664],[100.708477,13.734918],[100.70866,13.736952],[100.708828,13.738716],[100.708887,13.741089],[100.709111,13.744688],[100.709348,13.75015],[100.70973,13.75608],[100.707617,13.756445],[100.707105,13.758106],[100.708897,13.760828],[100.710292,13.762379],[100.711417,13.764177],[100.712527,13.765413],[100.713691,13.767857],[100.715176,13.770274],[100.716242,13.77285],[100.716572,13.777027],[100.716154,13.778227],[100.715304,13.780989],[100.714735,13.782943],[100.712649,13.786738],[100.71077,13.790011],[100.70905,13.793029],[100.70782,13.795202],[100.706759,13.797049],[100.705869,13.798073],[100.702498,13.796208],[100.699036,13.794291],[100.692444,13.790651],[100.685897,13.787009],[100.677641,13.782487],[100.668354,13.777352],[100.660302,13.772878],[100.654855,13.769937],[100.6493,13.765595],[100.645502,13.764762],[100.638411,13.763997],[100.634232,13.763457],[100.627132,13.762718],[100.622916,13.762245],[100.621604,13.762146],[100.620263,13.761926],[100.618913,13.761686],[100.617314,13.761552],[100.615591,13.761218],[100.614537,13.76073],[100.613895,13.760201],[100.61247,13.758749],[100.610958,13.757351],[100.609077,13.755684],[100.608023,13.754647],[100.606159,13.75299],[100.604539,13.751481],[100.603565,13.750587],[100.602455,13.749425],[100.601105,13.748159],[100.600298,13.747411],[100.598668,13.743002],[100.598363,13.740888],[100.597726,13.741051],[100.596751,13.741135],[100.595814,13.741326],[100.594818,13.741514],[100.594055,13.741615],[100.593144,13.741781],[100.592126,13.741963],[100.591079,13.742144],[100.590369,13.742305],[100.589411,13.742456],[100.588219,13.742721],[100.587047,13.742936],[100.585234,13.743296],[100.584167,13.743538],[100.583446,13.743762],[100.582911,13.743884],[100.582284,13.744054],[100.581353,13.744278],[100.580455,13.74448],[100.579526,13.744698],[100.578826,13.74485],[100.577981,13.745011],[100.577052,13.745198],[100.576497,13.745326],[100.575702,13.745483],[100.575006,13.745562],[100.574266,13.74568],[100.573518,13.745842],[100.573112,13.745988],[100.572469,13.74617],[100.571752,13.746295],[100.571026,13.746381],[100.57052,13.74646],[100.569695,13.746627],[100.56869,13.746793],[100.567368,13.747025],[100.566783,13.747166],[100.566196,13.747269],[100.565414,13.747472],[100.564774,13.747617],[100.564184,13.747705],[100.56373,13.747773],[100.563152,13.747785],[100.563144,13.747809]]]}},{"type":"Feature","properties":{"name":"พญาไท","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.586578,13.858386],[100.586438,13.858875],[100.585724,13.858424],[100.584243,13.858269],[100.582316,13.857916],[100.579135,13.857664],[100.57672,13.857407],[100.575105,13.85712],[100.573602,13.856967],[100.571244,13.856412],[100.568855,13.856319],[100.565561,13.855661],[100.564834,13.85479],[100.56329,13.851916],[100.561617,13.848816],[100.560138,13.846071],[100.558866,13.843698],[100.55709,13.840372],[100.556043,13.838433],[100.554502,13.83558],[100.552995,13.832745],[100.551292,13.829565],[100.548968,13.825272],[100.546468,13.820391],[100.544843,13.817113],[100.543967,13.815021],[100.543401,13.812788],[100.542928,13.811467],[100.542506,13.810427],[100.542011,13.809213],[100.541544,13.808021],[100.54113,13.806968],[100.540839,13.806056],[100.540498,13.805119],[100.539996,13.803648],[100.539637,13.802744],[100.539258,13.801921],[100.538748,13.800801],[100.538293,13.799875],[100.538132,13.799545],[100.537868,13.798959],[100.537703,13.798558],[100.537695,13.798538],[100.537527,13.798158],[100.537434,13.797938],[100.53742,13.797902],[100.537363,13.797766],[100.537334,13.797695],[100.537324,13.79767],[100.537261,13.797508],[100.53646,13.795558],[100.535141,13.792334],[100.533791,13.789012],[100.532944,13.786866],[100.529749,13.779026],[100.52913,13.773341],[100.531823,13.771411],[100.533469,13.770167],[100.535453,13.768575],[100.536397,13.767838],[100.537506,13.76684],[100.538914,13.765977],[100.539952,13.765404],[100.540849,13.764644],[100.54171,13.76392],[100.543432,13.762656],[100.545498,13.761288],[100.546134,13.760417],[100.547237,13.76041],[100.547738,13.759724],[100.549255,13.759144],[100.550737,13.758368],[100.551452,13.757457],[100.552068,13.75663],[100.552583,13.755919],[100.553725,13.75587],[100.554375,13.756111],[100.555897,13.756024],[100.556999,13.75581],[100.558331,13.755754],[100.55988,13.75564],[100.561414,13.755552],[100.562828,13.755415],[100.564771,13.755137],[100.563437,13.748972],[100.563539,13.747773],[100.563988,13.747734],[100.564491,13.747659],[100.565155,13.747558],[100.565948,13.747295],[100.566621,13.747206],[100.567124,13.747084],[100.567726,13.746954],[100.569354,13.74669],[100.570288,13.746509],[100.570786,13.746413],[100.571416,13.746335],[100.572199,13.746242],[100.572841,13.746071],[100.57334,13.745905],[100.573925,13.745741],[100.574682,13.745606],[100.575349,13.74553],[100.576052,13.745436],[100.576779,13.745256],[100.577457,13.745115],[100.578481,13.744913],[100.579169,13.744787],[100.580065,13.744564],[100.581055,13.744349],[100.581895,13.744149],[100.582665,13.743952],[100.583228,13.743813],[100.583954,13.743597],[100.584627,13.743432],[100.58657,13.743031],[100.587908,13.742788],[100.588997,13.742545],[100.590021,13.742369],[100.590836,13.742191],[100.591552,13.742062],[100.592746,13.741858],[100.593691,13.741677],[100.594522,13.741567],[100.595397,13.741409],[100.5964,13.741206],[100.597308,13.741042],[100.598152,13.740964],[100.598785,13.740705],[100.599884,13.746361],[100.600817,13.747915],[100.602112,13.74909],[100.603232,13.750282],[100.603946,13.751216],[100.603598,13.751702],[100.60264,13.75265],[100.601481,13.753738],[100.601003,13.754217],[100.599555,13.755522],[100.599046,13.756031],[100.597902,13.757091],[100.597162,13.758199],[100.596257,13.759937],[100.596041,13.760424],[100.594926,13.762105],[100.594584,13.763466],[100.594649,13.763961],[100.594748,13.764558],[100.594478,13.766797],[100.593064,13.772664],[100.593555,13.776924],[100.592041,13.781605],[100.590805,13.784837],[100.589957,13.787688],[100.59002,13.789356],[100.589367,13.792376],[100.589312,13.796161],[100.589056,13.798173],[100.588843,13.801154],[100.588279,13.803044],[100.588681,13.805018],[100.588711,13.808533],[100.588977,13.810346],[100.588459,13.812446],[100.588911,13.813718],[100.589129,13.815499],[100.589492,13.817786],[100.589167,13.819479],[100.589285,13.822537],[100.589316,13.825174],[100.589835,13.828538],[100.589767,13.831851],[100.590481,13.83489],[100.590876,13.838647],[100.589967,13.842621],[100.589695,13.844027],[100.588158,13.849987],[100.587464,13.853625],[100.587445,13.856323],[100.586578,13.858386]]]}},{"type":"Feature","properties":{"name":"ลาดพร้าว","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.6785116,13.8505627],[100.6769256,13.8515597],[100.6742986,13.8520997],[100.6715776,13.8523697],[100.6708206,13.8526767],[100.6698256,13.8524627],[100.6688376,13.8518697],[100.6676226,13.8510197],[100.6658646,13.8506027],[100.6645016,13.8506157],[100.6624576,13.8502917],[100.6613836,13.8496677],[100.6608396,13.8490927],[100.6592386,13.8488647],[100.6588636,13.8486447],[100.6588496,13.8483047],[100.6586626,13.8478187],[100.6581376,13.8477627],[100.6574006,13.8478237],[100.6565966,13.8478447],[100.6561286,13.8477497],[100.6553336,13.8474427],[100.6539816,13.8471047],[100.6528936,13.8468717],[100.6522386,13.8469947],[100.6516696,13.8468857],[100.6502396,13.8464717],[100.6491156,13.8463057],[100.6480286,13.8464457],[100.6466136,13.8472227],[100.6454015,13.8473227],[100.6438575,13.8470737],[100.6416945,13.8467937],[100.6404755,13.8465417],[100.6385815,13.8457617],[100.6360065,13.8439287],[100.6345415,13.8432147],[100.6318385,13.8426777],[100.6303705,13.8427467],[100.6287705,13.8426407],[100.6284215,13.8430537],[100.6274915,13.8437547],[100.6265135,13.8442537],[100.6249375,13.8451227],[100.6241235,13.8455617],[100.6233745,13.8459507],[100.6228975,13.8464477],[100.6221415,13.8469647],[100.6218415,13.8471027],[100.6214555,13.8473877],[100.6208875,13.8480047],[100.6195975,13.8484907],[100.6188975,13.8485337],[100.6162945,13.8488767],[100.6149245,13.8489947],[100.6137235,13.8491237],[100.6124665,13.8491537],[100.6111685,13.8491107],[100.6105725,13.8491257],[100.6099665,13.8491477],[100.6093735,13.8491227],[100.6087415,13.8491007],[100.6082885,13.8491667],[100.6076465,13.8492507],[100.6069865,13.8493017],[100.6060505,13.8489957],[100.6044455,13.8482057],[100.6030345,13.8473187],[100.6006585,13.8466667],[100.5987275,13.8463657],[100.5982965,13.8462297],[100.5977695,13.8461707],[100.5972425,13.8459867],[100.5969135,13.8458177],[100.5962925,13.8457567],[100.5947075,13.8454827],[100.5932385,13.8450897],[100.5912655,13.8442837],[100.5898255,13.8433157],[100.5908015,13.8390187],[100.5907135,13.8359687],[100.5897975,13.8323087],[100.5898665,13.8290427],[100.5894785,13.8258937],[100.5891655,13.8231257],[100.5891645,13.8199627],[100.5894475,13.8181687],[100.5892105,13.8158677],[100.5889165,13.8141057],[100.5884835,13.8127167],[100.5889595,13.8105717],[100.5887365,13.8090137],[100.5886605,13.8057717],[100.5886085,13.8040387],[100.5888375,13.8013827],[100.5890045,13.7987157],[100.5891785,13.7970887],[100.5893415,13.7931357],[100.5899345,13.7897777],[100.5899535,13.7883327],[100.5906805,13.7850987],[100.5915215,13.7831007],[100.5934895,13.7789227],[100.5930415,13.7743217],[100.5943115,13.7672517],[100.5947425,13.7648257],[100.5946355,13.7640187],[100.5945595,13.7636137],[100.5947705,13.7624647],[100.5958425,13.7607407],[100.5961045,13.7602317],[100.5970475,13.7584647],[100.5977755,13.7572407],[100.5988085,13.7562657],[100.5993365,13.7557387],[100.6008315,13.7543747],[100.6013545,13.7538667],[100.6023905,13.7529077],[100.6034245,13.7519057],[100.6038755,13.7513487],[100.6045175,13.7515227],[100.6061375,13.7530317],[100.6080015,13.7546887],[100.6090555,13.7557257],[100.6109365,13.7573927],[100.6124485,13.7587907],[100.6138735,13.7602427],[100.6145155,13.7607717],[100.6155695,13.7612597],[100.6172925,13.7615937],[100.6188915,13.7617277],[100.6202415,13.7619677],[100.6215825,13.7621877],[100.6228945,13.7622867],[100.6271105,13.7627597],[100.6342105,13.7634987],[100.6383895,13.7640387],[100.6454805,13.7648037],[100.6492786,13.7656367],[100.6548336,13.7699787],[100.6602806,13.7729197],[100.6683326,13.7773937],[100.6776196,13.7825287],[100.6858756,13.7870507],[100.6924226,13.7906927],[100.6990146,13.7943327],[100.7024766,13.7962497],[100.7044856,13.7983437],[100.7031346,13.8004307],[100.7022676,13.8016637],[100.7015836,13.8028717],[100.7004186,13.8046777],[100.7010046,13.8053207],[100.7016546,13.8063277],[100.7020276,13.8074147],[100.7019736,13.8083947],[100.7016526,13.8093017],[100.7007966,13.8099837],[100.6999966,13.8103877],[100.6980316,13.8119117],[100.6973086,13.8131627],[100.6967296,13.8151347],[100.6965196,13.8173697],[100.6969116,13.8202797],[100.6960476,13.8208637],[100.6953846,13.8219947],[100.6953296,13.8236927],[100.6948636,13.8246677],[100.6934886,13.8272467],[100.6913296,13.8306017],[100.6907426,13.8312687],[100.6902986,13.8326527],[100.6888336,13.8338917],[100.6877796,13.8347377],[100.6881416,13.8356617],[100.6880206,13.8369567],[100.6873456,13.8391787],[100.6866796,13.8406377],[100.6862316,13.8425327],[100.6859076,13.8440047],[100.6852806,13.8455057],[100.6844396,13.8466787],[100.6838486,13.8478017],[100.6831176,13.8485947],[100.6807846,13.8498197],[100.6788966,13.8504137],[100.6785116,13.8505627]]]}},{"type":"Feature","properties":{"name":"ประชาชื่น","type":"district"},"geometry":{"type":"Polygon","coordinates":[[[100.62291,13.947203],[100.620977,13.95106],[100.613977,13.954336],[100.610909,13.954136],[100.605636,13.953784],[100.604564,13.953233],[100.604689,13.952281],[100.604828,13.951458],[100.604793,13.950893],[100.604999,13.949634],[100.605328,13.947421],[100.601897,13.945693],[100.5935819,13.949373],[100.5935089,13.94943],[100.5932979,13.949474],[100.5929549,13.949617],[100.592307,13.949959],[100.591855,13.95018],[100.591564,13.950275],[100.591203,13.950397],[100.590521,13.95059],[100.590007,13.950761],[100.589503,13.950935],[100.589146,13.951021],[100.588459,13.951197],[100.585597,13.951875],[100.581758,13.95274],[100.576442,13.953927],[100.575107,13.954249],[100.573945,13.954591],[100.570967,13.953073],[100.569077,13.952097],[100.567972,13.951605],[100.565124,13.94038],[100.563696,13.934279],[100.5621719,13.927873],[100.5600309,13.918676],[100.5581499,13.910709],[100.5568769,13.905283],[100.555397,13.899064],[100.554367,13.894689],[100.552846,13.888191],[100.550407,13.877756],[100.549876,13.875488],[100.549119,13.872225],[100.547837,13.866819],[100.546923,13.863041],[100.545752,13.858041],[100.544894,13.854368],[100.543476,13.849873],[100.542724,13.84926],[100.541609,13.848782],[100.540508,13.848276],[100.539088,13.847629],[100.53776,13.846904],[100.536939,13.84649],[100.536181,13.846224],[100.53548,13.845617],[100.534883,13.844981],[100.53401,13.844363],[100.533362,13.843673],[100.532758,13.843208],[100.532174,13.842638],[100.531866,13.842248],[100.530863,13.84156],[100.530241,13.840924],[100.529696,13.84042],[100.52917,13.83989],[100.527976,13.838904],[100.526064,13.837251],[100.525498,13.83681],[100.5239319,13.835485],[100.5227519,13.834437],[100.5221539,13.833757],[100.5211459,13.832939],[100.5192149,13.831159],[100.517903,13.830091],[100.516428,13.828918],[100.515831,13.827897],[100.515096,13.826946],[100.513863,13.826449],[100.513291,13.826238],[100.513088,13.825699],[100.51312,13.824789],[100.512807,13.824715],[100.512439,13.825275],[100.511954,13.826034],[100.511154,13.826204],[100.510892,13.826036],[100.510807,13.82534],[100.510455,13.825212],[100.509878,13.825469],[100.509345,13.825546],[100.50921,13.825055],[100.509493,13.824631],[100.509967,13.824507],[100.510145,13.824252],[100.50982,13.823794],[100.509327,13.823552],[100.508716,13.823428],[100.508351,13.823148],[100.507912,13.82293],[100.507638,13.822618],[100.507585,13.822193],[100.507573,13.821523],[100.507177,13.821219],[100.506913,13.820466],[100.506375,13.819397],[100.506629,13.818278],[100.507538,13.816056],[100.515221,13.813213],[100.517078,13.81024],[100.517596,13.80499],[100.518636,13.800186],[100.5213559,13.79994],[100.5229449,13.799728],[100.5248579,13.799208],[100.526575,13.798752],[100.528057,13.798833],[100.530415,13.798485],[100.532319,13.798242],[100.532632,13.798768],[100.533063,13.799593],[100.535012,13.798698],[100.537256,13.797621],[100.537301,13.797614],[100.537324,13.797671],[100.537334,13.797695],[100.537356,13.797747],[100.53737,13.797783],[100.537427,13.797919],[100.537502,13.798109],[100.537527,13.798158],[100.537685,13.798515],[100.537699,13.798548],[100.53773,13.798625],[100.537935,13.799113],[100.538132,13.799545],[100.538275,13.799837],[100.538536,13.800356],[100.538981,13.801307],[100.539367,13.802154],[100.539637,13.802744],[100.539929,13.803467],[100.540181,13.8042],[100.54062,13.805457],[100.540897,13.806217],[100.54113,13.806968],[100.541464,13.807818],[100.541893,13.808921],[100.542182,13.809628],[100.542606,13.810669],[100.542928,13.811467],[100.543345,13.812559],[100.543765,13.814232],[100.544107,13.815401],[100.54521,13.817833],[100.546468,13.820391],[100.548443,13.824294],[100.550534,13.828179],[100.551946,13.830781],[100.553035,13.832819],[100.554502,13.83558],[100.555828,13.838078],[100.5564669,13.839222],[100.5575849,13.841291],[100.5590249,13.843996],[100.5601379,13.846071],[100.5612069,13.848066],[100.562627,13.850698],[100.563798,13.852866],[100.565089,13.855253],[100.565561,13.855661],[100.567949,13.856092],[100.570566,13.856348],[100.572546,13.856593],[100.573793,13.856971],[100.575105,13.85712],[100.576554,13.85741],[100.578077,13.857481],[100.580678,13.857824],[100.583507,13.857906],[100.584243,13.858269],[100.585553,13.85837],[100.586438,13.858876],[100.587847,13.877725],[100.588439,13.88042],[100.5933459,13.88618],[100.5988459,13.891089],[100.605372,13.895322],[100.607675,13.897679],[100.615117,13.906816],[100.626441,13.926076],[100.625131,13.934792],[100.62291,13.947203]]]}}]};
+const MWA_BOUNDARY={"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"ขอบเขตพื้นที่บริการ กปน."},"geometry":{"type":"Polygon","coordinates":[[[100.25462,14.02613],[100.25475,14.04255],[100.25842,14.05216],[100.27214,14.07319],[100.27547,14.08886],[100.27787,14.12565],[100.29748,14.14197],[100.32258,14.13075],[100.33411,14.12915],[100.34579,14.11564],[100.34299,14.09666],[100.33389,14.06679],[100.33375,14.05333],[100.34486,14.02301],[100.36221,13.99539],[100.37925,13.99072],[100.38131,13.99628],[100.43552,13.9825],[100.46024,13.96291],[100.46571,13.96064],[100.47319,13.96502],[100.48754,13.95098],[100.48974,13.94419],[100.49992,13.93927],[100.50849,13.94488],[100.53056,13.94657],[100.53631,13.95155],[100.53884,13.95749],[100.56298,13.95121],[100.57426,13.95606],[100.6039,13.94648],[100.60333,13.95461],[100.61279,13.9567],[100.62694,13.95022],[100.6411,13.95236],[100.64261,13.94313],[100.62763,13.94035],[100.63807,13.93886],[100.64053,13.94041],[100.6414,13.93305],[100.69054,13.93242],[100.68867,13.92053],[100.69242,13.92037],[100.79161,13.93252],[100.84312,13.9425],[100.91537,13.94992],[100.90793,13.88051],[100.90783,13.86036],[100.90402,13.85003],[100.91397,13.84791],[100.9096,13.83867],[100.94039,13.81387],[100.92986,13.8003],[100.91152,13.78975],[100.85734,13.70015],[100.95896,13.66252],[100.95471,13.65445],[100.95561,13.64913],[100.96626,13.64497],[100.96423,13.63703],[100.96123,13.6305],[100.939,13.60794],[100.96324,13.6033],[100.97198,13.59506],[100.97106,13.58734],[100.96786,13.58637],[100.96127,13.57776],[100.95399,13.55441],[100.95587,13.55092],[100.95343,13.54323],[100.95307,13.51707],[100.93366,13.52387],[100.9301,13.5024],[100.89744,13.51135],[100.87411,13.51508],[100.87313,13.48674],[100.86537,13.47836],[100.85081,13.47764],[100.81371,13.48719],[100.7081,13.50096],[100.65063,13.51131],[100.63192,13.51767],[100.60075,13.5445],[100.58317,13.55238],[100.5945,13.53694],[100.58999,13.53404],[100.59047,13.52519],[100.58744,13.51959],[100.57512,13.50778],[100.54428,13.50456],[100.53432,13.50026],[100.52954,13.502],[100.51633,13.49856],[100.4992,13.49845],[100.49056,13.4948],[100.47368,13.49635],[100.46357,13.49331],[100.45795,13.49861],[100.44075,13.49464],[100.40907,13.49163],[100.40457,13.50775],[100.40465,13.53602],[100.41285,13.53739],[100.41816,13.54592],[100.41307,13.55069],[100.41322,13.55454],[100.3996,13.5508],[100.39417,13.55264],[100.38295,13.57703],[100.38032,13.59405],[100.37565,13.60612],[100.37126,13.60212],[100.36354,13.60319],[100.3637,13.60995],[100.37276,13.61836],[100.3541,13.63355],[100.34649,13.63807],[100.34003,13.63759],[100.3367,13.6424],[100.33978,13.66099],[100.33655,13.67549],[100.332,13.68116],[100.32873,13.69986],[100.32733,13.80166],[100.27588,13.9103],[100.26348,13.92041],[100.27311,13.93584],[100.28325,13.94524],[100.29601,13.9631],[100.27968,13.97492],[100.26785,13.98854],[100.25462,14.02613]]]}}]};
+function showErr(msg){var t=document.getElementById("errToast");if(t){t.style.display="block";t.textContent=msg;}}
+window.addEventListener("error",function(e){showErr("Error: "+(e.message||"script failed")+(e.filename?" @ "+e.filename.split("/").pop()+":"+e.lineno:""));});
+
+function main(){
+const MOCK={
+  "4":{frcIn:1.44,frcOut:1.36,turb:0.31,temp:29.2,ph:7.3},"16":{frcIn:1.30,frcOut:1.18,turb:0.28,temp:29.5,ph:7.2},
+  "5":{frcIn:1.42,frcOut:1.34,turb:0.35,temp:29.0,ph:7.1},"9":{frcIn:1.18,frcOut:1.22,turb:0.40,temp:29.5,ph:7.36,bypass:true},
+  "18":{frcIn:null,frcOut:0.87,turb:0.40,temp:29.4,ph:7.2},"17":{frcIn:0.90,frcOut:0.93,turb:0.65,temp:29.8,ph:7.21,bypass:true},
+  "14":{frcIn:0.13,frcOut:1.05,turb:0.35,temp:30.8,ph:7.18},"20":{frcIn:1.04,frcOut:1.39,turb:0.45,temp:29.6,ph:7.25},
+  "15":{frcIn:0.73,frcOut:1.20,turb:0.38,temp:29.9,ph:7.15},"LK2":{frcIn:0.43,frcOut:0.70,turb:0.30,temp:29.5,ph:7.20},"19":{frcIn:0.38,frcOut:1.11,turb:0.52,temp:30.1,ph:7.19},
+};
+const API="http://172.16.196.100:3000/api",USE_MOCK=false,REFRESH=60;
+const HUB_API="https://twqonline.mwa.co.th/TWQMSServicepublic/api/mwaonmobile/getStations";
+const SMART_API="http://172.16.193.162/smartmap";
+const PUB_MAP={SW01:"18",SW02:"9",SW03:"17",SW04:"14",SW05:"20",SW06:"15",SW07:"19",SW08:"5",SW09:"4",SW10:"16"};
+const HUB_MAP={SP01:"TR1",SP02:"TR2",SP03:"TR3",SP11:"MTR"};
+// พิกัดตามตารางทางการ (Lat/Long)
+const META={
+  "4":{code:"PK",name:"เพชรเกษม",area:10500,maxLv:6.7,flow:12000,k:0.451,coord:[100.40649,13.72472],src:"MTR"},
+  "16":{code:"TP",name:"ท่าพระ",area:8120,maxLv:5.63,flow:10000,k:0.44,coord:[100.47622,13.731417],src:"MTR/TR1"},
+  "5":{code:"RB",name:"ราษฎร์บูรณะ",area:10025,maxLv:5.6,flow:14000,k:0.094,coord:[100.467606,13.675917],src:"MTR"},
+  "18":{code:"LP",name:"ลุมพินี",area:8570,maxLv:5.7,flow:12000,k:null,coord:[100.53785,13.734649],src:"TR1"},
+  "9":{code:"LA",name:"ลาดพร้าว",area:13815,maxLv:5.63,flow:16000,k:0.454,coord:[100.59763,13.766959],src:"TR2"},
+  "17":{code:"KT",name:"คลองเตย",area:8120,maxLv:5.63,flow:9000,k:0.316,coord:[100.58102,13.715186],src:"TR2"},
+  "14":{code:"SR",name:"สำโรง",area:14081,maxLv:5.63,flow:20000,k:2.652,coord:[100.59082,13.662468],src:"TR1"},
+  "20":{code:"MB",name:"มีนบุรี",area:11961,maxLv:7.1,flow:16000,k:0.627,coord:[100.74055,13.826229],src:"TR3"},
+  "15":{code:"LK",name:"ลาดกระบัง",area:9000,maxLv:5.63,flow:10000,k:0.047,coord:[100.741005,13.724753],src:"TR3"},
+  "LK2":{code:"LK2",name:"ลาดกระบัง 2",area:11410,maxLv:5.36,flow:15000,k:0.3,sim:true,coord:[100.7423,13.7253],src:"TR3"}, // k=0.3: วัด 18 ก.ย. (Q 13,000 in 0.78 dose 80 out 1.56) ได้ k~0 -> ถัง passivate แล้ว ตั้ง 0.3 เผื่อความปลอดภัย
+  "19":{code:"BP",name:"บางพลี",area:11000,maxLv:5.9,flow:22000,k:null,coord:[100.713974,13.598997],src:"TR3"},
+};
+const IDS=Object.keys(META);
+// สถานีสูบส่ง (hub)
+const HUBS=[
+  {code:"MTR",name:"สูบส่งมหาสวัสดิ์",coord:[100.40854,13.809139],group:"MTR",off:[0,0]},
+  {code:"TR1",name:"สูบส่งบางเขน 1",coord:[100.55298,13.87858],group:"TR1",off:[-58,6]},
+  {code:"TR2",name:"สูบส่งบางเขน 2",coord:[100.5544,13.878268],group:"TR2",off:[0,-14]},
+  {code:"TR3",name:"สูบส่งบางเขน 3",coord:[100.55593,13.877851],group:"TR3",off:[58,6]},
+];
+// โรงงานผลิตน้ำ 2 แห่ง (มหาสวัสดิ์ + บางเขน)
+const SOURCES=[
+  {name:"โรงงานผลิตน้ำมหาสวัสดิ์",coord:[100.3930,13.8120]},
+  {name:"โรงงานผลิตน้ำบางเขน",coord:[100.5500,13.8815]},
+];
+// สีตามแผนที่ระบบส่งน้ำจริง: MTR เขียว | TR1 ส้มเข้ม | TR2 ส้มอ่อน | TR3 ชมพู
+const GROUP_COLOR={MTR:[34,197,94],TR1:[249,115,22],TR2:[234,179,8],TR3:[236,72,153]};
+
+// อุโมงค์ส่งน้ำ: โครงสร้างสายหลัก/แขนง/ท่อแยก — น้ำวิ่งต่อเนื่องตามระยะทาง แยกที่ junction พร้อมกัน
+// pts[0] ของแขนง/ท่อแยก ต้องเป็น vertex ที่มีอยู่จริงในสาย parent
+const ROUTES2=[
+  // ===== MTR (เขียว) =====
+  {id:"MTR-A",g:"MTR",pts:[[100.3930,13.8120],[100.40854,13.809139],[100.4020,13.7820],[100.3980,13.7550],[100.3965,13.7330],[100.3990,13.7250],[100.4030,13.7080],[100.4180,13.6950],[100.4360,13.6870],[100.4550,13.6810],[100.4685,13.6775]]},
+  {id:"MTR-B",g:"MTR",parent:"MTR-A",pts:[[100.3990,13.7250],[100.4200,13.7285],[100.4470,13.7300],[100.4740,13.7315]]},
+  {id:"sp-PK",g:"MTR",parent:"MTR-A",kind:"spur",pts:[[100.3990,13.7250],[100.40649,13.72472]]},
+  {id:"sp-TP",g:"MTR",parent:"MTR-B",kind:"spur",pts:[[100.4740,13.7315],[100.47622,13.731417]]},
+  {id:"sp-RB1",g:"MTR",parent:"MTR-A",kind:"spur",pts:[[100.4685,13.6775],[100.467606,13.675917]]},
+  // ===== TR1 (ส้มเข้ม) =====
+  {id:"TR1-A",g:"TR1",pts:[[100.5500,13.8815],[100.55298,13.87858],[100.5512,13.8380],[100.5475,13.7980],[100.5428,13.7620],[100.5398,13.7362],[100.5440,13.7180],[100.5500,13.7050],[100.5600,13.6920],[100.5710,13.6810],[100.5830,13.6700],[100.5885,13.6645]]},
+  {id:"TR1-B",g:"TR1",parent:"TR1-A",pts:[[100.5428,13.7620],[100.5220,13.7420],[100.5000,13.7180],[100.4850,13.6980],[100.4720,13.6840],[100.4690,13.6790]]},
+  {id:"sp-LP",g:"TR1",parent:"TR1-A",kind:"spur",pts:[[100.5398,13.7362],[100.53785,13.734649]]},
+  {id:"TR1-C",g:"TR1",parent:"TR1-A",pts:[[100.5428,13.7620],[100.5250,13.7520],[100.5080,13.7430],[100.4920,13.7360],[100.47622,13.731417]]},
+  {id:"sp-SR1",g:"TR1",parent:"TR1-A",kind:"spur",pts:[[100.5885,13.6645],[100.59082,13.662468]]},
+  {id:"sp-RB2",g:"TR1",parent:"TR1-B",kind:"spur",pts:[[100.4690,13.6790],[100.467606,13.675917]]},
+  // ===== TR2 (ส้มอ่อน) =====
+  {id:"TR2-A",g:"TR2",pts:[[100.5500,13.8815],[100.5544,13.878268],[100.5665,13.8430],[100.5820,13.8080],[100.5952,13.7690],[100.5938,13.7550],[100.5900,13.7430],[100.5842,13.7170],[100.5852,13.7020],[100.5880,13.6840],[100.5920,13.6640]]},
+  {id:"TR2-B",g:"TR2",parent:"TR2-A",pts:[[100.5852,13.7020],[100.6250,13.6970],[100.6650,13.6930],[100.7058,13.6900]]},
+  {id:"sp-LA",g:"TR2",parent:"TR2-A",kind:"spur",pts:[[100.5952,13.7690],[100.59763,13.766959]]},
+  {id:"sp-KT",g:"TR2",parent:"TR2-A",kind:"spur",pts:[[100.5842,13.7170],[100.58102,13.715186]]},
+  {id:"sp-SR2",g:"TR2",parent:"TR2-A",kind:"spur",pts:[[100.5920,13.6640],[100.59082,13.662468]]},
+  // ===== TR3 (ชมพู) =====
+  {id:"TR3-A",g:"TR3",pts:[[100.5500,13.8815],[100.55593,13.877851],[100.6000,13.8700],[100.6500,13.8600],[100.7060,13.8523],[100.7480,13.8470]]},
+  {id:"TR3-B",g:"TR3",parent:"TR3-A",pts:[[100.7060,13.8523],[100.7060,13.8000],[100.7062,13.7600],[100.7062,13.7250],[100.7078,13.6800],[100.7110,13.6400],[100.7140,13.6050]]},
+  {id:"sp-MB",g:"TR3",parent:"TR3-A",kind:"spur",pts:[[100.7480,13.8470],[100.74055,13.826229]]},
+  {id:"sp-LK",g:"TR3",parent:"TR3-B",kind:"spur",pts:[[100.7062,13.7250],[100.741005,13.724753]]},
+  {id:"sp-BP",g:"TR3",parent:"TR3-B",kind:"spur",pts:[[100.7140,13.6050],[100.713974,13.598997]]},
+];
+function segDist(a,b){var dx=a[0]-b[0],dy=a[1]-b[1];return Math.sqrt(dx*dx+dy*dy);}
+function densify(pts,n){
+  var out=[];
+  for(var i=0;i<pts.length-1;i++){
+    for(var j=0;j<n;j++){
+      var t=j/n;
+      out.push([pts[i][0]+(pts[i+1][0]-pts[i][0])*t,pts[i][1]+(pts[i+1][1]-pts[i][1])*t]);
+    }
+  }
+  out.push(pts[pts.length-1]);
+  return out;
+}
+// น้ำวิ่งความเร็วคงที่: เวลาสะสมตามระยะทาง — แขนงเริ่มเมื่อน้ำมาถึง junction จริง
+const SPEED=1600;
+const _byId={};ROUTES2.forEach(function(r){_byId[r.id]=r;});
+function _cumTo(route,pt){
+  var acc=0;
+  for(var i=0;i<route.pts.length;i++){
+    if(i>0)acc+=segDist(route.pts[i-1],route.pts[i]);
+    if(Math.abs(route.pts[i][0]-pt[0])<1e-9&&Math.abs(route.pts[i][1]-pt[1])<1e-9)return acc;
+  }
+  return 0;
+}
+function _t0(r){
+  if(r._t0!=null)return r._t0;
+  if(!r.parent){r._t0=0;return 0;}
+  var p=_byId[r.parent];
+  r._t0=_t0(p)+_cumTo(p,r.pts[0])*SPEED;
+  return r._t0;
+}
+const TRIPS=ROUTES2.map(function(r){
+  var p=densify(r.pts,8),t0=_t0(r),ts=[t0],acc=t0;
+  for(var i=1;i<p.length;i++){acc+=segDist(p[i-1],p[i])*SPEED;ts.push(acc);}
+  return{path:p,timestamps:ts,g:r.g,color:GROUP_COLOR[r.g],kind:r.kind||"main"};
+});
+const LOOP=Math.max.apply(null,TRIPS.map(function(t){return t.timestamps[t.timestamps.length-1];}))+140;
+let animTime=0;
+
+window.__S={stations:{},hist:{},detailOpen:null,selectedId:null,simLevel:4.0,simFlow:16000,threshold:0.8,layersOn:{pipe:true,area:true},theme:"dark",dose:{target:1.00,factor:0.89,sg:1.20,frcin:null,k:null,t:null,q:null}};
+const S=window.__S;
+try{S.uiScale=parseFloat(localStorage.getItem("frcUiScale"))||1;}catch(e){S.uiScale=1;}
+// LK2: ยังไม่มี API — ค่าสนามชั่วคราว 11/09/69 (ลบทิ้งเมื่อ API มา)
+function seedLK2(){
+  var m=META["LK2"];
+  if(!S.stations["LK2"]){
+    S.stations["LK2"]=Object.assign({},m,{stationId:"LK2",frcIn:0.43,frcOut:1.56,level:5.13,
+      turb:null,tempOut:null,ph:null,conduct:null,fis:15000,qin:15000,flowLive:15000,
+      kt:null,t:(5.13*m.area)/m.flow,kHist:m.k,bypass:false,dosing:true,hasBooster:true,
+      p1:null,p2:null,dt:"ขาเข้า: เซ็นเซอร์ LK1 สด · ขาออก 1.56 (18/09) · น้ำเข้าเฉลี่ย 15,000 · รอ API LK2"});
+  }
+  // LK2 รับน้ำ TR3 ก้อนเดียวกับ LK1 -> ใช้ค่าจริงจากเซ็นเซอร์ LK1 (id 15) จนกว่าจะมี API เอง
+  var lk=S.stations["15"],me=S.stations["LK2"];
+  if(lk&&me&&lk.frcIn!=null)me.frcIn=lk.frcIn;
+  // flow ไม่ mirror จาก LK1 (LK1 หยุดสูบกลางวัน ค่าไม่แทน LK2) — ใช้เฉลี่ย 15,000 จนกว่ามี API
+}
+seedLK2();
+setInterval(seedLK2,15000); // กันโดนรอบโหลดล้าง/ข้าม
+
+function frcColor(fo,booster){
+  var dark=S.theme==="dark";
+  if(booster)return dark?[167,139,250]:[124,58,237];
+  if(fo>=0.8)return dark?[34,211,238]:[2,132,199];
+  if(fo>=0.5)return dark?[251,191,36]:[202,138,4];
+  if(fo>0)return dark?[248,113,113]:[220,38,38];
+  return dark?[100,116,139]:[71,85,105];
+}
+// ===== พารามิเตอร์แสดงผล: frc | turb (เกณฑ์ความขุ่น กปน. < 4 NTU) =====
+function turbColor(t){
+  var dark=S.theme==="dark";
+  if(t==null)return dark?[100,116,139]:[71,85,105];
+  if(t>4)return dark?[248,113,113]:[220,38,38];
+  if(t>1)return dark?[251,191,36]:[202,138,4];
+  return dark?[34,211,238]:[2,132,199];
+}
+function paramColor(d){return S.param==="turb"?turbColor(d.turb):frcColor(d.frcOut,d.hasBooster);}
+function setLegend(){
+  var el=document.getElementById("legendParam");if(!el)return;
+  var t='<div style="font-size:9px;color:#5b7089;margin-bottom:6px;font-weight:700;letter-spacing:1px">';
+  if(S.param==="turb"){
+    el.innerHTML=t+'TURBIDITY STATUS</div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#22d3ee;color:#22d3ee"></div><span>ใส (&le;1 NTU)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#fbbf24;color:#fbbf24"></div><span>ระวัง (1&ndash;4)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#f87171;color:#f87171"></div><span>เกินเกณฑ์ (&gt;4 NTU)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#64748b;color:#64748b"></div><span>ไม่มีข้อมูล</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#f59e0b;color:#f59e0b"></div><span>&#8644; Bypass (น้ำไม่ผ่านถัง)</span></div>';
+  }else{
+    el.innerHTML=t+'FRC OUTLET STATUS</div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#22d3ee;color:#22d3ee"></div><span>ผ่านเกณฑ์ (&ge;0.8 mg/L)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#fbbf24;color:#fbbf24"></div><span>ระวัง (0.5&ndash;0.8)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#f87171;color:#f87171"></div><span>ต่ำกว่าเกณฑ์ (&lt;0.5)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#a78bfa;color:#a78bfa"></div><span>Booster Active (FRC ออก &gt; เข้า)</span></div>'
+      +'<div class="legend-item"><div class="legend-dot" style="background:#f59e0b;color:#f59e0b"></div><span>&#8644; Bypass (น้ำไม่ผ่านถัง)</span></div>';
+  }
+}
+window.setParam=function(p){
+  S.param=p==="turb"?"turb":"frc";
+  try{localStorage.setItem("frcParam",S.param);}catch(e){}
+  var f=document.getElementById("pm-frc"),t=document.getElementById("pm-turb");
+  if(f)f.classList.toggle("active",S.param==="frc");
+  if(t)t.classList.toggle("active",S.param==="turb");
+  setLegend();try{buildLayers();}catch(e){}
+};
+window.toggleParam=function(){setParam(S.param==="turb"?"frc":"turb");};
+(function(){
+  try{S.param=localStorage.getItem("frcParam")==="turb"?"turb":"frc";}catch(e){S.param="frc";}
+  var f=document.getElementById("pm-frc"),t=document.getElementById("pm-turb");
+  if(f)f.classList.toggle("active",S.param==="frc");
+  if(t)t.classList.toggle("active",S.param==="turb");
+  if(S.param==="turb")setLegend();
+})();
+
+function mkMapStyle(theme){
+  // OpenFreeMap vector styles — ฟรีถาวร ไม่มี key (dark = สายเดียวกับ dark-matter เดิม)
+  return theme==="dark"?"https://tiles.openfreemap.org/styles/dark":"https://tiles.openfreemap.org/styles/positron";
+}
+// ลดความรกของ basemap: ซ่อนป้าย POI/หมู่บ้าน (BAN ...) + หรี่ป้ายที่เหลือ — คืนลุคเรียบแบบ dark-matter เดิม
+function tuneBasemap(){
+  try{
+    var st=map.getStyle();if(!st||!st.layers)return;
+    var dark=S.theme==="dark";
+    st.layers.forEach(function(l){
+      if(l.type!=="symbol")return;
+      var key=(l["source-layer"]||"")+" "+l.id;
+      if(/poi|housenumber|housename/i.test(key)){map.setLayoutProperty(l.id,"visibility","none");return;}
+      if(/village|hamlet|suburb|quarter|neighbourhood|neighborhood|isolated/i.test(key)){map.setLayoutProperty(l.id,"visibility","none");return;}
+      try{map.setPaintProperty(l.id,"text-opacity",dark?0.65:0.85);}catch(e){}
+    });
+  }catch(e){}
+}
+function addOutsideMask(){
+  try{
+    var dark=S.theme==="dark";
+    var world=[[100.0,13.2],[101.3,13.2],[101.3,14.3],[100.0,14.3],[100.0,13.2]];
+    // basemap-dim: หรี่ basemap ทั้งแผนที่ (ป้ายชื่อ/ถนน) ให้จางลง — วางก่อน mask และก่อนตึก 3D
+    if(!map.getSource("dim-src"))map.addSource("dim-src",{type:"geojson",data:{type:"Feature",geometry:{type:"Polygon",coordinates:[world]}}});
+    if(!map.getLayer("basemap-dim"))map.addLayer({id:"basemap-dim",type:"fill",source:"dim-src",
+      paint:{"fill-color":dark?"#0a1220":"#f4f6f9","fill-opacity":dark?0.16:0.22}});
+    if(!map.__tuned){tuneBasemap();map.__tuned=true;}
+    if(map.getLayer("mwa-mask"))return;
+    var hole=MWA_BOUNDARY.features[0].geometry.coordinates[0];
+    if(!map.getSource("mwa-mask-src"))map.addSource("mwa-mask-src",{type:"geojson",data:{type:"Feature",geometry:{type:"Polygon",coordinates:[world,hole]}}});
+    map.addLayer({id:"mwa-mask",type:"fill",source:"mwa-mask-src",
+      paint:{"fill-color":dark?"#0a1220":"#f4f6f9","fill-opacity":dark?0.60:0.66}});
+  }catch(e){}
+}
+function addBuildings3D(){
+  addOutsideMask();
+  try{
+    if(map.getLayer("3d-b"))return;
+    var dark=S.theme==="dark";
+    if(!map.getSource("omt"))map.addSource("omt",{type:"vector",url:"https://tiles.openfreemap.org/planet"});
+    var bld=dark?
+      ["interpolate",["linear"],["coalesce",["get","render_height"],10],0,"#1a2942",50,"#2a4560",120,"#356080"]:
+      ["interpolate",["linear"],["coalesce",["get","render_height"],10],0,"#ffffff",50,"#e8ebef",120,"#d8dde3"];
+    map.addLayer({id:"3d-b",source:"omt","source-layer":"building",type:"fill-extrusion",minzoom:13,
+      paint:{"fill-extrusion-color":bld,
+        "fill-extrusion-height":["coalesce",["get","render_height"],10],
+        "fill-extrusion-base":["coalesce",["get","render_min_height"],0],
+        "fill-extrusion-opacity":S.theme==="dark"?0.8:0.92}});
+  }catch(e){}
+}
+
+const map=new maplibregl.Map({
+  container:"map",style:mkMapStyle("dark"),
+  center:[100.55,13.75],zoom:8.8,pitch:0,bearing:0,maxPitch:70,antialias:true,
+  maxBounds:[[100.20,13.40],[101.02,14.10]],maxTileCacheSize:200
+});
+map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),"bottom-right");
+map.on("style.load",function(){addBuildings3D();});
+map.on("idle",function(){addBuildings3D();});
+var _zt=null;
+map.on("zoom",function(){if(_zt)return;_zt=setTimeout(function(){_zt=null;try{buildLayers();}catch(e){}},160);}); // กันจังหวะ: มี guard ภายใน ไม่เพิ่มซ้ำ
+
+window.setTheme=function(t){
+  map.__tuned=false;
+  S.theme=t;
+  document.getElementById("btn-dark").classList.toggle("active",t==="dark");
+  document.getElementById("btn-white").classList.toggle("active",t==="white");
+  map.setStyle(mkMapStyle(t));
+};
+
+const overlay=new deck.MapboxOverlay({
+  interleaved:false,layers:[],
+  getTooltip:function(info){
+    var o=info.object;
+    if(o&&o.code&&o.stationId)return{html:'<b style="color:#67e8f9;font-size:14px">'+o.code+'</b> '+o.name+(o.bypass?' <b style="color:#fbbf24">\u21c4 BYPASS</b>':'')+'<br/><span style="color:#7d93ab">FRC Out:</span> <b>'+(o.frcOut!=null?o.frcOut.toFixed(2):"—")+' mg/L</b> · <span style="color:#7d93ab">Level:</span> '+(o.level!=null?o.level.toFixed(1):"—")+' m'};
+    if(o&&o.code)return{html:'<b>'+o.code+'</b> '+o.name+(o.level!=null?'<br/><span style=\"color:#7d93ab\">ระดับถัง:</span> <b>'+o.level.toFixed(2)+' m</b>':'')+(o.frc!=null?'<br/><span style=\"color:#7d93ab\">FRC ขาออก:</span> <b>'+o.frc.toFixed(2)+' mg/L</b>':'')};
+    if(o&&o.name)return{html:'<b>'+o.name+'</b>'};
+    if(o&&o.properties&&o.properties.name)return{html:'<b>'+o.properties.name+'</b>'};
+    return null;
+  },
+  onClick:function(info){if(info.object&&info.object.stationId)selectStation(info.object.stationId);},
+  onError:function(e){showErr("deck.gl: "+(e&&e.message||e));}
+});
+map.addControl(overlay);
+
+
+function hexOf(c){return "#"+c.map(function(v){return ("0"+v.toString(16)).slice(-2);}).join("");}
+// ความคมชัด: rasterize SVG ที่ขนาดพิกเซลจริงบนจอ (getSize x devicePixelRatio) = วาด 1:1 ไม่ย่อไม่ขยาย
+var DPR=Math.max(1,Math.min(window.devicePixelRatio||1,3));
+window.addEventListener("resize",function(){DPR=Math.max(1,Math.min(window.devicePixelRatio||1,3));});
+function icDim(vw,vh,anchorV,disp){var sc=disp*DPR*(S.uiScale||1)/vh;return{w:Math.round(vw*sc),h:Math.round(vh*sc),a:Math.round(anchorV*sc)};}
+// การ์ดข้อมูลกะทัดรัด + ถังกว้างเตี้ยขนาดเท่ากันทุกสถานี ฐานปักพื้น + ป้ายระดับที่ผิวน้ำ
+function tankIconURL(d){
+  var dark=S.theme==="dark";
+  var c=paramColor(d),col=hexOf(c);
+  var lite=hexOf(c.map(function(v){return Math.min(v+85,255);}));
+  var sel=d.stationId===S.selectedId;
+  var byp=!!d.bypass;
+  var bypC=dark?"#fbbf24":"#b45309";
+  var cardBg=dark?"#0a1526":"#ffffff";
+  var nameC=dark?"#e2eefc":"#0b1f33";
+  var dimC=dark?"#8aa3bd":"#3f5468";
+  var inC=dark?"#67e8f9":"#025a8c";
+  var outC=dark?"#4ade80":"#0f6d33";
+  var halo=dark?"#04070f":"#ffffff";
+  var inTxt=(d.frcIn!=null&&d.frcIn>0)?d.frcIn.toFixed(2):"-",outTxt=d.frcOut!=null?d.frcOut.toFixed(2):"-";
+  var lv=(d.level||0).toFixed(2);
+  var vol=Math.round((d.level||0)*(d.area||0)).toLocaleString("en-US");
+  var cx=72,hw=42,dy=13,topY=74,hgt=30;
+  var botF=topY+2*dy+hgt;
+  var f=Math.max(0.08,Math.min((d.level||0)/(d.maxLv||6),1));
+  var wf=botF-f*hgt;
+  var P=function(x,y){return x+","+y;};
+  var simBand=d.sim?('<rect x="4" y="63" width="168" height="17" rx="6" fill="#b45309" fill-opacity="0.96"/>'
+    +'<text x="88" y="75.5" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff7ed">⚠ ค่าจำลอง — ยังไม่เชื่อมระบบ</text>'):"";
+  var rowVals;
+  if(S.param==="turb"){
+    var tbTxt=(d.turb!=null)?Number(d.turb).toFixed(2):"-";
+    rowVals='<text x="10" y="43" font-family="sans-serif" font-size="9.5" fill="'+dimC+'">ความขุ่น</text>'
+      +'<text x="62" y="45" font-family="monospace" font-size="17" font-weight="700" fill="'+lite+'">'+tbTxt+'</text>'
+      +'<text x="10" y="57" font-family="sans-serif" font-size="8.5" fill="'+dimC+'">NTU</text>';
+  }else{
+    rowVals='<text x="10" y="42" font-family="sans-serif" font-size="9.5" fill="'+dimC+'">FRC In</text>'
+      +'<text x="47" y="43" font-family="monospace" font-size="14.5" font-weight="700" fill="'+inC+'">'+inTxt+'</text>'
+      +'<text x="90" y="42" font-family="sans-serif" font-size="9.5" fill="'+dimC+'">FRC Out</text>'
+      +'<text x="133" y="43" font-family="monospace" font-size="14.5" font-weight="700" fill="'+outC+'">'+outTxt+'</text>'
+      +'<text x="10" y="57" font-family="sans-serif" font-size="8.5" fill="'+dimC+'">mg/L</text>';
+  }
+  var _m=icDim(176,142,132,102);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+_m.w+'" height="'+_m.h+'" viewBox="0 0 176 142">'
+    +(dark?'':'<rect x="6" y="7" width="168" height="58" rx="9" fill="#334155" fill-opacity="0.28"/>')
+    +'<rect x="4" y="4" width="168" height="58" rx="9" fill="'+cardBg+'" fill-opacity="'+(dark?"0.94":"0.99")+'" stroke="'+(byp?bypC:(sel?lite:col))+'" stroke-width="'+(sel?"2.4":(dark?"1.2":"1.6"))+'"/>' 
+    +'<line x1="13" y1="4" x2="38" y2="4" stroke="'+lite+'" stroke-width="2.5"/>'
+    +'<circle cx="16" cy="18" r="4" fill="'+col+'"/>'
+    +'<text x="26" y="23" font-family="monospace" font-size="14" font-weight="700" fill="'+nameC+'">'+d.code+'</text>'
+    +'<text x="164" y="22" text-anchor="end" font-family="sans-serif" font-size="10.5" fill="'+dimC+'">'+d.name+'</text>'
+    +(byp?'<rect x="58" y="8" width="54" height="15" rx="7" fill="'+bypC+'" fill-opacity="0.16" stroke="'+bypC+'" stroke-width="1"/><text x="85" y="19" text-anchor="middle" font-family="monospace" font-size="8.5" font-weight="700" fill="'+bypC+'">\u21c4 BYPASS</text>':'')
+    +rowVals
+    +'<text x="164" y="57" text-anchor="end" font-family="monospace" font-size="10" font-weight="700" fill="'+dimC+'">\u0e1b\u0e23\u0e34\u0e21\u0e32\u0e15\u0e23 '+vol+' m\u00b3</text>'
+    +'<line x1="72" y1="62" x2="72" y2="'+(topY-2)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="3 2" opacity="0.75"/>'
+    +'<ellipse cx="72" cy="'+(botF+2)+'" rx="'+(hw+9)+'" ry="5" fill="#000" opacity="'+(dark?"0.45":"0.16")+'"/>'
+    +'<polygon points="'+P(cx-hw,topY+dy)+' '+P(cx,topY+2*dy)+' '+P(cx,botF)+' '+P(cx-hw,botF-dy)+'" fill="'+(dark?"#0e2a44":"#e3eef9")+'" fill-opacity="0.9" stroke="'+col+'" stroke-width="1.1"/>'
+    +'<polygon points="'+P(cx,topY+2*dy)+' '+P(cx+hw,topY+dy)+' '+P(cx+hw,botF-dy)+' '+P(cx,botF)+'" fill="'+(dark?"#0b2135":"#d4e4f4")+'" fill-opacity="0.9" stroke="'+col+'" stroke-width="1.1"/>'
+    +'<polygon points="'+P(cx-hw,wf-dy)+' '+P(cx,wf)+' '+P(cx,botF)+' '+P(cx-hw,botF-dy)+'" fill="'+col+'" fill-opacity="0.45"/>'
+    +'<polygon points="'+P(cx,wf)+' '+P(cx+hw,wf-dy)+' '+P(cx+hw,botF-dy)+' '+P(cx,botF)+'" fill="'+col+'" fill-opacity="0.32"/>'
+    +'<polygon points="'+P(cx,wf)+' '+P(cx+hw,wf-dy)+' '+P(cx,wf-2*dy)+' '+P(cx-hw,wf-dy)+'" fill="'+lite+'" fill-opacity="0.4"/>'
+    +'<polyline points="'+P(cx-hw,wf-dy)+' '+P(cx,wf)+' '+P(cx+hw,wf-dy)+'" fill="none" stroke="'+lite+'" stroke-width="1.5"/>'
+    +'<polygon points="'+P(cx-hw,topY+dy)+' '+P(cx,topY+2*dy)+' '+P(cx+hw,topY+dy)+' '+P(cx,topY)+'" fill="'+(dark?"#12395c":"#c3daef")+'" fill-opacity="0.9" stroke="'+lite+'" stroke-width="1.1"/>'
+    +(byp?'<line x1="'+(cx-hw-11)+'" y1="'+(topY+dy+hgt/2)+'" x2="'+(cx+hw+11)+'" y2="'+(topY+dy+hgt/2)+'" stroke="'+bypC+'" stroke-width="3" stroke-linecap="round" opacity="0.95"/><path d="M'+(cx+hw+4)+' '+(topY+dy+hgt/2-4)+' L'+(cx+hw+12)+' '+(topY+dy+hgt/2)+' L'+(cx+hw+4)+' '+(topY+dy+hgt/2+4)+'" fill="none" stroke="'+bypC+'" stroke-width="1.6"/>':'')
+    +'<line x1="'+(cx+hw)+'" y1="'+(wf-dy)+'" x2="'+(cx+hw+6)+'" y2="'+(wf-dy)+'" stroke="'+lite+'" stroke-width="1.4"/>'
+    +'<text x="'+(cx+hw+9)+'" y="'+(wf-dy+4)+'" font-family="monospace" font-size="12.5" font-weight="700" fill="'+lite+'" stroke="'+halo+'" stroke-width="3" paint-order="stroke">'+lv+' m</text>'
+    +simBand+'</svg>';
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+
+
+// ไอคอนถังตกตะกอน (แบบ C) สีฟ้า ทรงสูง สำหรับ MTR/TR1/TR2/TR3 + ค่า FRC ขาออกสด
+function hubIconURL(d){
+  var dark=S.theme==="dark";
+  var col=dark?"#38bdf8":"#0284c7";
+  var lite=dark?"#7dd3fc":"#0369a1";
+  var halo=dark?"#04070f":"#ffffff";
+  var bodyF=dark?"#0c2338":"#dbe9f6",wallF=dark?"#0a1c2e":"#c9dcee",brF=dark?"#122c44":"#eef5fc";
+  var cx=60,cy=42,rx=42,ry=14,wall=26;
+  var posts="";
+  [cx-rx+4,cx-rx/2,cx,cx+rx/2,cx+rx-4].forEach(function(px){
+    posts+='<line x1="'+px+'" y1="'+(cy-9)+'" x2="'+px+'" y2="'+(cy-14)+'" stroke="'+lite+'" stroke-width="1"/>';
+  });
+  var frcTxt=(d.frc!=null)?'<text x="60" y="100" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="'+lite+'" stroke="'+halo+'" stroke-width="3" paint-order="stroke">'+d.frc.toFixed(2)+' mg/L</text>':'';
+  var _m=icDim(120,106,84,78);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+_m.w+'" height="'+_m.h+'" viewBox="0 0 120 106">'
+    +'<text x="60" y="14" text-anchor="middle" font-family="monospace" font-size="14.5" font-weight="700" fill="'+lite+'" stroke="'+halo+'" stroke-width="3.4" paint-order="stroke">'+d.code+'</text>'
+    +'<ellipse cx="60" cy="84" rx="'+(rx+7)+'" ry="5" fill="#000" opacity="'+(dark?"0.4":"0.15")+'"/>'
+    +'<path d="M'+(cx-rx)+' '+cy+' L'+(cx-rx)+' '+(cy+wall)+' A'+rx+' '+ry+' 0 0 0 '+(cx+rx)+' '+(cy+wall)+' L'+(cx+rx)+' '+cy+'" fill="'+wallF+'" stroke="'+col+'" stroke-width="1.2"/>'
+    +'<ellipse cx="60" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="'+bodyF+'" stroke="'+col+'" stroke-width="1.5"/>'
+    +'<ellipse cx="60" cy="'+cy+'" rx="'+(rx-7)+'" ry="'+(ry-3)+'" fill="#0ea5e9" fill-opacity="0.55"/>'
+    +'<rect x="'+(cx-rx-2)+'" y="'+(cy-9)+'" width="'+(2*rx+4)+'" height="5" rx="2" fill="'+brF+'" stroke="'+lite+'" stroke-width="1"/>'
+    +posts
+    +'<line x1="'+(cx-rx+4)+'" y1="'+(cy-14)+'" x2="'+(cx+rx-4)+'" y2="'+(cy-14)+'" stroke="'+lite+'" stroke-width="1"/>'
+    +'<circle cx="60" cy="'+(cy-6.5)+'" r="3.5" fill="'+lite+'"/>'
+    +frcTxt
+    +'</svg>';
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+
+
+// ป้ายโรงงานผลิตน้ำ — การ์ดกระจกสไตล์เดียวกับสถานี
+function plantIconURL(d){
+  var dark=S.theme==="dark";
+  var col=dark?"#38bdf8":"#0284c7";
+  var lite=dark?"#7dd3fc":"#0369a1";
+  var cardBg=dark?"#0a1526":"#ffffff";
+  var nameC=dark?"#e2eefc":"#0f2740";
+  var _m=icDim(190,150,142,140);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+_m.w+'" height="'+_m.h+'" viewBox="0 0 190 150">'
+    +'<rect x="4" y="4" width="182" height="32" rx="8" fill="'+cardBg+'" fill-opacity="0.94" stroke="'+col+'" stroke-width="1.2"/>'
+    +'<line x1="12" y1="4" x2="36" y2="4" stroke="'+lite+'" stroke-width="2.5"/>'
+    +'<circle cx="16" cy="20" r="4" fill="'+col+'"/>'
+    +'<text x="26" y="24.5" font-family="sans-serif" font-size="11.5" font-weight="600" fill="'+nameC+'">'+d.name+'</text>'
+    +'<line x1="95" y1="36" x2="95" y2="138" stroke="'+col+'" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.85"/>'
+    +'<circle cx="95" cy="142" r="4.5" fill="'+col+'"/>'
+    +'</svg>';
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+
+// ===== ALARM SYSTEM: FRC ขาออกต่ำกว่าเกณฑ์ -> จอวาบแดง + แหวนกะพริบ + เสียงไซเรน =====
+// ค่าเริ่มต้น — ผู้ใช้ปรับได้จากปุ่ม ⚙ ตั้งค่าเตือน (เก็บใน localStorage)
+var AL_DEF={frcRed:0.5,frcYel:0.8,tbRed:4,tbYel:2,vig:true,sndYel:false};
+window.AL={active:{},muted:false,ack:false,ctx:null,timer:null,cfg:Object.assign({},AL_DEF)};
+try{AL.muted=localStorage.getItem("frcAlarmMute")==="1";}catch(e){}
+try{var _ac=JSON.parse(localStorage.getItem("frcAlarmCfg")||"null");if(_ac)AL.cfg=Object.assign({},AL_DEF,_ac);}catch(e){}
+function alCtx(){
+  if(!AL.ctx){try{AL.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(AL.ctx&&AL.ctx.state==="suspended")AL.ctx.resume().catch(function(){});
+  return AL.ctx;
+}
+function alBeep(){ // ไซเรนสองโทน สูง-ต่ำ-สูง
+  var c=alCtx();if(!c||c.state!=="running")return;
+  var t=c.currentTime;
+  [[880,0,0.28],[622,0.34,0.28],[880,0.68,0.30]].forEach(function(n){
+    var o=c.createOscillator(),g=c.createGain();
+    o.type="square";o.frequency.value=n[0];
+    g.gain.setValueAtTime(0.0001,t+n[1]);
+    g.gain.exponentialRampToValueAtTime(0.13,t+n[1]+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+n[1]+n[2]);
+    o.connect(g);g.connect(c.destination);
+    o.start(t+n[1]);o.stop(t+n[1]+n[2]+0.05);
+  });
+}
+function checkAlarms(){
+  var now={},cfg=AL.cfg;
+  Object.values(S.stations).forEach(function(st){
+    if(st.sim)return; // ค่าจำลอง (LK2) ไม่ปลุก alarm
+    if(st.frcOut!=null){
+      var t1=st.frcOut<cfg.frcRed?"red":(st.frcOut<cfg.frcYel?"yel":null);
+      if(t1)now[st.stationId+"|frc"]={sid:st.stationId,code:st.code,label:"FRC "+st.frcOut.toFixed(2),tier:t1,since:(AL.active[st.stationId+"|frc"]||{}).since||Date.now()};
+    }
+    if(st.turb!=null){
+      var t2=st.turb>cfg.tbRed?"red":(st.turb>cfg.tbYel?"yel":null);
+      if(t2)now[st.stationId+"|turb"]={sid:st.stationId,code:st.code,label:"ขุ่น "+Number(st.turb).toFixed(1)+" NTU",tier:t2,since:(AL.active[st.stationId+"|turb"]||{}).since||Date.now()};
+    }
+  });
+  if(AL.active.__T)now.__T=AL.active.__T; // คง alarm ทดสอบไว้
+  // ปลดการรับทราบเมื่อมีเหตุใหม่ หรือเหตุเดิมยกระดับเหลือง->แดง
+  if(Object.keys(now).some(function(k){var o=AL.active[k];return !o||(now[k].tier==="red"&&o.tier!=="red");}))AL.ack=false;
+  AL.active=now;
+  renderAlarm();
+}
+function renderAlarm(){
+  var keys=Object.keys(AL.active);
+  var vig=document.getElementById("alarmVig"),bn=document.getElementById("alarmBanner");
+  if(!vig||!bn)return;
+  if(!keys.length){
+    vig.style.display="none";bn.style.display="none";AL.ack=false;
+    if(AL.timer){clearInterval(AL.timer);AL.timer=null;}
+    return;
+  }
+  var hasRed=keys.some(function(k){return AL.active[k].tier==="red";});
+  // ตามหลัก ISA-18.2: ยังไม่รับทราบ = กะพริบ+เสียง | รับทราบแล้ว = ไฟนิ่งค้างจนกว่าค่าปกติ
+  vig.style.display=(hasRed&&AL.cfg.vig&&!AL.ack)?"block":"none";
+  bn.style.display="flex";
+  bn.style.background=hasRed?"rgba(68,8,10,0.93)":"rgba(66,41,4,0.93)";
+  bn.style.borderColor=hasRed?"rgba(248,113,113,0.65)":"rgba(251,191,36,0.6)";
+  bn.style.boxShadow=hasRed?"0 8px 32px rgba(239,68,68,0.4)":"0 8px 32px rgba(245,158,11,0.35)";
+  bn.style.color=hasRed?"#fecaca":"#fde68a";
+  var dotStyle=(hasRed?'':'background:#f59e0b;box-shadow:0 0 14px #f59e0b;')+(AL.ack?'animation:none;':'');
+  var dot='<span class="al-dot"'+(dotStyle?' style="'+dotStyle+'"':'')+'></span>';
+  var chips=keys.map(function(k){var a=AL.active[k];
+    var yel=a.tier!=="red";
+    return '<span class="al-chip"'+(yel?' style="background:rgba(245,158,11,0.2);border-color:rgba(251,191,36,0.55);color:#fde68a"':'')
+      +' onclick="selectStation(\''+(a.sid||"")+'\')">'+a.code+' '+a.label+'</span>';}).join("");
+  bn.innerHTML=dot+'<b>⚠ แจ้งเตือนคุณภาพน้ำ</b>'+chips
+    +'<button class="al-btn" onclick="ackAlarm()">'+(AL.ack?"รับทราบแล้ว ✓":"รับทราบ (หยุดเสียง)")+'</button>';
+  if(!AL.timer){
+    AL.timer=setInterval(function(){if(alShouldBeep())alBeep();},3000);
+    if(alShouldBeep())alBeep();
+  }
+}
+function alShouldBeep(){
+  var ks=Object.keys(AL.active);
+  if(!ks.length||AL.muted||AL.ack)return false;
+  var red=ks.some(function(k){return AL.active[k].tier==="red";});
+  var yel=ks.some(function(k){return AL.active[k].tier!=="red";});
+  return red||(AL.cfg.sndYel&&yel);
+}
+window.ackAlarm=function(){AL.ack=true;renderAlarm();};
+window.alarmBtn=function(e){
+  if(e&&e.shiftKey)return testAlarm();
+  AL.muted=!AL.muted;
+  try{localStorage.setItem("frcAlarmMute",AL.muted?"1":"0");}catch(e2){}
+  var b=document.getElementById("btn-snd");if(b)b.textContent=AL.muted?"🔕 ปิดเสียง":"🔔 เสียงเตือน";
+  if(!AL.muted)alCtx();
+  renderAlarm();
+};
+window.testAlarm=function(){ // Shift+คลิกปุ่มกระดิ่ง = จำลอง alarm ~10 วิ
+  alCtx();
+  AL.active.__T={sid:"",code:"TEST",label:"FRC 0.32",tier:"red",since:Date.now()};AL.ack=false;renderAlarm();
+  setTimeout(function(){delete AL.active.__T;renderAlarm();},10000);
+};
+window.toggleAlCfg=function(){
+  var p=document.getElementById("alCfg");if(!p)return;
+  if(p.style.display!=="block"){fillAlCfg();p.style.display="block";}
+  else p.style.display="none";
+};
+function fillAlCfg(){
+  var c=AL.cfg;
+  [["alFrcRed",c.frcRed],["alFrcYel",c.frcYel],["alTbYel",c.tbYel],["alTbRed",c.tbRed]].forEach(function(x){
+    var e=document.getElementById(x[0]);if(e)e.value=x[1];});
+  var v=document.getElementById("alVig");if(v)v.checked=!!c.vig;
+  var s=document.getElementById("alSndYel");if(s)s.checked=!!c.sndYel;
+}
+window.saveAlCfg=function(){
+  var g=function(id,def){var e=document.getElementById(id),v=parseFloat(e&&e.value);return isNaN(v)?def:v;};
+  AL.cfg.frcRed=g("alFrcRed",AL_DEF.frcRed);
+  AL.cfg.frcYel=Math.max(g("alFrcYel",AL_DEF.frcYel),AL.cfg.frcRed); // เหลืองต้องไม่ต่ำกว่าแดง
+  AL.cfg.tbRed=g("alTbRed",AL_DEF.tbRed);
+  AL.cfg.tbYel=Math.min(g("alTbYel",AL_DEF.tbYel),AL.cfg.tbRed);     // เหลืองต้องไม่เกินแดง
+  AL.cfg.vig=!!((document.getElementById("alVig")||{}).checked);
+  AL.cfg.sndYel=!!((document.getElementById("alSndYel")||{}).checked);
+  try{localStorage.setItem("frcAlarmCfg",JSON.stringify(AL.cfg));}catch(e){}
+  fillAlCfg(); // สะท้อนค่าที่ถูก clamp กลับเข้า input
+  try{checkAlarms();}catch(e){}
+  document.getElementById("alCfg").style.display="none";
+};
+window.resetAlCfg=function(){
+  AL.cfg=Object.assign({},AL_DEF);
+  try{localStorage.removeItem("frcAlarmCfg");}catch(e){}
+  fillAlCfg();try{checkAlarms();}catch(e){}
+};
+(function(){var b=document.getElementById("btn-snd");if(b&&AL.muted)b.textContent="🔕 ปิดเสียง";})();
+// ปลดล็อก AudioContext ด้วย gesture แรกของผู้ใช้ (นโยบายเบราว์เซอร์)
+["click","touchstart","keydown"].forEach(function(ev){
+  window.addEventListener(ev,function h(){alCtx();},{once:true});
+});
+
+function buildLayers(){
+  var arr=Object.values(S.stations);
+  if(!arr.length)return;
+  // LK กับ LK2 อยู่ติดกันจริง -> ถ่างตำแหน่งแสดงผลเป็น "พิกเซลคงที่" ตาม zoom
+  // (ถ่างเป็นองศาแบบเดิมได้แค่ ~10px ที่ z10 แต่การ์ดกว้าง ~150px เลยยังทับกัน)
+  try{
+    var _z=map.getZoom();
+    var _t=Math.max(0,Math.min(1,(13.8-_z)/1.8)); // z>=13.8 ตำแหน่งจริง, z<=12 ถ่างเต็ม
+    if(_t){
+      var mpp=156543.03*Math.cos(13.73*Math.PI/180)/Math.pow(2,_z); // เมตร/พิกเซล
+      var dLon=function(px){return px*mpp/(111320*Math.cos(13.73*Math.PI/180));};
+      var dLat=function(px){return px*mpp/110574;};
+      var us=S.uiScale||1;
+      arr=arr.map(function(d){
+        var ox=0,oy=0;
+        if(d.stationId==="LK2"){ox=95*us*_t;oy=30*us*_t;}        // LK2 เฉียงขวาบน
+        else if(d.code==="LK"){ox=-72*us*_t;oy=-22*us*_t;}       // LK เฉียงซ้ายล่าง
+        else return d;
+        return Object.assign({},d,{coord:[d.coord[0]+dLon(ox),d.coord[1]+dLat(oy)]});
+      });
+    }
+  }catch(e){}
+  var pulse=(Date.now()/1400)%1;
+  var dark=S.theme==="dark";
+  var L=[];
+  if(S.layersOn.area){
+    // เขตสาขา 18 เขต (จางๆ)
+    L.push(new deck.GeoJsonLayer({id:"districts",data:DISTRICTS_GEOJSON,stroked:true,filled:true,
+      getFillColor:dark?[34,140,220,7]:[2,132,199,10],
+      getLineColor:dark?[56,169,238,42]:[2,132,199,80],
+      getLineWidth:20,lineWidthMinPixels:0.8,pickable:true}));
+    // กรอบนอกพื้นที่บริการ กปน. (เด่นชัด)
+    L.push(new deck.GeoJsonLayer({id:"mwa-boundary-glow",data:MWA_BOUNDARY,stroked:true,filled:false,
+      getLineColor:dark?[34,211,238,55]:[2,132,199,75],getLineWidth:420,lineWidthMinPixels:7}));
+    L.push(new deck.GeoJsonLayer({id:"mwa-boundary",data:MWA_BOUNDARY,stroked:true,filled:false,
+      getLineColor:dark?[103,232,249,235]:[3,105,161,255],getLineWidth:170,lineWidthMinPixels:2.8}));
+  }
+  if(S.layersOn.pipe){
+    var mains=TRIPS.filter(function(t){return t.kind!=="spur";});
+    var sps=TRIPS.filter(function(t){return t.kind==="spur";});
+    // ตัวอุโมงค์ (casing หนา เข้ม)
+    L.push(new deck.PathLayer({id:"tunnel-casing",data:mains,getPath:d=>d.path,
+      getColor:d=>d.color.concat([dark?160:200]),getWidth:300,widthMinPixels:7,capRounded:true,jointRounded:true}));
+    // โพรงในอุโมงค์
+    L.push(new deck.PathLayer({id:"tunnel-inner",data:mains,getPath:d=>d.path,
+      getColor:dark?[10,18,34,242]:[248,250,252,246],getWidth:170,widthMinPixels:3.5,capRounded:true,jointRounded:true}));
+    // น้ำวิ่งในอุโมงค์ (ถึงทางแยก → ไหลแยกพร้อมกันตามเวลาจริง)
+    L.push(new deck.TripsLayer({id:"tunnel-water",data:mains,getPath:d=>d.path,getTimestamps:d=>d.timestamps,
+      getColor:d=>dark?[Math.min(d.color[0]+85,255),Math.min(d.color[1]+85,255),Math.min(d.color[2]+85,255)]:d.color,
+      getWidth:105,widthMinPixels:2.6,
+      trailLength:130,currentTime:animTime,capRounded:true,jointRounded:true,fadeTrail:true,opacity:0.98}));
+    // ท่อแยกเข้าสถานี (เล็กกว่า) + น้ำไหลเข้าเมื่อน้ำหลักมาถึง
+    L.push(new deck.PathLayer({id:"spur-casing",data:sps,getPath:d=>d.path,
+      getColor:d=>d.color.concat([dark?150:190]),getWidth:120,widthMinPixels:3,capRounded:true}));
+    L.push(new deck.TripsLayer({id:"spur-water",data:sps,getPath:d=>d.path,getTimestamps:d=>d.timestamps,
+      getColor:d=>dark?[Math.min(d.color[0]+85,255),Math.min(d.color[1]+85,255),Math.min(d.color[2]+85,255)]:d.color,
+      getWidth:60,widthMinPixels:1.8,
+      trailLength:130,currentTime:animTime,capRounded:true,fadeTrail:true,opacity:0.98}));
+  }
+  var phz=function(d){ // เฟสเฉพาะสถานี (กระจายจังหวะ ไม่เต้นพร้อมกัน)
+    var h=0,s=String(d.stationId||"");for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%97;
+    return (pulse+h/97)%1;
+  };
+  L.push(new deck.ScatterplotLayer({id:"pulse",data:arr,getPosition:d=>d.coord,
+    getRadius:d=>{var p=phz(d);return 560+p*950*(d.stationId===S.selectedId?1.4:1);},
+    getFillColor:d=>{var p=phz(d);return paramColor(d).concat([Math.round(70*(1-p))]);},
+    getLineColor:d=>{var p=phz(d);return paramColor(d).concat([Math.round(160*(1-p))]);},
+    stroked:true,lineWidthMinPixels:1.5,filled:true,
+    updateTriggers:{getRadius:[pulse,S.selectedId],getFillColor:[pulse,S.param],getLineColor:[pulse,S.param]}}));
+  // แหวนแดงกะพริบรอบสถานีที่ alarm (ขยาย-จางเป็นจังหวะเร็ว)
+  var _alSid={};Object.values(AL.active).forEach(function(a){
+    if(a.sid)_alSid[a.sid]=(a.tier==="red"||_alSid[a.sid]==="red")?"red":"yel";});
+  var alArr=arr.filter(function(d){return _alSid[d.stationId];});
+  if(alArr.length){
+    var ap=AL.ack?0.45:(Date.now()/700)%1; // รับทราบแล้ว -> วงนิ่ง
+    var alSig=Object.keys(_alSid).map(function(k){return k+_alSid[k];}).join()+(AL.ack?"|ack":"");
+    L.push(new deck.ScatterplotLayer({id:"alarm-ring",data:alArr,getPosition:d=>d.coord,
+      getRadius:950+ap*2400,
+      getFillColor:d=>(_alSid[d.stationId]==="red"?[239,68,68]:[245,158,11]).concat([Math.round(42*(1-ap))]),
+      getLineColor:d=>(_alSid[d.stationId]==="red"?[248,113,113]:[251,191,36]).concat([Math.round(235*(1-ap))]),
+      stroked:true,lineWidthMinPixels:3,filled:true,
+      updateTriggers:{getRadius:[ap],getFillColor:[ap,alSig],getLineColor:[ap,alSig]}}));
+  }
+  var iconSig=arr.map(function(s){return [s.frcIn,s.frcOut,s.turb,(s.level||0).toFixed(2),s.bypass?1:0].join(",");}).join("|")+"|"+S.theme+"|"+S.selectedId+"|"+DPR+"|"+S.param;
+  L.push(new deck.IconLayer({id:"tank-icons",data:arr,pickable:true,billboard:true,
+    getPosition:d=>d.coord,
+    getIcon:function(d){var m=icDim(176,142,132,102);return {url:tankIconURL(d),width:m.w,height:m.h,anchorY:m.a};},
+    getSize:Math.round(102*(S.uiScale||1)),sizeUnits:"pixels",
+    updateTriggers:{getIcon:[iconSig,S.uiScale]}}));
+  // Hub สูบส่ง — ถังตกตะกอน (แบบ C)
+  L.push(new deck.IconLayer({id:"hubs",data:HUBS,pickable:true,billboard:true,
+    getPosition:d=>d.coord,getPixelOffset:d=>d.off||[0,0],
+    getIcon:function(d){var m=icDim(120,106,84,78);return {url:hubIconURL(d),width:m.w,height:m.h,anchorY:m.a};},
+    getSize:Math.round(78*(S.uiScale||1)),sizeUnits:"pixels",
+    updateTriggers:{getIcon:[S.theme,DPR,S.uiScale,HUBS.map(function(h){return h.frc;}).join()]}}));
+  // ป้าย tag โรงงานผลิตน้ำ (การ์ดสไตล์เดียวกับสถานี)
+  L.push(new deck.IconLayer({id:"plant-tags",data:SOURCES,pickable:true,billboard:true,
+    getPosition:d=>d.coord,getPixelOffset:function(){return [0,-6];},
+    getIcon:function(d){var m=icDim(190,150,142,140);return {url:plantIconURL(d),width:m.w,height:m.h,anchorY:m.a};},
+    getSize:Math.round(140*(S.uiScale||1)),sizeUnits:"pixels",
+    updateTriggers:{getIcon:[S.theme,DPR,S.uiScale]}}));
+  overlay.setProps({layers:L});
+}
+window.uiZoom=function(dd){
+  S.uiScale=Math.min(1.6,Math.max(0.85,Math.round(((S.uiScale||1)+dd)*100)/100));
+  try{localStorage.setItem("frcUiScale",S.uiScale);}catch(e){}
+  buildLayers();
+};
+
+let lastFrame=0,animErrShown=false;
+function animate(ts){
+  if(ts-lastFrame>33){
+    animTime=(animTime+3.0)%LOOP;
+    try{buildLayers();}catch(e){if(!animErrShown){animErrShown=true;showErr("layers: "+e.message);}}
+    lastFrame=ts;
+  }
+  requestAnimationFrame(animate);
+}
+
+function setBadge(t){var el=document.querySelector(".badge span");if(el)el.textContent=t;}
+function fT(url,ms){return Promise.race([fetch(url),new Promise(function(_,rej){setTimeout(function(){rej(new Error("timeout"));},ms||6000);})]);}
+function pushHist(id,v){var _h=(S.hist[id]=S.hist[id]||[]);if(v!=null){_h.push(v);if(_h.length>16)_h.shift();}}
+function loadMock(){
+  IDS.forEach(function(id){var mk=MOCK[id],m=META[id];
+    var kt=(!mk.bypass&&mk.frcIn&&mk.frcOut&&mk.frcOut<mk.frcIn)?-Math.log(mk.frcOut/mk.frcIn):null;
+    S.stations[id]=Object.assign({},m,{stationId:id,frcIn:mk.frcIn,frcOut:mk.frcOut,turb:mk.turb,tempOut:mk.temp,ph:mk.ph,dt:new Date().toLocaleString("th-TH"),kt:kt,t:(4*m.area)/m.flow,kHist:m.k,bypass:!!mk.bypass,p1:((mk.frcIn!=null&&mk.frcOut>mk.frcIn)&&!mk.bypass)?1:0,p2:0,conduct:Math.round(280+Math.random()*100),dosing:(mk.frcIn!=null&&mk.frcOut>mk.frcIn)&&!mk.bypass,hasBooster:(mk.frcIn!=null&&mk.frcOut>mk.frcIn)&&!mk.bypass,level:3.2+Math.random()*1.8});
+    pushHist(id,(mk.frcOut||1)+(Math.random()-0.5)*0.07);});
+  setBadge("DEMO MODE");
+  renderRanking();if(S.selectedId)renderInfo();if(S.detailOpen)renderDetail(S.detailOpen);
+}
+// สำรอง: twqonline public API (มีเฉพาะ FRC ขาออก)
+function loadPublic(){
+  return fT(HUB_API,9000).then(function(r){return r.json();}).then(function(list){
+    var got=0;
+    list.forEach(function(st){
+      var id=PUB_MAP[st.stationCode];if(!id)return;
+      var m=META[id],v=st.value||{};
+      var fo=parseFloat(v.frc_2);if(isNaN(fo))fo=null;
+      var tb=parseFloat(v.tub_1),to=parseFloat(v.tmpOut_8),ph=parseFloat(v.pph_4);
+      S.stations[id]=Object.assign({},m,{stationId:id,frcIn:null,frcOut:fo,turb:isNaN(tb)?null:tb,tempOut:isNaN(to)?null:to,ph:isNaN(ph)?null:ph,dt:st.sourceDtm,kt:null,t:(4*m.area)/m.flow,kHist:m.k,bypass:false,dosing:false,p1:null,p2:null,conduct:(function(){var e=parseFloat(v.ecm_5);return isNaN(e)?null:e;})(),hasBooster:false,level:4.0});
+      pushHist(id,fo);got++;
+    });
+    if(!got)throw new Error("no stations");
+    setBadge("LIVE · PUBLIC API");
+    renderRanking();if(S.selectedId)renderInfo();if(S.detailOpen)renderDetail(S.detailOpen);
+  });
+}
+// หลัก: intranet API (มี In+Out+level hook)
+function loadLive(){
+  var ok=0;
+  return Promise.all(IDS.map(function(id){return fT(API+"/station/"+id,6000).then(function(r){if(!r.ok)throw 0;return r.json();})
+    .catch(function(){return fT(CHL_HOST+"/api/station/"+id,8000).then(function(r){if(!r.ok)throw 0;return r.json();});})
+    .then(function(d){
+    var sc=d.data&&d.data.scada&&d.data.scada[0],m=META[id];if(!sc)return;
+    var frcOut=sc.Chlorine,frcIn=(sc.FREE_CL_INLET!=null&&sc.FREE_CL_INLET>0)?sc.FREE_CL_INLET/100:null;
+    // Bypass: น้ำเข้าถังเก็บน้ำใส (FLOW_INLET_STATION, m3/hr) ต่ำผิดปกติ
+    // เทียบกับอัตราจ่ายพิกัดของสถานี (m.flow) — ปกติน้ำเข้าถังหลักพัน m3/hr
+    // เกณฑ์ 5% ปรับได้ | ไม่ใช้ FLOW_OUTLET เพราะสถานีไม่มีมิเตอร์ขาออกจริง
+    var bypass=(sc.FLOW_INLET_STATION!=null && sc.FLOW_INLET_STATION<0.05*m.flow);
+    // PUMP1/2_STS = ปั๊มดึงน้ำจากท่อ inlet เข้าเครื่องวัด FRC ขาเข้า (ไม่ใช่ปั๊มจ่ายคลอรีน)
+    // การเติมคลอรีนเสริม (Booster) อนุมานจาก FRC ออก > เข้า จนกว่าจะมีแหล่งสถานะปั๊มโดสจริง
+    var dosing=(frcIn!=null&&frcOut!=null&&frcOut>frcIn+0.02);
+    var kt=(!bypass&&!dosing&&frcIn&&frcOut&&frcOut<frcIn)?-Math.log(frcOut/frcIn):null;
+    // ระดับน้ำจริง: เปลี่ยน sc.LEVEL เป็นชื่อ field จาก SCADA เมื่อทราบ (รอเชื่อม API)
+    var lvl=sc.LEVEL!=null?sc.LEVEL:(sc.Level!=null?sc.Level:4.0);
+    S.stations[id]=Object.assign({},m,{stationId:id,fis:sc.FLOW_INLET_STATION,frcIn:frcIn,frcOut:frcOut,turb:sc.Turbidity,tempOut:sc.TEMP_OUTLET/100,ph:sc.PH,dt:sc.LogDateTime,kt:kt,t:(lvl*m.area)/m.flow,kHist:m.k,bypass:bypass,dosing:dosing,p1:sc.PUMP1_STS,p2:sc.PUMP2_STS,conduct:sc.Conduct,hasBooster:dosing&&!bypass,level:lvl});
+    pushHist(id,frcOut);ok++;
+  }).catch(function(){}).then(function(){lpStation();});})).then(function(){
+    if(ok===0){
+      return loadPublic().catch(function(){
+        showErr("เชื่อม API ไม่ได้ (intranet+public) — ใช้ข้อมูลจำลอง");
+        loadMock();
+      });
+    }
+    setBadge("LIVE · INTRANET");
+    renderRanking();if(S.selectedId)renderInfo();if(S.detailOpen)renderDetail(S.detailOpen);
+  });
+}
+// Smart Tunnel: ระดับน้ำถังสด + อัตราจ่ายจริง + น้ำเข้าถัง (Qin) ทุกสถานี
+function fetchSmart(){
+  fT(SMART_API+"/data_station_real.php",8000).then(function(r){return r.json();}).then(function(j){
+    IDS.forEach(function(id){
+      var st=S.stations[id];if(!st)return;
+      var c=META[id].code;
+      var lv=parseFloat(j[c+"_Level"]),fl=parseFloat(j[c+"_F"]),qin=parseFloat(j[c+"_Qin"]);
+      if(!isNaN(lv)&&lv>0){st.level=lv;st.lvLive=true;}
+      if(!isNaN(fl)&&fl>0){st.flowLive=fl;}
+      if(!isNaN(qin)){st.qin=qin;}
+      // bypass ตัวจริง: น้ำเข้าถังต่ำกว่า 5% ของน้ำจ่ายออก
+      if(!isNaN(qin)&&!isNaN(fl)&&fl>0){
+        st.bypass=qin<0.05*fl;
+        st.hasBooster=st.dosing||((st.frcOut>st.frcIn)&&st.frcIn!=null&&!st.bypass);
+      }
+      st.t=(st.level*st.area)/(st.flowLive||st.flow);
+    });
+    var mh=parseFloat(j["MHTR_Level"]);
+    if(!isNaN(mh)){for(var i=0;i<HUBS.length;i++){if(HUBS[i].code==="MTR"){HUBS[i].level=mh;break;}}}
+    S.smart=true;
+    var el=document.querySelector(".badge span");
+    if(el)el.textContent=el.textContent.replace(/ \+ระดับน้ำสด$/,"")+" +ระดับน้ำสด";
+    renderRanking();if(S.selectedId)renderInfo();if(S.detailOpen)renderDetail(S.detailOpen);
+  }).catch(function(e){
+    if(!S._smWarn&&!USE_MOCK){S._smWarn=true;
+      showErr("เชื่อมต่อ smartmap ไม่ได้");}
+  });
+}
+// FRC ขาออกของสถานีสูบส่ง MTR/TR1/TR2/TR3 จาก twqonline
+function fetchHubs(){
+  fT(HUB_API,9000).then(function(r){return r.json();}).then(function(list){
+    list.forEach(function(st){
+      var code=HUB_MAP[st.stationCode];if(!code)return;
+      for(var i=0;i<HUBS.length;i++){if(HUBS[i].code===code){
+        var f=parseFloat(st.value&&st.value.frc_2);
+        HUBS[i].frc=isNaN(f)?null:f;HUBS[i].dtm=st.sourceDtm;break;}}
+    });
+  }).catch(function(){});
+}
+function loadData(){
+  // โหลดข้อมูลสถานีให้เสร็จก่อน แล้วค่อย merge ระดับน้ำ/อัตราจ่ายจาก smartmap
+  var p=USE_MOCK?(loadMock(),Promise.resolve()):loadLive();
+  p.then(function(){fetchSmart();revealWhenReady("data");});
+  fetchHubs();
+}
+window.toggleLayer=function(t){S.layersOn[t]=!S.layersOn[t];document.getElementById("btn-"+t).classList.toggle("active",S.layersOn[t]);};
+window.resetView=function(){map.flyTo({center:[100.565,13.725],zoom:10.1,pitch:52,bearing:-14,duration:1400});};
+window.topView=function(){map.flyTo({center:[100.56,13.74],zoom:10.1,pitch:0,bearing:0,duration:1200});};
+
+function renderRanking(){
+  try{checkAlarms();}catch(e){}
+  var r=Object.values(S.stations).filter(x=>x.kHist>0).sort((a,b)=>b.kHist-a.kHist);
+  document.getElementById("rankList").innerHTML=r.map(function(x,i){
+    var kv=x.kHist,col=kv>1.0?"#f87171":kv>0.4?"#fbbf24":"#34d399";
+    return '<div class="rank-item" onclick="selectStation(\''+x.stationId+'\')"><span style="width:12px;text-align:right;color:'+(i===0?"#f87171":"#48596e")+';font-weight:700">'+(i+1)+'</span><span class="rank-code">'+x.code+'</span><div class="rank-bar"><div class="rank-bar-f" style="width:'+Math.min(kv/2.8*100,100)+'%;background:'+col+'"></div></div><span class="rank-val mono" style="color:'+col+'">'+kv.toFixed(2)+'</span></div>';
+  }).join("");
+}
+
+window.selectStation=function(id){
+  if(S.selectedId===id&&S.stations[id]){openDetail(id);return;}
+  S.selectedId=id;
+  var st=S.stations[id];
+  S.simLevel=(st&&st.level)?Math.round(st.level*10)/10:4.0;
+  S.simFlow=(st&&st.flowLive)?Math.min(30000,Math.max(2000,Math.round(st.flowLive/500)*500)):META[id].flow;
+  map.flyTo({center:[META[id].coord[0],META[id].coord[1]-0.004],zoom:14.4,pitch:60,bearing:-18,duration:1600});
+  renderInfo();
+};
+
+function renderInfo(){
+  var s=S.stations[S.selectedId]||META[S.selectedId];
+  var panel=document.getElementById("infoPanel");panel.classList.add("show");
+  var kd=s.kHist,canCalc=kd&&kd>0;
+  var srcName={MTR:"สูบส่งมหาสวัสดิ์ (MTR)",TR1:"สูบส่งบางเขน 1 (TR1)",TR2:"สูบส่งบางเขน 2 (TR2)",TR3:"สูบส่งบางเขน 3 (TR3)"}[s.src]||s.src||"—";
+  var html='<div class="close" onclick="closeInfo()">✕</div>'+(s.sim?'<div style="background:rgba(180,83,9,0.25);border:1px solid rgba(251,146,60,0.6);color:#fdba74;border-radius:10px;padding:7px 10px;margin-bottom:8px;font-size:12.5px;font-weight:800;text-align:center">⚠ ค่าจำลอง — ยังไม่มีการเชื่อมต่อระบบกับ LK2</div>':'')+'<div class="code">'+s.code+'</div><div class="name">'+s.name+' · รับน้ำจาก '+srcName+' &nbsp;<span class="open-st-btn" style="color:#67e8f9;cursor:pointer;font-size:10.5px;border:1px solid rgba(34,211,238,0.35);border-radius:8px;padding:1px 8px" onclick="openDetail(\''+S.selectedId+'\')">เปิดหน้าสถานี ⤢</span></div>'+
+    '<div class="stat-row"><span class="stat-label">เติมคลอรีนเสริม (จาก FRC)</span><span class="stat-value mono" style="color:'+(s.dosing?"#a78bfa":"#7d93ab")+'">'+(s.dosing?"มี (Booster)":"ไม่มี")+'</span></div>'+
+    '<div class="stat-row"><span class="stat-label">ปั๊มดึงน้ำเข้าเครื่องวัด</span><span class="stat-value mono">P1 '+(s.p1===1?"✓":(s.p1===0?"✗":"—"))+' · P2 '+(s.p2===1?"✓":(s.p2===0?"✗":"—"))+'</span></div>'+
+    '<div class="stat-row"><span class="stat-label">สถานะการจ่าย</span><span class="stat-value mono" style="color:'+(s.bypass?"#fbbf24":"#34d399")+'">'+(s.bypass?"\u21c4 BYPASS ไม่ผ่านถัง":"ปกติ ผ่านถังน้ำใส")+'</span></div>'+
+    '<div class="stat-row"><span class="stat-label">FRC Inlet</span><span class="stat-value mono" style="color:#67e8f9">'+((s.frcIn!=null&&s.frcIn>0)?s.frcIn.toFixed(2):"—")+' mg/L</span></div>'+
+    '<div class="stat-row"><span class="stat-label">FRC Outlet</span><span class="stat-value mono" style="color:'+(s.frcOut>=0.8?"#34d399":"#f87171")+'">'+(s.frcOut!=null?s.frcOut.toFixed(2):"—")+' mg/L</span></div>'+
+    '<div class="stat-row"><span class="stat-label">Turbidity</span><span class="stat-value mono" style="color:#60a5fa">'+(s.turb!=null?s.turb.toFixed(2):"—")+' NTU</span></div>'+
+    '<div class="stat-row"><span class="stat-label">Temp</span><span class="stat-value mono" style="color:#fbbf24">'+(s.tempOut!=null?s.tempOut.toFixed(1):"—")+' °C</span></div>'+
+    '<div class="stat-row"><span class="stat-label">k (historical)</span><span class="stat-value mono" style="color:#fbbf24">'+(kd?kd.toFixed(3):"—")+' /day</span></div>'+
+    '<div class="stat-row"><span class="stat-label">Tank Area</span><span class="stat-value mono">'+(s.area?s.area.toLocaleString():"—")+' m²</span></div>'+
+    '<div class="stat-row"><span class="stat-label">ระดับน้ำในถัง</span><span class="stat-value mono" style="color:#22d3ee">'+(s.level!=null?s.level.toFixed(2):"—")+' m'+(s.lvLive?' <span style="font-size:8px;color:#34d399;vertical-align:2px">●LIVE</span>':'')+'</span></div>'+
+    '<div class="stat-row"><span class="stat-label">อัตราจ่ายปัจจุบัน</span><span class="stat-value mono" style="color:#38bdf8">'+(s.flowLive?Math.round(s.flowLive).toLocaleString():"—")+' m³/h</span></div>'+
+    '<div class="stat-row"><span class="stat-label">น้ำเข้าถัง (Qin)</span><span class="stat-value mono" style="color:'+(s.bypass?"#fbbf24":"#7dd3fc")+'">'+(s.qin!=null?Math.round(s.qin).toLocaleString():"—")+' m³/h</span></div>'+
+    '<div class="stat-row"><span class="stat-label">ปริมาตรน้ำ</span><span class="stat-value mono" style="color:#60a5fa">'+(s.level!=null&&s.area?Math.round(s.level*s.area).toLocaleString():"—")+' m³</span></div>';
+  if(canCalc){
+    var frcIn=s.frcIn||1.0,khr=kd/24,simT=(S.simLevel*s.area)/S.simFlow,simFrc=frcIn*Math.exp(-khr*simT);
+    var maxT=-Math.log(S.threshold/frcIn)/khr,maxLv=(maxT*S.simFlow)/s.area;
+    var booster=simFrc<S.threshold?S.threshold-simFrc:0,pct=simFrc/frcIn*100;
+    var barCol=simFrc>=S.threshold?"linear-gradient(90deg,#06b6d4,#22c55e)":"linear-gradient(90deg,#ef4444,#f59e0b)";
+    html+='<div class="section-t">🎛️ What-If Simulator</div>'+
+    (s.bypass?'<div style="font-size:10.5px;color:#fbbf24;padding:2px 0 6px">⚠️ ขณะนี้ bypass — retention \u2248 0 ค่าจำลองใช้เมื่อกลับมาจ่ายผ่านถัง</div>':'')+
+    '<div class="calc-card">'+
+      '<div class="slider-row"><label>ระดับน้ำ</label><input type="range" min="1" max="'+s.maxLv+'" step="0.1" value="'+S.simLevel+'" oninput="upd(\'lv\',this.value)"><div class="slider-val mono" style="color:#22d3ee">'+S.simLevel.toFixed(1)+' m</div></div>'+
+      '<div class="slider-row"><label>น้ำจ่าย</label><input type="range" min="2000" max="30000" step="500" value="'+S.simFlow+'" oninput="upd(\'fl\',this.value)"><div class="slider-val mono" style="color:#60a5fa">'+S.simFlow.toLocaleString()+' m³/h</div></div>'+
+      '<div class="slider-row"><label>เกณฑ์ FRC</label><input type="range" min="0.2" max="1.5" step="0.05" value="'+S.threshold+'" oninput="upd(\'th\',this.value)"><div class="slider-val mono" style="color:#fbbf24">'+S.threshold.toFixed(2)+' mg/L</div></div>'+
+    '</div>'+
+    '<div class="result-row"><div class="result-box"><div class="rl">Retention</div><div class="rv mono" style="color:#60a5fa">'+simT.toFixed(1)+'</div><div class="ru">hr</div></div><div class="result-box"><div class="rl">FRC คาดการณ์</div><div class="rv mono" style="color:'+(simFrc>=S.threshold?"#34d399":"#f87171")+'">'+simFrc.toFixed(3)+'</div><div class="ru">mg/L</div></div></div>'+
+    '<div class="result-row"><div class="result-box"><div class="rl">ระดับสูงสุดปลอดภัย</div><div class="rv mono" style="color:#fbbf24">'+maxLv.toFixed(1)+'</div><div class="ru">m (FRC≥'+S.threshold+')</div></div><div class="result-box"><div class="rl">Booster ต้องเติม</div><div class="rv mono" style="color:'+(booster>0?"#f87171":"#34d399")+'">'+(booster>0?booster.toFixed(3):"0")+'</div><div class="ru">mg/L</div></div></div>'+
+    '<div class="bar-c"><div class="bar-f" style="width:'+Math.min(pct,100)+'%;background:'+barCol+'"></div><div class="bar-th" style="left:'+(S.threshold/frcIn)*100+'%"></div><div class="bar-t mono">'+frcIn.toFixed(2)+' → '+simFrc.toFixed(3)+' ('+pct.toFixed(0)+'%)</div></div>'+
+    '<div class="formula mono">Ct = '+frcIn.toFixed(2)+' × e^(-'+khr.toFixed(4)+' × '+simT.toFixed(1)+') = '+simFrc.toFixed(3)+'</div>';
+  }else{
+    html+='<div class="section-t">⚠️ ไม่สามารถคำนวณ Decay</div><div style="font-size:11px;color:#7d93ab;padding:4px 0">'+(s.hasBooster?"FRC Out > In → Booster active":"ไม่มีข้อมูล k")+'</div>';
+  }
+  panel.innerHTML=html;
+}
+window.closeInfo=function(){S.selectedId=null;document.getElementById("infoPanel").classList.remove("show");};
+window.upd=function(k,v){if(k==="lv")S.simLevel=+v;else if(k==="fl")S.simFlow=+v;else if(k==="th")S.threshold=+v;renderInfo();};
+
+
+// ===== หน้ารายละเอียดสถานี (ระบบจ่ายคลอรีนเสริม) =====
+function ensureDetailDom(){
+  if(document.getElementById("detailPage"))return;
+  var st=document.createElement("style");
+  st.textContent=
+    ".clblink{animation:clblink 0.9s infinite}"
+    +"@keyframes clblink{50%{opacity:0.3}}"
+    +".dp-wrap{position:fixed;inset:0;z-index:350;display:none;overflow:auto;font-family:'IBM Plex Sans Thai',sans-serif;background:linear-gradient(rgba(34,211,238,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,0.03) 1px,transparent 1px),radial-gradient(1100px 620px at 50% 24%,rgba(14,42,68,0.65),transparent 72%),#04070f;background-size:46px 46px,46px 46px,auto,auto}"
+    +".dp-wrap.show{display:flex}"
+    +".dp-inner{flex:1;width:100%;min-height:100vh;display:flex;flex-direction:column;padding:18px 36px 26px;position:relative}"
+    +".dp-inner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#22d3ee 30%,#a78bfa 70%,transparent)}"
+    +".dp-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(45,68,99,0.5)}"
+    +".dp-back{border:1px solid #2b4159;color:#8fb3cc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;background:rgba(14,26,44,0.6);font-family:inherit;font-weight:600;transition:all .15s}"
+    +".dp-back:hover{color:#67e8f9;border-color:#22d3ee;box-shadow:0 0 14px rgba(34,211,238,0.25)}"
+    +".dp-code{font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;letter-spacing:1px;background:linear-gradient(90deg,#22d3ee,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 14px rgba(34,211,238,0.4));line-height:1}"
+    +".dp-title{font-size:15.5px;font-weight:600;color:#c8d6e5}"
+    +".dp-title small{display:block;font-size:10px;color:#5b7089;letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}"
+    +".dp-chip{border-radius:14px;padding:4px 12px;font-size:11.5px;border:1px solid;font-weight:600}"
+    +".dp-grid{flex:1;display:grid;grid-template-columns:280px minmax(0,1fr) 304px;gap:18px;align-items:stretch;min-height:0}"
+    +"@media(max-width:1020px){.dp-grid{grid-template-columns:1fr}}"
+    +".dp-card{background:linear-gradient(180deg,#0f1c30,#0c1728);border:1px solid #1d3a57;border-radius:16px;padding:16px;display:flex;flex-direction:column}"
+    +".dp-lbl{font-size:10.5px;margin-bottom:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase}"
+    +".dp-tbl{width:100%;font-size:13px;border-collapse:collapse}.dp-tbl td{padding:7px 0;color:#8fb3cc;border-bottom:1px solid rgba(45,68,99,0.35)}.dp-tbl tr:last-child td{border-bottom:none}.dp-tbl td:last-child{text-align:right;font-family:'JetBrains Mono',monospace;color:#e2eefc;font-size:14px;font-weight:700}"
+    +".dp-flow{display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,rgba(14,32,54,0.5),rgba(10,20,38,0.3));border:1px solid rgba(34,211,238,0.14);border-radius:16px;padding:18px 20px;position:relative;overflow:hidden}"
+    +".dp-flow::after{content:'';position:absolute;inset:0;background:radial-gradient(500px 260px at 50% 55%,rgba(56,189,248,0.07),transparent 70%);pointer-events:none}"
+    +".dp-frc{border-radius:12px;padding:10px 16px;text-align:center;border:1px solid;backdrop-filter:blur(4px)}"
+    +".dp-frc .fl{font-size:11px;font-weight:600;letter-spacing:0.5px}"
+    +".dp-frc .fv{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.15;text-shadow:0 0 18px currentColor}"
+    +".dp-frc .fu{font-size:9.5px;color:#5b7089}"
+    +".dp-arr{flex:1;text-align:center;min-width:70px}"
+    +".dp-line{height:4px;margin:6px 0;border-radius:2px;background:repeating-linear-gradient(90deg,currentColor 0 12px,transparent 12px 21px);animation:dpflow .5s linear infinite;box-shadow:0 0 8px currentColor;opacity:0.9}"
+    +"@keyframes dpflow{to{background-position:21px 0}}"
+    +".dp-note{margin-top:14px;border-top:1px dashed #3b4f68;padding-top:10px;font-size:12.5px;text-align:center;letter-spacing:0.3px}"
+    +".dp-reco{margin-top:16px;background:linear-gradient(90deg,rgba(30,26,74,0.55),rgba(14,26,44,0.7));border:1px solid #3c3489;border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}"
+    +".dp-proc{flex:1;min-height:340px;background:radial-gradient(900px 420px at 20% -5%,rgba(34,211,238,0.10),transparent 60%),radial-gradient(760px 400px at 88% 8%,rgba(167,139,250,0.09),transparent 65%),linear-gradient(180deg,#0f2038 0%,#0a1628 55%,#071021 100%);border:1px solid rgba(56,189,248,0.22);border-radius:16px;padding:6px;display:flex;position:relative;overflow:hidden}"
+    +".dp-proc::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(140,180,230,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(140,180,230,0.022) 1px,transparent 1px);background-size:54px 54px;pointer-events:none}"
+    +".dp-proc svg{width:100%;height:100%;font-family:'IBM Plex Sans Thai',sans-serif}"
+    +".dp-proc .flow{stroke-dasharray:15 11;animation:dpdash .5s linear infinite}"
+    +"@keyframes dpdash{to{stroke-dashoffset:-26}}"
+    +".dp-proc .spin{transform-box:fill-box;transform-origin:center;animation:dpspin .9s linear infinite}"
+    +"@keyframes dpspin{to{transform:rotate(360deg)}}"
+    +".dp-proc .bub{animation:dpbub 3.4s ease-in-out infinite}"
+    +"@keyframes dpbub{0%,100%{transform:translateY(0);opacity:.65}50%{transform:translateY(-16px);opacity:.15}}"
+    +".dp-bot{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap}"
+    +".dp-stat{background:rgba(20,31,51,0.65);border:1px solid rgba(34,211,238,0.12);border-radius:10px;padding:7px 13px;text-align:center;min-width:88px;flex:1}"
+    +".dp-stat .sl{font-size:10.5px;color:#7d93ab}.dp-stat .sv{font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#e2eefc;margin-top:1px}"
+    +".dp-in{width:78px;background:#0d1a2d;border:1px solid #3b4f68;border-radius:8px;color:#e2eefc;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;padding:6px 8px;text-align:center;outline:none}"
+    +".dp-in:focus{border-color:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,0.25)}"
+    +".dp-proc .dotp{animation:dppulse 1.8s ease-out infinite}"
+    +"@keyframes dppulse{0%,100%{opacity:0.95}55%{opacity:0.25}}";
+  document.head.appendChild(st);
+  var d=document.createElement("div");
+  d.id="detailPage";d.className="dp-wrap";
+  d.innerHTML='<div class="dp-inner" id="dpInner"></div>';
+  d.addEventListener("click",function(e){if(e.target===d)closeDetail();});
+  document.body.appendChild(d);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDetail();});
+}
+function openDetail(id){
+  ensureDetailDom();
+  S.detailOpen=id;
+  if(!S.dose||S.dose.src!==id){
+    S.dose={target:null,factor:null,sg:null,frcin:null,k:null,t:null,q:null,auto:(S.dose&&S.dose.auto===false)?false:true,src:id};
+    S.doseTouched=false;
+  }
+  renderDetail(id);
+  fbLoadDose(id);
+  loadChlorineInfo(id);
+  document.getElementById("detailPage").classList.add("show");
+}
+function closeDetail(){
+  S.detailOpen=null;
+  var d=document.getElementById("detailPage");
+  if(d)d.classList.remove("show");
+}
+window.openDetail=openDetail;window.closeDetail=closeDetail;
+var CHL_HOST="http://172.16.196.100";
+// ================= Firebase (บันทึกค่าพารามิเตอร์ข้ามเครื่อง) =================
+// วาง config ของ Firebase project ตรงนี้ (ใช้ project เดียวกับ FRCContour ได้)
+// ตัวอย่าง: var FB_CONFIG={apiKey:"...",authDomain:"xxx.firebaseapp.com",databaseURL:"https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"xxx"};
+var FB_CONFIG={
+  apiKey:"AIzaSyBMv3wQI02clGMHnna4XaIx078G7kaSYqg",
+  authDomain:"wqcmap-7f9d2.firebaseapp.com",
+  databaseURL:"https://wqcmap-7f9d2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"wqcmap-7f9d2"
+};
+var FB=null;
+try{if(FB_CONFIG&&typeof firebase!=="undefined"){
+  firebase.initializeApp(FB_CONFIG);FB=firebase.database();
+  firebase.auth().signInAnonymously().catch(function(e){console.warn("FB auth:",e.code);});
+}}catch(e){console.warn("Firebase init:",e);}
+S.fbSaved={};
+function fbSaveDose(){
+  var id=S.detailOpen;if(!id)return;
+  var el=document.getElementById("dpSaveMsg");
+  if(!FB){if(el)el.textContent="ยังไม่ตั้งค่า Firebase (วาง FB_CONFIG ในโค้ด)";return;}
+  S.doseTouched=true;
+  window.dpCalc();
+  var rec=Object.assign({},S.dose,{updatedAt:new Date().toISOString()});
+  var doSet=function(){
+    FB.ref("frcTwin/dose/"+id).set(rec).then(function(){
+      S.fbSaved[id]=true;
+      if(el)el.textContent="บันทึกแล้ว ✓ "+new Date().toLocaleTimeString("th-TH");
+    }).catch(function(e){if(el)el.textContent="บันทึกไม่สำเร็จ: "+(e.code||e.message);});
+  };
+  if(firebase.auth().currentUser)doSet();
+  else firebase.auth().signInAnonymously().then(doSet).catch(function(e){if(el)el.textContent="ยืนยันตัวตนไม่สำเร็จ: "+(e.code||e.message)+" (เปิด Anonymous ใน Console หรือยัง?)";});
+}
+window.fbSaveDose=fbSaveDose;
+function fbLoadDose(id){
+  if(!FB)return;
+  FB.ref("frcTwin/dose/"+id).once("value").then(function(snap){
+    var v=snap.val();if(!v)return;
+    S.fbSaved[id]=true;
+    S.doseTouched=true;
+    S.dose=Object.assign({},v,{src:id});
+    if(S.detailOpen===id)renderDetail(id);
+  }).catch(function(){});
+}
+
+var REST113="http://172.16.183.113/restData";
+var HAS113={SR:1,KT:1,PK:1,TP:1,RB:1,LA:1};
+function parse113(code,j){
+  if(!j)return null;
+  var nn=function(v){v=parseFloat(v);return isFinite(v)?v:null;};
+  var vol=nn(j[code+"_CL_VOLUMEALL"]),pumps=[],dose=null;
+  if(vol==null){var sum=0,f=0;Object.keys(j).forEach(function(k){var m=k.match(new RegExp("^"+code+"_CL_VOLUME(\\d+)$"));if(m){var v=nn(j[k]);if(v!=null){sum+=v;f++;}}});if(f)vol=sum*(f<4?4/f:1);} // ถังแฝด: เซ็นเซอร์คู่ละตัว (ทุกสถานี SCADA = 4 ถัง)
+  var fr=nn(j[code+"_CL_FLOWRATE"]);
+  if(fr!=null)dose=fr;
+  else{var s=0,f2=0;Object.keys(j).forEach(function(k){if(/_CL_P\dAB_FLOWRATE$/.test(k)){var v=nn(j[k]);if(v!=null){s+=Math.max(0,v);f2++;}}});if(f2)dose=s;}
+  Object.keys(j).forEach(function(k){var m=k.match(new RegExp("^"+code+"_CL_(P[0-9A-Z]+)_STATUS$"));if(m&&(j[k]===true||j[k]===1))pumps.push(m[1]);});
+  if(vol==null&&dose==null)return null;
+  return {vol:vol,dose:dose,pumps:pumps,dt:j.timestamp||null};
+}
+function loadChlorineInfo(id){
+  var tryF=function(paths){
+    return fT(API+paths,8000).then(function(r){if(!r.ok)throw 0;return r.json();})
+      .catch(function(){return fT(CHL_HOST+"/api"+paths,8000).then(function(r){if(!r.ok)throw 0;return r.json();});});
+  };
+  // สูตร + ค่าแนะนำของระบบ wqc
+  tryF("/chlorine/"+id).then(function(j){
+    var c=j&&j.data;var st=S.stations[id];if(!c||!st)return;
+    st.chl={target:parseFloat(c.frc),factor:parseFloat(c.factor),sg:parseFloat(c.sg),frcInlet:parseFloat(c.frcInlet),reco:parseFloat(c.chlorine),dt:c.updatedAt};
+    // ค่า default จาก chl ถูกหยิบใน renderDetail (เฉพาะช่องที่ผู้ใช้ยังไม่แตะ)
+    if(S.detailOpen===id)renderDetail(id);
+  }).catch(function(){});
+  // ถังคลอรีน (โครง JSON ยังไม่ยืนยัน — parser ยืดหยุ่น + log)
+  fT(CHL_HOST+"/api/chlorine-tank/"+id,17000).then(function(r){
+    if(!r.ok){
+      var se=S.stations[id];
+      if(se&&!se.tank){
+        se.tankErr="server ตอบ HTTP "+r.status;
+        tank113(id); // ลองแหล่ง SCADA สำรอง
+        if(S.detailOpen===id)renderDetail(id);
+      }
+      return null;
+    }
+    return r.json();
+  }).then(function(j){
+    if(!j)return;
+    var d=(j&&j.data)||{};var st=S.stations[id];if(!st)return;
+    st.tankErr=false;
+    try{console.log("chlorine-tank/"+id,JSON.stringify(d));}catch(e){}
+    // mapping ยืนยัน MB 15/7/69: LEVEL(m) VOLUMP(L) FLOWRATE(=Dose rate L/hr) INLETFLOW(m3/h) timeDate
+    // DOSING ยังไม่ทราบความหมายแน่ชัด (ไม่ใช่น้ำเข้าตู้วัด) — เก็บไว้ใน tank.dosing รอตีความ
+    var nn=function(v){v=parseFloat(v);return isFinite(v)?v:null;};
+    st.tank={level:nn(d.LEVEL),volume:nn(d.VOLUMP),dose:nn(d.FLOWRATE),cab:null,dosing:nn(d.DOSING),inlet:nn(d.INLETFLOW),dt:d.timeDate||null};
+    if(S.detailOpen===id)renderDetail(id);
+  }).catch(function(){
+    var st=S.stations[id];if(st&&!st.tank){st.tankErr="เชื่อมไม่ได้ (CORS/เครือข่าย)";tank113(id);if(S.detailOpen===id)renderDetail(id);}
+  });
+}
+function tank113(id){
+  var st=S.stations[id];if(!st||st.tank)return;
+  var code=META[id]&&META[id].code;
+  if(!code||!HAS113[code])return;
+  fT(REST113+"/"+code+"/Cl",8000)
+    .then(function(r){if(!r.ok)throw 0;return r.json();})
+    .then(function(j){
+      var p=parse113(code,j);if(!p)return;
+      var st2=S.stations[id];if(!st2||st2.tank)return;
+      st2.tank={level:null,volume:p.vol,dose:p.dose,cab:null,dosing:null,inlet:null,dt:p.dt,pumps:p.pumps,src:"scada"};
+      st2.tankErr=false;
+      if(S.detailOpen===id)renderDetail(id);
+    }).catch(function(){});
+}
+
+window.dpCalc=function(){
+  var s=S.stations[S.detailOpen];if(!s)return;
+  var g=function(id){var e=document.getElementById(id);if(!e||e.value==="")return NaN;return parseFloat(e.value);};
+  var t=g("dpT"),fa=g("dpF"),sg=g("dpG"),kd=g("dpK"),rt=g("dpR"),q=g("dpQ");
+  var ie=document.getElementById("dpI");
+  var fi=(ie&&ie.value!=="")?parseFloat(ie.value):null;
+  var _au=document.getElementById("dpAuto");var autoV=_au?_au.checked:true;
+  if(S.doseTouched){
+    S.dose={target:t,factor:fa,sg:sg,frcin:autoV?null:fi,k:isFinite(kd)?kd:null,t:autoV?null:(isFinite(rt)?rt:null),q:autoV?null:(isFinite(q)?q:null),auto:autoV,src:S.detailOpen};
+  }else if(S.dose){S.dose.auto=autoV;}
+  if(!isFinite(kd))kd=0;if(!isFinite(rt))rt=0;
+  if(!isFinite(q)||q<=0){
+    q=((!s.bypass)&&s.qin!=null&&s.qin>0)?s.qin
+      :((s.fis!=null&&s.fis>0)?s.fis:((s.flowLive!=null&&s.flowLive>0)?s.flowLive:(s.flow||null)));
+  }
+  var fin=(fi!=null&&isFinite(fi))?fi:((s.frcIn!=null&&s.frcIn>0)?s.frcIn:null);
+  var el=document.getElementById("dpDoseVal"),e2=document.getElementById("dpCreq");
+  if(!el)return;
+  if(q==null||fin==null||!isFinite(t)||!isFinite(fa)||!isFinite(sg)||sg<=0){el.textContent="—";if(e2)e2.textContent="—";return;}
+  var creq=t*Math.exp((kd/24)*rt);
+  if(e2)e2.textContent=creq.toFixed(2);
+  var ep=document.getElementById("dpPred");
+  if(ep)ep.textContent=(fin!=null&&isFinite(fin))?(fin*Math.exp(-(kd/24)*rt)).toFixed(2):"—";
+  var d=q*(creq-fin)*fa/(100*sg);if(d<0)d=0;
+  el.textContent=d.toFixed(1);
+};
+window.dpKpick=function(v){S.doseTouched=true;var e=document.getElementById("dpK");if(v!=="c"&&e)e.value=v;window.dpCalc();};
+window.dpAutoToggle=function(v){S.doseTouched=true;if(S.dose)S.dose.auto=v;renderDetail(S.detailOpen);};
+window.dpTouch=function(){S.doseTouched=true;};
+// ===== บันทึกสถานะปั๊มดึงน้ำ inlet รายชั่วโมง (เขียนโดยหน้าที่เปิดอยู่) =====
+function hourKey(){var d=new Date();var p=function(n){return (n<10?"0":"")+n;};
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours());}
+function fbLogPumps(){
+  try{
+    if(!FB||!firebase.auth().currentUser)return;
+    var hk=hourKey();
+    if(S.pumpLogged===hk)return;
+    var wrote=false;
+    IDS.forEach(function(id){
+      var st=S.stations[id];if(!st)return;
+      if(st.p1==null&&st.p2==null)return; // โหมด public ไม่มีข้อมูลปั๊ม
+      var rec={at:new Date().toISOString()};
+      if(st.p1!=null)rec.p1=st.p1?1:0;
+      if(st.p2!=null)rec.p2=st.p2?1:0;
+      FB.ref("frcTwin/pumplog/"+id+"/"+hk).set(rec).catch(function(){});
+      wrote=true;
+    });
+    if(wrote)S.pumpLogged=hk;
+  }catch(e){}
+}
+
+function renderDetail(id){
+  var s=S.stations[id];
+  var el=document.getElementById("dpInner");
+  if(!s||!el)return;
+  var f=Math.max(0.06,Math.min((s.level||0)/(s.maxLv||6),1));
+  var inTxt=(s.frcIn!=null&&s.frcIn>0)?s.frcIn.toFixed(2):"—";
+  var outTxt=s.frcOut!=null?s.frcOut.toFixed(2):"—";
+  var qinRaw=(s.qin!=null&&isFinite(s.qin))?s.qin:null;
+  var qinShow=(qinRaw!=null)?Math.max(0,qinRaw):((s.fis!=null&&s.fis>0)?s.fis:null);
+  var qin=qinShow!=null?Math.round(qinShow).toLocaleString():"—";
+  // ค่าเข้าสูตร: ตอน bypass หรือ Qin เพี้ยน (<=0) ใช้น้ำเข้าสถานี/น้ำจ่ายแทน
+  var qinN=((!s.bypass)&&qinRaw!=null&&qinRaw>0)?qinRaw
+    :((s.fis!=null&&s.fis>0)?s.fis:((s.flowLive!=null&&s.flowLive>0)?s.flowLive:null));
+  var fl=s.flowLive!=null?Math.round(s.flowLive).toLocaleString():"—";
+  var vol=(s.level!=null&&s.area)?Math.round(s.level*s.area).toLocaleString():"—";
+  var lv=s.level!=null?s.level.toFixed(2):"—";
+  var outC=s.frcOut==null?"#8fb3cc":(s.frcOut>=0.8?"#22d3ee":(s.frcOut>=0.5?"#fbbf24":"#f87171"));
+  var byp=!!s.bypass,clOn=((s.tank&&s.tank.dose>0)||!!s.dosing);
+  var mono='font-family="JetBrains Mono,monospace"';
+  var chipP=function(n,v){
+    if(v==null)return '<span class="dp-chip" style="background:#1a2433;color:#8fb3cc;border-color:#2b4159">'+n+' —</span>';
+    return v===1
+      ?'<span class="dp-chip" style="background:#0f2b22;color:#4ade80;border-color:#1d5c40">'+n+' ทำงาน</span>'
+      :'<span class="dp-chip" style="background:#1a2433;color:#8fb3cc;border-color:#2b4159">'+n+' หยุด</span>';
+  };
+
+  var w=[];
+  w.push('<svg viewBox="0 0 1420 630" preserveAspectRatio="xMidYMid meet">');
+  w.push('<defs>');
+  w.push('<linearGradient id="dpwatR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4d9ae8" stop-opacity="0.9"/><stop offset="1" stop-color="#1e40af" stop-opacity="0.82"/></linearGradient>');
+  w.push('<linearGradient id="dpglass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6ea3d8" stop-opacity="0.16"/><stop offset="0.5" stop-color="#a9cdf0" stop-opacity="0.06"/><stop offset="1" stop-color="#4d7fb4" stop-opacity="0.18"/></linearGradient>');
+  w.push('<linearGradient id="dpclg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e9cd6a" stop-opacity="0.28"/><stop offset="0.5" stop-color="#f7e9a8" stop-opacity="0.12"/><stop offset="1" stop-color="#caa93f" stop-opacity="0.30"/></linearGradient>');
+  w.push('<linearGradient id="dpclq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047" stop-opacity="0.85"/><stop offset="1" stop-color="#a16207" stop-opacity="0.8"/></linearGradient>');
+  w.push('<linearGradient id="dpcab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4a5d"/><stop offset="1" stop-color="#242f3d"/></linearGradient>');
+  w.push('</defs>');
+
+  // ---------- พื้น + เงา ----------
+  w.push('<line x1="30" y1="575" x2="1395" y2="575" stroke="#7ba7d9" stroke-opacity="0.10" stroke-width="1.4"/>');
+  w.push('<ellipse cx="110" cy="578" rx="102" ry="9" fill="#000" opacity="0.32"/>');
+  w.push('<ellipse cx="658" cy="576" rx="262" ry="11" fill="#000" opacity="0.32"/>');
+  w.push('<ellipse cx="1275" cy="592" rx="116" ry="9" fill="#000" opacity="0.32"/>');
+
+  var pipe=function(d2,w2){return '<path d="'+d2+'" fill="none" stroke="#4c5a68" stroke-width="'+w2+'" stroke-linecap="round"/>';};
+  var flow=function(d2,c2,w2,on){return '<path d="'+d2+'" fill="none" '+(on?'class="flow"':'opacity="0.22"')+' stroke="'+c2+'" stroke-width="'+w2+'"/>';};
+  var valve=function(x,y,on){var c2=on?"#fbbf24":"#5b6a7a";return '<polygon points="'+(x-11)+','+(y-9)+' '+x+','+y+' '+(x-11)+','+(y+9)+'" fill="'+c2+'"/><polygon points="'+(x+11)+','+(y-9)+' '+x+','+y+' '+(x+11)+','+(y+9)+'" fill="'+c2+'"/>';};
+
+  // ---------- ถังเก็บน้ำใส (สี่เหลี่ยม) ----------
+  var gx=430,gw=456,gy=266,gb=548,iT=288,iB=540;
+  var wy=iB-(iB-iT)*f;
+  var pipeY=350;
+
+  // ท่อเข้า: การ์ด FRC เข้า -> tee bypass -> ถัง
+  w.push(pipe('M270 '+pipeY+' L'+gx+' '+pipeY,14));
+  w.push('<path d="M270 '+pipeY+' L340 '+pipeY+'" fill="none" class="flow" stroke="#22d3ee" stroke-width="5"/>');
+  w.push(flow('M340 '+pipeY+' L'+gx+' '+pipeY,'#22d3ee',5,!byp));
+  // ท่อ bypass อ้อมถัง: tee(400) ขึ้น -> ข้ามบน -> ลง join(960)
+  var pBy='M340 '+pipeY+' L340 208 Q340 186 362 186 L938 186 Q960 186 960 208 L960 347';
+  w.push(pipe(pBy,10));
+  w.push(flow(pBy,'#fbbf24',4,byp));
+  w.push(valve(680,186,byp));
+  w.push('<text x="680" y="165" text-anchor="middle" font-size="12" font-weight="700" fill="'+(byp?"#fbbf24":"#5b6a7a")+'" '+(byp?'':'opacity="0.6"')+'>BYPASS '+(byp?"เปิด — น้ำอ้อมถัง":"(ปิด)")+'</text>');
+  // ท่อออก: ถัง -> join -> แยกจ่ายน้ำ -> เข้าตู้วัด
+  w.push(pipe('M886 '+pipeY+' L1120 '+pipeY+' Q1142 '+pipeY+' 1142 372 L1142 430 L1170 430',14));
+  w.push(flow('M886 '+pipeY+' L960 '+pipeY,outC,5,!byp));
+  w.push('<path d="M960 '+pipeY+' L1120 '+pipeY+' Q1142 '+pipeY+' 1142 372 L1142 430 L1170 430" fill="none" class="flow" stroke="'+outC+'" stroke-width="5"/>');
+  w.push('<circle cx="340" cy="'+pipeY+'" r="7" fill="#0d1a2d" stroke="#8fa3b8" stroke-width="2"/>');
+  w.push('<circle cx="960" cy="'+pipeY+'" r="7" fill="#0d1a2d" stroke="#8fa3b8" stroke-width="2"/>');
+  // ลูกศรจ่ายผู้ใช้น้ำ (แยกขึ้น)
+  w.push(pipe('M1040 '+pipeY+' L1040 300',10));
+  w.push('<path d="M1040 '+pipeY+' L1040 300" fill="none" class="flow" stroke="'+outC+'" stroke-width="4"/>');
+  w.push('<polygon points="1028,302 1040,280 1052,302" fill="'+outC+'"/>');
+  w.push('<text x="1040" y="272" text-anchor="middle" font-size="11" fill="#8fb3cc">จ่ายผู้ใช้น้ำ</text>');
+
+  // ตัวถัง — MB มี 2 ถังอนุกรม (LV ใหม่ -> ถังเดิม) สถานีอื่นถังเดียว
+  var tanks=(id==="20")
+    ?[{x:430,w:288,lbl:"ถังใหญ่ · 7,745 m²"},{x:736,w:150,lbl:"LV · 4,216 m²",main:true}]
+    :[{x:430,w:456,main:true}];
+  var lastTk=tanks[tanks.length-1];
+  tanks.forEach(function(tk2){
+    var x1=tk2.x,w2=tk2.w;
+    w.push('<rect x="'+(x1-12)+'" y="548" width="'+(w2+24)+'" height="14" rx="5" fill="#1d2f44" stroke="#3a5570"/>');
+    w.push('<rect x="'+x1+'" y="'+gy+'" width="'+w2+'" height="'+(gb-gy)+'" rx="4" fill="url(#dpglass)" stroke="#6ea3d8" stroke-width="2"/>');
+    w.push('<rect x="'+(x1+6)+'" y="'+wy+'" width="'+(w2-12)+'" height="'+(iB-wy+2)+'" fill="url(#dpwatR)"/>');
+    var seg=Math.max(2,Math.round((w2-12)/112)),segW=(w2-12)/(seg*2);
+    var wv='M'+(x1+6)+' '+wy;
+    for(var k3=0;k3<seg;k3++)wv+=' q'+(segW/2)+' -6 '+segW+' 0 q'+(segW/2)+' 6 '+segW+' 0';
+    w.push('<path d="'+wv+'" fill="none" stroke="#9bd7ff" stroke-width="2.2" opacity="0.85"/>');
+    w.push('<rect x="'+(x1+14)+'" y="'+(wy+10)+'" width="14" height="'+Math.max(0,iB-wy-22)+'" rx="7" fill="#cfe9ff" opacity="0.12"/>');
+    for(var mk=1;mk<Math.round(w2/120);mk++)w.push('<line x1="'+(x1+mk*w2/Math.round(w2/120))+'" y1="'+gy+'" x2="'+(x1+mk*w2/Math.round(w2/120))+'" y2="'+gb+'" stroke="#6ea3d8" stroke-opacity="0.22" stroke-width="2"/>');
+    w.push('<rect x="'+(x1-12)+'" y="252" width="'+(w2+24)+'" height="14" rx="5" fill="#2c4258" stroke="#6ea3d8" stroke-width="1.4"/>');
+    if(tk2.lbl)w.push('<text x="'+(x1+w2/2)+'" y="'+(gy+22)+'" text-anchor="middle" font-size="11" fill="#7ba7d9">'+tk2.lbl+'</text>');
+  });
+  // ท่อถ่ายระหว่างถัง (เฉพาะ MB) — LV -> ถังเดิม
+  if(tanks.length>1){
+    w.push('<line x1="714" y1="516" x2="740" y2="516" stroke="#4c5a68" stroke-width="10" stroke-linecap="round"/>');
+    w.push('<line x1="714" y1="516" x2="740" y2="516" class="flow" stroke="#22d3ee" stroke-width="4"/>');
+    w.push('<text x="727" y="540" text-anchor="middle" font-size="9.5" fill="#5b7089">อนุกรม</text>');
+  }
+  var bx=(tanks.length>1)?[480,660,760,840]:[520,620,720,820];
+  for(var b=0;b<bx.length;b++)w.push('<circle class="bub" style="animation-delay:'+(b*0.75)+'s" cx="'+bx[b]+'" cy="'+(iB-18-(b%2)*26)+'" r="'+(3.5+(b%2))+'" fill="#dbeafe" opacity="0.5"/>');
+  w.push('<rect x="548" y="216" width="220" height="28" rx="9" fill="#12253c" stroke="#2b4a6b"/>');
+  w.push('<text x="658" y="235" text-anchor="middle" font-size="12.5" font-weight="700" fill="#c8dcf0">ถังเก็บน้ำใส (Clear Water Tank)</text>');
+  var mainTk=tanks.reduce(function(a,b){return b.w>a.w?b:a;},tanks[0]);
+  var volX=mainTk.x+mainTk.w/2;
+  w.push('<text x="'+volX+'" y="'+((wy+iB)/2+8)+'" text-anchor="middle" font-size="17" font-weight="700" fill="#eaf6ff" '+mono+'>'+vol+' m³</text>');
+  if(tanks.length>1)w.push('<text x="'+volX+'" y="'+((wy+iB)/2+26)+'" text-anchor="middle" font-size="9.5" fill="#7ba7d9">(รวม 2 ถัง · smartmap ไม่มีระดับ LV แยก — แสดงเท่าถังหลัก)</text>');
+  w.push('<line x1="898" y1="'+wy+'" x2="912" y2="'+wy+'" stroke="#7dd3fc" stroke-width="2.2"/>');
+  w.push('<text x="918" y="'+(wy+5)+'" font-size="14" font-weight="700" fill="#7dd3fc" '+mono+'>'+lv+' m</text>');
+  w.push('<text x="918" y="'+(iT+2)+'" font-size="10.5" fill="#5b7089" '+mono+'>max '+(s.maxLv||"—")+'</text>');
+  var capV=(s.maxLv&&s.area)?Math.round(s.maxLv*s.area).toLocaleString():"—";
+  w.push('<text x="894" y="581" text-anchor="end" font-size="12" fill="#7d93ab" '+mono+'>ความจุถัง '+capV+' m³</text>');
+
+  // ---------- ถังคลอรีน + ท่อ ----------
+  var cc=110,crx=88,cry=22,ct=412,cb=558;
+  var _cap=(id==="20")?45000:24000; // ความจุถังคลอรีนรวม (MB 3x15000, อื่น 4x6000)
+  var _tkl=(s.tank&&s.tank.level!=null)?Math.max(0.06,Math.min(s.tank.level/3,1))
+          :((s.tank&&s.tank.volume!=null)?Math.max(0.06,Math.min(s.tank.volume/_cap,1)):0.45);
+  var cly=cb-_tkl*(cb-ct-14);
+  w.push('<path d="M'+(cc-crx)+' '+ct+' L'+(cc-crx)+' '+cb+' A'+crx+' '+cry+' 0 0 0 '+(cc+crx)+' '+cb+' L'+(cc+crx)+' '+ct+'" fill="url(#dpclg)" stroke="#d9b23a" stroke-width="1.6"/>');
+  w.push('<path d="M'+(cc-crx)+' '+cly+' L'+(cc-crx)+' '+cb+' A'+crx+' '+cry+' 0 0 0 '+(cc+crx)+' '+cb+' L'+(cc+crx)+' '+cly+' A'+crx+' '+cry+' 0 0 1 '+(cc-crx)+' '+cly+'" fill="url(#dpclq)"/>');
+  w.push('<ellipse cx="'+cc+'" cy="'+cly+'" rx="'+crx+'" ry="'+cry+'" fill="#fef08a" fill-opacity="0.7" stroke="#fde047" stroke-width="1.4"/>');
+  w.push('<ellipse cx="'+cc+'" cy="'+ct+'" rx="'+crx+'" ry="'+cry+'" fill="#243247" stroke="#d9b23a" stroke-width="1.6"/>');
+  w.push('<text x="'+cc+'" y="600" text-anchor="middle" font-size="12" fill="#d9b23a">ถังเก็บคลอรีนน้ำ</text>');
+  var pCl='M198 508 L398 508 Q420 508 425 493 L430 475';
+  w.push(pipe(pCl,10));
+  w.push(flow(pCl,'#fde047',4,clOn));
+
+  // ---------- ตู้วัดคุณภาพน้ำประปา ----------
+  w.push('<rect x="1170" y="296" width="210" height="284" rx="14" fill="url(#dpcab)" stroke="#5b6a7a" stroke-width="1.8"/>');
+  w.push('<rect x="1188" y="322" width="130" height="234" rx="9" fill="#2a3644" stroke="#4a5a6d" stroke-width="1.4"/>');
+  w.push('<rect x="1200" y="346" width="106" height="64" rx="6" fill="#061018" stroke="#22d3ee" stroke-opacity="0.55" stroke-width="1.4"/>');
+  w.push('<text x="1253" y="366" text-anchor="middle" font-size="9.5" letter-spacing="1" fill="#5b7089">FRC OUT · mg/L</text>');
+  w.push('<text x="1253" y="396" text-anchor="middle" font-size="22" font-weight="700" fill="'+outC+'" '+mono+'>'+outTxt+'</text>');
+  var leds=["#4ade80","#22d3ee","#fbbf24","#64748b"];
+  for(var l2=0;l2<4;l2++)w.push('<circle cx="'+(1212+l2*26)+'" cy="432" r="5" fill="'+leds[l2]+'" opacity="'+(l2<2?"1":"0.5")+'"/>');
+  w.push('<rect x="1304" y="470" width="7" height="28" rx="3" fill="#8fa3b8"/>');
+  for(var v3=0;v3<3;v3++)w.push('<line x1="1334" y1="'+(320+v3*10)+'" x2="1364" y2="'+(320+v3*10)+'" stroke="#4a5a6d" stroke-width="3"/>');
+  w.push('<text x="1253" y="530" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#7d93ab">WQ ANALYZER</text>');
+  w.push('<text x="1275" y="570" text-anchor="middle" font-size="11.5" fill="#8fa8c0">ตู้วัดคุณภาพน้ำประปา</text>');
+  w.push('<rect x="1182" y="580" width="28" height="10" rx="3" fill="#1c2530"/><rect x="1340" y="580" width="28" height="10" rx="3" fill="#1c2530"/>');
+
+  // ---------- การ์ด callout ----------
+  var card=function(x,y,w2,h,ac){return '<rect x="'+x+'" y="'+y+'" width="'+w2+'" height="'+h+'" rx="14" fill="rgba(13,24,40,0.93)" stroke="'+ac+'" stroke-opacity="0.55" stroke-width="1.5"/><rect x="'+x+'" y="'+(y+12)+'" width="4" height="'+(h-24)+'" rx="2" fill="'+ac+'" opacity="0.9"/>';};
+  var lead=function(pts,ac){var r='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+ac+'" stroke-width="1.6" opacity="0.8"/>';var lastp=pts[pts.length-1].split(',');r+='<circle class="dotp" cx="'+lastp[0]+'" cy="'+lastp[1]+'" r="5.5" fill="'+ac+'"/>';return r;};
+
+  // FRC ขาเข้า (เล็กลง) — ต้นทางท่อเข้า
+  w.push(card(30,24,220,90,"#38bdf8"));
+  w.push('<text x="140" y="50" text-anchor="middle" font-size="12" font-weight="600" fill="#7dd3fc">คลอรีนอิสระคงเหลือขาเข้า</text>');
+  w.push('<text x="140" y="86" text-anchor="middle" font-size="26" font-weight="700" fill="#67e8f9" '+mono+'>'+inTxt+' <tspan font-size="11" fill="#5b7089">mg/L</tspan></text>');
+  w.push(lead(["250,70","285,70","285,347"],"#38bdf8"));
+
+  // ปริมาณน้ำเข้าถัง (เหนือท่อเข้า)
+  w.push(card(295,392,130,84,"#34d399"));
+  w.push('<text x="360" y="418" text-anchor="middle" font-size="11" font-weight="600" fill="#6ee7b7">ปริมาณน้ำเข้าถัง</text>');
+  w.push('<text x="360" y="450" text-anchor="middle" font-size="22" font-weight="700" fill="#a7f3d0" '+mono+'>'+qin+'</text>');
+  w.push('<text x="360" y="470" text-anchor="middle" font-size="10.5" fill="#5b7089">m³/hr</text>');
+  w.push(lead(["360,392","360,353"],"#34d399"));
+
+  // ปริมาณน้ำออกถัง (ใต้ท่อออก)
+  w.push(card(960,405,170,92,"#4ade80"));
+  w.push('<text x="1045" y="432" text-anchor="middle" font-size="11.5" font-weight="600" fill="#86efac">ปริมาณน้ำออกถัง</text>');
+  w.push('<text x="1045" y="466" text-anchor="middle" font-size="23" font-weight="700" fill="#bbf7d0" '+mono+'>'+fl+'</text>');
+  w.push('<text x="1045" y="486" text-anchor="middle" font-size="10.5" fill="#5b7089">m³/hr</text>');
+  w.push(lead(["1000,405","1000,356"],"#4ade80"));
+
+  // ถังคลอรีน (เหลือง)
+  w.push(card(30,138,220,150,"#fbbf24"));
+  w.push('<text x="140" y="165" text-anchor="middle" font-size="13.5" font-weight="700" fill="#fbbf24">ถังเก็บคลอรีนน้ำ</text>');
+  var tk=s.tank||{};
+  var rows=[["Level",(tk.level!=null?(+tk.level).toFixed(2):"—"),"m"],["Volume",(tk.volume!=null?Math.round(tk.volume).toLocaleString():"—"),"L"],["Dose rate",(tk.dose!=null?(+tk.dose).toFixed(1):"—"),"L/hr"]];
+  if(tk.pumps)rows.push(["ปั๊มจ่าย",(tk.pumps.length?tk.pumps.join(",")+" ▶":"หยุด"),""]);
+  for(var q3=0;q3<3;q3++){var ry3=196+q3*31;
+    w.push('<text x="46" y="'+(ry3+5)+'" font-size="12" fill="#c8b98a">'+rows[q3][0]+'</text>');
+    w.push('<rect x="118" y="'+(ry3-13)+'" width="78" height="26" rx="7" fill="#0d1a2d" stroke="#3b4f68"/>');
+    w.push('<text x="157" y="'+(ry3+5)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#fde68a" '+mono+'>'+rows[q3][1]+'</text>');
+    w.push('<text x="204" y="'+(ry3+5)+'" font-size="11" fill="#7d93ab">'+rows[q3][2]+'</text>');}
+  w.push(lead(["110,288","110,388"],"#fbbf24"));
+
+  // คุณภาพน้ำ (ขวาบน) — แถวแรกเป็น "ขาออก"
+  w.push(card(1100,24,296,236,"#67e8f9"));
+  w.push('<text x="1248" y="52" text-anchor="middle" font-size="14" font-weight="700" fill="#9be9f9">คุณภาพน้ำประปา</text>');
+  var qr=[["คลอรีนอิสระคงเหลือขาออก",outTxt,"mg/L",outC],["ความขุ่น",(s.turb!=null?s.turb.toFixed(2):"—"),"NTU","#e2eefc"],["ความเป็นกรด-ด่าง",(s.ph!=null?s.ph.toFixed(2):"—"),"","#e2eefc"],["ความนำไฟฟ้า",(s.conduct!=null?Math.round(s.conduct):"—"),"µS/cm","#e2eefc"],["อุณหภูมิ",(s.tempOut!=null?s.tempOut.toFixed(1):"—"),"°C","#e2eefc"]];
+  for(var q4=0;q4<5;q4++){var ry4=82+q4*33;
+    w.push('<text x="1118" y="'+(ry4+5)+'" font-size="'+(q4===0?"11":"12")+'" fill="#8fb3cc">'+qr[q4][0]+'</text>');
+    w.push('<rect x="1262" y="'+(ry4-13)+'" width="72" height="26" rx="7" fill="#0d1a2d" stroke="#3b4f68"/>');
+    w.push('<text x="1298" y="'+(ry4+5)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+qr[q4][3]+'" '+mono+'>'+qr[q4][1]+'</text>');
+    w.push('<text x="1340" y="'+(ry4+5)+'" font-size="10.5" fill="#7d93ab">'+qr[q4][2]+'</text>');}
+  w.push(lead(["1200,260","1200,292"],"#67e8f9"));
+
+  // อัตราน้ำเข้าตู้ (ม่วง) — ใต้การ์ดน้ำออก
+  w.push(card(960,505,170,64,"#a78bfa"));
+  w.push('<text x="1030" y="530" text-anchor="middle" font-size="11" font-weight="600" fill="#c4b5fd">น้ำเข้าตู้วัด</text>');
+  w.push('<text x="1030" y="552" text-anchor="middle" font-size="16" font-weight="700" fill="#ddd6fe" '+mono+'>'+(tk.cab!=null?(+tk.cab).toFixed(1):"—")+' <tspan font-size="10" fill="#7d93ab">L/hr</tspan></text>');
+  w.push(lead(["1130,537","1142,537","1142,433"],"#a78bfa"));
+
+  // ---------- หมายเหตุ ----------
+  if(byp)w.push('<text x="418" y="600" font-size="12.5" font-weight="700" fill="#fbbf24">⇄ BYPASS — น้ำวิ่งอ้อมถัง (retention ≈ 0, k ไม่มีผล)</text>');
+  else w.push('<text x="418" y="600" font-size="12.5" fill="#7dd3fc">Retention time ≈ '+(s.t?s.t.toFixed(1):"—")+' ชม. · k = '+(s.k!=null?s.k:"—")+' /วัน</text>');
+  w.push('<text x="418" y="622" font-size="11" fill="#5b7089">* ข้อมูลล่าสุด '+(s.dt||"—")+(s.tank?' · ถังคลอรีน: เชื่อมแล้ว ('+(s.tank.dt||'')+')':(s.tankErr?' · ถังคลอรีน: '+s.tankErr:' · ช่อง — รอเชื่อมข้อมูลตู้จ่ายคลอรีน'))+'</text>');
+  w.push('</svg>');
+
+  // ---------- สูตรคำนวณด้านล่าง ----------
+  var D=S.dose||{};
+  var C=s.chl||{};
+  var dpTv=(D.target!=null&&isFinite(D.target))?D.target:(isFinite(C.target)?C.target:1.00);
+  var dpFv=(D.factor!=null&&isFinite(D.factor))?D.factor:(isFinite(C.factor)?C.factor:0.89);
+  var dpGv=(D.sg!=null&&isFinite(D.sg))?D.sg:(isFinite(C.sg)?C.sg:1.20);
+  var autoOn=!(D.auto===false); // เรียลไทม์เป็นค่าเริ่มต้น
+  var liveI=(s.frcIn!=null&&s.frcIn>0)?+s.frcIn.toFixed(2):"";
+  var liveQ=(qinN!=null?Math.round(qinN):(s.flow||""));
+  var dpIv=autoOn?liveI:((D.frcin!=null&&isFinite(D.frcin))?D.frcin:liveI);
+  var dpQv=autoOn?liveQ:((D.q!=null&&isFinite(D.q))?D.q:liveQ);
+  var dpKv=(D.k!=null&&isFinite(D.k))?D.k:(s.k!=null?s.k:"");
+  var liveR=(byp?0:(s.t!=null?+(+s.t).toFixed(1):""));
+  var dpRv=autoOn?liveR:((D.t!=null&&isFinite(D.t))?D.t:liveR);
+  var roA=autoOn?' readonly style="opacity:0.85;border-color:#1d5c40"':'';
+  var lvTag=autoOn?' <span style="color:#4ade80;font-size:9px">●สด</span>':'';
+  var kSel=String(dpKv);
+  var kop=function(val,label){return '<option value="'+val+'"'+(String(val)===kSel?" selected":"")+'>'+label+'</option>';};
+  var kopts=kop(s.k!=null?s.k:0,s.code+' — สถานีนี้ ('+(s.k!=null?s.k:"ไม่มีค่า k")+')');
+  IDS.forEach(function(id2){var m2=META[id2];if(m2.k!=null&&m2.code!==s.code)kopts+=kop(m2.k,m2.code+' '+m2.k+(m2.code==="SR"?" (ข้อมูลน้อย)":""));});
+  kopts+=kop(0,"0 — ไม่ชดเชย decay");
+  kopts+='<option value="c"'+(kopts.indexOf(" selected")<0?" selected":"")+'>กำหนดเอง</option>';
+  el.innerHTML=
+    '<div class="dp-head">'
+    +'<button class="dp-back" onclick="closeDetail()">← กลับแผนที่</button>'
+    +'<span class="dp-code">'+s.code+'</span>'
+    +(s.sim?'<span style="background:#b45309;color:#fff7ed;border-radius:9px;padding:4px 12px;font-size:13px;font-weight:800;margin-right:10px">⚠ ค่าจำลอง</span>':'')+'<span class="dp-title">สถานีสูบจ่ายน้ำ'+s.name+'<small>Water Quality Monitoring &amp; Re-Chlorination · รับน้ำจากอุโมงค์ '+(s.src||"—")+'</small></span>'
+    +(byp?'<span class="dp-chip" style="background:#3a2d10;color:#fbbf24;border-color:#7a5c14">⇄ BYPASS</span>':'')
+    +'<span style="font-size:10px;color:#7d93ab;margin-left:2px">ปั๊มดึงน้ำเข้าเครื่องวัดขาเข้า:</span>'+chipP("P1",s.p1)+chipP("P2",s.p2)
+    +'<span style="margin-left:auto;text-align:right;line-height:1.5"><span style="color:#4ade80;font-size:12px;font-weight:700">● '+(s.lvLive?"LIVE":"ONLINE")+'</span><br><span style="color:#8fb3cc;font-size:12px;font-family:JetBrains Mono,monospace">'+(s.dt||"")+'</span></span>'
+    +'</div>'
+    +'<div class="dp-proc">'+w.join('')+'</div>'
+    +'<div class="dp-bot">'
+    +'<div class="dp-card" style="flex:1;align-items:center;justify-content:center;text-align:center;border-color:#26437a;background:linear-gradient(180deg,#0e1f3d,#0b1830)">'
+      +'<div style="font-size:12px;color:#9db8e8">อัตราแนะนำการจ่ายคลอรีนเสริมอัตโนมัติจากระบบ</div>'
+      +'<div id="dpDoseVal" style="font-size:34px;font-weight:700;color:#7dd3fc;font-family:JetBrains Mono,monospace;text-shadow:0 0 20px rgba(125,211,252,0.4)">—</div>'
+      +'<div style="font-size:12px;color:#7d93ab">ลิตร/ชั่วโมง · ต้องทำ FRC ขาเข้า ≥ <span id="dpCreq" style="color:#a7f3d0;font-family:JetBrains Mono,monospace;font-weight:700">—</span> mg/L</div>'
+      +'<div style="font-size:11px;color:#7d93ab;margin-top:4px">ระบบ wqc แนะนำ: <span style="color:#9db8e8;font-family:JetBrains Mono,monospace;font-weight:700">'+(s.chl&&isFinite(s.chl.reco)?Math.max(0,s.chl.reco).toFixed(1):"—")+'</span> L/hr'+(s.chl&&isFinite(s.chl.reco)&&s.chl.reco<0?' <span style="color:#5b7089">(ดิบ '+s.chl.reco.toFixed(2)+')</span>':'')+'</div>' 
+    +'</div>'
+    +'<div class="dp-card" style="flex:1.25;justify-content:center;text-align:center">'
+      +'<div style="font-size:12.5px;color:#c8d6e5;padding:0 8px 8px;border-bottom:1.5px solid #3b4f68">Inlet Flow × (FRC เป้าหมาย × e<sup>k·t/24</sup> − FRC inlet) × Factor</div>'
+      +'<div style="font-size:12.5px;color:#c8d6e5;padding-top:8px">100 × S.G.</div>'
+      +'<div style="font-size:10.5px;color:#7d93ab;margin-top:10px">e<sup>k·t/24</sup> = ชดเชยการสลายคลอรีนในถัง (k /วัน × retention ชม.)</div>'
+    +'</div>'
+    +'<div class="dp-card" style="flex:1.7;border-color:#7a3d47;background:linear-gradient(180deg,rgba(127,29,29,0.16),rgba(14,26,44,0.6))">'
+      +'<div style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px 10px;align-items:center;flex:1">'
+      +'<label style="grid-column:1/-1;display:flex;gap:8px;align-items:center;font-size:11.5px;color:#a7f3d0;cursor:pointer;padding-bottom:2px;border-bottom:1px dashed rgba(122,61,71,0.5)"><input type="checkbox" id="dpAuto" '+(autoOn?"checked":"")+' onchange="dpAutoToggle(this.checked)" style="accent-color:#4ade80"> คำนวณเรียลไทม์ — Inlet Flow + FRC inlet จากเซ็นเซอร์ (อัปเดตทุก 60 วิ)</label>' 
+      +'<span style="font-size:11.5px;color:#e8b4b8">FRC เป้าหมาย</span><input id="dpT" class="dp-in" type="number" step="0.05" oninput="dpTouch();dpCalc()" value="'+dpTv+'">'
+      +'<span style="font-size:11.5px;color:#e8b4b8">Factor</span><input id="dpF" class="dp-in" type="number" step="0.01" oninput="dpTouch();dpCalc()" value="'+dpFv+'">'
+      +'<span style="font-size:11.5px;color:#e8b4b8">S.G.</span><input id="dpG" class="dp-in" type="number" step="0.01" oninput="dpTouch();dpCalc()" value="'+dpGv+'">'
+      +'<span style="font-size:11.5px;color:#e8b4b8">FRC inlet'+lvTag+'</span><input id="dpI" class="dp-in" type="number" step="0.01" oninput="dpTouch();dpCalc()" value="'+dpIv+'"'+roA+'>'
+      +'<span style="font-size:11.5px;color:#e8b4b8">Inlet Flow'+lvTag+'</span><input id="dpQ" class="dp-in" type="number" step="100" '+(autoOn?'style="width:92px;opacity:0.85;border-color:#1d5c40" readonly':'style="width:92px"')+' oninput="dpTouch();dpCalc()" value="'+dpQv+'">'
+      +'<span style="font-size:11.5px;color:#e8b4b8">Retention (ชม.)'+lvTag+'</span><input id="dpR" class="dp-in" type="number" step="0.1" oninput="dpTouch();dpCalc()" value="'+dpRv+'"'+roA+'>'
+      +'<span style="font-size:11.5px;color:#e8b4b8">k (/วัน)</span>'
+      +'<span style="grid-column:2/5;display:flex;gap:8px;align-items:center">'
+        +'<select id="dpKsel" class="dp-in" style="width:auto;flex:1;text-align:left;font-size:12px" onchange="dpKpick(this.value)">'+kopts+'</select>'
+        +'<input id="dpK" class="dp-in" type="number" step="0.01" style="width:76px" oninput="dpTouch();dpCalc()" value="'+dpKv+'">'
+      +'</span>'
+      +'</div>'
+      +'<div style="font-size:11.5px;color:#e8b4b8;margin-top:9px;text-align:center">FRC ขาออกคาดการณ์ (ยังไม่เติมเสริม): <span id="dpPred" style="color:#fde68a;font-family:JetBrains Mono,monospace;font-weight:700">—</span> mg/L · วัดจริง <span style="color:#a7f3d0;font-family:JetBrains Mono,monospace;font-weight:700">'+outTxt+'</span> mg/L'+(byp?' <span style="color:#fbbf24">· สภาพจริงขณะนี้: BYPASS ไม่ผ่านถัง (t=0) — เทียบ What-If ไม่ได้ตรงๆ</span>':'')+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;align-items:center">'
+      +'<button class="dp-back" style="border-color:#7a3d47;color:#f3c7cb;flex:1" onclick="dpCalc()">คำนวณ</button>'
+      +'<button class="dp-back" style="border-color:#1d5c40;color:#86efac;flex:1" onclick="fbSaveDose()">💾 บันทึก</button>'
+      +'</div>'
+      +'<div id="dpSaveMsg" style="font-size:10.5px;color:#7d93ab;margin-top:5px;text-align:center;min-height:14px">'+(S.fbSaved[id]?"ใช้ค่าที่บันทึกไว้":(FB?"":"ยังไม่ตั้งค่า Firebase — ค่าจะหายเมื่อเปลี่ยนหน้า"))+'</div>'  
+    +'</div>'
+    +'</div>';
+  if(window.dpCalc)setTimeout(window.dpCalc,0);
+}
+function updateClock(){var n=new Date();document.getElementById("clock").textContent=n.toLocaleTimeString("th-TH",{hour12:false});document.getElementById("clockDate").textContent=n.toLocaleDateString("th-TH",{weekday:"short",day:"numeric",month:"short",year:"numeric"});}
+setInterval(updateClock,1000);updateClock();
+
+function hideLoading(){var o=document.getElementById("loading");if(o){o.style.opacity="0";setTimeout(function(){o.style.display="none";},600);}}
+
+// เปิดฉากเมื่อ "แผนที่ + ข้อมูลสถานี" พร้อมทั้งคู่ — กันภาพค้างเห็นถัง/ท่อก่อนข้อมูลมา
+var _rv={map:false,data:false,done:false};
+// progress bar: หน่วย = สถานีทั้งหมด + แผนที่ 1 หน่วย
+var _lp={done:0,total:IDS.length+1,st:0};
+function lpSet(pc,label){
+  var f=document.getElementById("ldFill"),p=document.getElementById("ldPct"),s=document.getElementById("ldStatus");
+  if(f)f.style.width=Math.max(pc,3)+"%";
+  if(p)p.textContent=pc+"%";
+  if(s&&label)s.textContent=label;
+}
+function lpTick(label){
+  if(_rv.done)return;
+  _lp.done=Math.min(_lp.done+1,_lp.total);
+  lpSet(Math.round(_lp.done/_lp.total*100),label);
+}
+function lpStation(){_lp.st++;lpTick("ดึงข้อมูลสถานี "+Math.min(_lp.st,IDS.length)+"/"+IDS.length+"...");}
+window.revealWhenReady=function(what){
+  _rv[what]=true;
+  if(_rv.done||!_rv.map||!_rv.data)return;
+  _rv.done=true;
+  try{buildLayers();}catch(e){}
+  lpSet(100,"พร้อมใช้งาน");
+  setTimeout(hideLoading,420);
+  setTimeout(function(){map.flyTo({center:[100.565,13.725],zoom:10.1,pitch:52,bearing:-14,duration:2600});},650);
+};
+loadData();
+requestAnimationFrame(animate);
+map.on("load",function(){lpTick("แผนที่พร้อม — รอข้อมูลสถานี...");revealWhenReady("map");});
+// กันค้าง: ถ้า 15 วิแล้วยังไม่ครบ (API ล่ม/ช้า) เปิดฉากด้วยเท่าที่มี
+setTimeout(function(){_rv.map=true;revealWhenReady("data");},15000);
+
+var cd=REFRESH;setInterval(function(){cd--;if(cd<=0){loadData();if(S.detailOpen)loadChlorineInfo(S.detailOpen);setTimeout(fbLogPumps,9000);cd=REFRESH;}},1000);
+setTimeout(fbLogPumps,15000);
+}
+
+(function waitLib(n){
+  if(typeof deck!=="undefined"&&typeof maplibregl!=="undefined"&&deck.MapboxOverlay){main();return;}
+  if(n>60){
+    showErr("โหลด library ไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ต แล้ว refresh");
+    var o=document.getElementById("loading");if(o)o.style.display="none";
+    return;
+  }
+  setTimeout(function(){waitLib(n+1);},100);
+})(0);
+
+
+</script>
+</body>
+</html>
