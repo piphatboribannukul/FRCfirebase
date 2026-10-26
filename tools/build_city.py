@@ -32,12 +32,22 @@ KEEP_TAGS = {'building', 'building:levels', 'height', 'building:height', 'min_he
              'railway', 'layer', 'barrier', 'lanes'}
 
 
+# สถานีใหม่ที่ยังไม่อยู่ใน data/stations.js (snapshot) — เพิ่มที่นี่เพื่อสร้างข้อมูลเมือง 3 มิติ
+EXTRA_STATIONS = [
+    {'id': 'PK01', 'name': 'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ', 'lat': 13.7106175, 'lon': 100.4874110},   # ติดตั้งใหม่ ต.ค. 2569
+]
+
+
 def load_stations():
     src = open(os.path.join(ROOT, 'data', 'stations.js'), encoding='utf-8').read()
     m = re.search(r'SENSORS_FALLBACK\s*=\s*(\[.*\])\s*;', src, re.S)
     if not m:
         sys.exit('อ่าน data/stations.js ไม่ได้')
-    return [s for s in json.loads(m.group(1)) if isinstance(s.get('lat'), (int, float)) and s['lat'] > 0]
+    out = [s for s in json.loads(m.group(1)) if isinstance(s.get('lat'), (int, float)) and s['lat'] > 0]
+    for x in EXTRA_STATIONS:                                     # ข้ามถ้ามีสถานีเดิมอยู่ใกล้กันแล้ว
+        if not any(dist_m((x['lat'], x['lon']), (s['lat'], s['lon'])) < 60 for s in out):
+            out.append(x)
+    return out
 
 
 def dist_m(a, b):
