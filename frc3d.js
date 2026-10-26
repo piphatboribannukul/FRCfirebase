@@ -707,6 +707,24 @@
           for (let d = 0.25; d < len; d += 0.5) { const nx = uz * 0.035, nz = -ux * 0.035; for (const sd of [-1, 1]) add(B(0.03, h - 0.1, 0.12), rib, a[0] + ux * d + nx * sd, h / 2, a[1] + uz * d + nz * sd, ang); }
           for (const yy of [0.12, h - 0.06]) add(B(0.12, 0.12, len), fr, mx, yy, mz, ang);
           for (let d = 0; d <= len + 0.01; d += sp) add(B(0.14, h + 0.1, 0.14), fr, a[0] + ux * d, (h + 0.1) / 2, a[1] + uz * d, ang); }
+      } else if (p.type === 'footbridge') {        // สะพานลอยคนข้าม (พื้นคอนกรีต + ราวเหล็ก + เสาตอม่อ) · a, b = ปลายสะพาน [ตอ., เหนือ] · stairs = [{ at: 'a'|'b', dir: ทิศที่บันไดลง (องศา), run }]
+        const A0 = toF(p.a[0], p.a[1]), B0 = toF(p.b[0], p.b[1]), h = p.h || 5.6, w = p.w || 2.2, len = Math.hypot(B0[0] - A0[0], B0[1] - A0[1]), ang = Math.atan2(B0[0] - A0[0], B0[1] - A0[1]);
+        const conc = L('#d9d6cf'), concD = L('#bdb9b1'), rail = L(p.rail || '#a7adb1'), ux = (B0[0] - A0[0]) / len, uz = (B0[1] - A0[1]) / len, nx = uz, nz = -ux;
+        add(B(w, 0.25, len + 1.2), conc, (A0[0] + B0[0]) / 2, h, (A0[1] + B0[1]) / 2, ang); add(B(w * 0.7, 0.75, len + 1.2), concD, (A0[0] + B0[0]) / 2, h - 0.5, (A0[1] + B0[1]) / 2, ang);
+        for (const sd of [-1, 1]) { add(B(0.06, 0.06, len + 1.2), rail, (A0[0] + B0[0]) / 2 + nx * sd * w / 2, h + 1.15, (A0[1] + B0[1]) / 2 + nz * sd * w / 2, ang); add(B(0.04, 0.04, len + 1.2), rail, (A0[0] + B0[0]) / 2 + nx * sd * w / 2, h + 0.6, (A0[1] + B0[1]) / 2 + nz * sd * w / 2, ang);
+          for (let d = -0.6; d <= len + 0.6; d += 1.5) add(B(0.06, 1.15, 0.06), rail, A0[0] + ux * d + nx * sd * w / 2, h + 0.6, A0[1] + uz * d + nz * sd * w / 2); }
+        const piers = [0, len]; if (len > 14) piers.push(len / 2);
+        for (const d of piers) add(B(0.7, h - 0.8, 0.7), concD, A0[0] + ux * d, (h - 0.8) / 2, A0[1] + uz * d);
+        for (const st of p.stairs || []) {
+          const P0 = st.at === 'b' ? B0 : A0, th = (st.dir || 0) * Math.PI / 180, dv = toF(Math.sin(th), Math.cos(th)), run = st.run || h / 0.17 * 0.3, n = Math.round(h / 0.17), sa = Math.atan2(dv[0], dv[1]), off = st.off || 0;
+          const ox = P0[0] + nx * 0 + dv[0] * 1.0 + (st.side || 0) * nx, oz = P0[1] + dv[1] * 1.0 + (st.side || 0) * nz;
+          add(B(w + 0.3, 0.25, 2.0), conc, P0[0] + dv[0] * 0.5, h, P0[1] + dv[1] * 0.5, sa);                               // ชานพัก
+          for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, yy = h - (k + 0.5) * h / n; add(B(w, h / n + 0.04, run / n + 0.02), conc, ox + dv[0] * run * t, yy - (h / n) / 2, oz + dv[1] * run * t, sa); }
+          const sl = Math.hypot(h, run), sla = Math.atan2(h, run);
+          for (const sd of [-1, 1]) { const m = add(B(0.06, 0.06, sl), rail, ox + dv[0] * run / 2 + Math.cos(sa) * sd * w / 2, h / 2 + 1.0, oz + dv[1] * run / 2 - Math.sin(sa) * sd * w / 2, 0); m.rotation.order = 'YXZ'; m.rotation.y = sa; m.rotation.x = sla;
+            const m2 = add(B(0.18, 0.5, sl), concD, ox + dv[0] * run / 2 + Math.cos(sa) * sd * (w / 2 + 0.05), h / 2 + 0.05, oz + dv[1] * run / 2 - Math.sin(sa) * sd * (w / 2 + 0.05), 0); m2.rotation.order = 'YXZ'; m2.rotation.y = sa; m2.rotation.x = sla; }
+          add(B(0.5, h * 0.5, 0.5), concD, ox + dv[0] * run * 0.5, h * 0.25, oz + dv[1] * run * 0.5);                // เสารับบันได
+        }
       } else if (p.type === 'guardrail') {         // ราวกันอันตรายเหล็กลูกฟูก (W-beam) + เสาทุก 2 ม. ตามเส้น · pts พิกัดจริง
         const pts = p.pts.map(q => toF(q[0], q[1])), gm = L('#c7ccd0'), pm = L('#9aa1a6'), h = p.h || 0.72;
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
@@ -1067,20 +1085,23 @@
         { type: 'plumeria', world: true, x: -1.25, z: 2.77, s: 1.1 },   // ต้นลีลาวดี (ดอกขาว) ข้างตู้
         { type: 'barrierArm', world: true, x: 3.2, z: -12.5, rot: 90, len: 4.4 },   // ไม้กั้นประตูทางออก 2
         { type: 'sign', world: true, x: 1.8, z: -12.0, rot: 270, y: 2.3, w: 1.6, h: 0.5, text: 'ประตูทางออก 2', fg: '#ffffff', bg: '#1f5c3a', post: true },
-        { type: 'barriers', pts: [[7.4, -17.1], [-24, -17.1]] },   // แบริเออร์แดง-ขาว เรียงแนวขอบทางเข้า–ออก ฝั่งงานก่อสร้าง (ภาพถนน)
+        { type: 'barriers', pts: [[6.33, -17.1], [-24, -17.1]] },
+        { type: 'barriers', pts: [[-24.5, -17.1], [-24.6, -17.1]] },   // แบริเออร์แดง-ขาว เรียงแนวขอบทางเข้า–ออก ฝั่งงานก่อสร้าง (ภาพถนน)
         { type: 'barriers', pts: [[7.4, -11.9], [3.9, -11.9]] },   // แบริเออร์แดง-ขาว ขอบทางเข้า–ออก ฝั่งซอย
-        { type: 'barriers', c1: '#e8662a', c2: '#e8662a', pts: [[7.2, -18.6], [7.2, -24.8]] },   // แบริเออร์ส้ม หน้ารั้วก่อสร้าง ริม ถ.ตากสิน
-        { type: 'lawn', h: 0.04, color: '#b6a385', wall: '#a39073', pts: [[-47, -18], [6.5, -18], [6.5, -44], [-47, -44]] },   // พื้นที่โครงการก่อสร้างของ รพ. (ในรั้ว)
-        { type: 'hoarding', h: 2.4, pts: [[-47, -17.9], [6.6, -17.9], [6.6, -44], [-47, -44], [-47, -17.9]] },   // รั้วชั่วคราวแผ่นเหล็กลูกฟูก + โครงแดง ล้อมโครงการก่อสร้างของ รพ. (ภาพถนน)
+        { type: 'barriers', c1: '#e8662a', c2: '#e8662a', pts: [[5.61, -18.4], [4.78, -21.0]] },   // แบริเออร์ส้ม บนทางเท้าหน้ารั้วก่อสร้าง
+        { type: 'lawn', h: 0.04, color: '#b6a385', wall: '#a39073', pts: [[-47, -18], [3.63, -18], [-4.61, -44], [-47, -44]] },   // พื้นที่โครงการก่อสร้างของ รพ. (ในรั้ว)
+        { type: 'hoarding', h: 2.4, pts: [[-47, -17.9], [3.77, -17.9], [-4.51, -44], [-47, -44], [-47, -17.9]] },   // รั้วชั่วคราวแผ่นเหล็กลูกฟูก + โครงแดง ล้อมโครงการก่อสร้างของ รพ. · ด้านถนนอยู่แนวหลังทางเท้า (ไม่ล้ำถนน)
         { type: 'tree', world: true, x: -49, z: -4, s: 1.35 },
         { type: 'tree', world: true, x: -53, z: -11, s: 1.5 },
         { type: 'tree', world: true, x: -46, z: -15, s: 1.15 },
         { type: 'tree', world: true, x: -56, z: 19, s: 1.5 },
         { type: 'tree', world: true, x: -36, z: 15.5, s: 1.0 },
         { type: 'tree', world: true, x: -44, z: 8, s: 1.1 },   // ต้นไม้ใหญ่ขอบลานด้านตะวันตก
-        { type: 'powerline', h: 10.5, pts: [[17.73, -36.68], [10.53, -9.62], [3.33, 17.44], [-3.87, 44.5]] },   // เสาไฟฟ้า + สายสื่อสารระโยงระยาง ริมซอย 22
-        { type: 'powerline', h: 9, pts: [[8.38, -24.68], [0.66, 4.32], [-7.05, 33.31]] },
-        { type: 'powerline', h: 8, pts: [[15.7, -31.01], [8.5, -3.95], [1.3, 23.11], [-5.9, 50.17]] },
+        { type: 'powerline', h: 10.5, pts: [[9.76, -6.72], [3.33, 17.44], [-3.87, 44.5]] },   // เสาไฟฟ้า + สายสื่อสารระโยงระยาง ริมซอย 22 (เฉพาะช่วงซอย)
+        { type: 'powerline', h: 9, pts: [[4.26, -9.21], [-1.39, 12.05], [-7.05, 33.31]] },
+        { type: 'powerline', h: 8, pts: [[9.01, -5.88], [1.3, 23.11], [-5.9, 50.17]] },
+        { type: 'powerline', h: 10.5, pts: [[6.33, -11.5], [4.39, -17.6], [-3.98, -44], [-12.23, -70]] },   // เสาไฟฟ้าริม ถ.ตากสิน แนวเดียวกับรั้ว (หลังทางเท้า)
+        { type: 'footbridge', a: [0.03, -34], b: [37.06, -34], h: 5.6, w: 2.2, stairs: [{ at: 'a', dir: 17.6, run: 9.8 }, { at: 'b', dir: 197.6, run: 9.8 }] },   // สะพานลอยคนข้าม ถ.สมเด็จพระเจ้าตากสิน (บันไดลงตามทางเท้าทั้ง 2 ฝั่ง ตามภาพถนน)
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
