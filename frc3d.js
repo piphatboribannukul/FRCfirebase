@@ -653,6 +653,53 @@
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
           for (const [col, y, r] of p.pipes) { const m = add(new T.CylinderGeometry(r, r, len, 10), L(col), (a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2, ang); m.rotation.x = Math.PI / 2; m.rotation.order = 'YXZ'; m.rotation.y = ang; }
           for (let d = 0; d <= len; d += 3) add(B(0.35, 0.25, 0.3), L('#cfcac0'), a[0] + (b[0] - a[0]) * d / len, 0.12, a[1] + (b[1] - a[1]) * d / len, ang); }
+      } else if (p.type === 'booth') {             // ป้อม รปภ. แบบอาคารปูน: ผนังขาว เสามุมแดง หลังคาจั่วน้ำตาลยื่นชายคา บล็อกแก้วระบายอากาศ · world · ยาว w (แกน x วัตถุ) ลึก d · rot = ทิศหน้าป้อม
+        const g2 = new T.Group(), w = p.w || 2.6, d = p.d || 3, h = p.h || 2.7, A = (geo, m, x, y, z, rx, rz) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; g2.add(o); return o; };
+        A(B(w, h, d), L(p.color || '#f1f0ec'), 0, h / 2, 0); A(B(w + 0.06, 0.25, d + 0.06), L('#cfcac0'), 0, 0.12, 0);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) A(B(0.14, h, 0.14), L(p.trim || '#8e2b25'), sx * (w / 2 - 0.05), h / 2, sz * (d / 2 - 0.05));
+        const rise = 0.75, half = d / 2 + 0.45, sl = Math.hypot(half, rise), ang = Math.atan2(rise, half);
+        for (const sz of [-1, 1]) A(B(w + 0.7, 0.07, sl), L(p.roof || '#6e4a36', { side: T.DoubleSide }), 0, h + rise / 2 + 0.05, sz * half / 2, sz * ang);
+        A(B(w + 0.72, 0.18, 0.12), L(p.trim || '#8e2b25'), 0, h + 0.02, d / 2 + 0.42); A(B(w + 0.72, 0.18, 0.12), L(p.trim || '#8e2b25'), 0, h + 0.02, -d / 2 - 0.42);
+        for (const sx of [-1, 1]) { const gb = new T.Shape([new T.Vector2(-half, 0), new T.Vector2(half, 0), new T.Vector2(0, rise)]); const m = new T.Mesh(new T.ShapeGeometry(gb), L('#e9e6df', { side: T.DoubleSide })); m.rotation.y = Math.PI / 2; m.position.set(sx * w / 2, h + 0.05, 0); g2.add(m); }
+        for (let i = 0; i < 3; i++) for (let k = 0; k < 4; k++) A(B(0.02, 0.2, 0.2), L('#b9c6cc'), w / 2 + 0.01, h - 0.7 - i * 0.23, -0.45 + k * 0.23);   // บล็อกแก้ว (ด้าน +x)
+        A(B(0.02, 0.5, 0.6), L('#c9cfd2'), w / 2 + 0.01, h - 0.55, 0.85);                                           // ช่องระบายอากาศ
+        A(B(0.9, 2.0, 0.04), L('#9a5a3c'), 0.2, 1.0, d / 2 + 0.01);                                                // ประตู (ด้านหน้า)
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'valves') {            // ชุดวาล์ว/ท่อจ่ายน้ำบนแท่นปูน (ประตูน้ำตัวฟ้า พวงมาลัยแดง-เหลือง ท่อดำตั้ง) · world · แท่นยาวตามแกน z วัตถุ
+        const g2 = new T.Group(), len = p.len || 2.2, A = (geo, m, x, y, z) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); g2.add(o); return o; };
+        A(B(0.62, 0.36, len), L('#b7b3ab'), 0, 0.18, 0);
+        const blue = L('#2f6fb3'), grey = L('#8f979c'), blk = L('#24272a'), pipe = (r, l, m, x, y, z, rx, rz) => { const o = A(new T.CylinderGeometry(r, r, l, 12), m, x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; return o; };
+        pipe(0.1, len - 0.2, grey, 0, 0.55, 0, Math.PI / 2);
+        for (const z of [-len * 0.28, len * 0.12]) { pipe(0.17, 0.32, blue, 0, 0.55, z, Math.PI / 2); pipe(0.05, 0.42, grey, 0, 0.88, z); const hw = new T.Mesh(new T.TorusGeometry(0.14, 0.025, 6, 14), L(z < 0 ? '#e4b52b' : '#c8302c')); hw.rotation.x = Math.PI / 2; hw.position.set(0, 1.1, z); g2.add(hw);
+          for (const s of [-1, 1]) pipe(0.2, 0.05, grey, 0, 0.55, z + s * 0.18, Math.PI / 2); }
+        pipe(0.08, 1.15, blk, 0, 1.12, -len / 2 + 0.25); pipe(0.08, 0.5, blk, 0, 1.68, -len / 2 + 0.5, 0, Math.PI / 2 * 0); A(B(0.12, 0.12, 0.45), blk, 0, 1.7, -len / 2 + 0.45);
+        pipe(0.12, 0.6, grey, 0, 0.3, len / 2 - 0.1);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'plumeria') {          // ต้นลีลาวดี (กิ่งแตกง่าม ใบเป็นกระจุกปลายกิ่ง ดอกขาว) · world
+        const s = p.s || 1, bark = L('#8c8378'), leaf = L('#3f6f34'), leaf2 = L('#4c7d3c'), fl = L('#fbfaf2'), fc = L('#f2d35a');
+        const br = (x0, y0, z0, x1, y1, z1, r) => { const v = new T.Vector3(x1 - x0, y1 - y0, z1 - z0), l = v.length(), m = new T.Mesh(new T.CylinderGeometry(r * 0.75, r, l, 7), bark); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), v.normalize()); grp.add(m); };
+        br(p.x, 0, p.z, p.x, 1.4 * s, p.z, 0.16 * s);
+        const tips = [[1.5, 3.0, 0.3], [-1.3, 3.2, 0.6], [0.4, 3.6, -1.4], [-0.5, 3.4, 1.5], [1.1, 3.9, 1.2], [-1.2, 3.8, -0.9], [0.2, 4.2, 0.1]];
+        tips.forEach((t, i) => { const tx = p.x + t[0] * s, ty = t[1] * s, tz = p.z + t[2] * s; br(p.x, 1.4 * s, p.z, tx, ty, tz, 0.09 * s);
+          for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + i, lf = new T.Mesh(new T.ConeGeometry(0.16 * s, 0.85 * s, 4), k % 2 ? leaf : leaf2); lf.position.set(tx + Math.cos(a) * 0.38 * s, ty + 0.12 * s, tz + Math.sin(a) * 0.38 * s); lf.rotation.z = Math.cos(a) * 1.1; lf.rotation.x = -Math.sin(a) * 1.1; grp.add(lf); }
+          for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283 + i * 0.7, f = new T.Mesh(new T.IcosahedronGeometry(0.08 * s, 0), fl); f.position.set(tx + Math.cos(a) * 0.14 * s, ty + 0.35 * s + (k % 2) * 0.08 * s, tz + Math.sin(a) * 0.14 * s); grp.add(f); }
+          const c = new T.Mesh(new T.IcosahedronGeometry(0.05 * s, 0), fc); c.position.set(tx, ty + 0.42 * s, tz); grp.add(c); });
+      } else if (p.type === 'barriers') {          // แบริเออร์พลาสติกใส่น้ำ (สลับแดง-ขาว) ตามเส้น · pts พิกัดจริง
+        const pts = p.pts.map(q => toF(q[0], q[1])), red = L(p.c1 || '#d8342c'), wh = L(p.c2 || '#f2f2ef'); let k = 0;
+        for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
+          for (let d = 0.6; d < len; d += 1.25, k++) { const x = a[0] + (b[0] - a[0]) * d / len, z = a[1] + (b[1] - a[1]) * d / len, m = k % 2 ? wh : red;
+            add(B(0.55, 0.5, 1.15), m, x, 0.25, z, ang); add(B(0.32, 0.38, 1.0), m, x, 0.69, z, ang); } }
+      } else if (p.type === 'crane') {             // ปั้นจั่นตีนตะขาบ (งานก่อสร้าง): ฐาน + ห้องคนขับ + บูมโครงถักเอียง + สลิงห้อยตะขอ · world · rot = ทิศที่บูมชี้
+        const g2 = new T.Group(), Lb = p.len || 26, ang = (p.angle || 62) * Math.PI / 180, org = L('#d4561f'), dk = L('#2b2d30'), A = (geo, m, x, y, z) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); g2.add(o); return o; };
+        for (const sx of [-1.5, 1.5]) A(B(1.0, 1.0, 6.2), dk, sx, 0.5, 0);
+        A(B(3.6, 0.9, 4.2), org, 0, 1.45, -0.4); A(B(1.7, 2.0, 2.0), L('#e0e2e2'), 1.0, 2.9, 0.9); A(B(3.2, 1.6, 1.8), org, 0, 2.7, -2.0);
+        const boom = new T.Group(); boom.position.set(0, 2.4, 1.2); boom.rotation.x = -(Math.PI / 2 - ang); g2.add(boom);
+        for (const sx of [-0.35, 0.35]) for (const sy of [-0.35, 0.35]) { const r = new T.Mesh(B(0.1, 0.1, Lb), org); r.position.set(sx, sy, Lb / 2); boom.add(r); }
+        for (let d = 0.8; d < Lb; d += 1.6) { const c = new T.Mesh(B(0.8, 0.06, 0.06), org); c.position.set(0, 0.35, d); boom.add(c); const c2 = new T.Mesh(B(0.06, 0.8, 0.06), org); c2.position.set(0.35, 0, d + 0.8); boom.add(c2); }
+        const tipY = 2.4 + Math.cos(Math.PI / 2 - ang) * 0 + Math.sin(ang) * Lb, tipZ = 1.2 + Math.cos(ang) * Lb, hookY = Math.max(3, tipY - (p.drop || 12));
+        const pv = [new T.Vector3(0, tipY, tipZ), new T.Vector3(0, hookY, tipZ)]; g2.add(new T.Line(new T.BufferGeometry().setFromPoints(pv), new T.LineBasicMaterial({ color: '#222' })));
+        A(B(0.5, 0.6, 0.5), L('#e3b53c'), 0, hookY - 0.3, tipZ);
+        g2.position.set(p.x, p.y || 0, p.z); g2.rotation.y = ry; grp.add(g2);
       } else if (p.type === 'guardrail') {         // ราวกันอันตรายเหล็กลูกฟูก (W-beam) + เสาทุก 2 ม. ตามเส้น · pts พิกัดจริง
         const pts = p.pts.map(q => toF(q[0], q[1])), gm = L('#c7ccd0'), pm = L('#9aa1a6'), h = p.h || 0.72;
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
@@ -981,6 +1028,55 @@
         { type: 'streetSign', world: true, x: -7.38, z: -1.1, rot: 287.8, h: 3.5, w: 1.9, ph: 0.5, text: 'นิคมบางพลี 6', sub: 'SOI NIKHOM BANG PHLI 6' },   // ป้ายชื่อซอยเสาสูง (ภาพถนน)
         { type: 'busStop', world: true, x: 0.36, z: 31.39, rot: 287.8, w: 6, d: 1.5, h: 2.6, text: 'ENKEI', fg: '#1d3f8a' },   // ศาลาที่พักผู้โดยสารหน้าลาน ENKEI (ภาพถนน)
         { type: 'box', world: true, x: -1.07, z: 26.39, rot: 287.8, w: 2.6, h: 1.5, d: 1.2, color: '#d6cdb0', band: '#b9ae8f' },   // เครื่องปั่นไฟข้างศาลา
+      ] },
+    { match: /ปิ่นเกล้า/, lat: 13.7106175, lon: 100.4874110, yaw: -75.1, ovtClear: 0,   // โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ — ริมกำแพงด้านใน (ด้านซอยตากสิน 22) ติดป้อม รปภ. ใกล้ประตูทางออก 2
+                 // ตามแบบติดตั้ง + ภาพถ่ายหน้างาน: ตู้หลังชิดกำแพงบล็อกเทา หน้าตู้หันเข้าในโรงพยาบาล (ทิศตะวันตก) · ซ้าย = ตู้ควบคุม + ต้นลีลาวดี · ขวา = กล่อง CCTV, ชุดวาล์ว, ป้อม รปภ.
+      treeHide: [[[-47.5, 14.5], [-4, 14.5], [-4.11, 13.91], [2.78, -11.99], [7, -12], [7, -44], [-47.5, -44]]],   // ไม่ปลูกต้นไม้อัตโนมัติบนลาน/ทางรถหน้าตู้
+      ovtHide: [[[-48, 28], [-3.8, 28], [-4.53, 20.53], [4.03, -11.66], [7, -12], [7, -45], [-48, -45]]],    // ไม่วางอาคาร Overture ทับลานจอด/ทางรถในรั้ว
+      props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ — ผังตามภาพดาวเทียม (ผู้ใช้ยืนยัน 26 ต.ค. 69) · ของชิดกำแพงคำนวณตามแนวกำแพง/ซอย 22 (แนว −14.9°) กำแพงห่างหลังตู้ 1.05 ม.
+        { type: 'lawn', h: 0.05, color: '#6f7377', wall: '#5d6165', pts: [[-47, 14], [-31, 14], [-31, 8], [-10, 8], [-10, 14], [-4.2, 14], [-4.02, 13.94], [-1.47, 4.37], [-3.21, 3.91], [-1.36, -3.05], [-2.91, -3.46], [-0.88, -11.1], [2.17, -12.05], [-47, -12]] },   // ลานจอดรถ/ทางรถยางมะตอย (ตามภาพดาวเทียม)
+        { type: 'lawn', h: 0.05, color: '#6f7377', wall: '#5d6165', pts: [[-47, -11.6], [2.17, -12.05], [2.6, -12.4], [7, -12.4], [7, -17], [-47, -17]] },   // ทางรถเข้า–ออกด้านใต้ → ประตูทางออก 2 (ซอยตากสิน 22)
+        { type: 'lawn', h: 0.1, color: '#aaa79f', wall: '#8f8c85', pts: [[1.68, -2.24], [-0.17, 4.72], [-2.97, 3.97], [-1.12, -2.99]] },   // ลานปูนหน้าตู้
+        { type: 'lawn', h: 0.17, color: '#bebab2', wall: '#a9a59d', pts: [[-1.12, -2.99], [-2.97, 3.97], [-3.21, 3.91], [-1.36, -3.05]] },   // ขอบคันหินลานปูน
+        { type: 'lawn', h: 0.12, color: '#7c8a55', wall: '#9a958c', pts: [[-0.17, 4.72], [-4.39, 20.56], [-5.69, 20.22], [-1.47, 4.37]] },   // แนวดินหญ้าริมกำแพง (เหนือตู้)
+        { type: 'lawn', h: 0.15, color: '#e6e4de', wall: '#c9c6bf', pts: [[-26.5, -12.4], [-3, -12.4], [-3, -11.6], [-26.5, -11.6]] },   // คันหินขาว แนวขอบลานจอด (ตามแบบ)
+        { type: 'lawn', h: 0.22, round: 2.7, color: '#6fa64e', wall: '#d8d4cb', pts: [[-31, 8], [-10, 8], [-10, 13.5], [-31, 13.5]] },   // เกาะกลางสนามหญ้าปลายมน หน้าอาคาร
+        { type: 'shrubs', y: 0.22, gap: 1.6, flowers: true, pts: [[-29.5, 8.7], [-11.5, 8.7]] },
+        { type: 'tree', world: true, x: -27.5, z: 11.0, s: 0.62 },
+        { type: 'tree', world: true, x: -23.3, z: 11.0, s: 0.62 },
+        { type: 'tree', world: true, x: -19.1, z: 11.0, s: 0.62 },
+        { type: 'tree', world: true, x: -14.9, z: 11.0, s: 0.62 },   // ไม้พุ่ม/ต้นไม้บนเกาะ
+        { type: 'stalls', a: [-28.6, 3.3], b: [-10.4, 3.3], gap: 2.6, len: 4.7, side: 1 },
+        { type: 'cars', world: true, x: -27.3, z: 5.7, rot: 90, n: 7, gap: 2.6, seed: 31, empty: 0.1 },   // แถวจอดรถหันหน้าเข้าเกาะ
+        { type: 'stalls', a: [-26.1, -6.0], b: [-10.5, -6.0], gap: 2.6, len: 4.7, side: -1 },
+        { type: 'cars', world: true, x: -24.8, z: -8.4, rot: 90, n: 6, gap: 2.6, seed: 37, empty: 0.1 },   // แถวจอดรถกลางลาน
+        { type: 'tower', world: true, x: -17.95, z: 18.75, rot: 0, w: 12.5, d: 10.5, h: 11, facade: 'hosp', color: '#eef0ef', roof: '#5f9a6e' },   // อาคารหลังคาเขียว (เหนือเกาะกลาง)
+        { type: 'shop', world: true, x: -6.45, z: 21.0, rot: 180, w: 4.5, d: 7.0, h: 3.8, text: 'Punthai' },   // ร้านกาแฟ Punthai
+        { type: 'wall', h: 2.6, t: 0.22, color: '#c6c5ca', post: '#d8cfcd', span: 3.3, pts: [[-4.39, 20.56], [4.15, -11.52]] },   // กำแพงบล็อกปูนเทา ริมซอยตากสิน 22 (หลังตู้)
+        { type: 'booth', world: true, x: 0.45, z: -6.66, rot: 255.1, w: 7.7, d: 4.65, h: 2.8, roof: '#7a5f52' },   // ป้อม รปภ. (ขนาดตามหลังคาในภาพดาวเทียม)
+        { type: 'valves', world: true, x: -0.66, z: -2.19, rot: 255.1, len: 2.25 },   // ชุดวาล์ว/ท่อจ่ายน้ำบนแท่นปูน
+        { type: 'box', world: true, x: 1.06, z: -0.96, rot: 255.1, y: 1.85, w: 0.6, h: 0.55, d: 0.3, color: '#d5d9dc', band: '#aeb4b8' },   // กล่อง CCTV สแตนเลสบนกำแพง
+        { type: 'box', world: true, x: -0.14, z: 1.31, rot: 255.1, w: 0.66, h: 0.75, d: 0.62, color: '#e4dfd3' },   // ฐานตู้ควบคุม
+        { type: 'box', world: true, x: -0.14, z: 1.31, rot: 255.1, y: 0.75, w: 0.62, h: 0.72, d: 0.56, color: '#ecebe6', band: '#d9d8d2' },   // ตู้ควบคุมไฟฟ้า
+        { type: 'box', world: true, x: -0.42, z: 1.23, rot: 255.1, y: 0.95, w: 0.4, h: 0.4, d: 0.02, color: '#7f8b92' },
+        { type: 'plumeria', world: true, x: -1.25, z: 2.77, s: 1.1 },   // ต้นลีลาวดี (ดอกขาว) ข้างตู้
+        { type: 'barrierArm', world: true, x: 3.2, z: -12.5, rot: 90, len: 4.4 },   // ไม้กั้นประตูทางออก 2
+        { type: 'sign', world: true, x: 1.8, z: -12.0, rot: 270, y: 2.3, w: 1.6, h: 0.5, text: 'ประตูทางออก 2', fg: '#ffffff', bg: '#1f5c3a', post: true },
+        { type: 'barriers', pts: [[7.6, -12.8], [7.6, -24]] },   // แบริเออร์แดง-ขาว ริมปากทาง (ภาพถนน)
+        { type: 'lawn', h: 0.04, color: '#b6a385', wall: '#a39073', pts: [[-47, -18.6], [6.8, -18.6], [5, -44], [-47, -44]] },   // พื้นที่ก่อสร้าง
+        { type: 'wall', h: 2.4, t: 0.12, color: '#d7dbde', post: '#8e989f', span: 2.4, pts: [[-47, -18.5], [6.8, -18.5]] },   // รั้วชั่วคราวแผ่นเหล็ก กั้นพื้นที่ก่อสร้าง
+        { type: 'crane', world: true, x: -18, z: -31, rot: 20, len: 28, angle: 64, drop: 14 },   // ปั้นจั่นงานก่อสร้าง (เห็นบูมสีส้มในภาพถ่ายหน้างาน)
+        { type: 'box', world: true, x: -30, z: -27, rot: 0, w: 6, h: 2.6, d: 2.4, color: '#4f7fa8', band: '#f2f2ef' },   // ตู้คอนเทนเนอร์สำนักงานสนาม
+        { type: 'box', world: true, x: -8, z: -36, rot: 15, w: 9, h: 0.9, d: 3, color: '#8c8f93' },   // กองวัสดุ/เหล็ก
+        { type: 'tree', world: true, x: -49, z: -4, s: 1.35 },
+        { type: 'tree', world: true, x: -53, z: -11, s: 1.5 },
+        { type: 'tree', world: true, x: -46, z: -15, s: 1.15 },
+        { type: 'tree', world: true, x: -56, z: 19, s: 1.5 },
+        { type: 'tree', world: true, x: -36, z: 15.5, s: 1.0 },
+        { type: 'tree', world: true, x: -44, z: 8, s: 1.1 },   // ต้นไม้ใหญ่ขอบลานด้านตะวันตก
+        { type: 'powerline', h: 10.5, pts: [[17.73, -36.68], [10.53, -9.62], [3.33, 17.44], [-3.87, 44.5]] },   // เสาไฟฟ้า + สายสื่อสารระโยงระยาง ริมซอย 22
+        { type: 'powerline', h: 9, pts: [[8.38, -24.68], [0.66, 4.32], [-7.05, 33.31]] },
+        { type: 'powerline', h: 8, pts: [[15.7, -31.01], [8.5, -3.95], [1.3, 23.11], [-5.9, 50.17]] },
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
