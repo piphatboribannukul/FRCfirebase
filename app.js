@@ -15811,6 +15811,8 @@ const FRC3D_TOUR = [
   { m: /เทียนฟ้า/,    short: 'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์' },
   { m: /ท้องฟ้าจำลอง/, short: 'ศูนย์วิทยาศาสตร์ฯ (ท้องฟ้าจำลอง)' },
   { m: /นิคมอุตสาหกรรมบางพลี/, short: 'นิคมอุตสาหกรรมบางพลี' },
+  { m: /ปิ่นเกล้า/, short: 'รพ.สมเด็จพระปิ่นเกล้า',
+    pre: { name: 'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ', lat: 13.7106175, lon: 100.487411 } },   // ติดตั้งใหม่ ยังไม่อยู่ในรายชื่อสถานี → แสดงภาพจำลองได้ แต่ไม่มีค่าวัด
 ];
 function _frc3dBtn(s) {
   return '<button class="frc3d-pbtn" onclick="open3DStation(\'' + String(s.id).replace(/['"\\<>]/g, '') + '\')">🏙 ดู 3 มิติ</button>';
@@ -15834,6 +15836,7 @@ function _frc3dTourList() {
   for (const t of FRC3D_TOUR) {
     const s = SENSORS.find(x => t.m.test(x.name || '')) || (typeof SENSORS_FALLBACK !== 'undefined' && SENSORS_FALLBACK.find(x => t.m.test(x.name || '')));
     if (s) out.push(Object.assign(_frc3dSt(s), { short: t.short }));
+    else if (t.pre) out.push(Object.assign({ frc: null, ec: null, ts: null, note: 'สถานีติดตั้งใหม่ · ยังไม่เชื่อมข้อมูลออนไลน์' }, t.pre, { short: t.short, pre: true }));   // ไม่แสดงค่าปลอม
   }
   return out;
 }
@@ -15860,7 +15863,7 @@ function open3DPicker() {
     '<button class="fp-all" data-i="all">▶ เล่นทั้งหมด <span>' + list.length + ' สถานี · ต่อกันอัตโนมัติ</span></button>' +
     '<div class="fp-sub">หรือเลือกดูทีละสถานี</div>' +
     list.map((s, i) => '<button class="fp-st" data-i="' + i + '"><i style="background:' + FRC3D.frcHex(s.frc) + '"></i><b>' + esc(s.short || s.name) + '</b>' +
-      '<em>' + (s.frc != null ? s.frc.toFixed(2) + ' <small>mg/L</small>' : '—') + '</em></button>').join('') +
+      '<em>' + (s.pre ? '<small>ติดตั้งใหม่</small>' : s.frc != null ? s.frc.toFixed(2) + ' <small>mg/L</small>' : '—') + '</em></button>').join('') +
     '<div class="fp-idle"><span>เล่นเองเมื่อไม่มีการใช้งาน</span><div>' + FRC3D_IDLE_CHOICES.map(v => '<button data-idle="' + v + '"' + (v === _frc3dIdleMin() ? ' class="on"' : '') + '>' + (v ? v + ' นาที' : 'ปิด') + '</button>').join('') + '</div>' +
     (/[?&]autotour=/.test(location.search) ? '<small>ลิงก์นี้กำหนดเวลาไว้แล้ว (autotour)</small>' : '<small>จำค่าไว้ในเครื่องนี้ · มือถือไม่เล่นเอง</small>') + '</div>';
   document.body.appendChild(el);

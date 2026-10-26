@@ -2080,7 +2080,7 @@
     st = cabFix(st);
     close(); injectCss();
     const wrap = document.createElement('div'); wrap.id = 'frc3d-wrap';
-    const tsTxt = st.ts ? new Date(st.ts).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+    const tsTxt = st.ts ? new Date(st.ts).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : (st.note || '');
     wrap.innerHTML =
       '<div id="frc3d-map"></div>' +
       '<div id="frc3d-bar">' +
