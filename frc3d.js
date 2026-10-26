@@ -282,6 +282,33 @@
     const L = (c, o) => new T.MeshLambertMaterial(Object.assign({ color: c }, o || {}));
     const add = (geo, mat, x, y, z, ry) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; grp.add(m); return m; };
     const B = (w, h, d) => new T.BoxGeometry(w, h, d);
+    // ── รถยนต์รายละเอียด (เก๋ง / กระบะ / SUV): ตัวถังจากโปรไฟล์ด้านข้าง + กระจก + ล้อแม็ก + ไฟหน้า-ท้าย · แกนยาวตาม z (หน้ารถ +z) ──
+    const CAR = { sedan: { w: 1.74, r: 0.32, ax: [-1.36, 1.38], body: [[-2.25, 0.3], [-2.28, 0.68], [-2.05, 0.84], [-1.25, 0.88], [-0.82, 1.36], [0.5, 1.4], [1.15, 0.92], [2.05, 0.83], [2.28, 0.62], [2.25, 0.3]],
+                    side: [[-1.12, 0.93], [-0.8, 1.3], [0.47, 1.33], [1.03, 0.95]], ws: [[0.5, 1.4], [1.15, 0.92]], rw: [[-1.25, 0.88], [-0.82, 1.36]] },
+                  pickup: { w: 1.8, r: 0.36, ax: [-1.7, 1.55], body: [[-2.6, 0.4], [-2.62, 0.99], [-0.6, 0.99], [-0.56, 1.62], [0.55, 1.64], [1.2, 1.08], [2.4, 0.99], [2.62, 0.72], [2.6, 0.4]],
+                    side: [[-0.5, 1.07], [-0.5, 1.56], [0.5, 1.58], [1.08, 1.11]], ws: [[0.55, 1.64], [1.2, 1.08]], rw: [[-0.57, 1.05], [-0.56, 1.58]], bed: true },
+                  suv: { w: 1.82, r: 0.36, ax: [-1.42, 1.42], body: [[-2.3, 0.36], [-2.32, 0.9], [-2.2, 1.64], [0.6, 1.68], [1.25, 1.1], [2.15, 0.98], [2.33, 0.72], [2.3, 0.36]],
+                    side: [[-2.08, 1.0], [-2.03, 1.56], [0.55, 1.61], [1.12, 1.13]], ws: [[0.6, 1.68], [1.25, 1.1]], rw: [[-2.32, 0.95], [-2.2, 1.6]] } };
+    const _carG = {}, _carM = {}, CM = c => _carM[c] || (_carM[c] = L(c));
+    const carGeo = (pts, w) => { const sh = new T.Shape(pts.map(q => new T.Vector2(q[0], q[1]))); const g = new T.ExtrudeGeometry(sh, { depth: w, bevelEnabled: false }); g.translate(0, 0, -w / 2); g.rotateY(-Math.PI / 2); return g; };
+    function makeCar(color, kind) {
+      const K = CAR[kind] || CAR.sedan, g2 = new T.Group();
+      if (!_carG[kind]) _carG[kind] = { body: carGeo(K.body, K.w), side: carGeo(K.side, K.w + 0.025), wheel: new T.CylinderGeometry(K.r, K.r, 0.24, 14), hub: new T.CylinderGeometry(K.r * 0.55, K.r * 0.55, 0.03, 10) };
+      const G = _carG[kind], glass = CM('#27323a');
+      g2.add(new T.Mesh(G.body, CM(color))); g2.add(new T.Mesh(G.side, glass));
+      for (const seg of [K.ws, K.rw]) { const [a, b] = seg, len = Math.hypot(b[0] - a[0], b[1] - a[1]), m = new T.Mesh(B(K.w - 0.22, 0.025, len * 0.86), glass);
+        m.position.set(0, (a[1] + b[1]) / 2 + 0.012, (a[0] + b[0]) / 2 + (seg === K.ws ? 0.012 : -0.012)); m.rotation.x = -Math.atan2(b[1] - a[1], b[0] - a[0]); g2.add(m); }
+      if (K.bed) { const bd = new T.Mesh(B(K.w - 0.2, 0.04, 1.85), CM('#2b2e31')); bd.position.set(0, 1.0, -1.58); g2.add(bd); }
+      const zF = K.body[K.body.length - 2][0], zR = K.body[1][0];
+      for (const sx of [-1, 1]) {
+        const hl = new T.Mesh(B(0.42, 0.13, 0.05), CM('#f6f3e2')); hl.position.set(sx * (K.w / 2 - 0.3), K.body[K.body.length - 2][1] - 0.06, zF + 0.01); g2.add(hl);
+        const tl = new T.Mesh(B(0.36, 0.14, 0.05), CM('#b3261e')); tl.position.set(sx * (K.w / 2 - 0.26), K.bed ? 0.86 : K.body[1][1] + 0.02, zR - 0.01); g2.add(tl);
+        for (const az of K.ax) { const wh = new T.Mesh(G.wheel, CM('#1c1d1f')); wh.rotation.z = Math.PI / 2; wh.position.set(sx * (K.w / 2 - 0.08), K.r, az); g2.add(wh);
+          const hb = new T.Mesh(G.hub, CM('#c6cacd')); hb.rotation.z = Math.PI / 2; hb.position.set(sx * (K.w / 2 + 0.05), K.r, az); g2.add(hb); }
+      }
+      for (const [z0, y0] of [[zF, 0.42], [zR, 0.44]]) { const bp = new T.Mesh(B(K.w + 0.02, 0.2, 0.12), CM('#2a2c2f')); bp.position.set(0, y0, z0); g2.add(bp); }
+      return g2;
+    }
     for (let p of props || []) {
       const nBefore = grp.children.length;
       if (p.world) {                               // world: true → x = ตอ., z = เหนือ (ม. จากตู้) · rot = ทิศที่ด้านหน้าวัตถุหัน (0 = เหนือ, 90 = ตอ.)
@@ -576,6 +603,30 @@
         const pts = p.pts.map(q => toF(q[0], q[1])), red = L('#c23b2e'), wh = L('#f2f2f2'); let k = 0;
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
           for (let d = 0; d < len - 0.05; d += 1.0, k++) { const dd = Math.min(1.0, len - d) - 0.02; add(B(0.3, 0.2, dd), k % 2 ? red : wh, a[0] + (b[0] - a[0]) * (d + dd / 2) / len, 0.1, a[1] + (b[1] - a[1]) * (d + dd / 2) / len, ang); } }
+      } else if (p.type === 'stalls') {            // เส้นช่องจอดรถ: แถวช่องจอดตามแนว a→b (พิกัดจริง) ทุก gap ม. ยาว len ม. ไปทางซ้าย (side 1) / ขวา (side -1) ของแนว
+        const [ax, az] = toF(p.a[0], p.a[1]), [bx, bz] = toF(p.b[0], p.b[1]), Lr = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / Lr, uz = (bz - az) / Lr, sd = p.side || 1, nx = -uz * sd, nz = ux * sd, len = p.len || 5, wm = L('#eeeeea'), ang = Math.atan2(nx, nz);
+        for (let d = 0; d <= Lr + 0.01; d += p.gap || 2.6) add(B(0.1, 0.02, len), wm, ax + ux * d + nx * len / 2, 0.075, az + uz * d + nz * len / 2, ang);
+        add(B(0.1, 0.02, Lr), wm, ax + ux * Lr / 2, 0.075, az + uz * Lr / 2, Math.atan2(ux, uz));
+      } else if (p.type === 'wire') {              // สายไฟพาดจากเสาเข้าตู้ · a, b = [ตอ., เหนือ, สูง]
+        const [ax, az] = toF(p.a[0], p.a[1]), [bx, bz] = toF(p.b[0], p.b[1]), pv = [];
+        for (let k = 0; k <= 16; k++) { const t = k / 16; pv.push(new T.Vector3(ax + (bx - ax) * t, p.a[2] + (p.b[2] - p.a[2]) * t - 4 * t * (1 - t) * (p.sag || 0.5), az + (bz - az) * t)); }
+        grp.add(new T.Line(new T.BufferGeometry().setFromPoints(pv), new T.LineBasicMaterial({ color: '#222222' })));
+      } else if (p.type === 'streetSign') {        // ป้ายชื่อซอยเสาเดี่ยวสูง (แผ่นป้ายปลายแหลม สีน้ำเงิน) · world x,z · rot = ทิศที่หน้าป้ายหัน
+        const h = p.h || 3.4, w = p.w || 1.9, ph = p.ph || 0.5, bg = p.bg || '#2b4fa3';
+        add(new T.CylinderGeometry(0.05, 0.06, h, 8), L('#9aa0a5'), p.x, h / 2, p.z);
+        add(new T.PlaneGeometry(w, ph), new T.MeshBasicMaterial({ map: signTexture(T, p.text, p.sub, p.fg || '#ffffff', bg), side: T.DoubleSide }), p.x, h - ph / 2 - 0.05, p.z, ry);
+        for (const sx of [-1, 1]) { const tri = new T.Shape([new T.Vector2(0, -ph / 2), new T.Vector2(0.28 * sx, 0), new T.Vector2(0, ph / 2)]); const m = add(new T.ShapeGeometry(tri), new T.MeshBasicMaterial({ color: bg, side: T.DoubleSide }), p.x + Math.cos(ry) * sx * w / 2, h - ph / 2 - 0.05, p.z - Math.sin(ry) * sx * w / 2, ry); void m; }
+      } else if (p.type === 'busStop') {           // ศาลาที่พักผู้โดยสาร (เสาเหล็ก หลังคาแบน ป้ายคาดหน้า ม้านั่ง) · world · rot = ทิศหน้าศาลา
+        const g2 = new T.Group(), w = p.w || 6, d = p.d || 1.8, h = p.h || 2.6, met = L('#8d949a'), A = (geo, m, x, y, z) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); g2.add(o); return o; };
+        for (const sx of [-0.45, 0.45]) for (const sz of [-0.4, 0.4]) A(B(0.09, h, 0.09), met, sx * w, h / 2, sz * d);
+        A(B(w + 0.4, 0.12, d + 0.5), L('#d9dcdc'), 0, h + 0.06, 0.1);
+        const sg = new T.Mesh(new T.PlaneGeometry(w + 0.4, 0.36), new T.MeshBasicMaterial({ map: signTexture(T, p.text || '', p.sub, p.fg || '#1d3f8a', p.bg || '#f3f4f2'), side: T.DoubleSide })); sg.position.set(0, h - 0.12, d / 2 + 0.36); g2.add(sg);
+        A(B(w * 0.8, 0.06, 0.45), L('#b9bec2'), 0, 0.46, -d * 0.2); A(B(w * 0.8, 0.5, 0.05), L('#c9ced1'), 0, 0.75, -d * 0.42);
+        A(B(w * 0.9, 1.6, 0.03), new T.MeshLambertMaterial({ color: '#a9c6d1', transparent: true, opacity: 0.4 }), 0, 1.3, -d * 0.46);
+        g2.position.set(p.x, 0, p.z); g2.rotation.y = ry; grp.add(g2);
+      } else if (p.type === 'box') {               // กล่อง/ตู้ทั่วไป (เช่น เครื่องปั่นไฟ) · world
+        add(B(p.w || 2, p.h || 1.4, p.d || 1.2), L(p.color || '#d9d2bd'), p.x, (p.h || 1.4) / 2 + (p.y || 0), p.z, ry);
+        if (p.band) add(B((p.w || 2) + 0.02, 0.12, (p.d || 1.2) + 0.02), L(p.band), p.x, (p.h || 1.4) * 0.8, p.z, ry);
       } else if (p.type === 'guardrail') {         // ราวกันอันตรายเหล็กลูกฟูก (W-beam) + เสาทุก 2 ม. ตามเส้น · pts พิกัดจริง
         const pts = p.pts.map(q => toF(q[0], q[1])), gm = L('#c7ccd0'), pm = L('#9aa1a6'), h = p.h || 0.72;
         for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
@@ -662,11 +713,7 @@
         const ux = Math.sin(ry), uz = Math.cos(ry);
         for (let i = 0; i < n; i++) {
           if (hash(i * 7 + (p.seed || 1) * 131) < (p.empty || 0.25)) continue;
-          const c = cols[Math.floor(hash(i * 13 + (p.seed || 1) * 977 + 5) * cols.length)], g2 = new T.Group();
-          const body = new T.Mesh(B(1.8, 0.75, 4.4), L(c)); body.position.y = 0.55; g2.add(body);
-          const cab = new T.Mesh(B(1.6, 0.6, 2.3), L(c)); cab.position.set(0, 1.2, -0.2); g2.add(cab);
-          const gl = new T.Mesh(B(1.62, 0.42, 2.0), L('#2b3740')); gl.position.set(0, 1.22, -0.2); g2.add(gl);
-          for (const [wx, wz] of [[-0.85, 1.3], [0.85, 1.3], [-0.85, -1.3], [0.85, -1.3]]) { const wh = new T.Mesh(new T.CylinderGeometry(0.33, 0.33, 0.22, 10), L('#1a1a1a')); wh.rotation.z = Math.PI / 2; wh.position.set(wx, 0.33, wz); g2.add(wh); }
+          const c = cols[Math.floor(hash(i * 13 + (p.seed || 1) * 977 + 5) * cols.length)], kr = hash(i * 41 + (p.seed || 1) * 313 + 9), g2 = makeCar(c, p.kind || (kr < 0.55 ? 'sedan' : kr < 0.85 ? 'pickup' : 'suv'));
           g2.position.set(p.x + ux * gap * i, 0, p.z + uz * gap * i); g2.rotation.y = ry + Math.PI / 2 + (hash(i * 29 + (p.seed || 1) * 57) < 0.5 ? Math.PI : 0); grp.add(g2);
         }
       } else if (p.type === 'starbucks') {         // ร้านกาแฟชั้นเดียว: หน้ากระจก + หลังคาคลุมระเบียง + ร่ม + ป้ายบนชายคา (ด้านหน้า = +z ของวัตถุ)
@@ -855,39 +902,50 @@
       ] },
     { match: /นิคมอุตสาหกรรมบางพลี/, lat: 13.5651358, lon: 100.7914685, yaw: -17.8,   // นิคมอุตสาหกรรมบางพลี — หัวมุม ถ.เคหะบางพลี (สป.1006) × ซอยนิคมอุตสาหกรรมบางพลี 6
                  // ตามแบบติดตั้ง + ภาพถนน: ตู้ (แบบที่ 1) ชิดรั้วขาวลานจอดรถ บ. ENKEI ใต้ต้นหูกวาง หน้าตู้หันลงซอย 6 (ทิศใต้) · ตำแหน่งขยับ ~8 ม. ให้ห่างขอบถนนตามแบบ (พิกัดแบบเดิม 13.5650960, 100.7914066)
+      ovtHide: [[[-7.79, 3.55], [23.63, -6.54], [42.68, 53.51], [11.26, 63.6]]],   // ลานจอดรถยาว: ไม่วางอาคาร Overture ทับ
       roadNames: [{ text: 'ซอยนิคมอุตสาหกรรมบางพลี 6', e: 20.72, n: -17.36 }],
       props: [   // พิกัดจริง (ตอ., เหนือ) ม. จากตู้ — คำนวณจากกรอบแนวซอย 6 (แนว 107.8°) และแนว ถ.1006 (แนว 17.6°)
-        { type: 'lawn', h: 0.04, round: 2.5, color: '#a99a82', wall: '#978873', pts: [[-6.84, 3.56], [12.39, -2.61], [10.67, -8.05], [-6.09, -2.67], [-7.84, 0.42]] },   // ลานดินอัดหัวมุม (หน้ารั้ว ENKEI) — ลานจอดรถช่าง PICO
+        { type: 'lawn', h: 0.04, round: 2.5, color: '#a99a82', wall: '#978873', pts: [[-6.84, 3.56], [19.34, -4.84], [17.62, -10.28], [-6.09, -2.67], [-7.84, 0.42]] },   // ลานดินอัดหัวมุม หน้ารั้วลานจอดรถ ENKEI
         { type: 'lawn', h: 0.055, round: 0.4, color: '#a7a29a', wall: '#96918a', pts: [[-1.92, 1.88], [2.84, 0.35], [1.69, -3.27], [-3.07, -1.74]] },   // พื้นปูอิฐตัวหนอนหน้าตู้
         { type: 'slab', h: 0.1, top: '#b9b5ad', wall: '#a19d95', pts: [[0.46, -3.19], [5.41, -4.78], [5.01, -6.02], [0.06, -4.43]] },   // บ่อพักท่อ / ฝาท่อ (ตามแบบ)
         { type: 'lawn', h: 0.13, color: '#6c6e6f', wall: '#5b5d5e', pts: [[0.6, -3.4], [2.03, -3.85], [1.73, -4.81], [0.3, -4.35]] },
         { type: 'lawn', h: 0.13, color: '#6c6e6f', wall: '#5b5d5e', pts: [[2.27, -3.93], [3.7, -4.39], [3.39, -5.34], [1.97, -4.88]] },
         { type: 'lawn', h: 0.13, color: '#6c6e6f', wall: '#5b5d5e', pts: [[3.93, -4.47], [5.36, -4.92], [5.06, -5.88], [3.63, -5.42]] },
-        { type: 'lot', pts: [[-6.98, 4.13], [12.26, -2.04], [15.43, 7.96], [-3.8, 14.14]], stalls: [] },   // ลานจอดรถ บ. ENKEI (ในรั้ว)
-        { type: 'palaceFence', world: true, x1: -7.35, z1: 3.94, x2: 12.16, z2: -2.33, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.3, cap: false },   // รั้วขาวลานจอดรถ ENKEI (ด้านใต้ หลังตู้ / ตะวันตก ริม ถ.1006 / เหนือ)
-        { type: 'palaceFence', world: true, x1: -7.35, z1: 3.94, x2: -4.0, z2: 14.52, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.3, cap: false },
-        { type: 'palaceFence', world: true, x1: -4.0, z1: 14.52, x2: 15.52, z2: 8.25, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.3, cap: false },
-        { type: 'cars', world: true, x: -4.7, z: 6.34, rot: 107.8, n: 6, gap: 2.7, seed: 11 },
-        { type: 'cars', world: true, x: -2.98, z: 11.77, rot: 107.8, n: 6, gap: 2.7, seed: 16 },   // รถพนักงานจอดในลาน
-        { type: 'guardhouse', world: true, x: 8.91, z: 1.97, rot: 197.8, w: 2.4, d: 2.4 },
-        { type: 'guardhouse', world: true, x: 11.86, z: 1.02, rot: 197.8, w: 2.4, d: 2.4 },   // ป้อม 1–2 (ตามแบบ)
-        { type: 'road', w: 6, pts: [[12.82, -12.52], [25.51, 27.52]] },   // ทางเข้าที่จอดรถ บ. ENKEI (ฝั่งตะวันออก ตามแบบ)
-        { type: 'cars', world: true, x: 7.57, z: -3.59, rot: 107.8, n: 1, empty: 0.0001, seed: 5 },   // รถกระบะช่าง (ภาพถนน)
-        { type: 'tree', world: true, x: -6.99, z: 0.77, s: 0.95 },
+        { type: 'lot', pts: [[-6.98, 4.13], [19.21, -4.28], [37.41, 53.11], [11.23, 61.51]] },   // ลานจอดรถ บ. ENKEI — ยาวขนาน ถ.1006 (~60 ม. ตามภาพดาวเทียม)
+        { type: 'stalls', a: [-4.91, 9.98], b: [10.81, 59.55], gap: 2.6, len: 5.0, side: -1 },
+        { type: 'stalls', a: [5.85, 6.53], b: [21.57, 56.09], gap: 2.6, len: 5.0, side: -1 },
+        { type: 'stalls', a: [15.37, 3.47], b: [31.09, 53.03], gap: 2.6, len: 5.0, side: 1 },   // เส้นช่องจอด 3 แถว
+        { type: 'cars', world: true, x: -2.09, z: 10.44, rot: 17.6, n: 20, gap: 2.6, seed: 3, empty: 0.2 },
+        { type: 'cars', world: true, x: 8.62, z: 7.0, rot: 17.6, n: 20, gap: 2.6, seed: 7, empty: 0.2 },
+        { type: 'cars', world: true, x: 13.38, z: 5.47, rot: 17.6, n: 20, gap: 2.6, seed: 11, empty: 0.2 },   // รถพนักงานจอดเต็มลาน (เก๋ง / กระบะ / SUV)
+        { type: 'palaceFence', world: true, x1: -7.35, z1: 3.94, x2: 19.4, z2: -4.65, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.22, cap: false },   // รั้วขาวรอบลานจอดรถ ENKEI (ใต้ = หลังตู้ / ตะวันตก ริม ถ.1006 / เหนือ / ตะวันออก เว้นช่องทางเข้า)
+        { type: 'palaceFence', world: true, x1: -7.35, z1: 3.94, x2: 11.03, z2: 61.89, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.22, cap: false },
+        { type: 'palaceFence', world: true, x1: 11.03, z1: 61.89, x2: 37.79, z2: 53.3, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.22, cap: false },
+        { type: 'palaceFence', world: true, x1: 37.79, z1: 53.3, x2: 21.82, z2: 2.97, color: '#f2f2ef', bar: '#c9cdcf', h: 2.0, plinth: 0.45, span: 3.0, post: 0.22, cap: false },
+        { type: 'guardhouse', world: true, x: 15.85, z: 0.37, rot: 107.8, w: 2.3, d: 2.3 },
+        { type: 'guardhouse', world: true, x: 18.52, z: -0.48, rot: 107.8, w: 2.3, d: 2.3 },   // ป้อม 1–2 ที่ปากทางเข้าลาน (ตามแบบ)
+        { type: 'barrierArm', world: true, x: 20.5, z: 2.45, rot: 377.8, len: 4.2 },
+        { type: 'road', w: 4.5, pts: [[19.06, -14.0], [40.68, 54.16]] },   // ทางเข้าโรงงาน ENKEI (ฝั่งตะวันออกของลาน)
+        { type: 'tree', world: true, x: -6.24, z: 1.48, s: 0.9 },
         { type: 'tree', world: true, x: -4.28, z: 1.06, s: 0.75 },
         { type: 'tree', world: true, x: 10.17, z: -6.31, s: 1.1 },
         { type: 'tree', world: true, x: -8.09, z: 8.9, s: 0.85 },
         { type: 'tree', world: true, x: -6.27, z: 14.62, s: 0.9 },
-        { type: 'tree', world: true, x: 19.92, z: -9.97, s: 1.0 },
-        { type: 'tree', world: true, x: 27.48, z: -12.6, s: 0.95 },   // ต้นหูกวางรอบหัวมุม (ตามแบบ + ภาพถนน) — เว้นหน้าตู้
+        { type: 'tree', world: true, x: 3.5, z: 45.09, s: 0.85 },
+        { type: 'tree', world: true, x: 5.92, z: 52.71, s: 0.9 },
+        { type: 'tree', world: true, x: 22.45, z: -10.57, s: 1.0 },
+        { type: 'tree', world: true, x: 28.43, z: -12.91, s: 0.95 },   // ต้นหูกวาง / ต้นไม้ริมทาง (เว้นหน้าตู้)
         { type: 'guardrail', pts: [[-6.85, 2.72], [-7.36, -0.05], [-6.51, -2.01], [-4.17, -3.23], [2.02, -5.22]] },   // ราวกันอันตรายเหล็กลูกฟูก ริมขอบทางหัวมุม
         { type: 'curbLine', pts: [[-8.1, 7.85], [-10.64, -0.15], [-10.58, -2.59], [-9.04, -4.35], [-6.43, -5.39], [12.14, -11.35]] },   // ขอบทางแดง-ขาว รอบหัวมุม
-        { type: 'road', w: 1.6, y: -0.15, noLine: true, color: '#c8665c', edge: '#d9d3c7', pts: [[-7.44, -3.6], [10.65, -9.41]] },   // ทางจักรยานทาสีแดง ริมซอย
-        { type: 'road', w: 1.6, y: -0.15, noLine: true, color: '#c8665c', edge: '#d9d3c7', pts: [[16.37, -11.24], [55.4, -23.77]] },
-        { type: 'powerline', h: 10, pts: [[-9.82, -2.52], [10.74, -9.12], [36.45, -17.38]] },   // เสาไฟฟ้า + สายไฟ ริมซอย (ต้นทางไฟเข้าตู้ ระยะ 20 ม.)
-        { type: 'powerline', h: 11, pts: [[-9.44, -0.65], [-4.15, 16.03], [3.72, 40.82]] },   // เสาไฟฟ้าแรงสูง ริม ถ.1006
-        { type: 'sign', world: true, x: -7.31, z: -1.22, rot: 242.8, y: 2.9, w: 1.6, h: 0.42, text: 'นิคมบางพลี 6', fg: '#ffffff', bg: '#2457a8', post: true },   // ป้ายชื่อซอย (ภาพถนน)
-        { type: 'sign', world: true, x: -6.23, z: -1.78, rot: 197.8, y: 1.7, w: 1.1, h: 0.62, text: 'นิคมอุตสาหกรรมบางพลี', sub: '←    →', fg: '#ffffff', bg: '#1f4f9a', post: true },
+        { type: 'road', w: 1.4, y: -0.15, noLine: true, color: '#b8675e', edge: '#d9d3c7', pts: [[-7.45, -3.65], [16.83, -11.44]] },   // ทางจักรยานทาสีแดง ริมซอย
+        { type: 'road', w: 1.4, y: -0.15, noLine: true, color: '#b8675e', edge: '#d9d3c7', pts: [[22.06, -13.12], [55.39, -23.82]] },
+        { type: 'powerline', h: 11, pts: [[-9.19, -0.2], [-4.15, 16.03], [3.72, 40.82], [11.58, 65.6]] },   // เสาไฟฟ้าคอนกรีต ริม ถ.1006 (คู่เสาที่หัวมุม ตามภาพถนน)
+        { type: 'powerline', h: 9, pts: [[-8.58, -0.92]] },
+        { type: 'powerline', h: 10, pts: [[-7.32, -3.22], [10.78, -9.03], [36.48, -17.28]] },   // เสาไฟฟ้า + สายไฟ ริมซอย 6
+        { type: 'wire', a: [10.78, -9.03, 8.6], b: [0.3, -0.2, 2.75], sag: 0.6 },   // สายไฟเข้าตู้ (เดินลอยอากาศจากเสาริมซอย ~20 ม. ตามแบบ)
+        { type: 'streetSign', world: true, x: -7.38, z: -1.1, rot: 287.8, h: 3.5, w: 1.9, ph: 0.5, text: 'นิคมบางพลี 6', sub: 'SOI NIKHOM BANG PHLI 6' },   // ป้ายชื่อซอยเสาสูง (ภาพถนน)
+        { type: 'busStop', world: true, x: 0.36, z: 31.39, rot: 287.8, w: 6, d: 1.5, h: 2.6, text: 'ENKEI', fg: '#1d3f8a' },   // ศาลาที่พักผู้โดยสารหน้าลาน ENKEI (ภาพถนน)
+        { type: 'box', world: true, x: -1.07, z: 26.39, rot: 287.8, w: 2.6, h: 1.5, d: 1.2, color: '#d6cdb0', band: '#b9ae8f' },   // เครื่องปั่นไฟข้างศาลา
       ] },
     { match: /จิตรลดา/, lat: 13.772515, lon: 100.520836, yaw: 153, camOff: -27, cabShift: [-0.4, -2.0],   // ตู้ลึกเข้าไปในซอก 2 ม.                 // ในซอกระหว่างปลายอาคารเสาเรียง กับประตู/ป้อมรักษาการณ์ทางเข้าวัง · ตู้หันออกถนน
       bld: { 1537116220: { style: 'colonnade', h: 4.6, noSign: true }, 1537135506: { hide: true } }, noBarrierR: 45,   // 1537135506 = จุดประตู/ป้อม ไม่ใช่ตึก
