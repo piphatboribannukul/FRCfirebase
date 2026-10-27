@@ -2115,6 +2115,7 @@
         '<button class="frc3d-btn" data-a="orbit">🔄 หมุนรอบ</button>' +
         '<button class="frc3d-btn" data-a="night">🌙 กลางคืน</button>' +
         '<button class="frc3d-btn" data-a="near">🔍 ดูตู้ใกล้ๆ</button>' +
+        '<button class="frc3d-btn" data-a="inside">🧪 ภายในตู้</button>' +
         '<button class="frc3d-btn frc3d-close" data-a="close">✕ ปิด</button>' +
       '</div>' +
       '<div id="frc3d-msg">กำลังโหลดแผนที่ 3 มิติ…</div><div id="frc3d-chip"></div>' +
@@ -2129,6 +2130,7 @@
     document.addEventListener('keydown', onKey);
 
     try { await ensureLibs(); } catch (e) { msg.textContent = '⚠ ' + e.message; return; }
+    if (!window.FRC3D_INSIDE && !window._frc3dInsideLoading) { window._frc3dInsideLoading = true; loadScript(CFG.insideJs || 'frc3d_inside.js').catch(() => { window._frc3dInsideLoading = false; }); }
     if (_cur !== state) return;
     const ml = window.maplibregl;
     const map = new ml.Map({
@@ -2332,6 +2334,7 @@
     if (!s.map) return;
     if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
+    else if (a === 'inside') { if (!window.FRC3D_INSIDE) return; if (s.onUser) s.onUser(); window.FRC3D_INSIDE.play({ st: s.st, mode: 'tour' }); }   // ภายในตู้ (frc3d_inside.js) — นำชมทีละชิ้น
     else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); { const c = s.cabLL || [s.st.lon, s.st.lat], ff = frontBearing(s) - (s.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
       s.layer && s.layer.setShowcase(true); s.map.easeTo({ center: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], zoom: 22.35, pitch: 76, bearing: ff, duration: 3000, easing: easeIO }); } }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
     else if (a === 'night') {
@@ -2342,6 +2345,7 @@
   }
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() {
+    if (window.FRC3D_INSIDE) window.FRC3D_INSIDE.stop();
     if (_tour && !_tour.switching) stopTour();
     if (!_cur) return;
     try { _cur.map && _cur.map.remove(); } catch (e) {}
@@ -2391,6 +2395,7 @@
     if (opt.auto) {                                    // เล่นเอง: ผู้ใช้กลับมาแตะ/กดอะไรก็ตาม → จบทัวร์ทันที
       let mx = null;
       T.onInput = e => {
+        if (window.FRC3D_INSIDE && window.FRC3D_INSIDE.isOn()) { if (e.type === 'mousemove' || e.type === 'wheel') return; if (e.target && e.target.closest && e.target.closest('#frc3d-inside [data-f]')) return; }   // ฉากภายในตู้: ให้กดปุ่มได้
         if (e.type === 'mousemove') { if (!mx) { mx = [e.clientX, e.clientY]; return; } if (Math.hypot(e.clientX - mx[0], e.clientY - mx[1]) < 12) return; }
         e.preventDefault && e.type !== 'wheel' && e.type !== 'mousemove' && e.preventDefault(); e.stopPropagation && e.stopPropagation();
         stopTour();
@@ -2421,11 +2426,21 @@
       T.switching = true; open(Object.assign({}, st)); T.switching = false;
       const S = _cur; if (!S) return;
       S.wrap.classList.add('frc3d-touring'); if (T.opt.auto) S.wrap.classList.add('frc3d-kiosk');                      // เล่นเอง: ซ่อนปุ่มควบคุม ให้ภาพสะอาด
-      S.onArrive = () => { if (_tour !== T || _cur !== S) return; tourBar(T, T.hold); tourTimer(T, () => step(T, 1), T.hold); };
+      S.onArrive = () => { if (_tour !== T || _cur !== S) return;
+        const after = () => { tourBar(T, T.hold); tourTimer(T, () => step(T, 1), T.hold); };
+        if (!window.FRC3D_INSIDE || T.opt.inside === false) return after();
+        tourBar(T, 2500);
+        tourTimer(T, () => {                                  // ค้างหน้าตู้ 2.5 วิ → เข้าภายในตู้ (เล่นเองจนจบ → สถานีถัดไป)
+          if (_tour !== T || _cur !== S) return;
+          const ok = window.FRC3D_INSIDE.play({ st: S.st, mode: 'auto',
+            onDetail: () => { if (_tour !== T) return; T.timers.forEach(clearTimeout); T.timers = []; tourBar(T, 0); },   // กด "ดูภายในตู้" → หยุดนับเวลา
+            onDone: r => { if (_tour !== T || _cur !== S) return; if (r === 'end') step(T, 1); else if (r === 'closed') { if (T.opt.auto) stopTour(); else after(); } } });
+          if (!ok) after();
+        }, 2500); };
       S.onUser = () => { if (_tour !== T || T.opt.auto) return; T.timers.forEach(clearTimeout); T.timers = []; tourBar(T, 0);    // ผู้ใช้หมุน/ซูมเอง → หยุดรอ กด "ถัดไป"
         T.hud.querySelector('.t').textContent = '⏸ ' + (T.i + 1) + '/' + T.list.length + ' · ' + (st.short || st.name || 'สถานี'); };
       tourTimer(T, () => T.fade.classList.remove('on'), 450);
-      tourTimer(T, () => { if (_cur === S && S.phase !== 'user') step(T, 1); }, 45000);     // กันค้าง (โหลดแผนที่ไม่ขึ้น ฯลฯ)
+      tourTimer(T, () => { if (_cur === S && S.phase !== 'user' && !(window.FRC3D_INSIDE && window.FRC3D_INSIDE.isOn())) step(T, 1); }, 60000);     // กันค้าง (โหลดแผนที่ไม่ขึ้น ฯลฯ)
     };
     if (T.i === 0 && d === 1 && !_cur) { T.fade.classList.add('on'); tourTimer(T, go, 350); }
     else { T.fade.classList.add('on'); tourTimer(T, go, 650); }
@@ -2433,6 +2448,7 @@
   function stopTour(silent, finished) {
     const T = _tour; if (!T) return;
     _tour = null;
+    if (window.FRC3D_INSIDE) window.FRC3D_INSIDE.stop();
     T.timers.forEach(clearTimeout);
     if (T.evs) T.evs.forEach(ev => window.removeEventListener(ev, T.onInput, { capture: true }));
     T.hud.remove();
