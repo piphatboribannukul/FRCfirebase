@@ -86,7 +86,7 @@
       const pan = (w, h, x, y, z, ry, rx, k) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(k, k, k * .97) })); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, 0); rs.add(m); };
       pan(6, 2, 0, 4.9, 0, 0, Math.PI / 2, 1.8); pan(3, 2.5, -4.9, 2.2, 1, Math.PI / 2, 0, 1.3); pan(3, 2.5, 4.9, 2.4, -1, -Math.PI / 2, 0, .9); pan(4, 2, 0, 2.5, 4.9, Math.PI, 0, .8);
       env = new T.PMREMGenerator(R).fromScene(rs, .04).texture; }
-    scene.add(new T.HemisphereLight(0xfff6ea, 0xb9c6d4, .65));
+    const hemi = new T.HemisphereLight(0xfff6ea, 0xb9c6d4, .65); scene.add(hemi);
     const key = new T.DirectionalLight(0xfff1de, 1.9); key.position.set(2.5, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
     Object.assign(key.shadow.camera, { left: -2.5, right: 2.5, top: 3.5, bottom: -1, near: .5, far: 14 }); key.shadow.bias = -.0004; key.shadow.radius = 4; scene.add(key);
     const rim = new T.DirectionalLight(0xdfe9ff, .55); rim.position.set(-3, 3, -4); scene.add(rim);
@@ -215,6 +215,15 @@
         [.06, .04, .02].forEach(y => mesh(C(.0055, .0055, .008, 16), M('#2a2a2a'), 0, y, 0, p)); });
     });
     cell.mats = []; cell.g.traverse(o => { if (o.isMesh && !cell.mats.includes(o.material)) cell.mats.push(o.material); });
+    // ชิ้นที่ดูทีละอย่าง (หัววัด 3 แท่ง + ชุดวัดความขุ่น): ดึงขึ้น/ขยาย + ขอบเรืองแสง + ชิ้นอื่นจางลง + ไฟส่องเฉพาะจุด
+    const FOC = [probes[0], probes[1], probes[2], parts.tub.g];
+    const haloM = new T.MeshBasicMaterial({ color: 0x4aa3df, side: T.BackSide, transparent: true, opacity: .6, depthWrite: false });
+    FOC.forEach(f => { const ms = []; f.traverse(o => { if (o.isMesh) ms.push(o); });
+      f.userData.halos = ms.map(o => { const h = new T.Mesh(o.geometry, haloM); h.position.copy(o.position); h.rotation.copy(o.rotation); h.scale.copy(o.scale).multiplyScalar(1.28); h.visible = false; h.renderOrder = -1; o.parent.add(h); return h; });
+      f.userData.mats = []; ms.forEach(o => { if (!f.userData.mats.includes(o.material)) f.userData.mats.push(o.material); }); f.userData.k = 0; });
+    const dimMats = cell.mats.concat(parts.horiba.mats.filter(m => !cell.mats.includes(m)), parts.water.mats);   // ชิ้นที่จางลงตอนดูหัววัด (รวมกล่อง HORIBA)
+    dimMats.forEach(m => { m.userData.o0 = m.transparent ? m.opacity : 1; m.transparent = true; });
+    const focusLight = new T.PointLight(0xffffff, 0, 1.4, 2); scene.add(focusLight);
     // สีวัสดุ sRGB → linear (ครั้งเดียว)
     { const seen = new Set(); scene.traverse(o => { if (!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (seen.has(m) || m.isShadowMaterial) return; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.emissive && !m.emissiveMap) m.emissive.convertSRGBToLinear(); }); }); }
 
@@ -245,13 +254,13 @@
       { n: 'ตัวเก็บข้อมูล', d: 'คอมพิวเตอร์อุตสาหกรรมรับค่าจากเครื่องวิเคราะห์ผ่านสาย Serial แล้วส่งขึ้นระบบ TWQMS ทุก 5 นาที', c: '#25292e', f: () => wp(parts.logger.g), off: V3(.12, .05, .75), door: 1, cover: 0, hl: 'logger' },
       { n: 'เกจวัดแรงดัน · วาล์วไฟฟ้า', d: 'น้ำจากท่อจ่ายเข้าตู้ผ่านวาล์วไฟฟ้า แล้ววัดแรงดันที่เกจก่อนเข้าเครื่องวิเคราะห์', c: '#1d7fd6', f: () => wp(parts.water.g), off: V3(-.15, .05, .8), door: 1, cover: 0, hl: 'water', v: V => fmt(V.pres, 3), u: 'MPa (แรงดัน)' },
       { n: 'เครื่องวิเคราะห์ HORIBA TW-150', d: 'วัด 6 ค่าในเครื่องเดียว แสดงบนจอ LCD: ความขุ่น คลอรีน แรงดัน pH ความนำไฟฟ้า อุณหภูมิ', c: '#1b5fb4', f: () => wp(parts.horiba.g), off: V3(.15, .06, 1.15), door: 1, cover: 0, hl: 'horiba' },
-      { n: 'หัววัดคลอรีนอิสระคงเหลือ', d: 'ขั้ววัดแบบกระแสไฟฟ้า จุ่มในเซลล์ที่น้ำไหลผ่านตลอด อ่านค่าเป็น mg/L', c: '#123f86', f: () => wp(probes[0], V3(0, .04, 0)), off: V3(.12, .05, .55), door: 1, cover: 1, hl: 'cell', lift: 1, v: V => fmt(V.frc, 2), u: 'mg/L · เกณฑ์ 0.2–2.0' },
-      { n: 'หัววัด pH', d: 'ขั้วแก้ว ปลายเป็นกระเปาะบาง มีน้ำยาอิเล็กโทรไลต์ภายใน สอบเทียบด้วยบัฟเฟอร์ 4.01 / 6.86 / 9.18', c: '#4aa3df', f: () => wp(probes[1], V3(0, .05, 0)), off: V3(.1, .05, .55), door: 1, cover: 1, hl: 'cell', lift: 1, v: V => fmt(V.ph, 2), u: 'เกณฑ์ 6.5–8.5' },
-      { n: 'หัววัดความนำไฟฟ้า + อุณหภูมิ', d: 'ขั้ววงแหวน 3 วงวัดความนำไฟฟ้า และมีเซ็นเซอร์อุณหภูมิในแท่งเดียวกัน', c: '#2b7fc0', f: () => wp(probes[2], V3(0, .06, 0)), off: V3(.14, .05, .55), door: 1, cover: 1, hl: 'cell', lift: 1, v: V => fmt(V.ec, 0), u: 'µS/cm · เกณฑ์ ≤ 500' },
-      { n: 'ชุดวัดความขุ่น', d: 'ส่องแสงผ่านน้ำแล้ววัดแสงที่กระเจิง มีมอเตอร์ขับกลไกทำความสะอาดอัตโนมัติ', c: '#138a8a', f: () => wp(parts.tub.g), off: V3(-.12, .08, .55), door: 1, cover: 1, hl: 'cell', v: V => fmt(V.tub, 2), u: 'NTU เฉลี่ยวันนี้ · เกณฑ์ < 1' },
+      { n: 'หัววัดคลอรีนอิสระคงเหลือ', d: 'ขั้ววัดแบบกระแสไฟฟ้า จุ่มในเซลล์ที่น้ำไหลผ่านตลอด อ่านค่าเป็น mg/L', c: '#123f86', f: () => wp(probes[0], V3(0, .04, 0)), off: V3(.12, .05, .55), door: 1, cover: 1, foc: 0, lift: 1, v: V => fmt(V.frc, 2), u: 'mg/L · เกณฑ์ 0.2–2.0' },
+      { n: 'หัววัด pH', d: 'ขั้วแก้ว ปลายเป็นกระเปาะบาง มีน้ำยาอิเล็กโทรไลต์ภายใน สอบเทียบด้วยบัฟเฟอร์ 4.01 / 6.86 / 9.18', c: '#4aa3df', f: () => wp(probes[1], V3(0, .05, 0)), off: V3(.1, .05, .55), door: 1, cover: 1, foc: 1, lift: 1, v: V => fmt(V.ph, 2), u: 'เกณฑ์ 6.5–8.5' },
+      { n: 'หัววัดความนำไฟฟ้า + อุณหภูมิ', d: 'ขั้ววงแหวน 3 วงวัดความนำไฟฟ้า และมีเซ็นเซอร์อุณหภูมิในแท่งเดียวกัน', c: '#2b7fc0', f: () => wp(probes[2], V3(0, .06, 0)), off: V3(.14, .05, .55), door: 1, cover: 1, foc: 2, lift: 1, v: V => fmt(V.ec, 0), u: 'µS/cm · เกณฑ์ ≤ 500' },
+      { n: 'ชุดวัดความขุ่น', d: 'ส่องแสงผ่านน้ำแล้ววัดแสงที่กระเจิง มีมอเตอร์ขับกลไกทำความสะอาดอัตโนมัติ', c: '#138a8a', f: () => wp(parts.tub.g), off: V3(-.12, .08, .55), door: 1, cover: 1, foc: 3, v: V => fmt(V.tub, 2), u: 'NTU เฉลี่ยวันนี้ · เกณฑ์ < 1' },
     ];
     const dots = root.querySelector('.dots'); STEPS.forEach(() => dots.appendChild(document.createElement('i')));
-    return { T, root, R, scene, cam, svg, canvas, parts, probes, door, cover, canopy, LAY, PROBE_LIFT, LB, STEPS, drawLcd, V3 };
+    return { T, root, R, scene, cam, svg, canvas, parts, probes, door, cover, canopy, LAY, PROBE_LIFT, LB, STEPS, drawLcd, V3, FOC, haloM, focusLight, cellMats: dimMats, hemi, key };
   }
 
   /* ═══ การเล่น ═══ */
@@ -278,7 +287,15 @@
     let exAvg = 0;
     for (const id of MOVERS) { const p = g.parts[id], L = g.LAY[id]; p.e = sm(p.e, tg.ex[id], 3.4, dt); exAvg += p.e / 4;
       const k = p.e * p.e * (3 - 2 * p.e); p.g.position.lerpVectors(p.home, L.p, k); p.g.position.y += Math.sin(S.now * 1.6 + L.p.x * 3) * .012 * k; p.g.scale.setScalar(1 + (L.s - 1) * k); }
-    g.probes.forEach((p, i) => p.position.y = g.PROBE_LIFT[i] * S.lift);
+    const fi = S.mode === 'tour' ? g.STEPS[S.step].foc : undefined;
+    S.foc = sm(S.foc || 0, fi != null ? 1 : 0, 4, dt);
+    g.FOC.forEach((f, i) => { f.userData.k = sm(f.userData.k, fi === i ? 1 : 0, 4, dt); const k = f.userData.k;
+      if (i < 3) { f.position.y = g.PROBE_LIFT[i] * S.lift + .075 * k; f.scale.setScalar(1 + .35 * k); } else f.scale.setScalar(1 + .12 * k);
+      f.userData.halos.forEach(h => { h.visible = k > .05; }); });
+    g.haloM.opacity = (.35 + .2 * Math.sin(S.now * 4)) * S.foc;
+    g.cellMats.forEach(m => { const own = fi != null && g.FOC[fi].userData.mats.includes(m); m.opacity = own ? m.userData.o0 : m.userData.o0 * (1 - .85 * S.foc); m.depthWrite = m.opacity > .9; });
+    if (fi != null) { const fp = new g.T.Vector3(); g.FOC[fi].getWorldPosition(fp); g.focusLight.position.set(fp.x + .18, fp.y + .2, fp.z + .3); }
+    g.focusLight.intensity = 2.2 * S.foc; g.hemi.intensity = .65 * (1 - .5 * S.foc); g.key.intensity = 1.9 * (1 - .45 * S.foc);   // ฉากมืดลง ชิ้นที่ดูสว่างเด่น
     let wantPos, wantTgt;
     if (S.mode === 'auto') { const sw = Math.sin(S.t / TA * Math.PI * 2) * .35; wantTgt = g.V3(0, 1.3, 0); wantPos = g.V3(sw + .2, 1.55, 6.3 + .3 * exAvg); }
     else { const st = g.STEPS[S.step]; wantTgt = st.f(); wantPos = wantTgt.clone().add(st.off); }
@@ -356,7 +373,7 @@
   }
   function loop(now) {
     if (!P) return;
-    const S = P, raw = Math.min(1, (now - (S.last || now)) / 1000), dt = Math.min(.05, raw); S.last = now; S.now += dt;
+    const S = P, raw = Math.min(1, (now - (S.last || now)) / 1000), dt = Math.min(.2, raw); S.last = now; S.now += dt;
     update(dt, raw); if (P !== S) return;
     G.R.render(G.scene, G.cam); layoutLabels();
     S.raf = requestAnimationFrame(loop);
