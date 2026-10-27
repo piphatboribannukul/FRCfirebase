@@ -16,6 +16,9 @@
   // พิกัดสถานี (รหัสเดียวกับบอท) — ใช้จับคู่สถานีกับค่าความขุ่นจาก /wq-stats.json
   const WQ_XY = {"SP01":[13.87858,100.55298],"SW01":[13.73465,100.53785],"SM02":[13.71571,100.53942],"SW11":[13.78785,100.55427],"SP02":[13.87827,100.5544],"SW02":[13.76696,100.59763],"S008":[13.76093,100.63109],"S009":[13.80942,100.61572],"SW03":[13.71519,100.58102],"S010":[13.72008,100.58243],"SM03":[13.708,100.59941],"SW04":[13.66247,100.59082],"S011":[13.65518,100.64576],"S012":[13.56031,100.59005],"S013":[13.60461,100.55585],"SM04":[13.60456,100.59842],"S014":[13.62092,100.56164],"SP03":[13.87785,100.55593],"SW05":[13.82623,100.74055],"S015":[13.83018,100.84997],"SM05":[13.81499,100.74118],"S016":[13.80155,100.70511],"S017":[13.82835,100.72002],"SW06":[13.72475,100.74101],"S019":[13.71337,100.76257],"S018":[13.75802,100.79126],"S020":[13.6129,100.75651],"SW07":[13.599,100.71397],"S021":[13.5651,100.79149],"S022":[13.50292,100.83608],"S023":[13.54154,100.66235],"SP04":[13.87788,100.55349],"SM01":[13.87789,100.51404],"S003":[13.93261,100.58014],"S002":[13.93156,100.5322],"SP05":[13.87761,100.55496],"S005":[13.92434,100.68404],"S004":[13.90911,100.61698],"SP11":[13.87858,100.55298],"SW08":[13.67592,100.46761],"S026":[13.57489,100.43854],"S025":[13.64837,100.49335],"SW09":[13.72472,100.40649],"S027":[13.7067,100.35524],"S028":[13.64582,100.3852],"SW10":[13.73142,100.47622],"S033":[13.71011,100.48684],"S024":[13.71151,100.42657],"SP12":[13.80743,100.40977],"S029":[13.80616,100.47871],"S032":[13.78016,100.34428],"SM06":[13.91192,100.42452],"S030":[13.83991,100.34827],"S001":[13.92631,100.48093],"S031":[13.98311,100.32341],"SP06":[13.75901,100.47099],"S007":[13.7594,100.48442],"SP07":[13.77375,100.5303],"SP08":[13.77417,100.53128],"SP09":[13.77582,100.52958],"S006":[13.77254,100.52097],"SP10":[13.77449,100.52874]};
 
+  // มือถือ/เครื่องแรงน้อย: ลดความละเอียด + เงา และคืนหน่วยความจำ GPU ทุกครั้งที่ปิด (กันแท็บเด้ง)
+  const LITE = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || Math.min(screen.width, screen.height) < 820 || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+  const isPortrait = () => innerWidth < 760 || innerWidth < innerHeight * .9;
   let G = null;           // ฉาก (สร้างครั้งแรกที่เล่น แล้วใช้ซ้ำ)
   let P = null;           // การเล่นปัจจุบัน
 
@@ -58,6 +61,10 @@
 #frc3d-inside .fi-step .val{margin-top:10px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;font-size:22px;color:var(--c,#1b5fb4)}
 #frc3d-inside .fi-step .val small{font-family:Sarabun,sans-serif;font-weight:500;font-size:13px;color:#5f6b7d;margin-left:6px}
 #frc3d-inside [hidden]{display:none!important}
+#frc3d-inside.pt .fi-head{left:16px;right:16px;top:12px;max-width:none}#frc3d-inside.pt .fi-head h1{font-size:20px}#frc3d-inside.pt .fi-head .k{font-size:11px}
+#frc3d-inside.pt .v{padding:3px 8px;font-size:11.5px}#frc3d-inside.pt .v b{font-size:14px}
+#frc3d-inside.pt .fi-step{left:12px;right:12px;width:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));padding:14px 16px}#frc3d-inside.pt .fi-step h2{font-size:19px}#frc3d-inside.pt .fi-step p{font-size:13.5px}
+#frc3d-inside.pt .fi-bar{bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px)}#frc3d-inside.pt .fi-auto>span:first-child{display:none}#frc3d-inside.pt .chip,#frc3d-inside.pt svg{display:none}
 @media (max-width:720px){#frc3d-inside .chip{min-width:0;padding:6px 9px}#frc3d-inside .chip b{font-size:13px}#frc3d-inside .chip small{display:none}
   #frc3d-inside .fi-head h1{font-size:20px}#frc3d-inside .fi-step{width:auto;right:16px;bottom:84px}}
 @media (prefers-reduced-motion:reduce){#frc3d-inside{transition:none}}`;
@@ -76,8 +83,9 @@
       '<div class="fi-bar fi-tour" hidden><button class="g" data-f="prev" aria-label="ก่อนหน้า">◀</button><span class="dots"></span><button class="g" data-f="next" aria-label="ถัดไป">▶</button><button data-f="close">✕ ปิด</button></div>';
     const canvas = root.querySelector('canvas'), svg = root.querySelector('svg'), labEl = root.querySelector('.fi-labels');
 
-    const R = new T.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    R.setPixelRatio(Math.min(devicePixelRatio, 2)); R.setClearColor(0x000000, 0);
+    const R = new T.WebGLRenderer({ canvas, antialias: !LITE, alpha: true, powerPreference: LITE ? 'low-power' : 'default' });
+    R.setPixelRatio(Math.min(devicePixelRatio, LITE ? 1.5 : 2));
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (P) finish('error'); G = null; }); R.setClearColor(0x000000, 0);
     R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 1.05;
     R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap;
     const scene = new T.Scene(), cam = new T.PerspectiveCamera(30, 1, .03, 60);
@@ -87,7 +95,7 @@
       pan(6, 2, 0, 4.9, 0, 0, Math.PI / 2, 1.8); pan(3, 2.5, -4.9, 2.2, 1, Math.PI / 2, 0, 1.3); pan(3, 2.5, 4.9, 2.4, -1, -Math.PI / 2, 0, .9); pan(4, 2, 0, 2.5, 4.9, Math.PI, 0, .8);
       env = new T.PMREMGenerator(R).fromScene(rs, .04).texture; }
     const hemi = new T.HemisphereLight(0xfff6ea, 0xb9c6d4, .65); scene.add(hemi);
-    const key = new T.DirectionalLight(0xfff1de, 1.9); key.position.set(2.5, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+    const key = new T.DirectionalLight(0xfff1de, 1.9); key.position.set(2.5, 5, 4); key.castShadow = true; key.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048);
     Object.assign(key.shadow.camera, { left: -2.5, right: 2.5, top: 3.5, bottom: -1, near: .5, far: 14 }); key.shadow.bias = -.0004; key.shadow.radius = 4; scene.add(key);
     const rim = new T.DirectionalLight(0xdfe9ff, .55); rim.position.set(-3, 3, -4); scene.add(rim);
     const floor = new T.Mesh(new T.PlaneGeometry(30, 30), new T.ShadowMaterial({ opacity: .14 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -279,7 +287,11 @@
       if (S.t > TA - 1.1 && !S.leaving) { S.leaving = true; g.root.classList.remove('on'); }
       if (S.t > TA) { finish('end'); return; }
     } else {
-      S.stepT += raw; if (S.stepT > 6.5 && !S.hold) goStep(S.step + 1 >= g.STEPS.length ? 0 : S.step + 1);
+      S.stepT += raw;
+      if (S.autoTour) {                                   // มือถือแนวตั้ง: เล่นอัตโนมัติแบบไล่ทีละชิ้น แล้วจบ
+        g.root.querySelector('.prog b').style.width = Math.min(100, (S.step + S.stepT / 2.6) / g.STEPS.length * 100).toFixed(1) + '%';
+        if (S.stepT > 2.6) { if (S.step + 1 >= g.STEPS.length) { if (!S.leaving) { S.leaving = true; g.root.classList.remove('on'); } if (S.stepT > 3.5) { finish('end'); return; } } else goStep(S.step + 1); }
+      } else if (S.stepT > 6.5 && !S.hold) goStep(S.step + 1 >= g.STEPS.length ? 0 : S.step + 1);
       const st = g.STEPS[S.step]; tg = { door: st.door, ex: { logger: 0, water: 0, horiba: 0, cell: 0 }, lift: st.lift ? 1 : 0, lab: 0, cover: st.cover };
     }
     S.door = sm(S.door, tg.door, 3.2, dt); S.cover = sm(S.cover, tg.cover, 3.2, dt); S.lift = sm(S.lift, tg.lift, 3, dt); S.lab = sm(S.lab, tg.lab, 4, dt);
@@ -298,11 +310,12 @@
     g.focusLight.intensity = 2.2 * S.foc; g.hemi.intensity = .65 * (1 - .5 * S.foc); g.key.intensity = 1.9 * (1 - .45 * S.foc);   // ฉากมืดลง ชิ้นที่ดูสว่างเด่น
     let wantPos, wantTgt;
     if (S.mode === 'auto') { const sw = Math.sin(S.t / TA * Math.PI * 2) * .35; wantTgt = g.V3(0, 1.3, 0); wantPos = g.V3(sw + .2, 1.55, 6.3 + .3 * exAvg); }
-    else { const st = g.STEPS[S.step]; wantTgt = st.f(); wantPos = wantTgt.clone().add(st.off); }
+    else { const st = g.STEPS[S.step]; wantTgt = st.f(); wantPos = wantTgt.clone().addScaledVector(st.off, Math.max(1, Math.pow(1 / g.cam.aspect, .85))); }   // จอแนวตั้งถอยกล้องให้ชิ้นพอดีจอ
     const kc = S.mode === 'auto' ? 2.2 : 2.6;
     ['x', 'y', 'z'].forEach(a => { S.camPos[a] = sm(S.camPos[a], wantPos[a], kc, dt); S.camTgt[a] = sm(S.camTgt[a], wantTgt[a], kc, dt); });
     g.cam.position.copy(S.camPos); g.cam.lookAt(S.camTgt);
-    S.offX = sm(S.offX, S.mode === 'tour' ? -.14 : 0, 3, dt); g.cam.setViewOffset(innerWidth, innerHeight, innerWidth * S.offX, 0, innerWidth, innerHeight);
+    const pt = isPortrait(); S.offX = sm(S.offX, S.mode === 'tour' && !pt ? -.14 : 0, 3, dt); S.offY = sm(S.offY || 0, S.mode === 'tour' && pt ? .17 : 0, 3, dt);
+    g.cam.setViewOffset(innerWidth, innerHeight, innerWidth * S.offX, innerHeight * S.offY, innerWidth, innerHeight);
     const hl = S.mode === 'tour' ? g.STEPS[S.step].hl : null, pulse = .18 + .12 * Math.sin(S.now * 4);
     for (const id of MOVERS) { const on = hl === id; g.parts[id].mats.forEach(m => { if (!m.emissive || m.emissiveMap) return; m.emissive.setHex(0x4aa3df); m.emissiveIntensity = on ? pulse : 0; }); }
   }
@@ -323,7 +336,7 @@
         l.path.setAttribute('opacity', (vis * .85).toFixed(3)); l.dot.setAttribute('cx', l.x.toFixed(1)); l.dot.setAttribute('cy', l.y.toFixed(1)); l.dot.setAttribute('opacity', vis.toFixed(3)); });
     }
   }
-  function resize() { if (!G) return; const W = innerWidth, H = innerHeight; G.R.setSize(W, H, false); G.cam.aspect = W / H; G.cam.updateProjectionMatrix(); G.svg.setAttribute('viewBox', `0 0 ${W} ${H}`); }
+  function resize() { if (!G) return; G.root.classList.toggle('pt', isPortrait()); const W = innerWidth, H = innerHeight; G.R.setSize(W, H, false); G.cam.aspect = W / H; G.cam.updateProjectionMatrix(); G.svg.setAttribute('viewBox', `0 0 ${W} ${H}`); }
   function goStep(i) {
     const g = G, S = P; S.step = (i + g.STEPS.length) % g.STEPS.length; S.stepT = 0; const st = g.STEPS[S.step], el = g.root.querySelector('.fi-step');
     el.style.setProperty('--c', st.c); el.querySelector('.n').textContent = (S.step + 1) + ' / ' + g.STEPS.length;
@@ -333,7 +346,9 @@
   }
   function setMode(mode) {
     const g = G, S = P; S.mode = mode; S.hold = false;
-    g.root.querySelector('.fi-auto').hidden = mode !== 'auto'; g.root.querySelector('.fi-tour').hidden = mode !== 'tour'; g.root.querySelector('.fi-step').hidden = mode !== 'tour';
+    S.autoTour = mode === 'autotour'; if (S.autoTour) mode = S.mode = 'tour';
+    g.root.querySelector('.fi-auto').hidden = !(mode === 'auto' || S.autoTour); g.root.querySelector('.fi-tour').hidden = mode !== 'tour' || S.autoTour; g.root.querySelector('.fi-step').hidden = mode !== 'tour';
+    g.root.querySelector('[data-f=in]').textContent = S.autoTour ? '⏸ ดูทีละชิ้น' : '🔍 ดูภายในตู้';
     if (mode === 'tour') goStep(0);
   }
   function fillValues() {
@@ -366,7 +381,7 @@
   function onClick(e) {
     const b = e.target.closest('[data-f]'); if (!b || !P) return; e.stopPropagation();
     const f = b.dataset.f;
-    if (f === 'in') { setMode('tour'); if (P.onDetail) try { P.onDetail(); } catch (er) {} }
+    if (f === 'in') { if (P.autoTour) { P.autoTour = false; P.hold = true; G.root.querySelector('.fi-auto').hidden = true; G.root.querySelector('.fi-tour').hidden = false; } else setMode('tour'); if (P.onDetail) try { P.onDetail(); } catch (er) {} }
     else if (f === 'close') finish('closed');
     else if (f === 'next') { P.hold = true; goStep(P.step + 1); }
     else if (f === 'prev') { P.hold = true; goStep(P.step - 1); }
@@ -381,9 +396,10 @@
   function finish(reason) {
     const S = P; if (!S) return;
     P = null; cancelAnimationFrame(S.raf);
-    G.root.classList.remove('on');
+    if (G) G.root.classList.remove('on');
     window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', resize);
-    setTimeout(() => { if (!P && G.root.parentNode) G.root.remove(); }, 850);
+    const g0 = G; setTimeout(() => { if (P || !g0) return; if (g0.root.parentNode) g0.root.remove();
+      if (LITE && G === g0) { try { g0.R.dispose(); g0.R.forceContextLoss(); } catch (e) {} G = null; } }, 850);   // มือถือ: คืนหน่วยความจำ GPU
     if (S.onDone) try { S.onDone(reason); } catch (e) { console.error(e); }
   }
 
@@ -399,7 +415,8 @@
     for (const id of MOVERS) { const p = G.parts[id]; p.e = 0; p.g.position.copy(p.home); p.g.scale.setScalar(1); }
     G.door.rotation.y = 0; G.cover.rotation.y = 0;
     G.root.querySelector('h1').textContent = st.name || 'สถานีตรวจวัดคุณภาพน้ำ';
-    setMode(opt.mode === 'tour' ? 'tour' : 'auto');
+    G.root.classList.toggle('pt', isPortrait());
+    setMode(opt.mode === 'tour' ? 'tour' : isPortrait() ? 'autotour' : 'auto');
     fillValues(); loadTub(P);
     document.body.appendChild(G.root); resize();
     window.addEventListener('keydown', onKey, true); window.addEventListener('resize', resize);
