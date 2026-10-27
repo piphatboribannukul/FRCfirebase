@@ -2305,7 +2305,15 @@
     const D = 10500;
     m.flyTo({ center: cc, zoom: 22.35, pitch: 76, bearing: ff, duration: D, curve: 1.55, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
     setTimeout(() => { if (_cur === state && state.phase === 'fly') state.layer && state.layer.setShowcase(true); }, D * 0.72);   // เปิดไฟหลังคาตอนใกล้ถึง
-    m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.onArrive) state.onArrive(); if (state.orbit) setTimeout(() => sway(state, ff, 1), 1200); });
+    m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 5; if (state.onArrive) state.onArrive(); else autoInside(state); if (state.orbit) setTimeout(() => sway(state, ff, 1), 1200); });
+  }
+  function autoInside(state) {                       // เปิดดูสถานีเดียว: ถึงหน้าตู้ 2.5 วิ → เข้าภายในตู้เอง 1 รอบ แล้วกลับมาหน้าตู้
+    if (CFG.autoInside === false) return;
+    setTimeout(() => {
+      if (_cur !== state || _tour || state.phase !== 'idle' || state.userTook || state.insideShown) return;
+      if (!window.FRC3D_INSIDE || window.FRC3D_INSIDE.isOn()) return;
+      state.insideShown = true; window.FRC3D_INSIDE.play({ st: state.st, mode: 'auto' });
+    }, 2500);
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
