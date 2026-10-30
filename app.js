@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '40';   // [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
+const APP_VERSION = '43';   // [v43 · 30 ต.ค. 2569] แผนที่อิทธิพลสูบจ่าย: สีพื้นที่ติดกันต่างกัน · เส้นรอยต่อ · ป้ายชื่อสถานี · คำอธิบายสี + ที่มา SmartMap · ชี้เมาส์ = สถานี/สัดส่วนน้ำผสม · ชี้สถานีสูบ = ไฮไลต์พื้นที่ · แถบผสมกว้างตามสัดส่วนจริง · เมนูข้างเป็นตัวหลัก (โซนเดิมเป็นสำรอง) · เดิม [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อที่สองสถานีผลัดกันจ่าย เช่น หัวเฉียว บางพลี/ลาดกระบัง) · เติมพื้นที่นอก DMA ที่ติดแนวสายอิทธิพล ≤1.5 กม. · เดิม [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่ายจาก SmartMap (data/influence.js) เป็นตัวกำหนดต้นทาง contour ก่อนโซนเดิม · เตรียมอุดม→MDIS 17 ชม. · กองพัน→Dis2 4 ชม. · เดิม [v40.1 · 29 ต.ค. 2569] รหัสสถานี TWQMS (S001…/SM01…) ในข้อมูลสำรอง → ค่าสด/ย้อนหลังจาก Firebase ตรงทุกสถานี · เพิ่ม S033 รพ.สมเด็จพระปิ่นเกล้า (สจ.ท่าพระ 3.5 ชม.) · ราชวินิต/ตั้งพิรุฬห์ 12 ชม. · เวลาเดินน้ำไม่ใช้แรงดัน RTU (TT_PRESSURE_ON) · เดิม [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
 // ฤดูฝน มิ.ย.–พ.ย. (ใช้กับคู่ที่เวลาเดินน้ำต่างตามฤดู เช่น สจ.บางพลี → สภ.คลองด่าน แล้ง 17 / ฝน 20.5)
 function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 // [v39 · 3 ต.ค. 2569] ตารางเวลาเดินน้ำปรับใหม่ 47 คู่ จากการเทียบพีค TWQMS รายชั่วโมง ม.ค.–ก.ย. 2569 (7 เดือน, EC+FRC,
@@ -97,7 +97,7 @@ const EC_FALLBACK = {
   31:248, 32:250, 34:252, 35:236, 36:232, 37:252, 38:252, 39:258, 40:268,
   41:268, 42:265, 43:265, 44:252, 45:250, 46:250, 47:252, 48:252, 49:252,
   50:255, 51:258, 52:258, 53:208, 54:212, 55:214, 56:186, 57:187,
-  58:180, 59:180, 60:180, 61:180
+  58:180, 59:180, 60:180, 61:180, 62:280   // 62 = S033 รพ.สมเด็จพระปิ่นเกล้า [v40.1]
 };
 
 // ── Fallback: ข้อมูลสำรองกรณี API ไม่พร้อมใช้งาน ──────────────────────
@@ -111,12 +111,15 @@ let SENSORS = [];
 // VC ไม่ใช่ค่าวัดจริง — เป็นค่า simulate จาก EPANET ที่คำนวณมาจากสถานีต้นทาง (สูบส่ง)
 // valvePct = % การเปิดวาล์ว (0% = ปิด/ติดเฉยๆ ไม่มีอิทธิพล)
 // ══════════════════════════════════════════════════════════════════════
+// [v41 · 29 ต.ค. 2569] rcv = เลข RCV ใน SmartMap (ฝ่ายควบคุมระบบจ่ายน้ำ) — ตรวจจากตำแหน่งประตูน้ำใน SmartMap ตรงกับพิกัด VC (ห่าง 0–0.1 กม.)
+//   VC01 12→27 · VC02 –→66 · VC04 –→28 · VC05 38→60 · VC08=48 · VC11=51 · VC12=25 · VC13=50 (เดิมถูกแล้ว)
+//   ใช้ผูกพื้นที่อิทธิพล RCV ใน SmartMap กับ VC ของเรา (ดู _infLineSensor)
 const VC_STATIONS = [
-  {id:"VC01",name:"VC ประชานุกูล (วงสว่าง)",       rcv:"12", lat:13.831165, lon:100.539147, sourceId:"SP01", valvePct:73,    type:"vc"},
-  {id:"VC02",name:"VC เฉลิมพันธ์ (ประชาราษฎร์ 2)", rcv:"",   lat:13.805538, lon:100.533210, sourceId:"SP01", valvePct:36,    type:"vc"},
+  {id:"VC01",name:"VC ประชานุกูล (วงสว่าง)",       rcv:"27", lat:13.831165, lon:100.539147, sourceId:"SP01", valvePct:73,    type:"vc"},
+  {id:"VC02",name:"VC เฉลิมพันธ์ (ประชาราษฎร์ 2)", rcv:"66", lat:13.805538, lon:100.533210, sourceId:"SP01", valvePct:36,    type:"vc"},
   {id:"VC03",name:"VC ประดิพัทธ์",                  rcv:"",   lat:13.792821, lon:100.535011, sourceId:"",     valvePct:0,     type:"vc"},
-  {id:"VC04",name:"VC สามเสน (กำแพงเพชร 5)",       rcv:"",   lat:13.774578, lon:100.527910, sourceId:"SP01", valvePct:0.09,  type:"vc"},
-  {id:"VC05",name:"VC สี่พระยา",                    rcv:"38", lat:13.730218, lon:100.515738, sourceId:"SP01", valvePct:0.05,  type:"vc"},
+  {id:"VC04",name:"VC สามเสน (กำแพงเพชร 5)",       rcv:"28", lat:13.774578, lon:100.527910, sourceId:"SP01", valvePct:0.09,  type:"vc"},
+  {id:"VC05",name:"VC สี่พระยา",                    rcv:"60", lat:13.730218, lon:100.515738, sourceId:"SP01", valvePct:0.05,  type:"vc"},
   {id:"VC06",name:"VC เจริญนคร 2 (ลาดหญ้า)",       rcv:"52", lat:13.730260, lon:100.509652, sourceId:"SP01", valvePct:0,     type:"vc"},
   {id:"VC07",name:"VC เจริญนคร 34 (ราษฎร์บูรณะ)",   rcv:"53", lat:13.693769, lon:100.486592, sourceId:"SP01", valvePct:0,     type:"vc"},
   {id:"VC08",name:"VC ราชมนตรี (กัลปพฤกษ์)",        rcv:"48", lat:13.688184, lon:100.428492, sourceId:"SP11", valvePct:73,    type:"vc"},
@@ -732,6 +735,12 @@ function renderStationKList() {
   el.innerHTML = html;
 }
 
+// [v40.1 · 29 ต.ค. 2569] แรงดัน RTU ในเวลาเดินน้ำ — ปิดเป็นค่าเริ่มต้น
+//   ทดสอบ 38 คู่สถานี (Firebase 7 วัน): ความเร็วจริงไม่สัมพันธ์กับแรงดันที่ปลายทาง (r = −0.08) และต้นทาง (r = 0.25)
+//   ทายเวลาเดินน้ำแบบซ่อนสถานี: ความเร็วคงที่ คลาด 2.6 ชม. · แรงดันต้นทาง 2.5 ชม. · แรงดันรายจุด 3.9 ชม. (แย่ลง)
+//   contour เทียบค่าวัด 24 ชม.: เปิด/ปิดแรงดัน คลาดเท่ากัน (0.184 / 0.185 mg/L) → เวลาเดินน้ำมาจากตาราง (v39) อย่างเดียว
+//   เปิดกลับได้: window.TT_PRESSURE_ON = true แล้ว buildIdwCache()
+window.TT_PRESSURE_ON = false;
 function epanetDecay(dKm, sensor, lat, lon, distMult) {
   // single pressure layer with automatic source selection.
   //   1) s.rtuPressure — pre-injected per-sensor nearest RTU pressure (fastest, avoids O(N) scan per pixel)
@@ -743,10 +752,10 @@ function epanetDecay(dKm, sensor, lat, lon, distMult) {
   //   ไม่มี pipe diameter รายจุด → velocity คำนวณเพี้ยนกว่า sensor จริง
   let L_m = dKm * 1000;
   let v_adj = EPANET.v;
-  let rtuApplied = false;
+  let rtuApplied = !window.TT_PRESSURE_ON;   // [v40.1] ปิดแรงดัน = ไม่ใช้ทั้ง RTU และ _pressureGrid
 
   // RTU Bernoulli: v ∝ √P (pFactor per-sensor)
-  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+  if (window.TT_PRESSURE_ON && sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
     const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
     v_adj = EPANET.v * pFactor;
     rtuApplied = true;
@@ -790,8 +799,8 @@ function getParamVal(s) {
     if (s.ec != null) return s.ec;
     // fallback: numeric id
     if (typeof s.id === 'number') return EC_FALLBACK[s.id] || 300;
-    // fallback: string id → map to numeric
-    const numId = _EC_ID_MAP[s.id];
+    // fallback: string id → map to numeric  ([v40.1] สถานีตรวจวัดใช้ s.num = เลขเดิมของ EC_FALLBACK)
+    const numId = s.num != null ? s.num : _EC_ID_MAP[s.id];
     if (numId && EC_FALLBACK[numId]) return EC_FALLBACK[numId];
     return 300;
   }
@@ -1574,6 +1583,7 @@ function buildIdwCache() {
   const rows = CACHE_RES + 1;
   _idwCache = new Float32Array(rows * rows);
   try { if (typeof _v39BuildAnchors === 'function') _v39BuildAnchors(); if (window.V39_FIT_K && typeof _v39FitK === 'function') _v39FitK(); } catch(e) { console.warn('[v39] anchors', e.message); }
+  try { if (typeof _infMixUpdate === 'function') _infMixUpdate(); } catch(e) { console.warn('[v42] สัดส่วนน้ำผสม', e.message); _infMixSites = []; }
   const dlat = (CACHE_LAT1 - CACHE_LAT0) / CACHE_RES;
   const dlon = (CACHE_LON1 - CACHE_LON0) / CACHE_RES;
 
@@ -1590,8 +1600,8 @@ function buildIdwCache() {
       window._v39pxLat = lat; window._v39pxLon = lon;   // [v39]
       if (PARAM_MODE === 'ec') {
         // rev24: EC zone-aware
-        let _ecZV = null;
-        if (window.CUSTOM_ZONES) {
+        let _ecZV = (typeof _influenceEc === 'function') ? _influenceEc(lat, lon, j, i) : null;   // [v41] อิทธิพล SmartMap ก่อน
+        if (_ecZV === null && window.CUSTOM_ZONES) {
           for (const [_es, _ez] of Object.entries(window.CUSTOM_ZONES)) {
             if (_es.startsWith('VC') || !_ez.coords || _ez.coords.length < 3) continue;
             if (!_pip(lat, lon, _ez.coords)) continue;
@@ -1636,6 +1646,12 @@ function buildIdwCache() {
         if (vcVal !== null) {
           _idwCache[j * rows + i] = vcVal;
           continue;
+        }
+
+        // 1.5 [v41] พื้นที่อิทธิพลสูบจ่าย (SmartMap) — ถ้าช่องนี้อยู่ใน DMA ที่มีอิทธิพลหลัก ใช้ต้นทางตามอิทธิพล
+        if (window.INFLUENCE_ON && typeof _influenceFrc === 'function') {
+          const infVal = _influenceFrc(lat, lon, j, i);
+          if (infVal !== null) { _idwCache[j * rows + i] = infVal; continue; }
         }
 
         // 2. CUSTOM_ZONES polygon — สถานีสูบจ่าย (highest priority after VC)
@@ -1722,7 +1738,7 @@ window._frcDiag = function(lat, lon) {
     console.log('  sensor:', sensor.id, '| C0 (sensor.frc):', sensor.frc);
     console.log('  ระยะทาง:', dKm.toFixed(3), 'km');
     let vSrc = 'EPANET default (' + EPANET.v + ' m/s)';
-    if (sensor.rtuPressure > 0) vSrc = 'RTU Bernoulli (P=' + sensor.rtuPressure + ')';
+    if (window.TT_PRESSURE_ON && sensor.rtuPressure > 0) vSrc = 'RTU Bernoulli (P=' + sensor.rtuPressure + ')';
     console.log('  velocity source:', vSrc);
     const K = (typeof CONTOUR_K_OVERRIDE !== 'undefined' && CONTOUR_K_OVERRIDE[sensor.id]) ||
               (typeof STATION_K_OVERRIDE !== 'undefined' && STATION_K_OVERRIDE[sensor.id]) ||
@@ -2704,20 +2720,21 @@ const EC_ROOT_SOURCE_MAP = {
   'มหาวิทยาลัยเอเชียอาคเนย์':                                  { root: 'RAW_MAEKLONG', ttRoot: 110.5}, // 100+2+6.5
   'เรือนจำพิเศษธนบุรี':                                         { root: 'RAW_MAEKLONG', ttRoot: 107.5}, // 100+2+5.5
   'ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)': { root: 'RAW_MAEKLONG', ttRoot: 113}, // 100+7+3.5
+  'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ': { root: 'RAW_MAEKLONG', ttRoot: 112.5}, // [v40.1] สจ.ท่าพระ 109 + 3.5
   // ── Dis1 (สำแล 17 + Dis1→สถานี) ───────────────────────────────────
   'สำนักงานประปาสาขานนทบุรี':                                  { root: 'RAW_SAMLE',  ttRoot: 22.5 }, // 17+4.5
   'กองพันทหารสื่อสาร':                                          { root: 'RAW_SAMLE',  ttRoot: 21.5   }, // 17+5
-  'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                   { root: 'RAW_SAMLE',  ttRoot: 21.5   }, // 17+5
+  'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                   { root: 'RAW_SAMLE',  ttRoot: 21   }, // 17+4 [v41 Dis2 ตาม SmartMap BK04]
   'โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก':                      { root: 'RAW_SAMLE',  ttRoot: 22   }, // 17+6
-  'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี':                 { root: 'RAW_SAMLE',  ttRoot: 29 }, // 17+11.5
+  'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี':                 { root: 'RAW_MAEKLONG', ttRoot: 117 }, // 100+17 [v41 รับจากมหาสวัสดิ์ ตาม SmartMap MH-LineA · เดิม สำแล 17+11.5]
   // ── Dis2 (สำแล 17 + Dis2→สถานี) ───────────────────────────────────
   'โรงพยาบาลภูมิพลอดุลยเดช':                                   { root: 'RAW_SAMLE',  ttRoot: 21 }, // 17+3.5
   'โรงพยาบาลซีจีเอช สายไหม':                                   { root: 'RAW_SAMLE',  ttRoot: 29   }, // 17+12  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 27)
   // ── ธนบุรี (สำแล 44+4=48 + สามเสน→ธนบุรี 2) ──────────────────────
   'โรงพยาบาลศิริราช':                                           { root: 'RAW_SAMLE',  ttRoot: 50   }, // 48+2
   // ── MDIS (เขื่อนแม่กลอง → มหาสวัสดิ์ 100 + MDIS→สถานี) ────────
-  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 105 }, // 100+5  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC (เดิม 122.5)
-  'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'RAW_MAEKLONG', ttRoot: 106.5}, // 100+6.5
+  'โรงเรียนราชวินิต นนทบุรี':                                   { root: 'RAW_MAEKLONG', ttRoot: 112 }, // 100+12 [v40.1 เดิม 100+5]  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC (เดิม 122.5)
+  'โรงเรียนตั้งพิรุฬห์ธรรม':                                    { root: 'RAW_MAEKLONG', ttRoot: 112 }, // 100+12 [v40.1 เดิม 100+6.5]
   'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี':              { root: 'RAW_MAEKLONG', ttRoot: 107.5}, // 100+4.5
   'สำนักงานประปาสาขาบางบัวทอง':                                { root: 'RAW_MAEKLONG', ttRoot: 113.5  }, // 100+14  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 110.5)
   'สถานีตำรวจภูธรไทรน้อย':                                     { root: 'RAW_MAEKLONG', ttRoot: 122.5}, // 100+16.5
@@ -2807,9 +2824,9 @@ function buildMarkers() {
     'บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)': { tt_from: '3', tt_label: 'จาก สจ.ลาดกระบัง' },
     'มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)': { tt_from: '4',   tt_label: 'จาก สจ.บางพลี' },
     'สำนักงานประปาสาขานนทบุรี':           { tt_from: '5.5',  tt_label: 'จาก Dis1' },
-    'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                  { tt_from: '4.5',    tt_label: 'จาก Dis1' },
+    'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                  { tt_from: '4',    tt_label: 'จาก Dis2' },  // [v41 · 29 ต.ค. 2569] SmartMap: อิทธิพล BK04-Line1 (Dis2) · ระดับ FRC 3.5 ชม. · เดิม Dis1 4.5
     'โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก': { tt_from: '5', tt_label: 'จาก Dis1' },
-    'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี': { tt_from: '12', tt_label: 'จาก Dis1' },
+    'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี': { tt_from: '17', tt_label: 'จาก MDIS' },  // [v41 · 29 ต.ค. 2569] SmartMap: อิทธิพล MH-LineA · พีค FRC 18.5 ชม. + ระดับ FRC 16.4 ชม. · เดิม Dis1 12
     'โรงพยาบาลซีจีเอช สายไหม':            { tt_from: '12',   tt_label: 'จาก Dis2' },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10)
     'โรงพยาบาลภูมิพลอดุลยเดช':            { tt_from: '4',  tt_label: 'จาก Dis2' },
     'โรงพยาบาลศิริราช':                   { tt_from: '2',     tt_label: 'จากโรงงานธนบุรี' },
@@ -2819,11 +2836,12 @@ function buildMarkers() {
     'มหาวิทยาลัยเอเชียอาคเนย์':            { tt_from: '6-7',   tt_label: 'จาก สจ.เพชรเกษม' },
     'เรือนจำพิเศษธนบุรี':                  { tt_from: '3.5',   tt_label: 'จาก สจ.เพชรเกษม' },
     'ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)': { tt_from: '4', tt_label: 'จาก สจ.ท่าพระ' },
+    'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ': { tt_from: '3.5', tt_label: 'จาก สจ.ท่าพระ' },  // [v40.1 · 29 ต.ค. 2569] สถานีใหม่ S033 · พีค FRC 3.75 ชม. (r 0.43) + ระดับ FRC/K 2.9 ชม. · Firebase 7 วัน
     'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี': { tt_from: '7.5',  tt_label: 'จาก MDIS' },
     'สำนักงานประปาสาขาบางบัวทอง':         { tt_from: '13.5',   tt_label: 'จาก MDIS' },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10.5)
     'สถานีตำรวจภูธรไทรน้อย':              { tt_from: '22.5', tt_label: 'จาก MDIS' },
-    'โรงเรียนราชวินิต นนทบุรี':            { tt_from: '5',   tt_label: 'จาก MDIS' },  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC TWQMS 13–15 ต.ค. (เดิม 22.5)
-    'โรงเรียนตั้งพิรุฬห์ธรรม':             { tt_from: '6-7',   tt_label: 'จาก MDIS' },
+    'โรงเรียนราชวินิต นนทบุรี':            { tt_from: '12',  tt_label: 'จาก MDIS' },  // [v40.1 · 29 ต.ค. 2569] 5 → 12 (พีค FRC 12 ชม. + K ที่เอียง=0 ตรงกับ K โซน) · เดิม  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC TWQMS 13–15 ต.ค. (เดิม 22.5)
+    'โรงเรียนตั้งพิรุฬห์ธรรม':             { tt_from: '12',  tt_label: 'จาก MDIS' },  // [v40.1 · 29 ต.ค. 2569] 6-7 → 12 (พีค FRC 11.5–12 ชม. สองวิธี)
   };
 
   // ── map: tt_label shorthand → ชื่อเต็มของ sensor ต้นทาง ──────────────────
@@ -2855,59 +2873,15 @@ function buildMarkers() {
   // ── ROOT_SOURCE_MAP: trace ปลายทาง → root source (โรงงาน/TR/MH/MDIS) ──────
   // key = ชื่อสถานีปลายทาง, value = { rootName, ttTotal (ชม.) }
   // ttTotal = tt จาก สจ. + tt จาก สจ. → root
-  ROOT_SOURCE_MAP = window._ROOT_SOURCE_MAP = {
-    // สจ. → root โดยตรง (สจ. เป็นปลายทางเอง)
-    'สถานีสูบจ่ายน้ำลุมพินี':    { root: 'จาก TR1', ttRoot: 5.5   },
-    'สถานีสูบจ่ายน้ำพหลโยธิน':   { root: 'จาก TR1', ttRoot: 3   },
-    'สถานีสูบจ่ายน้ำสำโรง':       { root: 'จาก TR1', ttRoot: 8   },
-    'สถานีสูบจ่ายน้ำลาดพร้าว':    { root: 'จาก TR2', ttRoot: 4.5   },
-    'สถานีสูบจ่ายน้ำคลองเตย':     { root: 'จาก TR2', ttRoot: 4   },
-    'สถานีสูบจ่ายน้ำบางพลี':       { root: 'จาก TR3', ttRoot: 13  },
-    'สถานีสูบจ่ายน้ำมีนบุรี':      { root: 'จาก TR3', ttRoot: 9   },
-    'สถานีสูบจ่ายน้ำลาดกระบัง':   { root: 'จาก TR3', ttRoot: 9   },
-    'สถานีสูบจ่ายน้ำราษฎร์บูรณะ': { root: 'จาก MTR', ttRoot: 7  },
-    'สถานีสูบจ่ายน้ำเพชรเกษม':    { root: 'จาก MTR', ttRoot: 4  },
-    'สถานีสูบจ่ายน้ำท่าพระ':      { root: 'จาก MTR', ttRoot: 9  },
-    // ปลายทาง monitor → root (tt = tt_สจ. + tt_root)
-    'สำนักงานประปาสาขาทุ่งมหาเมฆ':       { root: 'จาก สจ.ลุมพินี', ttRoot: 6   },
-    'บริษัท โอสถสภา จำกัด (มหาชน)':      { root: 'จาก สจ.ลาดพร้าว', ttRoot: 2 },
-    'สถานคุ้มครองและพัฒนาอาชีพบ้านเกร็ดตระการ': { root: 'จาก สจ.ลาดพร้าว', ttRoot: 3.5  },
-    'ศูนย์วิทยาศาสตร์เพื่อการศึกษาแห่งชาติ': { root: 'จาก สจ.คลองเตย', ttRoot: 8  },
-    'สำนักงานประปาสาขาสุขุมวิท-พระโขนง':          { root: 'จาก สจ.คลองเตย', ttRoot: 3.5 },
-    'บริษัท ศิครินทร์ จำกัด (มหาชน) (โรงพยาบาลศิครินทร์)': { root: 'จาก สจ.สำโรง', ttRoot: 4.5 },
-    'โรงเรียนหาดอมราอักษรลักษณ์วิทยา':   { root: 'จาก สจ.สำโรง', ttRoot: 10 },
-    'บริษัท เอจีซี แฟลทกลาส (ประเทศไทย) จำกัด (มหาชน)': { root: 'จาก สจ.สำโรง', ttRoot: 4 },
-    'สำนักงานประปาสาขาสมุทรปราการ':       { root: 'จาก สจ.สำโรง', ttRoot: 2 },
-    'โรงไฟฟ้าพระนครใต้':                  { root: 'จาก สจ.สำโรง', ttRoot: 2 },
-    'นิคมอุตสาหกรรมบางพลี':              { root: 'จาก สจ.บางพลี', ttRoot: 5.5 },
-    'สถานีตำรวจภูธรคลองด่าน':             { root: 'จาก สจ.บางพลี', ttRoot: (_v39Wet()?20.5:17) },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 17)
-    'นิคมอุตสาหกรรมบางปู':               { root: 'จาก สจ.บางพลี', ttRoot: 5.5  },
-    'บริษัท มหาจักรออโตพาร์ท จำกัด':     { root: 'จาก สจ.มีนบุรี', ttRoot: 12.5 },
-    'สำนักงานประปาสาขามีนบุรี':           { root: 'จาก สจ.มีนบุรี', ttRoot: 4 },
-    'นิคมอุตสาหกรรมบางชัน':              { root: 'จาก สจ.มีนบุรี', ttRoot: 1.5  },
-    'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์':   { root: 'จาก สจ.มีนบุรี', ttRoot: 4  },
-    'นิคมอุตสาหกรรมลาดกระบัง':           { root: 'จาก สจ.ลาดกระบัง', ttRoot: 11 },
-    'บริษัท ท่าอากาศยานไทย มหาชน จำกัด (สุวรรณภูมิ)': { root: 'จาก สจ.ลาดกระบัง', ttRoot: 3 },
-    'มหาวิทยาลัยหัวเฉียวเฉลิมพระเกียรติ (วิทยาเขตบางพลี)': { root: 'จาก สจ.บางพลี', ttRoot: 4 },
-    'สำนักงานประปาสาขานนทบุรี':           { root: 'จาก Dis1', ttRoot: 5.5 },
-    'กองพันทหารสื่อสาร กองบัญชาการกองทัพไทย':                  { root: 'จาก Dis1', ttRoot: 4.5   },
-    'โรงเรียนทหารขนส่ง กรมการขนส่งทหารบก': { root: 'จาก Dis1', ttRoot: 5   },
-    'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี': { root: 'จาก Dis1', ttRoot: 12 },
-    'โรงพยาบาลซีจีเอช สายไหม':            { root: 'จาก Dis2', ttRoot: 12  },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10)
-    'โรงพยาบาลภูมิพลอดุลยเดช':            { root: 'จาก Dis2', ttRoot: 4 },
-    'โรงพยาบาลศิริราช':                   { root: 'จากโรงงานธนบุรี',   ttRoot: 2  },
-    'พระราชวังดุสิต สวนจิตรลดา':          { root: 'จากโรงงานสามเสน 3', ttRoot: 2  },
-    'ม.เทคโนโลยีพระจอมเกล้าธนบุรี (วิทยาเขตบางขุนเทียน)': { root: 'จาก สจ.ราษฎร์บูรณะ', ttRoot: 17 },
-    'ศูนย์กีฬาเฉลิมพระเกียรติ':            { root: 'จาก สจ.ราษฎร์บูรณะ', ttRoot: 3 },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 3.5)
-    'มหาวิทยาลัยเอเชียอาคเนย์':            { root: 'จาก สจ.เพชรเกษม', ttRoot: 6.5 },
-    'เรือนจำพิเศษธนบุรี':                  { root: 'จาก สจ.เพชรเกษม', ttRoot: 3.5 },
-    'ศูนย์พัฒนาการจัดสวัสดิการสังคมผู้สูงอายุบ้านบางแค (บ้านพักคนชราบางแค)': { root: 'จาก สจ.ท่าพระ', ttRoot: 4 },
-    'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี': { root: 'จาก MDIS', ttRoot: 7.5 },
-    'สำนักงานประปาสาขาบางบัวทอง':         { root: 'จาก MDIS', ttRoot: 13.5 },  // [v38.3.1 · 3 ต.ค. 2569] ปรับจากการเทียบพีค (เดิม 10.5)
-    'สถานีตำรวจภูธรไทรน้อย':              { root: 'จาก MDIS', ttRoot: 22.5 },
-    'โรงเรียนราชวินิต นนทบุรี':            { root: 'จาก MDIS', ttRoot: 5 },  // [v39.1 · 16 ต.ค. 2569] ระดับ FRC TWQMS 13–15 ต.ค. (เดิม 22.5)
-    'โรงเรียนตั้งพิรุฬห์ธรรม':             { root: 'จาก MDIS', ttRoot: 6.5 },
-  };
+  // [v41 · จัดระเบียบ] สร้างจาก TRAVEL_TIME อัตโนมัติ (เดิมเป็นตารางซ้ำอีกชุด ต้องแก้ 2 ที่) — ผลเหมือนเดิมทุกค่า
+  //   ไม่รวมสถานีที่ต้นทางเป็นน้ำดิบ (สำแล/เขื่อนแม่กลอง) · 'จาก MH' ใช้ชื่อ 'จาก MTR' ตามตารางเดิม · ช่วง '6-7' = ค่ากลาง
+  ROOT_SOURCE_MAP = window._ROOT_SOURCE_MAP = {};
+  for (const [dest, info] of Object.entries(TRAVEL_TIME)) {
+    if (/สำแล|เขื่อนแม่กลอง/.test(info.tt_label)) continue;
+    const parts = String(info.tt_from).split('-').map(parseFloat).filter(isFinite);
+    if (!parts.length) continue;
+    ROOT_SOURCE_MAP[dest] = { root: info.tt_label === 'จาก MH' ? 'จาก MTR' : info.tt_label, ttRoot: parts.reduce((a, b) => a + b, 0) / parts.length };
+  }
 
   // ── parse travel time → ค่าตัวเลข (ใช้ค่าสูงสุดของช่วง) ──────────────
   function parseTTmax(str) {
@@ -4994,6 +4968,8 @@ const STATION_K_DEFAULT = {};
     'สำนักงานประปาสาขาบางบัวทอง', 'โรงเรียนราชวินิต นนทบุรี',
     'โรงเรียนตั้งพิรุฬห์ธรรม', 'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
     'สถานีตำรวจภูธรไทรน้อย',
+    'โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นนทบุรี',   // [v41] รับจากมหาสวัสดิ์ (SmartMap)
+    'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ',   // [v40.1] รับน้ำจาก สจ.ท่าพระ (แม่กลอง)
   ];
   for (const name of MH_NAMES) STATION_K_DEFAULT[name] = 0.038; // MH default (3mo-fit median)
   // ── กลุ่มเจ้าพระยา (TR/สามเสน/ธนบุรี) — k median=0.062/hr hl~11h ──
@@ -5372,7 +5348,7 @@ function recordHistory(sensors) {
 
   for (const s of sensors) {
     // ข้อ 1: บันทึกเฉพาะ mapped (API) sensors เท่านั้น
-    // fallback sensors มี id เป็น number (จาก SENSORS_FALLBACK) → ข้าม
+    // [v40.1] SENSORS_FALLBACK ใช้รหัส TWQMS แล้ว — เงื่อนไขนี้เหลือไว้กันข้อมูลเก่าที่ยังเป็นตัวเลข
     if (typeof s.id === 'number') continue;
     // ต้องมี id เป็น string (stationCode จาก API)
     if (!s.id || typeof s.id !== 'string') continue;
@@ -5403,142 +5379,7 @@ function recordHistory(sensors) {
   return hist;
 }
 
-function fitAllK(hist) {
-  // ── วิธีที่ถูกต้อง: fit k จากคู่ (ต้นทาง, ปลายทาง) ──────────────────
-  // k = -ln(FRC_ปลาย / FRC_ต้น) / tt
-  // โดยจับคู่ค่าที่วัดได้ ณ เวลาที่ตรงกัน (ต้นทาง ณ t, ปลายทาง ณ t+tt)
-  let fitted = 0;
-
-  // สร้าง lookup: sensor name → id จาก SENSORS
-  const nameToId = {};
-  for (const s of SENSORS) nameToId[s.name] = s.id?.toString();
-
-  // PAIR_TT: คู่ (srcId, destId, tt_hr) จาก TRAVEL_TIME ที่มีอยู่
-  // ดึงจาก TRAVEL_TIME ซึ่งอยู่ใน buildMarkers scope — ต้องสร้างใหม่ที่นี่
-  // ข้อ 3: PAIR_TT_GLOBAL — 25 คู่ src-dest ตาม travel time
-  const PAIR_TT_GLOBAL = [
-    // srcId, destId, tt (ชม.) — จาก TRAVEL_TIME + SOURCE_MAP
-    // กลุ่ม TR/MDIS (2 คู่)
-    { src: '4',  dest: '23', tt: 4.5  }, // Dis1 → นนทบุรี
-    { src: '4',  dest: '30', tt: 6    }, // Dis1 → ทหารขนส่ง
-    // กลุ่ม Dis2 (3 คู่)
-    { src: '5',  dest: '32', tt: 3.5  }, // Dis2 → รพ.ภูมิพล
-    { src: '5',  dest: '34', tt: 10   }, // Dis2 → รพ.ซีจีเอช
-    { src: '5',  dest: '29', tt: 11.5 }, // Dis2 → เตรียมอุดมฯ
-    // กลุ่มสจ.ลุมพินี (1 คู่)
-    { src: '13', dest: '24', tt: 1    }, // สจ.ลุมพินี → ทุ่งมหาเมฆ
-    // กลุ่มสจ.ลาดพร้าว (2 คู่)
-    { src: '14', dest: '37', tt: 1.5  }, // สจ.ลาดพร้าว → โอสถสภา
-    { src: '14', dest: '38', tt: 5    }, // สจ.ลาดพร้าว → เกร็ดตระการ
-    // กลุ่มสจ.คลองเตย (2 คู่)
-    { src: '15', dest: '25', tt: 2.5  }, // สจ.คลองเตย → สุขุมวิท
-    { src: '15', dest: '39', tt: 5    }, // สจ.คลองเตย → ท้องฟ้าจำลอง
-    // กลุ่มสจ.สำโรง (3 คู่)
-    { src: '16', dest: '26', tt: 2.5  }, // สจ.สำโรง → สมุทรปราการ
-    { src: '16', dest: '40', tt: 4.5  }, // สจ.สำโรง → ศิครินทร์
-    { src: '16', dest: '41', tt: 6.5  }, // สจ.สำโรง → หาดอมรา
-    // กลุ่มสจ.มีนบุรี (2 คู่)
-    { src: '17', dest: '27', tt: 2.5  }, // สจ.มีนบุรี → สาขามีนบุรี
-    { src: '17', dest: '45', tt: 1.5  }, // สจ.มีนบุรี → บางชัน
-    // กลุ่มสจ.ลาดกระบัง (2 คู่)
-    { src: '18', dest: '47', tt: 1    }, // สจ.ลาดกระบัง → นิคมลาดกระบัง
-    { src: '18', dest: '48', tt: 1    }, // สจ.ลาดกระบัง → สุวรรณภูมิ
-    // กลุ่มสจ.บางพลี (2 คู่)
-    { src: '19', dest: '50', tt: 5    }, // สจ.บางพลี → นิคมบางพลี
-    { src: '19', dest: '52', tt: 7    }, // สจ.บางพลี → บางปู
-    // กลุ่มสจ.ราษฎร์บูรณะ (1 คู่)
-    { src: '20', dest: '54', tt: 3.5  }, // สจ.ราษฎร์บูรณะ → ศูนย์กีฬา
-    // กลุ่มสจ.เพชรเกษม (1 คู่)
-    { src: '21', dest: '56', tt: 6.5  }, // สจ.เพชรเกษม → เอเชียอาคเนย์
-    // กลุ่มสจ.ท่าพระ (1 คู่)
-    { src: '22', dest: '53', tt: 3.5  }, // สจ.ท่าพระ → บางแค
-    // กลุ่ม MDIS (5 คู่)
-    { src: '12', dest: '28', tt: 10.5 }, // MDIS → บางบัวทอง
-    { src: '12', dest: '59', tt: 12   }, // MDIS → ราชวินิต
-    { src: '12', dest: '58', tt: 4.5  }, // MDIS → บดินทรเดชา
-    { src: '12', dest: '60', tt: 16.5 }, // MDIS → ไทรน้อย (tt_from 15-18 → mid 16.5)
-    { src: '12', dest: '61', tt: 13   }, // MDIS → ตั้งพิรุฬห์ธรรม
-    // สถานีที่ขาดคู่ — เพิ่มเพื่อ auto-fit k ครบทุกสถานี
-    { src: '4',  dest: '31', tt: 5    }, // Dis1 → กองพัน
-    { src: '4',  dest: '29', tt: 11.5 }, // Dis1 → เตรียมอุดมฯ
-    { src: '9',  dest: '35', tt: 1    }, // สามเสน3 → จิตรลดา
-    { src: '6',  dest: '36', tt: 2    }, // ธนบุรี → ศิริราช
-    { src: '16', dest: '43', tt: 4    }, // สำโรง → โรงไฟฟ้า
-    { src: '17', dest: '44', tt: 15   }, // มีนบุรี → มหาจักร
-    { src: '17', dest: '46', tt: 4.5  }, // มีนบุรี → ไตเทียม
-    { src: '18', dest: '49', tt: 6    }, // ลาดกระบัง → หัวเฉียวบางพลี
-    { src: '19', dest: '51', tt: 17   }, // บางพลี → คลองด่าน
-    { src: '20', dest: '55', tt: 9.5  }, // ราษฎร์บูรณะ → มจธ บางขุนเทียน
-    { src: '21', dest: '57', tt: 5.5  }, // เพชรเกษม → เรือนจำธนบุรี
-    { src: '14', dest: '38', tt: 5    }, // ลาดพร้าว → เกร็ดตระการ *เพิ่ม dest id
-    { src: '16', dest: '42', tt: 3.5  }, // สำโรง → เอจีซี
-  ]; // รวม 40 คู่
-
-  for (const pair of PAIR_TT_GLOBAL) {
-    const srcPts = (hist[pair.src] || []).sort((a,b) => a.ts - b.ts);
-    const destPts = (hist[pair.dest] || []).sort((a,b) => a.ts - b.ts);
-    if (srcPts.length < 2 || destPts.length < 2) continue;
-
-    const ttMs = pair.tt * 3600000;
-    const kSamples = [];
-
-    // จับคู่: ต้นทาง ณ ts_src → ปลายทาง ณ ts_src + tt (time-matched)
-    for (const sp of srcPts) {
-      if (sp.frc <= 0) continue;
-      const targetTs = sp.ts + ttMs;
-      const dp = destPts.reduce((a,b) =>
-        Math.abs(b.ts - targetTs) < Math.abs(a.ts - targetTs) ? b : a
-      );
-      if (Math.abs(dp.ts - targetTs) > 15*60000) continue; // ห่างเกิน 15 นาที
-      if (dp.frc <= 0 || dp.frc > sp.frc * 1.5) continue; // sanity
-
-      const k = -Math.log(dp.frc / sp.frc) / pair.tt;
-      // cap: k ระบบประปาไม่ควรเกิน 0.5/hr (conservative)
-      if (k >= 0.003 && k <= 0.05) kSamples.push(k); // cap: 0.003–0.05/hr (half-life 14–231 hr)
-    }
-
-    if (kSamples.length === 0) continue;
-
-    // ใช้ median แทน mean เพื่อ robust ต่อ outlier
-    const sorted_k = [...kSamples].sort((a,b) => a-b);
-    const mid = Math.floor(sorted_k.length / 2);
-    const kMedian = sorted_k.length % 2
-      ? sorted_k[mid]
-      : (sorted_k[mid-1] + sorted_k[mid]) / 2;
-
-    // ต้องการ sample ≥ 3 จึงเชื่อถือได้ ไม่งั้นรอข้อมูลเพิ่ม
-    if (kSamples.length < 3) continue;
-
-    // ไม่ overwrite K ที่ user auto-fit ไว้แล้ว (จาก Firebase)
-    if (STATION_K[pair.dest] == null) { STATION_K[pair.dest] = kMedian; }
-    if (!STATION_K[pair.src]) STATION_K[pair.src] = kMedian;
-    fitted++;
-  }
-
-  // fallback: self-fit ด้วย linear regression บน ln(frc) vs t
-  // ใช้เฉพาะสถานีที่มีข้อมูลเพียงพอ (≥ 6 จุด = 30 นาที)
-  for (const [code, pts] of Object.entries(hist)) {
-    if (STATION_K[code]) continue;
-    if (pts.length < 6) continue; // ต้องการ ≥ 6 จุดสำหรับ self-fit
-    const sorted = [...pts].sort((a,b) => a.ts - b.ts);
-    const t0 = sorted[0].ts / 3600000;
-    const f0 = sorted[0].frc;
-    if (f0 <= 0) continue;
-    let sx=0,sy=0,sxx=0,sxy=0,n=0;
-    for (const p of sorted) {
-      if (p.frc <= 0) continue;
-      const x = p.ts/3600000 - t0;
-      const y = Math.log(p.frc/f0);
-      sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; n++;
-    }
-    if (n < 4 || (n*sxx-sx*sx) === 0) continue;
-    const k = -(n*sxy-sx*sy)/(n*sxx-sx*sx);
-    // self-fit cap เข้มกว่า: ไม่เกิน 0.3/hr
-    if (k >= 0.003 && k <= 0.05) { STATION_K[code] = k; fitted++; } // cap: 0.003–0.05/hr
-  }
-
-  return fitted;
-}
+// [v41 · จัดระเบียบ] ลบ fitAllK() + PAIR_TT_GLOBAL — ไม่มีที่เรียกใช้ตั้งแต่ v3x (ใช้ K จาก Firebase/EPANET Parameters) และยังอ้างรหัสสถานีแบบตัวเลขเดิม
 
 function updateHistBadge(hist) {
   const badge = document.getElementById('hist-api-badge');
@@ -11336,6 +11177,7 @@ function submitFeedback(){
       if (nearest) {
         ecVal = (nearest.ec != null) ? nearest.ec
               : (typeof nearest.id === 'number' && _ecFb[nearest.id]) ? _ecFb[nearest.id]
+              : (nearest.num != null && _ecFb[nearest.num]) ? _ecFb[nearest.num]
               : 300;
       }
 
@@ -15214,8 +15056,8 @@ function _laggedVal(bucket, code, tSec) {
 function _travelSec(dKm, sensor, distMult) {
   let L_m = dKm * 1000;
   let v_adj = EPANET.v;
-  let rtuApplied = false;
-  if (sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
+  let rtuApplied = !window.TT_PRESSURE_ON;   // [v40.1]
+  if (window.TT_PRESSURE_ON && sensor && sensor.rtuPressure > 0 && window._rtuPNominal > 0) {
     const pFactor = Math.max(0.5, Math.min(2.0, Math.sqrt(sensor.rtuPressure / window._rtuPNominal)));
     v_adj = EPANET.v * pFactor;
     rtuApplied = true;
@@ -15794,6 +15636,479 @@ window._v40TTcsv = function () {
   const csv = '﻿' + keys.join(',') + '\n' + R.map(r => keys.map(k => esc(r[k])).join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'travel_time_check_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
 };
+
+// ══════ [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่าย จาก SmartMap (ฝ่ายควบคุมระบบจ่ายน้ำ) ══════
+//   ข้อมูล: data/influence.js — ราสเตอร์ ~330 ม. ป้ายต่อช่อง = สายอิทธิพลหลัก|สายผันน้ำ (DM → route → DMA)
+//   ใช้ใน contour: ช่องที่อยู่ใน DMA ที่มีอิทธิพลหลัก → ต้นทาง = สถานีสูบจ่ายของสายนั้น
+//     หลายสถานี (น้ำผสม) → เฉลี่ยเท่ากันรายสถานี
+//     สาย RCVxx (ประตูน้ำรับน้ำจากอุโมงค์) → VC ของเราที่ rcv ตรงกัน (ค่า VC × e^(−K·ระยะ/1.5) เหมือนชั้น VC) · ใช้เมื่อ VC เปิดวาล์ว
+//     DMA ไม่มีมิเตอร์ DM (35 DMA, ป้าย '≈') → ใช้อิทธิพลของพื้นที่ข้างเคียง (≤4 กม.) · นอก DMA → โซนเดิม (CUSTOM_ZONES)
+//   ปิด/เปิด: ☑ ในกล่อง "📐 v39" หรือ window._infSet(false)
+const INFLUENCE_LINE_SENSOR = [
+  [/^BK03/, 'SP04'], [/^BK04/, 'SP05'], [/^TB$/, 'SP06'], [/^SS-/, 'SP09'], [/^MH-/, 'SP12'],
+  [/^LP-/, 'SW01'], [/^LA-/, 'SW02'], [/^KT-/, 'SW03'], [/^SR-/, 'SW04'], [/^MB-/, 'SW05'],
+  [/^LK-/, 'SW06'], [/^BP-/, 'SW07'], [/^RB-/, 'SW08'], [/^PK$/, 'SW09'], [/^TP-/, 'SW10'],
+  [/^RCV29$/, 'SW11'],   // RCV29 = สจ.พหลโยธิน (PY) ใน SmartMap
+];
+const LS_INF_KEY = 'frc_influence_on';
+window.INFLUENCE_ON = (function () { try { return localStorage.getItem(LS_INF_KEY) !== '0'; } catch (e) { return true; } })();
+let _infCells = null, _infComboSrc = null, _infComboAll = null;
+function _infLineSensor(line) {
+  for (const [re, sid] of INFLUENCE_LINE_SENSOR) if (re.test(line)) return sid;
+  const m = /^RCV0*(\d+)$/.exec(line);                       // RCVxx → VC ของเราที่ rcv ตรงกัน (ประตูน้ำรับน้ำจากอุโมงค์)
+  if (m && typeof VC_STATIONS !== 'undefined') { const vc = VC_STATIONS.find(v => String(v.rcv) === m[1]); if (vc) return vc.id; }
+  return null;
+}
+function _infReady() {
+  const G = window.INFLUENCE_GRID; if (!G || !G.rle) return false;
+  if (_infCells) return true;
+  const n = (G.res + 1) * (G.res + 1), cells = new Uint16Array(n); let k = 0;
+  for (const tok of G.rle.split(',')) { const p = tok.split('*'), v = +p[0], c = +p[1]; cells.fill(v, k, k + c); k += c; }
+  if (k !== n) { console.warn('[อิทธิพล] ขนาดกริดไม่ตรง', k, n); return false; }
+  _infComboSrc = G.combos.map(lab => {                     // ป้าย → รายชื่อสถานีต้นทาง (ไม่ซ้ำ)
+    if (!lab || lab[0] === '~') return null;
+    const prim = lab.replace(/^≈/, '').split('|')[0].split('+').filter(Boolean);   // ≈ = DMA ไม่มีมิเตอร์ เติมจากข้างเคียง
+    const sids = [...new Set(prim.map(_infLineSensor).filter(Boolean))];
+    return sids.length ? sids : null;
+  });
+  _infComboAll = G.combos.map(lab => {                     // [v42] สถานีสูบจ่ายทั้งสายหลัก + สายผันน้ำ (ไม่รวม VC) — ใช้กับสัดส่วนน้ำผสม
+    if (!lab || lab[0] === '~') return null;
+    const [p, t] = lab.replace(/^≈/, '').split('|');
+    const ids = [...new Set(((p || '') + '+' + (t || '')).split('+').filter(Boolean).map(_infLineSensor).filter(x => x && !x.startsWith('VC')))];
+    return ids.length ? ids : null;
+  });
+  _infCells = cells; return true;
+}
+function _infLabelAt(lat, lon) {
+  if (!_infReady()) return null;
+  const G = window.INFLUENCE_GRID;
+  const j = Math.round((lat - G.lat0) / ((G.lat1 - G.lat0) / G.res)), i = Math.round((lon - G.lon0) / ((G.lon1 - G.lon0) / G.res));
+  if (j < 0 || i < 0 || j > G.res || i > G.res) return null;
+  return _infCells[j * (G.res + 1) + i];
+}
+function _infSourcesAt(lat, lon) { const c = _infLabelAt(lat, lon); return c == null ? null : _infComboSrc[c]; }
+// ค่า FRC/EC ในช่องตามอิทธิพล — valFn(src) คืนค่าจากต้นทางนั้น · null = ให้ชั้นถัดไปจัดการ
+function _influenceVal(lat, lon, valFn) {
+  if (!window.INFLUENCE_ON) return null;
+  const c = _infLabelAt(lat, lon); if (c == null) return null;
+  const prim = _infComboSrc[c]; if (!prim) return null;
+  const W = _infMixWeightsFor(c, lat, lon);                   // [v42] null = เฉลี่ยเท่ากันรายสถานี (แบบ v41)
+  const sids = W ? Object.keys(W) : prim;
+  const sources = _ensureFrcSources();
+  let sum = 0, wsum = 0, down = false;
+  for (const sid of sids) {
+    const w = W ? W[sid] : 1; if (!(w > 0)) continue;
+    if (sid.startsWith('VC')) {                                // RCV/VC: ใช้ได้เมื่อ VC เปิดวาล์ว (เหมือนชั้น VC เดิม)
+      const vc = VC_STATIONS.find(v => v.id === sid);
+      if (!vc || !(vc.valvePct != null && vc.valvePct > 0)) continue;
+      const v = valFn(null, vc); if (v == null || !isFinite(v)) continue;
+      sum += w * v; wsum += w; continue;
+    }
+    const src = sources.find(s => String(s.id) === sid); if (!src) continue;
+    if (typeof _isSensorDown === 'function' && _isSensorDown(src)) { down = true; continue; }
+    const v = valFn(src); if (v == null || !isFinite(v)) continue;
+    sum += w * v; wsum += w;
+  }
+  if (wsum > 0) return sum / wsum;
+  return down ? GRAY_SENTINEL : null;
+}
+
+// ══════ [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง ══════
+//   พื้นที่รอยต่อที่สองสถานีผลัดกันจ่าย (เช่น ม.หัวเฉียว: บางพลีชนะช่วง 5–9 น. · ลาดกระบังชนะช่วงเที่ยง–17 น. และกลางคืน)
+//   ที่สถานีวัดซึ่งอยู่ใต้อิทธิพลหลายสถานีสูบ (สายหลัก + สายผันน้ำ):  ค่าวัด ≈ Σ wᵢ·(ค่าที่คำนวณจากต้นทาง i) → หา wᵢ ≥ 0, Σw = 1
+//     1) ค่าสด (ไม่เกิน 2 ชม.) → สัดส่วนตอนนี้   2) ไม่มีค่าสด → สัดส่วนเฉลี่ยของชั่วโมงเดียวกันย้อนหลัง 7 วัน   3) ไม่มีทั้งคู่ → แบบเดิม (เฉลี่ยเท่ากัน)
+//   ป้องกันค่าผิด: ต้นทางต้องต่างกัน ≥0.15 mg/L (ไม่งั้นแยกสัดส่วนไม่ได้) · ค่าวัด 0.02–3 · สถานีวัด/ต้นทางไม่ค้าง/ไม่ซ่อม · ต้นทางไม่เกิน 3 สถานี
+//   กระจายไปช่องรอบๆ ที่มีต้นทางร่วม ≥2 สถานี: น้ำหนัก g = e^(−(ระยะ/6 กม.)²) ผสมกับแบบเดิม (เกิน 12 กม. ไม่ใช้)
+var INF_MIX_KEY = 'frc_infmix_on';
+window.INF_MIX_ON = (function () { try { return localStorage.getItem(INF_MIX_KEY) !== '0'; } catch (e) { return true; } })();
+var _infMixSites = [];
+function _infKhr(sid) {
+  const k = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid] : (STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : K_total * 3600);
+  return k * (window._tempKFactor || 1);
+}
+// เวลาเดินน้ำ (วินาที) จากต้นทาง src ถึงช่อง (j,i) — ระยะ/ความเร็วแบบเดียวกับ contour
+function _infTauSec(src, lat, lon, j, i) {
+  const sid = String(src.id), pd = _getPipeDist ? _getPipeDist(j, i) : null;
+  window._v39pxLat = lat; window._v39pxLon = lon;
+  if (pd && _pipeMatch(pd.sensorId, sid)) return _travelSec(pd.dist_km, src, _getPressureFactor ? _getPressureFactor(j, i) : 1);
+  const dKm = Math.sqrt((src.lat - lat) ** 2 + (src.lon - lon) ** 2) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
+  return _travelSec(dKm, src, null);
+}
+function _infSolveW(C, meas) {                                 // หา w บนซิมเพล็กซ์ (2 ต้นทาง ละเอียด 0.05 · 3 ต้นทาง 0.1)
+  const n = C.length; if (n < 2 || n > 3) return null;
+  if (Math.max(...C) - Math.min(...C) < 0.15) return null;    // แยกสัดส่วนไม่ได้
+  let best = null, be = Infinity;
+  if (n === 2) { for (let a = 0; a <= 20; a++) { const w = [a / 20, 1 - a / 20], e = Math.abs(w[0] * C[0] + w[1] * C[1] - meas); if (e < be) { be = e; best = w; } } }
+  else { for (let a = 0; a <= 10; a++) for (let b = 0; a + b <= 10; b++) { const w = [a / 10, b / 10, (10 - a - b) / 10], e = Math.abs(w[0] * C[0] + w[1] * C[1] + w[2] * C[2] - meas); if (e < be) { be = e; best = w; } } }
+  return best;
+}
+function _infMixUpdate() {
+  _infMixSites = [];
+  if (!window.INFLUENCE_ON || !window.INF_MIX_ON || !_infReady()) return;
+  const H = _lagHist().frc, now = Date.now(), sources = _ensureFrcSources(), N = CACHE_RES + 1;
+  const hourOf = t => new Date(t + 7 * 3600e3).getUTCHours();
+  for (const m of SENSORS) {
+    if (m.type !== 'monitor' || !(m.lat > 0)) continue;
+    const c = _infLabelAt(m.lat, m.lon); if (c == null) continue;
+    const all = _infComboAll[c]; if (!all || all.length < 2 || all.length > 3) continue;
+    const srcs = all.map(id => sources.find(s => String(s.id) === id));
+    if (srcs.some(s => !s || (typeof _isSensorDown === 'function' && _isSensorDown(s)))) continue;
+    if (typeof _isSensorDown === 'function' && _isSensorDown(m)) continue;
+    const j = Math.round((m.lat - CACHE_LAT0) / ((CACHE_LAT1 - CACHE_LAT0) / CACHE_RES)), i = Math.round((m.lon - CACHE_LON0) / ((CACHE_LON1 - CACHE_LON0) / CACHE_RES));
+    const tau = srcs.map(s => _infTauSec(s, m.lat, m.lon, j, i)), dec = srcs.map((s, k) => Math.exp(-_infKhr(String(s.id)) * tau[k] / 3600));
+    const code = String(m.id);
+    // สัดส่วนรายชั่วโมงย้อนหลัง 7 วัน
+    const acc = Array.from({ length: 24 }, () => ({ w: all.map(() => 0), n: 0 }));
+    for (let h = 1; h <= 168; h++) {
+      const meas = _laggedVal(H, code, h * 3600); if (!(meas >= 0.02 && meas <= 3)) continue;
+      const C = srcs.map((s, k) => { const c0 = _laggedVal(H, String(s.id), h * 3600 + tau[k]); return c0 != null ? c0 * dec[k] : null; });
+      if (C.some(v => v == null)) continue;
+      const w = _infSolveW(C, meas); if (!w) continue;
+      const a = acc[hourOf(now - h * 3600e3)]; w.forEach((x, k) => a.w[k] += x); a.n++;
+    }
+    const prof = acc.map(a => a.n >= 3 ? a.w.map(x => x / a.n) : null);
+    // สัดส่วนตอนนี้จากค่าสด
+    let w = null, how = '';
+    const fresh = (apiStatus === 'live') || (m.liveTs && now - m.liveTs < 2 * 3600e3);
+    if (fresh && m.frc >= 0.02 && m.frc <= 3) {
+      const C = srcs.map((s, k) => { const c0 = window.TIME_LAGGED_C0 ? (_laggedC0(String(s.id), tau[k]) ?? s.frc) : s.frc; return c0 * dec[k]; });
+      w = _infSolveW(C, m.frc); if (w) how = 'ค่าสด';
+    }
+    if (!w && prof[hourOf(now)]) { w = prof[hourOf(now)]; how = 'เฉลี่ยชั่วโมงเดียวกัน 7 วัน'; }
+    if (!w) continue;
+    _infMixSites.push({ id: code, name: m.name, lat: m.lat, lon: m.lon, sids: all, w: Object.fromEntries(all.map((id, k) => [id, w[k]])), how, prof });
+  }
+  try {
+    const el = document.getElementById('infmix-list');
+    if (el) {
+      const nm = id => { const s = SENSORS.find(x => String(x.id) === id); return s ? s.name.replace(/^สถานีสูบจ่ายน้ำ/, 'สจ.').replace(/^โรงงานผลิตน้ำ/, 'รง.') : id; };
+      el.innerHTML = _infMixSites.length ? _infMixSites.map(st => '<div>• ' + st.name.slice(0, 22) + ': ' + Object.entries(st.w).map(([k, v]) => nm(k) + ' ' + Math.round(v * 100) + '%').join(' / ') + ' <span style="color:#7f93b0;">(' + st.how + ')</span></div>').join('') : '<span style="color:#7f93b0;">ยังไม่มีจุดที่แยกสัดส่วนได้ (ใช้แบบเฉลี่ยเท่ากัน)</span>';
+    }
+  } catch (e) {}
+}
+function _infMixWeightsFor(c, lat, lon) {
+  if (!window.INF_MIX_ON || !_infMixSites.length) return null;
+  const all = _infComboAll[c], prim = _infComboSrc[c]; if (!all) return null;
+  let best = null, bd = Infinity;
+  for (const st of _infMixSites) {
+    let common = 0; for (const id of st.sids) if (all.includes(id)) common++;
+    if (common < 2) continue;
+    const d = Math.sqrt((st.lat - lat) ** 2 + ((st.lon - lon) * 0.97) ** 2) * DEG_TO_KM;
+    if (d < bd) { bd = d; best = st; }
+  }
+  if (!best || bd > 12) return null;
+  const g = Math.exp(-((bd / 6) ** 2));
+  const W = {};
+  prim.forEach(id => { W[id] = (W[id] || 0) + (1 - g) / prim.length });           // แบบเดิม: เฉลี่ยเท่ากันรายสถานีสายหลัก (รวม VC)
+  let ss = 0; for (const id of all) if (best.w[id] != null) ss += best.w[id];
+  if (ss > 0) for (const id of all) if (best.w[id] != null) W[id] = (W[id] || 0) + g * best.w[id] / ss;
+  else return null;
+  return W;
+}
+window._infMixSet = function (on) { window.INF_MIX_ON = !!on; try { localStorage.setItem(INF_MIX_KEY, on ? '1' : '0'); } catch (e) {} window._c0Memo = {}; buildIdwCache(); if (typeof redrawContour === 'function') redrawContour(); };
+window._infMixInfo = function () { return _infMixSites.map(s => ({ สถานี: s.name.slice(0, 24), ต้นทาง: s.sids.join('+'), สัดส่วน: Object.entries(s.w).map(([k, v]) => k + ' ' + Math.round(v * 100) + '%').join(' · '), ที่มา: s.how })); };
+function _influenceFrc(lat, lon, j, i) {
+  return _influenceVal(lat, lon, (src, vc) => {
+    if (vc) {                                                  // สูตรเดียวกับชั้น VC: FRC ที่ VC × e^(−K·ระยะ/1.5)
+      const vcFrc = vc.frc || 0; if (vcFrc <= 0) return 0;
+      const dKm = Math.sqrt((vc.lat - lat) ** 2 + (vc.lon - lon) ** 2) * DEG_TO_KM;
+      const pair = typeof VC_PAIR !== 'undefined' ? VC_PAIR[vc.id] : null;
+      return Math.max(0, vcFrc * Math.exp(-(pair ? pair.K : 0.05) * (dKm / 1.5)));
+    }
+    if (!(src.frc > 0)) return null;
+    const sid = String(src.id);
+    const pd = _getPipeDist ? _getPipeDist(j, i) : null;
+    if (pd && _pipeMatch(pd.sensorId, sid)) {
+      const pGrid = _getPressureFactor ? _getPressureFactor(j, i) : 1;
+      return _c0For(src, pd.dist_km, pGrid) * epanetDecay(pd.dist_km, src, lat, lon, pGrid);
+    }
+    const dKm = Math.sqrt((src.lat - lat) ** 2 + (src.lon - lon) ** 2) * DEG_TO_KM * EUCLID_PIPE_FACTOR;
+    return _c0For(src, dKm, null) * epanetDecay(dKm, src, lat, lon);
+  });
+}
+function _influenceEc(lat, lon, j, i) {
+  return _influenceVal(lat, lon, (src, vc) => {
+    if (vc) { const s = SENSORS.find(x => String(x.id) === vc.sourceId); return s ? _ecValFor(s, lat, lon, j, i) : null; }   // VC: EC ตามอุโมงค์ต้นทาง
+    return _ecValFor(src, lat, lon, j, i);
+  });
+}
+
+// ── [v43] ชั้นแผนที่อิทธิพลสูบจ่าย (SmartMap) ──
+//   สีรายสถานี: เลือกให้พื้นที่ติดกัน/ผสมกันมีสีต่างกันมากที่สุด (คำนวณจากแนวรอยต่อจริงในกริด)
+//   เส้นขอบเข้ม = รอยต่อพื้นที่อิทธิพล · ลายทแยง = น้ำผสม (ความกว้างแถบตามสัดส่วนจากค่าวัดจริงเมื่อมี) · สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)
+//   ป้ายชื่อสถานีกลางพื้นที่ · คำอธิบายสี + ที่มา · ชี้เมาส์ = บอกสถานี/สัดส่วน · ชี้สถานีสูบ = ไฮไลต์พื้นที่ของสถานีนั้น
+const INF_COLORS = { SP04:'#f032e6', SP05:'#800000', SP06:'#911eb4', SP09:'#3cb44b', SP12:'#808000', SW01:'#9a6324', SW02:'#000075', SW03:'#ff69b4',
+  SW04:'#469990', SW05:'#bfef45', SW06:'#f58231', SW07:'#7f7fff', SW08:'#4363d8', SW09:'#42d4f4', SW10:'#e6194b', SW11:'#ffe119',
+  VC01:'#4a4a7a', VC02:'#8c8c8c', VC04:'#7a4a6b', VC05:'#2f4f4f', VC08:'#6b4f3a', VC12:'#3d6b45', VC13:'#a0a0a0' };
+const INF_VC_COLOR = '#455a64';
+const INF_SRC_TEXT = 'ที่มา: SmartMap ฝ่ายควบคุมระบบจ่ายน้ำ กปน.';
+let _infLayer = null, _infLabels = null, _infLegend = null, _infHl = null, _infHlSid = null, _infLayerOn = false;
+function _infColor(sid) { return INF_COLORS[sid] || (String(sid).startsWith('VC') ? INF_VC_COLOR : '#888'); }
+function _infName(sid, short) {
+  const s = SENSORS.find(x => String(x.id) === sid) || (typeof VC_STATIONS !== 'undefined' && VC_STATIONS.find(v => v.id === sid));
+  let n = s ? String(s.name) : sid;
+  if (short) n = n.replace(/^สถานีสูบจ่ายน้ำ/, 'สจ.').replace(/^สถานีสูบส่งน้ำ/, 'สจ.').replace(/^โรงงานผลิตน้ำ/, 'รง.').replace(/^(VC .+?)\s*\(.*\)$/, '$1');
+  return n;
+}
+function _infCellLL(j, i) { const G = window.INFLUENCE_GRID; return [G.lat0 + j * (G.lat1 - G.lat0) / G.res, G.lon0 + i * (G.lon1 - G.lon0) / G.res]; }
+// สัดส่วนต้นทางของช่อง: [{sid,w}] · how = ที่มาของสัดส่วน
+function _infShareAt(c, lat, lon) {
+  const prim = _infComboSrc[c]; if (!prim) return null;
+  const W = _infMixWeightsFor(c, lat, lon);
+  if (W) {
+    let s = 0; for (const k in W) s += W[k];
+    const site = _infMixNearest(c, lat, lon);
+    return { parts: Object.keys(W).filter(k => W[k] > 0.005).map(k => ({ sid: k, w: W[k] / s })).sort((a, b) => b.w - a.w), how: site ? ('สัดส่วนจากค่าวัดจริง ' + site.name.slice(0, 26) + ' · ' + site.how + (site.d > 0.5 ? ' · ห่าง ' + site.d.toFixed(1) + ' กม.' : '')) : 'สัดส่วนจากค่าวัดจริง' };
+  }
+  return { parts: prim.map(k => ({ sid: k, w: 1 / prim.length })), how: prim.length > 1 ? 'ไม่มีจุดวัดแยกสัดส่วน → ใช้เท่ากัน' : '' };
+}
+function _infMixNearest(c, lat, lon) {
+  const all = _infComboAll[c]; if (!all || !_infMixSites.length) return null;
+  let best = null, bd = Infinity;
+  for (const st of _infMixSites) {
+    let common = 0; for (const id of st.sids) if (all.includes(id)) common++;
+    if (common < 2) continue;
+    const d = Math.sqrt((st.lat - lat) ** 2 + ((st.lon - lon) * 0.97) ** 2) * DEG_TO_KM;
+    if (d < bd) { bd = d; best = st; }
+  }
+  return best && bd <= 12 ? Object.assign({ d: bd }, best) : null;
+}
+function _infBuildOverlay() {
+  if (!_infReady()) return null;
+  const G = window.INFLUENCE_GRID, N = G.res + 1, S = 6, cv = document.createElement('canvas');
+  cv.width = N * S; cv.height = N * S;
+  const ctx = cv.getContext('2d'), key = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const c = _infCells[j * N + i], prim = _infComboSrc[c]; key.push(prim ? prim.slice().sort().join('+') : '');
+    if (!prim) continue;
+    const x = i * S, y = (N - 1 - j) * S;
+    ctx.globalAlpha = G.combos[c][0] === '≈' ? 0.5 : 1;
+    if (prim.length === 1) { ctx.fillStyle = _infColor(prim[0]); ctx.fillRect(x, y, S, S); continue; }
+    const [la, lo] = _infCellLL(j, i), sh = _infShareAt(c, la, lo).parts;
+    for (let q = 0; q < S; q++) for (let p = 0; p < S; p++) {           // แถบทแยง ความกว้างตามสัดส่วน
+      const t = ((((x + p) + (y + q)) % 12) + 0.5) / 12;
+      let acc = 0, sid = sh[sh.length - 1].sid;
+      for (const o of sh) { acc += o.w; if (t <= acc) { sid = o.sid; break; } }
+      ctx.fillStyle = _infColor(sid); ctx.fillRect(x + p, y + q, 1, 1);
+    }
+  }
+  ctx.globalAlpha = 0.85; ctx.fillStyle = '#1b1b1b';                     // เส้นรอยต่อ
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const k = key[j * N + i]; if (!k) continue;
+    const x = i * S, y = (N - 1 - j) * S;
+    if (i + 1 < N && key[j * N + i + 1] !== k) ctx.fillRect(x + S - 1, y, 1, S);
+    if (i > 0 && key[j * N + i - 1] !== k) ctx.fillRect(x, y, 1, S);
+    if (j + 1 < N && key[(j + 1) * N + i] !== k) ctx.fillRect(x, y, S, 1);
+    if (j > 0 && key[(j - 1) * N + i] !== k) ctx.fillRect(x, y + S - 1, S, 1);
+  }
+  const dl = (G.lat1 - G.lat0) / G.res / 2, dn = (G.lon1 - G.lon0) / G.res / 2;
+  return L.imageOverlay(cv.toDataURL(), [[G.lat0 - dl, G.lon0 - dn], [G.lat1 + dl, G.lon1 + dn]], { opacity: 0.6, interactive: false, className: 'inf-ov' });
+}
+// ป้ายชื่อ: กลางกลุ่มช่องที่ใหญ่ที่สุดของแต่ละสถานี (ช่องที่มีสถานีเดียว) + ป้ายพื้นที่ผสมขนาดใหญ่
+function _infBuildLabels() {
+  const G = window.INFLUENCE_GRID, N = G.res + 1, seen = new Uint8Array(N * N), comps = [];
+  const keyAt = k => { const p = _infComboSrc[_infCells[k]]; return p ? p.slice().sort().join('+') : ''; };
+  for (let k0 = 0; k0 < N * N; k0++) {
+    if (seen[k0]) continue; const key = keyAt(k0); seen[k0] = 1; if (!key) continue;
+    const q = [k0]; let sj = 0, si = 0, n = 0;
+    while (q.length) { const k = q.pop(), j = (k / N) | 0, i = k % N; sj += j; si += i; n++;
+      for (const [dj, di] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const jj = j + dj, ii = i + di; if (jj < 0 || ii < 0 || jj >= N || ii >= N) continue; const kk = jj * N + ii; if (seen[kk] || keyAt(kk) !== key) continue; seen[kk] = 1; q.push(kk); } }
+    comps.push({ key, n, j: sj / n, i: si / n });
+  }
+  const g = L.layerGroup(), best = {};
+  for (const c of comps) if (!best[c.key] || c.n > best[c.key].n) best[c.key] = c;
+  const bigMix = comps.filter(c => c.key.includes('+') && c === best[c.key] && c.n >= 300).sort((a, b) => b.n - a.n).slice(0, 8);
+  for (const c of comps) {
+    const sids = c.key.split('+'), single = sids.length === 1;
+    if (single ? !((c === best[c.key] && c.n >= 25) || c.n >= 350) : !bigMix.includes(c)) continue;
+    const [la, lo] = _infCellLL(c.j, c.i);
+    const html = single
+      ? '<span style="border-left:4px solid ' + _infColor(sids[0]) + '">' + _infName(sids[0], true) + '</span>'
+      : '<span class="mix">ผสม: ' + sids.map(s => '<i style="background:' + _infColor(s) + '"></i>' + _infName(s, true)).join(' + ') + '</span>';
+    L.marker([la, lo], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'inf-lbl', html, iconSize: null }) }).addTo(g);
+  }
+  return g;
+}
+function _infBuildLegend() {
+  const G = window.INFLUENCE_GRID, N = G.res + 1, area = {};
+  for (let k = 0; k < N * N; k++) { const p = _infComboSrc[_infCells[k]]; if (p) p.forEach(s => area[s] = (area[s] || 0) + 1 / p.length); }
+  const sids = Object.keys(area).sort((a, b) => (a.startsWith('VC') - b.startsWith('VC')) || area[b] - area[a]);
+  const ctl = L.control({ position: 'topright' });
+  ctl.onAdd = function () {
+    const d = L.DomUtil.create('div', 'inf-legend');
+    d.innerHTML = '<div class="h">🗺 พื้นที่อิทธิพลสูบจ่าย <span class="x" title="ซ่อน" onclick="window._infShowLayer(false)">✕</span></div>' +
+      '<div class="lst">' + sids.map(s => '<div><i style="background:' + _infColor(s) + '"></i>' + _infName(s, true) + '</div>').join('') + '</div>' +
+      '<div class="nt"><b class="hatch"></b>ลายทแยง = น้ำผสม (กว้างแคบตามสัดส่วนจริงเมื่อมีจุดวัด)<br><b class="fade"></b>สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)<br>ชี้เมาส์บนแผนที่ = ดูสถานีและสัดส่วน · ชี้สถานีสูบ = ไฮไลต์พื้นที่</div>' +
+      '<div class="src">' + INF_SRC_TEXT + ' · ข้อมูล ณ ' + ((G.meta && G.meta.asOf) || '—') + '</div>';
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    return d;
+  };
+  return ctl;
+}
+function _infCss() {
+  if (document.getElementById('inf-css')) return;
+  const st = document.createElement('style'); st.id = 'inf-css';
+  st.textContent = '.inf-ov{image-rendering:pixelated}' +
+    '.inf-lbl{background:none;border:none;white-space:nowrap;transform:translate(-50%,-50%);pointer-events:none}' +
+    '.inf-lbl span{display:inline-block;background:rgba(255,255,255,.88);color:#1b2a41;font:700 11px Sarabun,sans-serif;padding:1px 6px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.25)}' +
+    '.inf-lbl span.mix{font-weight:600;font-size:10px;color:#36454f}.inf-lbl i,.inf-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 2px;vertical-align:-1px}' +
+    '.inf-legend{background:rgba(255,255,255,.96);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:7px 9px;font:11px Sarabun,sans-serif;color:#1b2a41;max-width:230px}' +
+    '.inf-legend .h{font-weight:700;font-size:12px;margin-bottom:4px;display:flex;justify-content:space-between}.inf-legend .x{cursor:pointer;color:#888;padding-left:8px}' +
+    '.inf-legend .lst{display:grid;grid-template-columns:1fr 1fr;gap:1px 6px;max-height:42vh;overflow:auto}.inf-legend .lst i{width:11px;height:11px}' +
+    '.inf-legend .nt{font-size:9.5px;color:#4a5a70;margin-top:5px;line-height:1.45}.inf-legend .nt b{display:inline-block;width:14px;height:9px;margin-right:4px;vertical-align:-1px;border-radius:2px}' +
+    '.inf-legend .hatch{background:repeating-linear-gradient(45deg,#f58231 0 3px,#7f7fff 3px 6px)}.inf-legend .fade{background:#4363d8;opacity:.4}' +
+    '.inf-legend .src{font-size:9.5px;color:#0b3d7a;margin-top:5px;border-top:1px solid #e3e8f0;padding-top:4px;font-weight:600}' +
+    '#tip-inf{margin-top:4px;padding-top:4px;border-top:1px dashed rgba(128,128,128,.35);font-size:10.5px;line-height:1.45;max-width:260px;white-space:normal}' +
+    '#tip-inf i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px}#tip-inf .hw{font-size:9.5px;opacity:.75}' +
+    '@media (max-width:640px){.inf-legend{max-width:170px;font-size:10px}.inf-legend .lst{grid-template-columns:1fr;max-height:28vh}}';
+  document.head.appendChild(st);
+}
+let _infFillSaved = null;
+window._infShowLayer = function (on) {
+  _infCss();
+  // ขณะดูแผนที่อิทธิพล ซ่อนสีคลอรีน (contour) ชั่วคราวเพื่อให้เห็นสีพื้นที่ชัด · ปิดแล้วคืนค่าเดิม
+  try {
+    if (on && !_infLayerOn) { _infFillSaved = layers.fill; if (layers.fill) { layers.fill = false; redrawContour(); } }
+    if (!on && _infLayerOn && _infFillSaved) { layers.fill = true; redrawContour(); _infFillSaved = null; }
+    const tf = document.getElementById('t-fill'); if (tf) tf.className = 'tog ' + (layers.fill ? 'on' : 'off');
+  } catch (e) {}
+  _infLayerOn = !!on;
+  if (_infLayer) { map.removeLayer(_infLayer); _infLayer = null; }
+  if (_infLabels) { map.removeLayer(_infLabels); }
+  if (_infLegend) { map.removeControl(_infLegend); _infLegend = null; }
+  if (on && _infReady()) {
+    _infLayer = _infBuildOverlay(); if (_infLayer) _infLayer.addTo(map);
+    if (!_infLabels) _infLabels = _infBuildLabels(); _infLabels.addTo(map);
+    _infLegend = _infBuildLegend(); _infLegend.addTo(map);
+  }
+  document.querySelectorAll('#inf-layer,#inf-layer-menu').forEach(el => el.checked = _infLayerOn);
+};
+// ไฮไลต์พื้นที่ของสถานีสูบที่ชี้อยู่
+function _infHighlight(sid) {
+  if (sid === _infHlSid) return; _infHlSid = sid;
+  if (_infHl) { map.removeLayer(_infHl); _infHl = null; }
+  if (_infLayer) _infLayer.setOpacity(sid ? 0.2 : 0.6);
+  if (!sid || !_infReady()) return;
+  const G = window.INFLUENCE_GRID, N = G.res + 1, S = 6, cv = document.createElement('canvas'); cv.width = cv.height = N * S;
+  const ctx = cv.getContext('2d'), inA = k => { const p = _infComboSrc[_infCells[k]]; return !!(p && p.includes(sid)); };
+  let n = 0;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const k = j * N + i; if (!inA(k)) continue; n++;
+    const x = i * S, y = (N - 1 - j) * S; ctx.globalAlpha = 0.6; ctx.fillStyle = _infColor(sid); ctx.fillRect(x, y, S, S);
+    ctx.globalAlpha = 1; ctx.fillStyle = '#000';
+    if (i + 1 >= N || !inA(k + 1)) ctx.fillRect(x + S - 2, y, 2, S);
+    if (i === 0 || !inA(k - 1)) ctx.fillRect(x, y, 2, S);
+    if (j + 1 >= N || !inA(k + N)) ctx.fillRect(x, y, S, 2);
+    if (j === 0 || !inA(k - N)) ctx.fillRect(x, y + S - 2, S, 2);
+  }
+  if (!n) return;
+  const dl = (G.lat1 - G.lat0) / G.res / 2, dn = (G.lon1 - G.lon0) / G.res / 2;
+  _infHl = L.imageOverlay(cv.toDataURL(), [[G.lat0 - dl, G.lon0 - dn], [G.lat1 + dl, G.lon1 + dn]], { opacity: 0.9, interactive: false, className: 'inf-ov' }).addTo(map);
+}
+const _infAreaMemo = {};
+function _infAreaKm2(sid) {
+  if (_infAreaMemo[sid] != null) return _infAreaMemo[sid];
+  const G = window.INFLUENCE_GRID, N = G.res + 1, cell = ((G.lat1 - G.lat0) / G.res * DEG_TO_KM) * ((G.lon1 - G.lon0) / G.res * DEG_TO_KM * Math.cos(13.75 * Math.PI / 180));
+  let n = 0; for (let k = 0; k < N * N; k++) { const p = _infComboSrc[_infCells[k]]; if (p && p.includes(sid)) n++; }
+  return (_infAreaMemo[sid] = n * cell);
+}
+// ข้อความอิทธิพล ณ จุด (ใช้ทั้ง tooltip และป๊อปอัป)
+function _infTipHtml(lat, lon) {
+  if (!window.INFLUENCE_GRID || !_infReady()) return '';
+  const c = _infLabelAt(lat, lon); if (c == null) return '<span class="hw">นอกพื้นที่อิทธิพล SmartMap (ใช้โซนเดิม)</span>';
+  const sh = _infShareAt(c, lat, lon); if (!sh) return '<span class="hw">ไม่ทราบอิทธิพล (ใช้โซนเดิม)</span>';
+  const filled = window.INFLUENCE_GRID.combos[c][0] === '≈';
+  const one = sh.parts.length === 1;
+  return (one ? '🗺 อิทธิพล: ' : '🗺 น้ำผสม: ') + sh.parts.map(o => '<i style="background:' + _infColor(o.sid) + '"></i>' + _infName(o.sid, true) + (one ? '' : ' <b>' + Math.round(o.w * 100) + '%</b>')).join(one ? '' : ' · ') +
+    (sh.how ? '<br><span class="hw">' + sh.how + '</span>' : '') + (filled ? '<br><span class="hw">เติมจากพื้นที่ข้างเคียง (DMA ไม่มีมิเตอร์)</span>' : '');
+}
+window._infTipHtml = _infTipHtml;
+map.on('mousemove', function (e) {
+  if (_popupOpen) return;
+  const tip = document.getElementById('tip'); if (!tip) return;
+  let el = document.getElementById('tip-inf');
+  if (!el) { el = document.createElement('div'); el.id = 'tip-inf'; tip.appendChild(el); _infCss(); }
+  if (!window.INFLUENCE_ON) { el.style.display = 'none'; _infHighlight(null); return; }
+  const lat = e.latlng.lat, lon = e.latlng.lng;
+  let near = null, nd = Infinity;                                            // ชี้สถานีสูบ/โรงงาน → ไฮไลต์พื้นที่
+  for (const s of SENSORS) { if (!_SOURCE_TYPES.has(s.type)) continue; const d = (s.lat - lat) ** 2 + (s.lon - lon) ** 2; if (d < nd) { nd = d; near = s; } }
+  const hov = near && nd < 0.002 * 0.002 && INF_COLORS[String(near.id)] ? String(near.id) : null;
+  _infHighlight(hov);
+  if (hov) { el.innerHTML = '<i style="background:' + _infColor(hov) + '"></i>พื้นที่อิทธิพลของ ' + _infName(hov, true) + ' ≈ ' + Math.round(_infAreaKm2(hov)) + ' ตร.กม.<br><span class="hw">' + INF_SRC_TEXT + '</span>'; el.style.display = ''; return; }
+  const h = _infTipHtml(lat, lon); el.innerHTML = h; el.style.display = h ? '' : 'none';
+});
+map.on('mouseout', function () { _infHighlight(null); });
+// ป๊อปอัปสถานี: แถว "อิทธิพลสูบจ่าย" (คำนวณตอนเปิด → สัดส่วนล่าสุด)
+map.on('popupopen', function (e) {
+  try {
+    const root = e.popup.getElement(); if (!root || !window.INFLUENCE_ON) return;
+    const ll = e.popup.getLatLng(); const h = _infTipHtml(ll.lat, ll.lng); if (!h) return;
+    let row = root.querySelector('.inf-pop');
+    if (!row) { const anchor = Array.from(root.querySelectorAll('.pr')).find(r => /พื้นที่รับน้ำ/.test(r.textContent)); if (!anchor) return;
+      row = document.createElement('div'); row.className = 'inf-pop'; row.style.cssText = 'font-size:11px;line-height:1.45;margin:3px 0 4px;padding:4px 6px;background:#f4f7fc;border-radius:6px;color:#1b2a41;'; anchor.after(row); _infCss(); }
+    row.innerHTML = h.replace(/class="hw"/g, 'style="font-size:9.5px;color:#5a6b80"').replace(/<i style="/g, '<i style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px;');
+  } catch (err) {}
+});
+window._infSet = function (on) {
+  window.INFLUENCE_ON = !!on;
+  try { localStorage.setItem(LS_INF_KEY, on ? '1' : '0'); } catch (e) {}
+  window._c0Memo = {};
+  console.log('[อิทธิพล] contour ใช้พื้นที่อิทธิพล SmartMap:', on ? 'ON' : 'OFF');
+  buildIdwCache(); if (typeof redrawContour === 'function') redrawContour();
+};
+window._infWhere = function (lat, lon) {                    // ตรวจรายจุด: ป้าย SmartMap + สถานีที่ใช้
+  const c = _infLabelAt(lat, lon); return c == null ? null : { label: window.INFLUENCE_GRID.combos[c], sources: _infComboSrc[c] };
+};
+function _infInjectUI() {
+  const blk = document.getElementById('v39-block');
+  if (!blk) { setTimeout(_infInjectUI, 3000); return; }
+  if (document.getElementById('inf-toggle')) return;
+  const G = window.INFLUENCE_GRID, asOf = G && G.meta ? G.meta.asOf : '—';
+  blk.insertAdjacentHTML('beforeend',
+    '<div style="border-top:1px dashed #b0c8e8;margin-top:7px;padding-top:6px;">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;margin-bottom:3px;" onclick="event.stopPropagation()">' +
+        '<input type="checkbox" id="inf-toggle" ' + (window.INFLUENCE_ON ? 'checked' : '') + ' onchange="window._infSet(this.checked)" style="accent-color:#0b63c4;">' +
+        '<span>🗺 ใช้พื้นที่อิทธิพลสูบจ่าย (SmartMap)</span></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;" onclick="event.stopPropagation()">' +
+        '<input type="checkbox" id="inf-layer" onchange="window._infShowLayer(this.checked)" style="accent-color:#0b63c4;">' +
+        '<span>แสดงแผนที่อิทธิพลสูบจ่าย (ป้ายชื่อ + คำอธิบายสี)</span></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;margin-top:3px;" onclick="event.stopPropagation()">' +
+        '<input type="checkbox" id="infmix-toggle" ' + (window.INF_MIX_ON ? 'checked' : '') + ' onchange="window._infMixSet(this.checked)" style="accent-color:#0b63c4;">' +
+        '<span>⚖️ สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อสองสถานี)</span></label>' +
+      '<div id="infmix-list" style="font-size:9.5px;color:#36507a;margin-top:3px;line-height:1.4;"></div>' +
+      '<div style="font-size:9.5px;color:#6080a0;margin-top:3px;line-height:1.4;">' + INF_SRC_TEXT + ' · ข้อมูล ณ ' + asOf + ' · ลายทแยง = น้ำผสม (กว้างแคบตามสัดส่วนจริง) · สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)</div>' +
+    '</div>');
+}
+(function _infLoad() {                                       // โหลดไฟล์ข้อมูลเอง (ไม่ต้องแก้ index.html)
+  if (window.INFLUENCE_GRID) return;
+  const s = document.createElement('script');
+  s.src = 'data/influence.js?v=43';
+  s.onload = function () {
+    _infCells = null;
+    console.log('[อิทธิพล] โหลดพื้นที่อิทธิพลแล้ว', window.INFLUENCE_GRID && window.INFLUENCE_GRID.meta && window.INFLUENCE_GRID.meta.asOf);
+    try { if (SENSORS.length) { window._c0Memo = {}; buildIdwCache(); redrawContour(); } } catch (e) {}
+  };
+  s.onerror = function () { console.warn('[อิทธิพล] ไม่พบ data/influence.js → ใช้โซนเดิม'); };
+  document.head.appendChild(s);
+})();
+window.addEventListener('load', function () { setTimeout(_infInjectUI, 4500); });
+
+// [v43] เมนูข้าง: แผนที่อิทธิพลใหม่เป็นตัวหลัก · Zone Influence Editor เดิมเป็นสำรอง
+window._infToggleLayer = function () { window._infShowLayer(!_infLayerOn); };
+function _infInjectMenu() {
+  if (document.getElementById('inf-menu')) return;
+  const old = Array.from(document.querySelectorAll('.sblock.sb-menu')).find(b => /toggleZoneEditor/.test(b.getAttribute('onclick') || ''));
+  if (!old) { setTimeout(_infInjectMenu, 3000); return; }
+  old.insertAdjacentHTML('beforebegin', '<div class="sblock sb-menu" id="inf-menu" onclick="toggleSidebar();setTimeout(window._infToggleLayer,300);">' +
+    '<h3 style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">🗺 แผนที่อิทธิพลสูบจ่าย (SmartMap) <span class="sb-arrow">▸</span></h3></div>');
+  const h = old.querySelector('h3'); if (h && h.firstChild && h.firstChild.nodeType === 3) h.firstChild.textContent = 'Zone Influence Editor (โซนเดิม · สำรอง) ';
+}
+window.addEventListener('load', function () { setTimeout(_infInjectMenu, 2500); });
+(function () {                                              // สัดส่วนเปลี่ยนทุกครั้งที่คำนวณ contour → วาดแถบผสมใหม่
+  const core = buildIdwCache;
+  buildIdwCache = function () { const r = core.apply(this, arguments); try { if (_infLayerOn && _infLayer) { map.removeLayer(_infLayer); _infLayer = _infBuildOverlay(); if (_infLayer) { _infLayer.addTo(map); if (_infLabels) { map.removeLayer(_infLabels); _infLabels.addTo(map); } } } } catch (e) {} return r; };
+  if (window.buildIdwCache === core) window.buildIdwCache = buildIdwCache;
+})();
 window.addEventListener('load', function(){ setTimeout(_v39InjectUI, 4000); });
 (function(){
   const core = buildIdwCache;
@@ -15809,10 +16124,9 @@ const FRC3D_TOUR = [
   { m: /ทหารขนส่ง/,   short: 'โรงเรียนทหารขนส่ง' },
   { m: /จิตรลดา/,     short: 'พระราชวังดุสิต สวนจิตรลดา' },
   { m: /เทียนฟ้า/,    short: 'ศูนย์ไตเทียมเทียนฟ้าประชาการุณย์' },
-  { m: /ท้องฟ้าจำลอง/, short: 'ศูนย์วิทยาศาสตร์ฯ (ท้องฟ้าจำลอง)' },
+  { m: /ท้องฟ้าจำลอง|ศูนย์วิทยาศาสตร์เพื่อการศึกษา/, short: 'ศูนย์วิทยาศาสตร์ฯ (ท้องฟ้าจำลอง)' },
   { m: /นิคมอุตสาหกรรมบางพลี/, short: 'นิคมอุตสาหกรรมบางพลี' },
-  { m: /ปิ่นเกล้า/, short: 'รพ.สมเด็จพระปิ่นเกล้า',
-    pre: { name: 'โรงพยาบาลสมเด็จพระปิ่นเกล้า กรมแพทย์ทหารเรือ', lat: 13.7106175, lon: 100.487411 } },   // ติดตั้งใหม่ ยังไม่อยู่ในรายชื่อสถานี → แสดงภาพจำลองได้ แต่ไม่มีค่าวัด
+  { m: /ปิ่นเกล้า/, short: 'รพ.สมเด็จพระปิ่นเกล้า' },   // [v40.1] S033 อยู่ในรายชื่อสถานีแล้ว → ใช้ค่าวัดจริง
   { m: /นิคมอุตสาหกรรมบางปู/, short: 'นิคมอุตสาหกรรมบางปู' },
 ];
 function _frc3dBtn(s) {
