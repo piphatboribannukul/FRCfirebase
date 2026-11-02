@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '43';   // [v43 · 30 ต.ค. 2569] แผนที่อิทธิพลสูบจ่าย: สีพื้นที่ติดกันต่างกัน · เส้นรอยต่อ · ป้ายชื่อสถานี · คำอธิบายสี + ที่มา SmartMap · ชี้เมาส์ = สถานี/สัดส่วนน้ำผสม · ชี้สถานีสูบ = ไฮไลต์พื้นที่ · แถบผสมกว้างตามสัดส่วนจริง · เมนูข้างเป็นตัวหลัก (โซนเดิมเป็นสำรอง) · เดิม [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อที่สองสถานีผลัดกันจ่าย เช่น หัวเฉียว บางพลี/ลาดกระบัง) · เติมพื้นที่นอก DMA ที่ติดแนวสายอิทธิพล ≤1.5 กม. · เดิม [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่ายจาก SmartMap (data/influence.js) เป็นตัวกำหนดต้นทาง contour ก่อนโซนเดิม · เตรียมอุดม→MDIS 17 ชม. · กองพัน→Dis2 4 ชม. · เดิม [v40.1 · 29 ต.ค. 2569] รหัสสถานี TWQMS (S001…/SM01…) ในข้อมูลสำรอง → ค่าสด/ย้อนหลังจาก Firebase ตรงทุกสถานี · เพิ่ม S033 รพ.สมเด็จพระปิ่นเกล้า (สจ.ท่าพระ 3.5 ชม.) · ราชวินิต/ตั้งพิรุฬห์ 12 ชม. · เวลาเดินน้ำไม่ใช้แรงดัน RTU (TT_PRESSURE_ON) · เดิม [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
+const APP_VERSION = '44';   // [v44 · 2 พ.ย. 2569] แผนที่อิทธิพลปรับด้วยอิทธิพลรายช่วงท่อ SmartMap (พื้นที่หลายสถานีลดลง ~36%) · ปิดการแยกสัดส่วนจากค่าวัด (ไม่ช่วยให้แม่นขึ้น) · ชี้เมาส์บอกสถานีที่รับน้ำได้ ไม่ใส่เปอร์เซ็นต์ที่เดา · เดิม [v43.1 · 30 ต.ค. 2569] สัดส่วนน้ำผสมใช้เฉพาะสายหลักของ DMA (ไม่นับสายผันน้ำ) · ช่องสถานีเดียวไม่ผสม · ค่าวัดนอกช่วงต้นทางไม่นำมาคิด · เดิม [v43 · 30 ต.ค. 2569] แผนที่อิทธิพลสูบจ่าย: สีพื้นที่ติดกันต่างกัน · เส้นรอยต่อ · ป้ายชื่อสถานี · คำอธิบายสี + ที่มา SmartMap · ชี้เมาส์ = สถานี/สัดส่วนน้ำผสม · ชี้สถานีสูบ = ไฮไลต์พื้นที่ · แถบผสมกว้างตามสัดส่วนจริง · เมนูข้างเป็นตัวหลัก (โซนเดิมเป็นสำรอง) · เดิม [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อที่สองสถานีผลัดกันจ่าย เช่น หัวเฉียว บางพลี/ลาดกระบัง) · เติมพื้นที่นอก DMA ที่ติดแนวสายอิทธิพล ≤1.5 กม. · เดิม [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่ายจาก SmartMap (data/influence.js) เป็นตัวกำหนดต้นทาง contour ก่อนโซนเดิม · เตรียมอุดม→MDIS 17 ชม. · กองพัน→Dis2 4 ชม. · เดิม [v40.1 · 29 ต.ค. 2569] รหัสสถานี TWQMS (S001…/SM01…) ในข้อมูลสำรอง → ค่าสด/ย้อนหลังจาก Firebase ตรงทุกสถานี · เพิ่ม S033 รพ.สมเด็จพระปิ่นเกล้า (สจ.ท่าพระ 3.5 ชม.) · ราชวินิต/ตั้งพิรุฬห์ 12 ชม. · เวลาเดินน้ำไม่ใช้แรงดัน RTU (TT_PRESSURE_ON) · เดิม [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
 // ฤดูฝน มิ.ย.–พ.ย. (ใช้กับคู่ที่เวลาเดินน้ำต่างตามฤดู เช่น สจ.บางพลี → สภ.คลองด่าน แล้ง 17 / ฝน 20.5)
 function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 // [v39 · 3 ต.ค. 2569] ตารางเวลาเดินน้ำปรับใหม่ 47 คู่ จากการเทียบพีค TWQMS รายชั่วโมง ม.ค.–ก.ย. 2569 (7 เดือน, EC+FRC,
@@ -15720,7 +15720,7 @@ function _influenceVal(lat, lon, valFn) {
 //   ป้องกันค่าผิด: ต้นทางต้องต่างกัน ≥0.15 mg/L (ไม่งั้นแยกสัดส่วนไม่ได้) · ค่าวัด 0.02–3 · สถานีวัด/ต้นทางไม่ค้าง/ไม่ซ่อม · ต้นทางไม่เกิน 3 สถานี
 //   กระจายไปช่องรอบๆ ที่มีต้นทางร่วม ≥2 สถานี: น้ำหนัก g = e^(−(ระยะ/6 กม.)²) ผสมกับแบบเดิม (เกิน 12 กม. ไม่ใช้)
 var INF_MIX_KEY = 'frc_infmix_on';
-window.INF_MIX_ON = (function () { try { return localStorage.getItem(INF_MIX_KEY) !== '0'; } catch (e) { return true; } })();
+window.INF_MIX_ON = false;   // [v44] ปิดถาวร: เทียบย้อนหลังแล้วไม่ช่วยให้แม่นขึ้น (0.126 เท่า v41) และเสี่ยงตีความความคลาดของแบบจำลองเป็นน้ำผสม
 var _infMixSites = [];
 function _infKhr(sid) {
   const k = CONTOUR_K_OVERRIDE[sid] != null ? CONTOUR_K_OVERRIDE[sid] : (STATION_K_OVERRIDE[sid] != null ? STATION_K_OVERRIDE[sid] : K_total * 3600);
@@ -15744,13 +15744,15 @@ function _infSolveW(C, meas) {                                 // หา w บ�
 }
 function _infMixUpdate() {
   _infMixSites = [];
+  return;                                                    // [v44] ปิด (ดู INF_MIX_ON)
   if (!window.INFLUENCE_ON || !window.INF_MIX_ON || !_infReady()) return;
   const H = _lagHist().frc, now = Date.now(), sources = _ensureFrcSources(), N = CACHE_RES + 1;
   const hourOf = t => new Date(t + 7 * 3600e3).getUTCHours();
   for (const m of SENSORS) {
     if (m.type !== 'monitor' || !(m.lat > 0)) continue;
     const c = _infLabelAt(m.lat, m.lon); if (c == null) continue;
-    const all = _infComboAll[c]; if (!all || all.length < 2 || all.length > 3) continue;
+    const all = (_infComboSrc[c] || []).filter(id => !id.startsWith('VC'));   // [v43.1] เฉพาะสายหลักของ DMA (ไม่นับสายผันน้ำ)
+    if (all.length < 2 || all.length > 3) continue;
     const srcs = all.map(id => sources.find(s => String(s.id) === id));
     if (srcs.some(s => !s || (typeof _isSensorDown === 'function' && _isSensorDown(s)))) continue;
     if (typeof _isSensorDown === 'function' && _isSensorDown(m)) continue;
@@ -15763,6 +15765,7 @@ function _infMixUpdate() {
       const meas = _laggedVal(H, code, h * 3600); if (!(meas >= 0.02 && meas <= 3)) continue;
       const C = srcs.map((s, k) => { const c0 = _laggedVal(H, String(s.id), h * 3600 + tau[k]); return c0 != null ? c0 * dec[k] : null; });
       if (C.some(v => v == null)) continue;
+      if (meas < Math.min(...C) - 0.1 || meas > Math.max(...C) + 0.1) continue;   // [v43.1] ค่าวัดอยู่นอกช่วงของต้นทาง = แบบจำลองคลาด ไม่ใช่น้ำผสม
       const w = _infSolveW(C, meas); if (!w) continue;
       const a = acc[hourOf(now - h * 3600e3)]; w.forEach((x, k) => a.w[k] += x); a.n++;
     }
@@ -15772,7 +15775,7 @@ function _infMixUpdate() {
     const fresh = (apiStatus === 'live') || (m.liveTs && now - m.liveTs < 2 * 3600e3);
     if (fresh && m.frc >= 0.02 && m.frc <= 3) {
       const C = srcs.map((s, k) => { const c0 = window.TIME_LAGGED_C0 ? (_laggedC0(String(s.id), tau[k]) ?? s.frc) : s.frc; return c0 * dec[k]; });
-      w = _infSolveW(C, m.frc); if (w) how = 'ค่าสด';
+      if (m.frc >= Math.min(...C) - 0.1 && m.frc <= Math.max(...C) + 0.1) { w = _infSolveW(C, m.frc); if (w) how = 'ค่าสด'; }
     }
     if (!w && prof[hourOf(now)]) { w = prof[hourOf(now)]; how = 'เฉลี่ยชั่วโมงเดียวกัน 7 วัน'; }
     if (!w) continue;
@@ -15787,22 +15790,22 @@ function _infMixUpdate() {
   } catch (e) {}
 }
 function _infMixWeightsFor(c, lat, lon) {
+  // [v43.1] ใช้เฉพาะช่องที่ SmartMap ระบุว่ารับน้ำจากสถานีเดียวกับจุดวัด ≥2 สถานี (สายหลัก) · ช่องสถานีเดียว = 100% สถานีนั้นเสมอ
   if (!window.INF_MIX_ON || !_infMixSites.length) return null;
-  const all = _infComboAll[c], prim = _infComboSrc[c]; if (!all) return null;
+  const prim = _infComboSrc[c]; if (!prim || prim.length < 2) return null;
   let best = null, bd = Infinity;
   for (const st of _infMixSites) {
-    let common = 0; for (const id of st.sids) if (all.includes(id)) common++;
+    let common = 0; for (const id of st.sids) if (prim.includes(id)) common++;
     if (common < 2) continue;
     const d = Math.sqrt((st.lat - lat) ** 2 + ((st.lon - lon) * 0.97) ** 2) * DEG_TO_KM;
     if (d < bd) { bd = d; best = st; }
   }
   if (!best || bd > 12) return null;
   const g = Math.exp(-((bd / 6) ** 2));
+  let ss = 0; for (const id of prim) if (best.w[id] != null) ss += best.w[id];
+  if (!(ss > 0)) return null;
   const W = {};
-  prim.forEach(id => { W[id] = (W[id] || 0) + (1 - g) / prim.length });           // แบบเดิม: เฉลี่ยเท่ากันรายสถานีสายหลัก (รวม VC)
-  let ss = 0; for (const id of all) if (best.w[id] != null) ss += best.w[id];
-  if (ss > 0) for (const id of all) if (best.w[id] != null) W[id] = (W[id] || 0) + g * best.w[id] / ss;
-  else return null;
+  for (const id of prim) W[id] = (1 - g) / prim.length + (best.w[id] != null ? g * best.w[id] / ss : 0);
   return W;
 }
 window._infMixSet = function (on) { window.INF_MIX_ON = !!on; try { localStorage.setItem(INF_MIX_KEY, on ? '1' : '0'); } catch (e) {} window._c0Memo = {}; buildIdwCache(); if (typeof redrawContour === 'function') redrawContour(); };
@@ -15841,7 +15844,7 @@ const INF_COLORS = { SP04:'#f032e6', SP05:'#800000', SP06:'#911eb4', SP09:'#3cb4
   SW04:'#469990', SW05:'#bfef45', SW06:'#f58231', SW07:'#7f7fff', SW08:'#4363d8', SW09:'#42d4f4', SW10:'#e6194b', SW11:'#ffe119',
   VC01:'#4a4a7a', VC02:'#8c8c8c', VC04:'#7a4a6b', VC05:'#2f4f4f', VC08:'#6b4f3a', VC12:'#3d6b45', VC13:'#a0a0a0' };
 const INF_VC_COLOR = '#455a64';
-const INF_SRC_TEXT = 'ที่มา: SmartMap ฝ่ายควบคุมระบบจ่ายน้ำ กปน.';
+const INF_SRC_TEXT = 'ที่มา: SmartMap ฝ่ายควบคุมระบบจ่ายน้ำ กปน. (มิเตอร์ DM + อิทธิพลรายช่วงท่อ)';
 let _infLayer = null, _infLabels = null, _infLegend = null, _infHl = null, _infHlSid = null, _infLayerOn = false;
 function _infColor(sid) { return INF_COLORS[sid] || (String(sid).startsWith('VC') ? INF_VC_COLOR : '#888'); }
 function _infName(sid, short) {
@@ -15863,7 +15866,7 @@ function _infShareAt(c, lat, lon) {
   return { parts: prim.map(k => ({ sid: k, w: 1 / prim.length })), how: prim.length > 1 ? 'ไม่มีจุดวัดแยกสัดส่วน → ใช้เท่ากัน' : '' };
 }
 function _infMixNearest(c, lat, lon) {
-  const all = _infComboAll[c]; if (!all || !_infMixSites.length) return null;
+  const all = _infComboSrc[c]; if (!all || all.length < 2 || !_infMixSites.length) return null;
   let best = null, bd = Infinity;
   for (const st of _infMixSites) {
     let common = 0; for (const id of st.sids) if (all.includes(id)) common++;
@@ -15938,7 +15941,7 @@ function _infBuildLegend() {
     const d = L.DomUtil.create('div', 'inf-legend');
     d.innerHTML = '<div class="h">🗺 พื้นที่อิทธิพลสูบจ่าย <span class="x" title="ซ่อน" onclick="window._infShowLayer(false)">✕</span></div>' +
       '<div class="lst">' + sids.map(s => '<div><i style="background:' + _infColor(s) + '"></i>' + _infName(s, true) + '</div>').join('') + '</div>' +
-      '<div class="nt"><b class="hatch"></b>ลายทแยง = น้ำผสม (กว้างแคบตามสัดส่วนจริงเมื่อมีจุดวัด)<br><b class="fade"></b>สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)<br>ชี้เมาส์บนแผนที่ = ดูสถานีและสัดส่วน · ชี้สถานีสูบ = ไฮไลต์พื้นที่</div>' +
+      '<div class="nt"><b class="hatch"></b>ลายทแยง = รับน้ำได้จากหลายสถานี (SmartMap ไม่ระบุสัดส่วน · คำนวณเฉลี่ยเท่ากัน)<br><b class="fade"></b>สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)<br>ชี้เมาส์บนแผนที่ = ดูว่ารับน้ำจากสถานีไหน · ชี้สถานีสูบ = ไฮไลต์พื้นที่</div>' +
       '<div class="src">' + INF_SRC_TEXT + ' · ข้อมูล ณ ' + ((G.meta && G.meta.asOf) || '—') + '</div>';
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
     return d;
@@ -16016,11 +16019,11 @@ function _infAreaKm2(sid) {
 function _infTipHtml(lat, lon) {
   if (!window.INFLUENCE_GRID || !_infReady()) return '';
   const c = _infLabelAt(lat, lon); if (c == null) return '<span class="hw">นอกพื้นที่อิทธิพล SmartMap (ใช้โซนเดิม)</span>';
-  const sh = _infShareAt(c, lat, lon); if (!sh) return '<span class="hw">ไม่ทราบอิทธิพล (ใช้โซนเดิม)</span>';
+  const prim = _infComboSrc[c]; if (!prim) return '<span class="hw">ไม่ทราบอิทธิพล (ใช้โซนเดิม)</span>';
   const filled = window.INFLUENCE_GRID.combos[c][0] === '≈';
-  const one = sh.parts.length === 1;
-  return (one ? '🗺 อิทธิพล: ' : '🗺 น้ำผสม: ') + sh.parts.map(o => '<i style="background:' + _infColor(o.sid) + '"></i>' + _infName(o.sid, true) + (one ? '' : ' <b>' + Math.round(o.w * 100) + '%</b>')).join(one ? '' : ' · ') +
-    (sh.how ? '<br><span class="hw">' + sh.how + '</span>' : '') + (filled ? '<br><span class="hw">เติมจากพื้นที่ข้างเคียง (DMA ไม่มีมิเตอร์)</span>' : '');
+  const chip = sid => '<i style="background:' + _infColor(sid) + '"></i>' + _infName(sid, true);
+  return (prim.length === 1 ? '🗺 อิทธิพล: ' + chip(prim[0]) : '🗺 รับน้ำได้จาก: ' + prim.map(chip).join(' · ') + '<br><span class="hw">SmartMap ไม่ระบุสัดส่วน → คำนวณเฉลี่ยเท่ากัน</span>') +
+    (filled ? '<br><span class="hw">เติมจากพื้นที่ข้างเคียง (DMA ไม่มีมิเตอร์)</span>' : '');
 }
 window._infTipHtml = _infTipHtml;
 map.on('mousemove', function (e) {
@@ -16072,17 +16075,13 @@ function _infInjectUI() {
       '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;" onclick="event.stopPropagation()">' +
         '<input type="checkbox" id="inf-layer" onchange="window._infShowLayer(this.checked)" style="accent-color:#0b63c4;">' +
         '<span>แสดงแผนที่อิทธิพลสูบจ่าย (ป้ายชื่อ + คำอธิบายสี)</span></label>' +
-      '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#0b3d7a;cursor:pointer;margin-top:3px;" onclick="event.stopPropagation()">' +
-        '<input type="checkbox" id="infmix-toggle" ' + (window.INF_MIX_ON ? 'checked' : '') + ' onchange="window._infMixSet(this.checked)" style="accent-color:#0b63c4;">' +
-        '<span>⚖️ สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อสองสถานี)</span></label>' +
-      '<div id="infmix-list" style="font-size:9.5px;color:#36507a;margin-top:3px;line-height:1.4;"></div>' +
-      '<div style="font-size:9.5px;color:#6080a0;margin-top:3px;line-height:1.4;">' + INF_SRC_TEXT + ' · ข้อมูล ณ ' + asOf + ' · ลายทแยง = น้ำผสม (กว้างแคบตามสัดส่วนจริง) · สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)</div>' +
+      '<div style="font-size:9.5px;color:#6080a0;margin-top:3px;line-height:1.4;">' + INF_SRC_TEXT + ' · ข้อมูล ณ ' + asOf + ' · ลายทแยง = รับน้ำได้จากหลายสถานี (SmartMap ไม่ระบุสัดส่วน → คำนวณเฉลี่ยเท่ากัน) · สีจาง = DMA ไม่มีมิเตอร์ (เติมจากข้างเคียง)</div>' +
     '</div>');
 }
 (function _infLoad() {                                       // โหลดไฟล์ข้อมูลเอง (ไม่ต้องแก้ index.html)
   if (window.INFLUENCE_GRID) return;
   const s = document.createElement('script');
-  s.src = 'data/influence.js?v=43';
+  s.src = 'data/influence.js?v=44';
   s.onload = function () {
     _infCells = null;
     console.log('[อิทธิพล] โหลดพื้นที่อิทธิพลแล้ว', window.INFLUENCE_GRID && window.INFLUENCE_GRID.meta && window.INFLUENCE_GRID.meta.asOf);
