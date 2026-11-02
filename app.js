@@ -15,7 +15,7 @@ async function _fbGetHistoryCached(){
 // FRCContour v37.0 — MWA Water Quality Division
 // สร้างใหม่จาก v36.3: แยก data → data/*.js, ระบบ version จุดเดียว, ตัด dead code
 
-const APP_VERSION = '44';   // [v44 · 2 พ.ย. 2569] แผนที่อิทธิพลปรับด้วยอิทธิพลรายช่วงท่อ SmartMap (พื้นที่หลายสถานีลดลง ~36%) · ปิดการแยกสัดส่วนจากค่าวัด (ไม่ช่วยให้แม่นขึ้น) · ชี้เมาส์บอกสถานีที่รับน้ำได้ ไม่ใส่เปอร์เซ็นต์ที่เดา · เดิม [v43.1 · 30 ต.ค. 2569] สัดส่วนน้ำผสมใช้เฉพาะสายหลักของ DMA (ไม่นับสายผันน้ำ) · ช่องสถานีเดียวไม่ผสม · ค่าวัดนอกช่วงต้นทางไม่นำมาคิด · เดิม [v43 · 30 ต.ค. 2569] แผนที่อิทธิพลสูบจ่าย: สีพื้นที่ติดกันต่างกัน · เส้นรอยต่อ · ป้ายชื่อสถานี · คำอธิบายสี + ที่มา SmartMap · ชี้เมาส์ = สถานี/สัดส่วนน้ำผสม · ชี้สถานีสูบ = ไฮไลต์พื้นที่ · แถบผสมกว้างตามสัดส่วนจริง · เมนูข้างเป็นตัวหลัก (โซนเดิมเป็นสำรอง) · เดิม [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อที่สองสถานีผลัดกันจ่าย เช่น หัวเฉียว บางพลี/ลาดกระบัง) · เติมพื้นที่นอก DMA ที่ติดแนวสายอิทธิพล ≤1.5 กม. · เดิม [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่ายจาก SmartMap (data/influence.js) เป็นตัวกำหนดต้นทาง contour ก่อนโซนเดิม · เตรียมอุดม→MDIS 17 ชม. · กองพัน→Dis2 4 ชม. · เดิม [v40.1 · 29 ต.ค. 2569] รหัสสถานี TWQMS (S001…/SM01…) ในข้อมูลสำรอง → ค่าสด/ย้อนหลังจาก Firebase ตรงทุกสถานี · เพิ่ม S033 รพ.สมเด็จพระปิ่นเกล้า (สจ.ท่าพระ 3.5 ชม.) · ราชวินิต/ตั้งพิรุฬห์ 12 ชม. · เวลาเดินน้ำไม่ใช้แรงดัน RTU (TT_PRESSURE_ON) · เดิม [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
+const APP_VERSION = '44.1';   // [v44.1 · 2 พ.ย. 2569] What-If จ่ายคลอรีนมีผลทั้ง contour (เดิมโหมดเลื่อนเวลาใช้แต่ค่าย้อนหลัง จุดไกลเกิน 30 นาทีไม่เปลี่ยน) · เดิม [v44 · 2 พ.ย. 2569] แผนที่อิทธิพลปรับด้วยอิทธิพลรายช่วงท่อ SmartMap (พื้นที่หลายสถานีลดลง ~36%) · ปิดการแยกสัดส่วนจากค่าวัด (ไม่ช่วยให้แม่นขึ้น) · ชี้เมาส์บอกสถานีที่รับน้ำได้ ไม่ใส่เปอร์เซ็นต์ที่เดา · เดิม [v43.1 · 30 ต.ค. 2569] สัดส่วนน้ำผสมใช้เฉพาะสายหลักของ DMA (ไม่นับสายผันน้ำ) · ช่องสถานีเดียวไม่ผสม · ค่าวัดนอกช่วงต้นทางไม่นำมาคิด · เดิม [v43 · 30 ต.ค. 2569] แผนที่อิทธิพลสูบจ่าย: สีพื้นที่ติดกันต่างกัน · เส้นรอยต่อ · ป้ายชื่อสถานี · คำอธิบายสี + ที่มา SmartMap · ชี้เมาส์ = สถานี/สัดส่วนน้ำผสม · ชี้สถานีสูบ = ไฮไลต์พื้นที่ · แถบผสมกว้างตามสัดส่วนจริง · เมนูข้างเป็นตัวหลัก (โซนเดิมเป็นสำรอง) · เดิม [v42 · 29 ต.ค. 2569] สัดส่วนน้ำผสมจากค่าวัดจริง (รอยต่อที่สองสถานีผลัดกันจ่าย เช่น หัวเฉียว บางพลี/ลาดกระบัง) · เติมพื้นที่นอก DMA ที่ติดแนวสายอิทธิพล ≤1.5 กม. · เดิม [v41 · 29 ต.ค. 2569] พื้นที่อิทธิพลสูบจ่ายจาก SmartMap (data/influence.js) เป็นตัวกำหนดต้นทาง contour ก่อนโซนเดิม · เตรียมอุดม→MDIS 17 ชม. · กองพัน→Dis2 4 ชม. · เดิม [v40.1 · 29 ต.ค. 2569] รหัสสถานี TWQMS (S001…/SM01…) ในข้อมูลสำรอง → ค่าสด/ย้อนหลังจาก Firebase ตรงทุกสถานี · เพิ่ม S033 รพ.สมเด็จพระปิ่นเกล้า (สจ.ท่าพระ 3.5 ชม.) · ราชวินิต/ตั้งพิรุฬห์ 12 ชม. · เวลาเดินน้ำไม่ใช้แรงดัน RTU (TT_PRESSURE_ON) · เดิม [v40 · 18 ต.ค. 2569] 3D สถานี (frc3d.js): ปุ่ม "🏙 ดู 3 มิติ" ในป๊อปอัปสถานี + ปุ่มทัวร์ 4 สถานี + เล่นเองเมื่อไม่มีการใช้งาน 2 นาที · เดิม [v39.1 · 16 ต.ค. 2569] MDIS → ร.ร.ราชวินิต 22.5 → 5 ชม. (ระดับ FRC จาก TWQMS 13–15 ต.ค.) · เดิม [v39 · 3 ต.ค. 2569] ขึ้นจริงจาก v39.3 test: เวลาเดินน้ำชุดใหม่ (เทียบพีค 7 เดือน) + contour ใช้ความเร็วรายสถานี + time-lag เปิดเป็นค่าเริ่มต้น
 // ฤดูฝน มิ.ย.–พ.ย. (ใช้กับคู่ที่เวลาเดินน้ำต่างตามฤดู เช่น สจ.บางพลี → สภ.คลองด่าน แล้ง 17 / ฝน 20.5)
 function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 // [v39 · 3 ต.ค. 2569] ตารางเวลาเดินน้ำปรับใหม่ 47 คู่ จากการเทียบพีค TWQMS รายชั่วโมง ม.ค.–ก.ย. 2569 (7 เดือน, EC+FRC,
@@ -11804,6 +11804,9 @@ function submitFeedback(){
     _wifActive = true;
     const origFrc = _wifOrigFrc[String(_wifStation.id)] || _wifStation.frc;
     _wifStation.frc = Math.max(0, origFrc + _wifDelta);
+    window._wifOffset = {};                                   // [v44.1] ส่วนต่างรายสถานี ใช้กับค่าย้อนหลังใน contour
+    SENSORS.forEach(s => { const o = _wifOrigFrc[String(s.id)]; if (o != null && s.frc !== o) window._wifOffset[String(s.id)] = s.frc - o; });
+    window._c0Memo = {};
     if (typeof updateVcFrc === 'function') updateVcFrc();
     if (typeof buildIdwCache === 'function') buildIdwCache();
     if (typeof redrawContour === 'function') redrawContour();
@@ -11818,6 +11821,7 @@ function submitFeedback(){
       if (orig != null) s.frc = orig;
     });
     _wifActive = false; _wifOrigFrc = {}; _wifDelta = 0; _wifStation = null;
+    window._wifOffset = {}; window._c0Memo = {};              // [v44.1]
     document.querySelectorAll('.wif-btn').forEach(b => b.classList.remove('active'));
     ['wif-station','wif-station2'].forEach(id => { const s = document.getElementById(id); if (s) s.value = ''; });
     ['wif-info','wif-info2'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<span style="color:#27ae60;font-weight:600;">✓ คืนค่าเดิมแล้ว</span>'; });
@@ -15107,17 +15111,18 @@ function _ecValFor(sensor, lat, lon, j, i) {
 // C₀ ที่ contour ใช้: snapshot (default) หรือ time-lagged (toggle)
 // fallback เป็น sensor.frc เสมอเมื่อไม่มีข้อมูลย้อนหลังพอ → ระบบไม่มีวันเสียหาย
 function _c0For(sensor, dKm, distMult) {
+  // [v44.1] What-If: ส่วนที่ผู้ใช้ปรับ (ใหม่ − เดิม) บวกเข้ากับค่าย้อนหลังด้วย — เดิมโหมดเลื่อนเวลา (time-lag) ใช้แต่ค่าย้อนหลัง
+  //         จุดที่น้ำเดินเกิน 30 นาทีจึงไม่เปลี่ยนเลยเมื่อจำลอง (ความหมาย: "ถ้าสถานีจ่ายเพิ่ม/ลดเท่านี้ตลอดช่วงที่ผ่านมา")
+  const off = (window._wifOffset && sensor) ? (window._wifOffset[String(sensor.id)] || 0) : 0;
   if (!window.TIME_LAGGED_C0) return sensor.frc;
   try {
     const tSec = _travelSec(dKm, sensor, distMult);
     if (tSec < 1800) return sensor.frc; // < 30 นาที — lag ไม่มีนัย ประหยัด lookup
     const key = 'frc|' + String(sensor.id) + '|' + ((tSec / 900) | 0); // memo bucket 15 นาที
     const memo = window._c0Memo || (window._c0Memo = {});
-    if (key in memo) return memo[key];
-    const c0 = _laggedC0(String(sensor.id), tSec);
-    const out = (c0 != null) ? c0 : sensor.frc;
-    memo[key] = out;
-    return out;
+    if (!(key in memo)) { const c0 = _laggedC0(String(sensor.id), tSec); memo[key] = (c0 != null) ? c0 : null; }
+    const out = memo[key] != null ? memo[key] + off : sensor.frc;
+    return Math.max(0, out);
   } catch(e) { return sensor.frc; }
 }
 
