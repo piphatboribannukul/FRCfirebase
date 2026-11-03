@@ -1,0 +1,88 @@
+name: Archive Firebase history (daily, before prune)
+
+# [3 พ.ย. 2569] เก็บค่า FRC/EC รายวันลง repo ก่อนที่ prune-history จะลบข้อมูลเก่ากว่า 7 วัน
+#   ไว้ใช้หาเวลาเดินน้ำ / เทียบช่วงปิด-เปิดเทอม ย้อนหลังได้นานเท่าที่ต้องการ
+#   ไม่แตะ Firebase (อ่านอย่างเดียว) → แอปยังโหลดเร็วเท่าเดิม (แอปยังดึงแค่ 7 วัน)
+#   ไฟล์: history_archive/YYYY-MM-DD.json.gz  (เวลาไทย 00:00–24:00 ของวันนั้น)
+#   รูปแบบ: { date, stations: { <code>: [ {ts, frc, ec, ...ทุก field เดิม}, ... ] } }
+
+on:
+  schedule:
+    - cron: '30 17 * * *'   # 00:30 เวลาไทย ทุกวัน (ก่อน prune 01:00)
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: 'เก็บย้อนหลังกี่วัน (ครั้งแรกใส่ 7 เพื่อเก็บของที่ยังเหลือใน Firebase)'
+        required: false
+        default: '1'
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export history from Firebase
+        env:
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+          DAYS_BACK: ${{ github.event.inputs.days_back || '1' }}
+        run: |
+          mkdir -p history_archive
+          node << 'EOF'
+          const fs = require('fs'), zlib = require('zlib');
+          const DB_URL = 'https://frc-contour-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const SECRET = process.env.FIREBASE_DB_SECRET;
+          const DAYS   = Math.max(1, Math.min(8, parseInt(process.env.DAYS_BACK || '1', 10) || 1));
+          const TH     = 7 * 3600e3;
+
+          async function getJson(url) {
+            for (let a = 1; ; a++) {
+              try {
+                const r = await fetch(url);
+                if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+                return r.json();
+              } catch (e) {
+                if (a >= 3) throw e;
+                console.warn('  retry', a, e.message); await new Promise(s => setTimeout(s, a * 5000));
+              }
+            }
+          }
+
+          (async () => {
+            const top = await getJson(`${DB_URL}/history.json?shallow=true&auth=${SECRET}`);
+            const stations = Object.keys(top || {}).filter(k => !k.startsWith('_'));   // ข้าม _maintenance, _feedbacks ฯลฯ
+            // วันไทยที่เพิ่งจบ (เมื่อวาน) ย้อนไป DAYS วัน
+            const todayTH = new Date(Date.now() + TH); todayTH.setUTCHours(0, 0, 0, 0);
+            for (let k = DAYS; k >= 1; k--) {
+              const start = todayTH.getTime() - k * 86400e3 - TH;      // 00:00 ไทย เป็น ms UTC
+              const end   = start + 86400e3 - 1;
+              const date  = new Date(start + TH).toISOString().slice(0, 10);
+              const file  = `history_archive/${date}.json.gz`;
+              if (fs.existsSync(file)) { console.log(date, 'มีแล้ว ข้าม'); continue; }
+              const out = { date, tz: 'Asia/Bangkok', exportedAt: new Date().toISOString(), stations: {} };
+              let n = 0;
+              for (const st of stations) {
+                try {
+                  const j = await getJson(`${DB_URL}/history/${st}.json?orderBy=%22ts%22&startAt=${start}&endAt=${end}&auth=${SECRET}`);
+                  const pts = Object.values(j || {}).filter(p => p && p.ts).sort((a, b) => a.ts - b.ts);
+                  if (pts.length) { out.stations[st] = pts; n += pts.length; }
+                } catch (e) { console.error('  ✗', st, e.message); }
+              }
+              if (!n) { console.log(date, 'ไม่มีข้อมูล'); continue; }
+              fs.writeFileSync(file, zlib.gzipSync(JSON.stringify(out)));
+              console.log(date, '→', Object.keys(out.stations).length, 'สถานี', n, 'จุด', file);
+            }
+          })().catch(e => { console.error(e); process.exit(1); });
+          EOF
+
+      - name: Commit archive
+        run: |
+          git config user.name  "history-archive-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add history_archive
+          if git diff --cached --quiet; then echo "ไม่มีไฟล์ใหม่"; exit 0; fi
+          git commit -m "archive history $(date -u -d '+7 hours' +%Y-%m-%d)"
+          git push
