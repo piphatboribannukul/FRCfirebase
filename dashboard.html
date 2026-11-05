@@ -441,7 +441,7 @@ function go(id,btn){
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const fr=document.getElementById('if-'+id);   // โหลดรายงานความขุ่น/EC เมื่อเปิดครั้งแรก
-  if(fr&&!fr.getAttribute('src'))fr.src=fr.dataset.src;
+  if(fr&&!fr.getAttribute('src'))fr.src=fr.dataset.src+(fr.dataset.src.includes('?')?'&':'?')+'v='+Date.now();   // กันเบราว์เซอร์ใช้ไฟล์เก่าที่จำไว้
 }
 /* ── Dashboard charts (mock — TODO: ต่อ Firebase) ── */
 const days=[...Array(14)].map((_,i)=>(8+i)+' ส.ค.');
