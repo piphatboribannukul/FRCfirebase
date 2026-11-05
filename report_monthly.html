@@ -84,7 +84,7 @@ body{margin:0;background:var(--bg);font-family:var(--body);color:var(--ink);padd
   <div class="rnav"><span class="lb">รายงาน:</span><a href="report_frc.html">🧪 คลอรีน</a><a href="report_turbidity.html">💧 ความขุ่น</a><a href="report_ec.html">⚡ ความนำไฟฟ้า</a><a href="report_monthly.html" class="on">📈 กราฟรายเดือน</a></div>
   <div class="tb">
     <span class="lab">พารามิเตอร์:</span>
-    <div class="grp" id="parGrp"><button data-p="frc" class="on">คลอรีน (ค่าเฉลี่ย)</button><button data-p="ec">ความนำไฟฟ้า (ค่าสูงสุด)</button><button data-p="tub">ความขุ่น (ค่าเฉลี่ย)</button></div>
+    <div class="grp" id="parGrp"><button data-p="frc" class="on">คลอรีน (ค่าเฉลี่ย)</button><button data-p="ec">ความนำไฟฟ้า (ค่าสูงสุด)</button><button data-p="tub">ความขุ่น (ค่าเฉลี่ย)</button><button data-p="all">รวมทุกพารามิเตอร์</button></div>
     <span class="lab">โรงงาน:</span>
     <div class="grp" id="pageGrp"></div>
     <span class="sp"></span>
@@ -251,7 +251,7 @@ function slideHTML(pg,par,days,label){
     return cellAt(i,P.ctrl?card(par,x.s,x.t,'ctrl',days,w-24,CH):card(par,x.s,x.t,'line1',days,w-24,CH),pill);}).join('');
   const mons=pg.mons.map((list,i)=>list.length?cellAt(i,card(par,list,null,'mon',days,w-24,MH),`<div class="pill" style="border-color:#e6a23c">⬇</div>`):'').join('');
   const note=pg.note||'ระยะเวลาเดินทางน้ำ : จากการวัดพีคความนำไฟฟ้า';
-  return `<div class="slide" data-key="${pg.key}">
+  return `<div class="slide" data-key="${par}_${pg.key}">
     <div class="top"><div class="note">${note}<br>* อาจเปลี่ยนแปลงตามสถานการณ์ ขึ้นกับอัตราการจ่ายน้ำ แรงดันน้ำ</div>
       <div class="ttl">${P.title}<small>${label}</small></div></div>
     <div class="band b0"><div class="rl">โรงงานผลิตน้ำ</div><div class="bc"><div class="plant">${pg.plant}</div><div class="tgt"><i></i>${P.tgtTxt(ST.cfg[par])}</div></div></div>
@@ -265,9 +265,13 @@ function render(){
   document.getElementById('hdMonth').textContent=`${TH_M[m]} ${y}`;document.title=`สรุปกราฟรายเดือน · ${TH_M[m]} ${y}`;
   const st=document.getElementById('stage');
   if(!ST.data){st.innerHTML='';banner('📂 กด <b>นำเข้าไฟล์ Excel</b> หรือลากไฟล์สรุปรายเดือน (มีชีต Cl2 · Tur · Cond) มาวางที่หน้านี้','#e3f2fb','#0a4a7c');return;}
-  if(!ST.data[ST.par]){st.innerHTML=`<div style="padding:40px;color:#b02a1f;font-family:var(--disp)">ไฟล์นี้ไม่มีชีตของ ${PAR[ST.par].title}</div>`;return;}
-  const list=ST.page==='all'?PAGES:PAGES.filter(p=>p.key===ST.page);
-  st.innerHTML=list.map((pg,i)=>`<div class="pgbar"><b>${PAR[ST.par].title} · ${pg.plant}${pg.tab.includes('(')?' '+pg.tab.slice(pg.tab.indexOf('(')):''}</b><span>หน้า ${PAGES.indexOf(pg)+1}/${PAGES.length}</span><span class="sp"></span><button data-png="${pg.key}">🖼 Export หน้านี้</button></div><div class="fit">${slideHTML(pg,ST.par,days,label)}</div>`).join('');
+  // รวมทุกพารามิเตอร์ = คลอรีน → ความนำไฟฟ้า → ความขุ่น ต่อกันเป็นชุดเดียว (เหมือนไฟล์ PPT)
+  const pars=ST.par==='all'?['frc','ec','tub']:[ST.par], have=pars.filter(p=>ST.data[p]), miss=pars.filter(p=>!ST.data[p]);
+  if(!have.length){st.innerHTML=`<div style="padding:40px;color:#b02a1f;font-family:var(--disp)">ไฟล์นี้ไม่มีชีตของ ${pars.map(p=>PAR[p].title).join(', ')}</div>`;return;}
+  const list=ST.page==='all'?PAGES:PAGES.filter(p=>p.key===ST.page), total=list.length*have.length;let n=0;
+  st.innerHTML=(miss.length?`<div style="padding:10px 16px;margin:0 auto 12px;max-width:1280px;color:#9a6a00;background:#fff3d6;border-radius:8px;font-size:13px">ไฟล์นี้ไม่มีชีต ${miss.map(p=>PAR[p].title).join(', ')} — แสดงเฉพาะพารามิเตอร์ที่มี</div>`:'')+
+    have.map(par=>list.map(pg=>{n++;const key=par+'_'+pg.key;
+      return `<div class="pgbar"><b>${PAR[par].title} · ${pg.plant}${pg.tab.includes('(')?' '+pg.tab.slice(pg.tab.indexOf('(')):''}</b><span>หน้า ${n}/${total}</span><span class="sp"></span><button data-png="${key}">🖼 Export หน้านี้</button></div><div class="fit">${slideHTML(pg,par,days,label)}</div>`;}).join('')).join('');
   fit();
 }
 function fit(){const avail=Math.min(document.getElementById('stage').clientWidth-32,1280),k=avail/1280;
@@ -281,7 +285,7 @@ async function exportSlides(keys){
   for(const key of keys){const el=document.querySelector(`.slide[data-key="${key}"]`);if(!el)continue;
     const tr=el.style.transform;el.style.transform='none';
     try{const c=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-      const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=`กราฟรายเดือน_${ST.par}_${key}_${TH_M[ST.month]}${ST.year}.png`;document.body.appendChild(a);a.click();a.remove();}
+      const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=`กราฟรายเดือน_${key}_${TH_M[ST.month]}${ST.year}.png`;document.body.appendChild(a);a.click();a.remove();}
     finally{el.style.transform=tr;}}
 }
 
