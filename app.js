@@ -12009,6 +12009,71 @@ function submitFeedback(){
            arrive: [['ถึง รง.มหาสวัสดิ์', 35]], note: 'เวลาเดินทางเป็นค่าประมาณ รอยืนยันด้วยข้อมูลจริง' },
   };
   window._RAW_SOURCE_ROUTE = RAW_SOURCE_ROUTE;
+  // [v45.6] กราฟน้ำดิบแบบเดียวกับกราฟสถานี (แกนเข้ม · ชี้/แตะแล้วมีกล่องค่า) — ย้อนหลัง 48 ชม.
+  window._rawChartData = window._rawChartData || {};
+  const RAWC = { H: 150, PL: 36, PR: 8, PT: 16, PB: 30 };
+  const _rawW = () => Math.max(300, Math.min(440, (window.innerWidth || 400) - 60));
+  const _rawGeo = d => {
+    const { H, PL, PR, PT, PB } = RAWC, W = d.W;
+    return { X: ts => PL + (ts - d.t0) / (d.t1 - d.t0) * (W - PL - PR),
+             Y: v => PT + (1 - (Math.min(d.hi, Math.max(d.lo, v)) - d.lo) / (d.hi - d.lo)) * (H - PT - PB) };
+  };
+  window._rawChartSvg = function (sid, hist) {
+    const now = Date.now(), t0 = now - 48 * 3600000;
+    const pts = (hist || []).filter(p => p && p.ec > 0 && p.ts >= t0).sort((a, b) => a.ts - b.ts);
+    if (pts.length < 2) return '<div style="font-size:11.5px;color:#666;padding:6px 0;">ยังมีข้อมูลย้อนหลังไม่พอวาดกราฟ ('+pts.length+' จุด)</div>';
+    const vs = pts.map(p => p.ec), mn = Math.min(...vs), mx = Math.max(...vs);
+    const step = (mx - mn) <= 40 ? 10 : (mx - mn) <= 120 ? 25 : 50;
+    const lo = Math.floor((mn - step / 2) / step) * step, hi = Math.ceil((mx + step / 2) / step) * step;
+    const W = _rawW(), d = { pts, t0, t1: now, lo, hi, W };
+    const key = String(sid).replace(/[^\w-]/g, '_');
+    window._rawChartData[key] = d;
+    const { H, PL, PR, PT, PB } = RAWC, { X, Y } = _rawGeo(d);
+    const dk = document.body.classList.contains('dark');
+    const ax = dk ? '#dfe3ec' : '#2b2f36', grid = dk ? 'rgba(255,255,255,.12)' : '#e6e9ee', blue = '#1f6fd1';
+    let g = '';
+    for (let v = lo; v <= hi; v += step)
+      g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
+        + '<text x="'+(PL-5)+'" y="'+(Y(v)+3).toFixed(1)+'" font-size="9.5" font-weight="500" text-anchor="end" fill="'+ax+'">'+v+'</text>';
+    g += '<text x="'+(PL-5)+'" y="'+(PT-5)+'" font-size="9" font-weight="500" text-anchor="end" fill="'+ax+'">µS/cm</text>';
+    const s0 = new Date(t0); s0.setMinutes(0, 0, 0);
+    let lastDay = -1, lastX = -99;
+    for (let ms = s0.getTime() + (6 - s0.getHours() % 6) % 6 * 3600000; ms <= now; ms += 6 * 3600000) {
+      const x = X(ms), dt = new Date(ms); if (x < PL) continue;
+      g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+ax+'" stroke-width="0.6"/>'
+        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+12)+'" font-size="9.5" font-weight="500" text-anchor="middle" fill="'+ax+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
+      if (dt.getDate() !== lastDay && x - lastX >= 34) { lastDay = dt.getDate(); lastX = x;
+        g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+23)+'" font-size="9" font-weight="600" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#2c5aa0')+'">'+dt.getDate()+' '+['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][dt.getMonth()]+'</text>'; }
+    }
+    const P = pts.map((p, i) => (i ? 'L' : 'M') + X(p.ts).toFixed(1) + ' ' + Y(p.ec).toFixed(1)).join(' ');
+    g += '<path d="'+P+' L'+X(pts[pts.length-1].ts).toFixed(1)+' '+(H-PB)+' L'+X(pts[0].ts).toFixed(1)+' '+(H-PB)+' Z" fill="'+blue+'" opacity=".08"/>'
+      + '<path d="'+P+'" fill="none" stroke="'+blue+'" stroke-width="2"/>';
+    const lp = pts[pts.length - 1];
+    g += '<circle cx="'+X(lp.ts).toFixed(1)+'" cy="'+Y(lp.ec).toFixed(1)+'" r="3.2" fill="'+blue+'" stroke="#fff" stroke-width="1.2"/>';
+    g += '<g id="rawc-tip-'+key+'" style="pointer-events:none;"></g>'
+      + '<rect x="'+PL+'" y="'+PT+'" width="'+(W-PL-PR)+'" height="'+(H-PT-PB)+'" fill="transparent" style="cursor:crosshair;"'
+      + ' onmousemove="window._rawTip(event,\''+key+'\')" onclick="window._rawTip(event,\''+key+'\')" ontouchstart="window._rawTip(event,\''+key+'\')" ontouchmove="window._rawTip(event,\''+key+'\')" onmouseleave="window._rawTip(null,\''+key+'\')"/>';
+    return '<div style="font-size:12px;font-weight:700;margin:2px 0 2px;">EC ย้อนหลัง 48 ชม. ('+pts.length+' จุด)</div>'
+      + '<svg id="rawc-svg-'+key+'" viewBox="0 0 '+W+' '+H+'" font-family="Sarabun,\'IBM Plex Sans Thai\',system-ui,sans-serif" style="width:100%;max-width:'+W+'px;display:block;margin:0 auto;font-variant-numeric:tabular-nums;">'+g+'</svg>'
+      + '<div style="font-size:11px;font-weight:500;color:'+(dk?'#c4c8d6':'#4a5260')+';margin-top:2px;">ชี้หรือแตะบนกราฟ เพื่อดูค่าแต่ละช่วงเวลา</div>';
+  };
+  window._rawTip = function (ev, key) {
+    const tip = document.getElementById('rawc-tip-' + key), svg = document.getElementById('rawc-svg-' + key), d = window._rawChartData[key];
+    if (!tip || !svg || !d) return;
+    if (!ev) { tip.innerHTML = ''; return; }
+    const { H, PL, PR, PT, PB } = RAWC, W = d.W, { X, Y } = _rawGeo(d);
+    const cx = ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX;
+    const r = svg.getBoundingClientRect(), ts = d.t0 + ((cx - r.left) / r.width * W - PL) / (W - PL - PR) * (d.t1 - d.t0);
+    const p = d.pts.reduce((a, b) => Math.abs(b.ts - ts) < Math.abs(a.ts - ts) ? b : a);
+    const x = X(p.ts), y = Y(p.ec), dk = document.body.classList.contains('dark');
+    const fmt = new Date(p.ts).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const bw = 132, bh = 38, bx = Math.min(W - PR - bw, Math.max(PL, x > W / 2 ? x - bw - 8 : x + 8));
+    tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+(dk?'#f0f0f8':'#111')+'" stroke-width="1"/>'
+      + '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.5" fill="#1f6fd1" stroke="#fff" stroke-width="1.2"/>'
+      + '<rect x="'+bx.toFixed(1)+'" y="'+(PT+2)+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+(dk?'#1d1d2b':'#fff')+'" stroke="#1f6fd1" stroke-width="1" opacity=".97"/>'
+      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(PT+16)+'" font-size="10.5" font-weight="700" fill="'+(dk?'#f0f0f8':'#111')+'">'+fmt+'</text>'
+      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(PT+30)+'" font-size="10.5" font-weight="700" fill="#1f6fd1">'+Math.round(p.ec)+' µS/cm</text>';
+  };
   window._rawPopupHtml = function (o) {
     const dk = document.body.classList.contains('dark');
     const C = { tx: dk?'#f0f0f8':'#111', sub: dk?'#c4c8d6':'#4a5260', line: dk?'rgba(255,255,255,.14)':'#e0e6ee',
@@ -12105,7 +12170,7 @@ function submitFeedback(){
       }
     }
 
-    return window._rawPopupHtml({ sid, name: st.name, water: 'แม่น้ำเจ้าพระยา', d, chart: chartSvg,
+    return window._rawPopupHtml({ sid, name: st.name, water: 'แม่น้ำเจ้าพระยา', d, chart: window._rawChartSvg('rw-' + sid, history),
       route: RAW_SOURCE_ROUTE[sid], footer: sid === 'S1' ? 'ℹ️ ค่า EC น้ำดิบนี้ใช้คาดการณ์ EC ที่สถานีปลายทางฝั่งตะวันออก' : '' });
   }
 
@@ -12794,7 +12859,7 @@ function submitFeedback(){
       }
     }
 
-    return window._rawPopupHtml({ sid, name: st.name, water: 'คลองประปาฝั่งตะวันตก (ลุ่มน้ำแม่กลอง)', d, chart: chartSvg, west: true,
+    return window._rawPopupHtml({ sid, name: st.name, water: 'คลองประปาฝั่งตะวันตก (ลุ่มน้ำแม่กลอง)', d, chart: window._rawChartSvg('mk-' + sid, history), west: true,
       route: (window._RAW_SOURCE_ROUTE || {})[sid],
       footer: sid === 'S12' ? 'ℹ️ ต้นทางน้ำดิบฝั่งตะวันตก (ข้อมูลจาก RWC เริ่ม 5 พ.ย. 69)' : '' });
   }
