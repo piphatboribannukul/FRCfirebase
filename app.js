@@ -12277,11 +12277,18 @@ function submitFeedback(){
   async function fetchRawWaterData() {
     try {
       console.log('[RawWater] Fetching API...');
-      const resp = await fetch(RAW_WATER_API);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      const records = json.data || [];
-      console.log(`[RawWater] API returned ${records.length} records`);
+      // [v45.1] bigdata ล้ม → ยังโหลดประวัติจาก Firebase ต่อ (collector เขียนจาก RWC อยู่แล้ว)
+      //         เดิม throw ทั้งฟังก์ชัน ทำให้กราฟ/คาดการณ์ EC ฝั่งตะวันออกหายไปด้วย
+      let records = [];
+      try {
+        const resp = await fetch(RAW_WATER_API);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        records = json.data || [];
+        console.log(`[RawWater] API returned ${records.length} records`);
+      } catch (eApi) {
+        console.warn('[RawWater] bigdata ใช้ไม่ได้ → ใช้ Firebase อย่างเดียว:', eApi.message);
+      }
 
       // หาค่าล่าสุดของแต่ละสถานี
       const latest = {};
@@ -12345,6 +12352,12 @@ function submitFeedback(){
           if (_rwHistory[sid].length > 1008) _rwHistory[sid] = _rwHistory[sid].slice(-1008);
         });
         console.log('[RawWater] ✅ Firebase history loaded:', Object.entries(_rwHistory).map(([k,v]) => `${k}:${v.length}`).join(', '));
+        // [v45.1] ค่าปัจจุบันใช้จุดล่าสุดใน Firebase เมื่อใหม่กว่า bigdata (RWC อัปเดตถี่กว่า)
+        Object.entries(_rwHistory).forEach(([sid, h]) => {
+          const last = h[h.length - 1]; if (!last) return;
+          const cur = _rwData[sid] && _rwData[sid].time ? new Date(_rwData[sid].time).getTime() : 0;
+          if (last.ts > cur) _rwData[sid] = Object.assign({}, _rwData[sid] || {}, { ec: last.ec, time: new Date(last.ts).toISOString() });
+        });
         // rev22: update global reference
         window._rawWaterHistory = _rwHistory;
       }
