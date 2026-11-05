@@ -46,7 +46,7 @@ function _v39Wet(){ const m = new Date().getMonth(); return m >= 5 && m <= 10; }
 //   คงเดิม: สจ.ลุมพินี → ประปาสาขาทุ่งมหาเมฆ 1 ชม. (EC ชี้ 5.1 แต่ FRC และโมเดลท่อยืนยัน ~1)
 //   รอยืนยันหน้าแล้ง: บดินทรเดชา, บางปู, มีนบุรี, หาดอมรา, ท้องฟ้าจำลอง (สงสัย mapping ต้นทาง), พหลโยธิน
 //   รายละเอียดทั้งหมด: travel_time_check.xlsx
-function appBadge(){ return '⬡ V' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
+function appBadge(){ return 'v' + APP_VERSION.replace(/\.0$/, ''); }   // แสดงสั้น: V38
 
 // ── สารบัญ (ค้นหา "[N/12]" เพื่อกระโดดไป section) ──
 //   [1/11] CORE ENGINE — map, contour, Dijkstra, K chain (3-priority), tempK Arrhenius, RTU, live poll, report
@@ -4755,8 +4755,8 @@ function setParam(mode) {
   document.getElementById('btn-ec').className  = 'param-btn' + (mode==='ec'?' active':'');
   document.getElementById('header-title').textContent =
     mode === 'ec'
-      ? '⚡ M sandbox : Real-Time Chlorine Contour — EC Mode'
-      : '🌸 M sandbox : Real-Time Chlorine Contour';
+      ? 'แผนที่ค่าความนำไฟฟ้า (EC) แบบเรียลไทม์'
+      : 'แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์';
   // อัปเดต disclaimer bar
   const ticker = document.getElementById('disclaimer-ticker');
   if (ticker) {
@@ -5485,10 +5485,8 @@ async function fetchAndUpdate() {
 
     apiStatus = 'live';
     window._frcLiveAt = Date.now();
-    badge.textContent   = '● Live — ' + new Date().toLocaleTimeString('th-TH');
-    badge.style.background = '#f0fff4';
-    badge.style.borderColor = '#80e0a0';
-    badge.style.color      = '#006020';
+    badge.textContent   = 'ออนไลน์ · ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    badge.dataset.state = 'live';
   } catch (err) {
     console.warn('[FRC] API error:', err.message);
     if (apiStatus === 'loading') {
@@ -5497,10 +5495,8 @@ async function fetchAndUpdate() {
       SENSORS_FALLBACK.forEach(s => SENSORS.push(s));
     }
     apiStatus = 'fallback';
-    badge.textContent   = '⚠ Offline — ข้อมูลสำรอง';
-    badge.style.background = '#fff8f0';
-    badge.style.borderColor = '#f0c060';
-    badge.style.color      = '#a05000';
+    badge.textContent   = 'ใช้ข้อมูลสำรอง';
+    badge.dataset.state = 'fallback';
   }
 
   // V27 Hybrid K — back-calculate K จาก live FRC ก่อน rebuild cache
@@ -9120,10 +9116,12 @@ const EC_LO = 210, EC_HI = 600;
 // ═══════════════════════════════════════════════════════════════════
 // 🌙 DARK MODE TOGGLE
 // ═══════════════════════════════════════════════════════════════════
+const _ICON_MOON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+const _ICON_SUN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
 function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark');
   const btn = document.getElementById('dark-toggle');
-  btn.textContent = isDark ? '☀️' : '🌙';
+  btn.innerHTML = isDark ? _ICON_SUN : _ICON_MOON;
   try { localStorage.setItem('mwa_dark_mode', isDark ? '1' : '0'); } catch(e) {}
   // Rebuild markers so popup charts get correct dark/light colors
   buildMarkers();
@@ -9136,7 +9134,7 @@ function toggleDarkMode() {
     if (stored === '1') {
       document.body.classList.add('dark');
       const btn = document.getElementById('dark-toggle');
-      if (btn) btn.textContent = '☀️';
+      if (btn) btn.innerHTML = _ICON_SUN;
     }
   } catch(e) {
     // fallback: default light — ไม่ต้องทำอะไร
@@ -14717,8 +14715,8 @@ function buildDashboard() {
     `<circle cx="55" cy="55" r="${R}" fill="none" stroke="#e5e7eb" stroke-width="8"/>` +
     `<circle cx="55" cy="55" r="${R}" fill="none" stroke="${col}" stroke-width="8"` +
     ` stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 55 55)"/>` +
-    `<text x="55" y="51" text-anchor="middle" font-size="19" font-weight="800" fill="#1e3a5f" font-family="JetBrains Mono,monospace">${pct}%</text>` +
-    `<text x="55" y="68" text-anchor="middle" font-size="9" fill="#94a3b8">${isEc ? 'เกณฑ์ดี' : 'ผ่านเกณฑ์'}</text>`;
+    `<text x="55" y="51" text-anchor="middle" font-size="20" font-weight="600" fill="#171717" font-family="JetBrains Mono,monospace">${pct}%</text>` +
+    `<text x="55" y="68" text-anchor="middle" font-size="11" fill="#737373">${isEc ? 'เกณฑ์ดี' : 'ผ่านเกณฑ์'}</text>`;
   document.getElementById('dash-donut-stats').innerHTML = isEc
     ? `EC &lt; 300 ${U}: <b>${st.pass}/${st.n}</b> สถานี<br>เฉลี่ยทั้งระบบ: <b>${Math.round(st.avg)}</b> ${U}<br>มัธยฐาน: <b>${Math.round(st.med)}</b> ${U}`
     : `ผ่าน ≥0.2 ${U}: <b>${st.pass}/${st.n}</b> สถานี<br>เฉลี่ยทั้งระบบ: <b>${st.avg.toFixed(2)}</b> ${U}<br>มัธยฐาน: <b>${st.med.toFixed(2)}</b> ${U}`;
@@ -14738,13 +14736,19 @@ function buildDashboard() {
   // ── system card ──
   const rtuN = SENSORS.filter(s => s.rtuPressure > 0).length;
   const tf = window._tempKFactor || 1;
+  const _live = (typeof apiStatus !== 'undefined' && apiStatus === 'live');
+  const _stTxt = _live ? 'ออนไลน์' : (typeof apiStatus !== 'undefined' && apiStatus === 'loading' ? 'กำลังโหลด' : 'ใช้ข้อมูลสำรอง');
   document.getElementById('dash-model').innerHTML =
-    `<h4>สถานะระบบ</h4>` +
-    `<div style="font-size:11px;line-height:2;color:#475569;">` +
-    `สถานะข้อมูล: <b style="color:${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '#16a34a' : '#d97706'}">${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '● Live' : '⚠ ' + (typeof apiStatus !== 'undefined' ? apiStatus : '-')}</b>` +
-    ` · RTU→sensor: <b>${rtuN}/${SENSORS.length}</b><br>` +
-    `อุณหภูมิระบบ: <b>${window._sysTempC ? window._sysTempC + '°C' : '–'}</b> · K factor: <b>×${tf.toFixed(2)}</b>${tf === 1 ? ' (OFF)' : ''}<br>` +
-    `แหล่งจ่าย: Kb 0.778 บข. / 0.400 มส. (กนว.32/2566)</div>`;
+    `<h4>สถานะระบบ</h4><dl class="dm-rows">` +
+    `<dt>ข้อมูล</dt><dd><span class="dm-dot ${_live ? 'ok' : 'warn'}"></span>${_stTxt}</dd>` +
+    `<dt>RTU → สถานี</dt><dd class="num">${rtuN}/${SENSORS.length}</dd>` +
+    `<dt>อุณหภูมิระบบ</dt><dd class="num">${window._sysTempC ? window._sysTempC + '°C' : '–'}</dd>` +
+    `<dt>K factor</dt><dd class="num">×${tf.toFixed(2)}${tf === 1 ? ' <span class="dm-mute">ปิด</span>' : ''}</dd>` +
+    `<dt>Kb แหล่งจ่าย</dt><dd class="num">0.778 บางเขน · 0.400 มหาสวัสดิ์</dd>` +
+    `</dl><div class="dm-ref">อ้างอิง กนว.32/2566</div>`;
+  const _sl = document.getElementById('dash-statusline');
+  if (_sl) _sl.innerHTML = `<span class="dm-dot ${_live ? 'ok' : 'warn'}"></span>${_stTxt}` +
+    ` · ข้อมูล TWQMS ${st.n} สถานี · อัปเดต ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`;
 
   // ── zone cards ──
   document.getElementById('dash-zones').innerHTML = st.gRows.map(g => {
@@ -14756,7 +14760,7 @@ function buildDashboard() {
       : (g.n ? `ต้นทาง ${g.srcVal != null ? _dFmt(g.srcVal) : '–'} · รับน้ำ ${g.n} สถานี` : `ใช้ค่าต้นทาง (ไม่มีจุดตรวจปลายทาง)`);
     return `<div class="dz-card${String(g.key) === String(_dashSelKey) ? ' sel' : ''}" onclick="dashSelectZone('${String(g.key).replace(/'/g, "\\'")}')">` +
       `<div class="dz-info"><div class="dz-name">${g.label}</div><div class="dz-sub">${sub}</div>` +
-      `<div class="dz-bar"><span style="width:${(frac * 100).toFixed(1)}%;background:${c}"></span></div></div>` +
+      `<div class="dz-bar"><span style="width:${(frac * 100).toFixed(1)}%;background:${c}"></span><i style="left:${isEc ? 60 : 13.3}%"></i></div></div>` +
       `<span class="dz-val" style="color:${c}">${_dFmt(v)}</span></div>`;
   }).join('');
 
@@ -14777,6 +14781,8 @@ function buildDashboard() {
   // ── bar chart ──
   document.getElementById('dash-chart-title').textContent =
     `${isEc ? 'EC' : 'FRC'} รายพื้นที่อิทธิพล — ${DASH_GROUP === 'src' ? 'ค่าต้นทางสถานีสูบจ่าย' : 'เฉลี่ยทั้งพื้นที่ (ต้นทาง+ปลายทาง)'} (${U})`;
+  const _thr = document.getElementById('dash-chart-thr');
+  if (_thr) _thr.textContent = 'เส้นประ = เกณฑ์ ' + (isEc ? '300 µS/cm' : '0.2 mg/L');
   document.getElementById('dash-updated').textContent =
     'ปรับปรุงล่าสุด: ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   try {
@@ -14789,12 +14795,21 @@ function buildDashboard() {
     } else {
       const ctx = document.getElementById('dash-chart').getContext('2d');
       _dashChart = new Chart(ctx, { type: 'bar',
-        data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, maxBarThickness: 26 }] },
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 0, maxBarThickness: 20 }] },
+        plugins: [{ id: 'dashThreshold', afterDatasetsDraw(ch) {
+          const ec = _dIsEc(), thr = ec ? 300 : 0.2, y = ch.scales.y.getPixelForValue(thr), a = ch.chartArea, g = ch.ctx;
+          if (y < a.top || y > a.bottom) return;
+          g.save(); g.strokeStyle = '#1e3a5f'; g.lineWidth = 1; g.setLineDash([4, 4]);
+          g.beginPath(); g.moveTo(a.left, y); g.lineTo(a.right, y); g.stroke(); g.setLineDash([]);
+          g.restore(); } }],
         options: { responsive: true, maintainAspectRatio: false,
           onClick: (e, els) => { if (els && els[0] != null && _dashRows[els[0].index]) dashSelectZone(_dashRows[els[0].index].key); },
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' เฉลี่ย ' + c.parsed.y + ' ' + _dUnit() + ' (คลิกเพื่อดูรายละเอียด)' } } },
-          scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 } } },
-                    x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 30 } } } } });
+          scales: { y: { beginAtZero: true, border: { display: false }, grid: { color: '#eef0f3' },
+                         ticks: { color: '#737373', font: { size: 11, family: 'JetBrains Mono' }, maxTicksLimit: 4 } },
+                    x: { grid: { display: false }, border: { color: '#e5e7eb' },
+                         ticks: { color: '#525252', font: { size: 11, family: 'Sarabun' }, autoSkip: false, maxRotation: 50, minRotation: 50,
+                           callback(v) { const t = String(this.getLabelForValue(v)).replace('โรงงานผลิตน้ำ', 'รง.'); return t.length > 16 ? t.slice(0, 15) + '…' : t; } } } } } });
     }
   } catch (e) { console.warn('[Dash] chart:', e.message); }
 }

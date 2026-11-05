@@ -2399,67 +2399,138 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
 @media (max-width:640px){ body #header #param-switcher .param-btn{font-size:11px !important;padding:4px 8px !important;} }
 </style>
 <style id="unslop-css">
-/* ═══ v44.3 unslop — โทนเรียบ: เส้นขอบแทนเงา, มุมเล็กลง, accent สีเดียว, ไม่มี emoji ═══ */
-:root{--u-ink:#1f2937;--u-mute:#6b7280;--u-faint:#9ca3af;--u-line:#e5e7eb;--u-bg:#f4f5f7;--u-acc:#1e3a5f;}
+/* ═══ unslop (v44.3) — by Damir Sokolovsky (@heydamir), CC BY 4.0 ═══
+   ทิศทาง: แม่นยำ · สงบ · พร้อมเวร — ห้องควบคุมระบบประปา
+   สีหลักกรมท่าสีเดียว · สีสเกล FRC ใช้เฉพาะที่แสดงค่า · signature = เส้นเกณฑ์ 0.2 mg/L */
+:root{
+  --u-bg:#f5f6f8; --u-card:#ffffff; --u-raised:#f1f3f5;
+  --u-line:rgba(17,24,39,.09); --u-line-2:rgba(17,24,39,.05);
+  --u-ink:#171717; --u-sec:#525252; --u-mute:#737373;
+  --u-acc:#1e3a5f; --u-acc-soft:#eef2f7;
+  --u-ok:#16a34a; --u-warn:#b45309;
+  --u-ease:cubic-bezier(.22,1,.36,1);
+}
+/* ── 1. spacing: header 56 · gutter 12 · card padding 16 · gap 12 · bottom bar 28 ── */
+@media (min-width:769px){
+  #header{height:56px !important;min-height:56px;padding-top:0 !important;padding-bottom:0 !important;}
+  #dash-left,#dash-right{top:68px !important;}
+  body.dash-mode #map{top:68px !important;bottom:224px !important;}
+  body.dash-mode #dash-right,body.dash-mode #dash-bottom{bottom:40px !important;}
+  body.dash-mode #dash-left{bottom:88px !important;}
+  body.dash-mode #dash-map-legend{bottom:236px !important;}
+  body.dash-mode.dash-popup #map{bottom:40px !important;}
+  body.dash-mode.dash-popup #dash-map-legend{bottom:52px !important;}
+}
+body.dash-mode .dash-panel{gap:12px !important;}
+.dash-card{padding:16px !important;}
+/* ── 2. color: neutral surfaces, hairlines, navy accent only for state ── */
 body.dash-mode{background:var(--u-bg) !important;}
-#header{box-shadow:none !important;border-bottom:1px solid var(--u-line) !important;}
-#header h1{color:var(--u-ink) !important;font-weight:600 !important;}
-/* แท็บ: ข้อความ + เส้นใต้ แทน pill */
-#main-tabs{gap:2px !important;align-self:stretch;}
-.mtab{background:transparent !important;border:none !important;border-radius:0 !important;box-shadow:none !important;
-  color:var(--u-mute) !important;font-weight:500 !important;padding:6px 11px !important;
-  border-bottom:2px solid transparent !important;transition:color .15s,border-color .15s !important;}
-.mtab:hover{color:var(--u-ink) !important;background:transparent !important;}
-.mtab.active{color:var(--u-acc) !important;font-weight:700 !important;border-bottom-color:var(--u-acc) !important;background:transparent !important;}
-/* ตัวสลับพารามิเตอร์: segmented เรียบ */
-body #header #param-switcher{border-width:1px !important;border-radius:6px !important;box-shadow:none !important;}
-body #header #param-switcher .param-btn{font-weight:600 !important;font-size:12.5px !important;padding:5px 12px !important;}
-/* การ์ด: ขอบ 1px แทนเงา */
-.dash-card{border-radius:8px !important;box-shadow:none !important;border:1px solid var(--u-line);color:var(--u-ink);}
-.dash-card h4{font-size:12px !important;font-weight:700;color:var(--u-ink) !important;letter-spacing:.2px;
-  padding-bottom:7px;margin-bottom:8px !important;border-bottom:1px solid var(--u-line);}
-#dash-chart-head h4{border-bottom:none;padding-bottom:0;}
-body.dash-mode #map{border-radius:8px !important;box-shadow:none !important;border:1px solid var(--u-line) !important;}
+#header{background:var(--u-card) !important;box-shadow:none !important;border-bottom:1px solid var(--u-line) !important;}
+.dash-card{background:var(--u-card);border-radius:12px !important;box-shadow:none !important;border:1px solid var(--u-line);color:var(--u-ink);}
+body.dash-mode #map{border-radius:12px !important;box-shadow:none !important;border:1px solid var(--u-line) !important;}
 #dash-detail{border:1px solid var(--u-acc) !important;}
-#dash-map-legend{border-radius:6px !important;box-shadow:none !important;border:1px solid var(--u-line);backdrop-filter:none !important;}
-#dash-map-legend .dl-bar{border-radius:0 !important;}
-#dash-donut-stats{color:var(--u-mute) !important;}
-#dash-donut-stats b{color:var(--u-ink) !important;}
-.dw-item{border-radius:0 !important;}
-.dw-item:hover{background:#f9fafb !important;}
-.dw-empty{color:var(--u-mute) !important;}
-/* โซน: รายการเดียวในกรอบ แทนการ์ดลอย 23 ใบ */
-#dash-zones{gap:0 !important;background:#fff;border:1px solid var(--u-line);border-radius:8px;padding:0 !important;}
-.dz-card{border-radius:0 !important;box-shadow:none !important;border:none !important;border-bottom:1px solid #f0f1f3 !important;
-  border-left:3px solid transparent !important;padding:8px 12px 8px 11px !important;transition:background .12s !important;}
+body #header #param-switcher,body #header #param-switcher:has(#btn-ec.active){border:1px solid var(--u-line) !important;border-radius:8px !important;box-shadow:none !important;background:var(--u-raised) !important;padding:2px;gap:2px !important;}
+body #header #param-switcher .param-btn{background:transparent !important;color:var(--u-sec) !important;border-radius:6px !important;
+  font-size:13px !important;font-weight:500 !important;padding:4px 12px !important;transition:background-color .15s var(--u-ease),color .15s var(--u-ease) !important;}
+body #header #param-switcher .param-btn:not(.active):hover{background:transparent !important;color:var(--u-ink) !important;}
+body #header #param-switcher #btn-frc.active,body #header #param-switcher #btn-ec.active{background:var(--u-acc) !important;color:#fff !important;}
+#v2-badge{background:none !important;box-shadow:none !important;color:var(--u-mute) !important;font-weight:400 !important;font-size:12px !important;letter-spacing:0 !important;padding:0 !important;border-radius:0 !important;}
+#header #clock{color:var(--u-mute) !important;font-size:12px !important;}
+#header-badge{white-space:nowrap;display:inline-flex !important;align-items:center;gap:6px;background:none !important;border:none !important;
+  color:var(--u-sec) !important;font-size:12px !important;font-weight:400 !important;padding:0 !important;}
+#header-badge[data-state]::before,.dm-dot{content:"";width:6px;height:6px;border-radius:50%;background:var(--u-warn);flex-shrink:0;display:inline-block;}
+#header-badge[data-state="live"]::before,.dm-dot.ok{background:var(--u-ok);}
+/* ── 3. icons ── */
+#dark-toggle{display:inline-flex !important;align-items:center;justify-content:center;width:32px;height:32px;padding:0 !important;
+  background:none !important;border:1px solid var(--u-line) !important;border-radius:8px !important;color:var(--u-sec);transition:background-color .15s var(--u-ease) !important;}
+#dark-toggle:hover{transform:none !important;background:var(--u-raised) !important;color:var(--u-ink);}
+/* ── 4/5. type: Sarabun 400/500/600, sizes 11·12·13·14·20 ── */
+#header h1{color:var(--u-ink) !important;font-weight:600 !important;font-size:14px !important;}
+.mtab{background:transparent !important;border:none !important;border-radius:0 !important;box-shadow:none !important;
+  color:var(--u-sec) !important;font-size:13px !important;font-weight:500 !important;padding:0 12px !important;height:56px;
+  border-bottom:2px solid transparent !important;transition:color .15s var(--u-ease),border-color .15s var(--u-ease) !important;}
+#main-tabs{gap:0 !important;align-self:stretch;}
+.mtab:hover{color:var(--u-ink) !important;background:transparent !important;}
+.mtab.active{color:var(--u-acc) !important;font-weight:600 !important;border-bottom-color:var(--u-acc) !important;background:transparent !important;}
+.dash-card h4{font-size:13px !important;font-weight:600 !important;color:var(--u-ink) !important;letter-spacing:0;
+  margin:0 0 12px !important;padding:0 !important;border:none !important;gap:8px !important;}
+#dash-chart-head h4{margin:0 !important;}
+.dash-meta{font-size:11px !important;color:var(--u-mute) !important;font-weight:400;}
+#dash-donut-wrap{gap:16px !important;}
+#dash-donut-stats{color:var(--u-sec) !important;font-size:12px !important;line-height:24px !important;}
+#dash-donut-stats b{color:var(--u-ink) !important;font-weight:500 !important;font-size:13px !important;font-variant-numeric:tabular-nums;}
+.dw-item{border-radius:0 !important;padding:8px 0 !important;border-bottom:1px solid var(--u-line-2) !important;}
+.dw-item:hover{background:transparent !important;}
+.dw-item:hover .dw-name{color:var(--u-ink) !important;}
+.dw-name{font-size:12px !important;color:var(--u-sec) !important;}
+.dw-val,.dz-val,.dd-src-val{font-weight:600 !important;font-variant-numeric:tabular-nums;}
+.dw-val{font-size:13px !important;}
+.dw-empty{color:var(--u-mute) !important;font-size:12px !important;text-align:left !important;padding:8px 0 !important;}
+.dd-src{background:var(--u-raised) !important;border-radius:8px !important;}
+.dd-src-name{font-weight:600 !important;color:var(--u-ink) !important;}
+.dd-note{color:var(--u-mute) !important;font-size:11px !important;}
+/* system card */
+.dm-rows{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:12px;line-height:20px;}
+.dm-rows dt{color:var(--u-mute);}
+.dm-rows dd{margin:0;color:var(--u-ink);display:flex;align-items:center;gap:6px;justify-content:flex-end;text-align:right;}
+.dm-rows dd.num{font-variant-numeric:tabular-nums;}
+.dm-mute{color:var(--u-mute);}
+.dm-ref{margin-top:8px;font-size:11px;color:var(--u-mute);text-align:right;}
+/* ── 6/7. zone list ── */
+#dash-zones{gap:0 !important;background:var(--u-card);border:1px solid var(--u-line);border-radius:12px;padding:4px 0 !important;}
+.dz-card{border-radius:0 !important;box-shadow:none !important;border:none !important;border-bottom:1px solid var(--u-line-2) !important;
+  border-left:2px solid transparent !important;padding:8px 16px 8px 14px !important;gap:12px !important;transition:background-color .15s var(--u-ease) !important;}
 .dz-card:last-child{border-bottom:none !important;}
-.dz-card:hover{transform:none !important;box-shadow:none !important;background:#f9fafb;}
-.dz-card.sel{border-left-color:var(--u-acc) !important;background:#f3f6fa;}
-.dz-name{color:var(--u-ink) !important;font-weight:600 !important;}
-.dz-sub{color:var(--u-faint) !important;}
-.dz-val{font-size:14px !important;font-weight:700 !important;}
-.dz-bar{height:3px;background:#eef0f3;margin-top:5px;}
+.dz-card:hover{transform:none !important;box-shadow:none !important;background:var(--u-raised);}
+.dz-card.sel{border-left-color:var(--u-acc) !important;background:var(--u-acc-soft);}
+.dz-name{color:var(--u-ink) !important;font-weight:500 !important;font-size:13px !important;}
+.dz-sub{color:var(--u-mute) !important;font-size:11px !important;}
+.dz-val{font-size:14px !important;}
+.dz-bar{position:relative;height:4px;background:#eceef1;margin-top:8px;}
 .dz-bar span{display:block;height:100%;}
-.dash-toggle{border:1px solid var(--u-line) !important;border-radius:6px !important;}
-.dash-toggle button.on{background:var(--u-acc) !important;}
-#header-badge{white-space:nowrap;font-size:10.5px !important;padding:2px 8px !important;border-radius:4px !important;}
-/* แถบ disclaimer ล่างสูง ~34px — ให้แผงจบเหนือแถบ ไม่โดนตัด */
-body.dash-mode #dash-right,body.dash-mode #dash-bottom{bottom:46px;}
-body.dash-mode #map{bottom:230px;}
-body.dash-mode #dash-map-legend{bottom:242px;}
-body.dash-mode.dash-popup #map{bottom:46px !important;}
-body.dash-mode.dash-popup #dash-map-legend{bottom:58px;}
-/* ปุ่มติดต่อ: เลิกลอยทับการ์ด → แถบเรียบใต้คอลัมน์ซ้าย */
-body.dash-mode #dash-left{bottom:86px;}
-body.dash-mode #feedback-btn{left:12px !important;bottom:46px !important;width:300px;justify-content:center;
-  background:#fff !important;color:var(--u-mute) !important;border:1px solid var(--u-line) !important;border-radius:8px !important;
-  box-shadow:none !important;opacity:1 !important;padding:8px 10px !important;font-weight:500 !important;transform:none !important;}
-body.dash-mode #feedback-btn:hover{color:var(--u-ink) !important;border-color:#cbd5e1 !important;}
+.dz-bar i{position:absolute;top:-2px;width:1px;height:8px;background:var(--u-acc);}
+.dash-toggle{border:1px solid var(--u-line) !important;border-radius:8px !important;background:var(--u-raised);padding:2px;gap:2px;}
+.dash-toggle button{background:transparent !important;color:var(--u-sec) !important;border-radius:6px;font-size:12px !important;font-weight:500 !important;padding:2px 10px !important;}
+.dash-toggle button.on{background:var(--u-acc) !important;color:#fff !important;}
+#dash-chart-head{margin-bottom:8px;gap:12px !important;}
+#dash-updated{display:none;}
+#dash-chart-head h4{flex:1;min-width:0;}
+#dash-donut{width:96px;height:96px;flex-shrink:0;}
+#dash-donut-wrap{gap:12px !important;}
+body.dash-mode #feedback-btn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px !important;}
+#header{gap:12px !important;padding-left:16px !important;padding-right:16px !important;}
+#header h1{font-size:13px !important;}
+.mtab{padding:0 10px !important;}
+#v2-badge{display:none !important;}
+@media (max-width:1366px) and (min-width:769px){
+  #header h1{max-width:232px !important;overflow:hidden;text-overflow:ellipsis;}
+  #header #clock{display:none !important;}
+}
+@media (min-width:769px){
+  body.dash-mode #dash-bottom{height:212px !important;}
+  body.dash-mode #map{bottom:264px !important;}
+  body.dash-mode #dash-map-legend{bottom:276px !important;}
+}
+#dash-map-legend{border-radius:8px !important;box-shadow:none !important;border:1px solid var(--u-line);backdrop-filter:none !important;padding:8px 12px !important;}
+#dash-map-legend .dl-title{font-size:12px !important;font-weight:500 !important;color:var(--u-ink) !important;margin-bottom:4px !important;}
+#dash-map-legend .dl-bar{border-radius:0 !important;height:8px !important;}
+#dash-map-legend .dl-labels{font-size:11px !important;color:var(--u-mute) !important;margin-top:4px !important;font-variant-numeric:tabular-nums;}
+/* bottom bar → quiet status line in dashboard */
+#dash-statusline{display:none;}
+body.dash-mode #disclaimer-bar{background:var(--u-card) !important;border-top:1px solid var(--u-line) !important;color:var(--u-sec) !important;
+  min-height:28px !important;height:28px;padding-top:0 !important;padding-bottom:0 !important;padding-left:16px !important;font-size:12px !important;}
+body.dash-mode #dash-statusline{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;}
+/* contact button: own slot under the left column */
+body.dash-mode #feedback-btn{left:12px !important;bottom:40px !important;width:300px;height:36px;justify-content:center;
+  background:var(--u-card) !important;color:var(--u-sec) !important;border:1px solid var(--u-line) !important;border-radius:8px !important;
+  box-shadow:none !important;opacity:1 !important;padding:0 12px !important;font-size:12px !important;font-weight:400 !important;transform:none !important;
+  transition:color .15s var(--u-ease),background-color .15s var(--u-ease) !important;}
+body.dash-mode #feedback-btn:hover{color:var(--u-ink) !important;background:var(--u-raised) !important;}
 @media (max-width:1100px) and (min-width:769px){ body.dash-mode #feedback-btn{width:248px;} }
 @media (max-width:768px){
   body.dash-mode #dash-left{bottom:auto;}
-  body.dash-mode #feedback-btn{width:auto;left:8px !important;bottom:44px !important;padding:5px 9px !important;}
-  .mtab{padding:6px 8px !important;}
+  body.dash-mode #feedback-btn{width:auto;left:8px !important;bottom:36px !important;height:32px;}
+  .mtab{padding:6px 8px !important;height:auto;}
 }
 </style>
 </head>
@@ -2483,10 +2554,10 @@ body.dash-mode #feedback-btn:hover{color:var(--u-ink) !important;border-color:#c
     <button class="mtab" id="mtab-cl2" onclick="dashOpenWhatIf()">Cl₂ จำลอง</button>
   </nav>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
-  <span id="v2-badge">⬡ V38</span>
+  <span id="v2-badge">v44.3</span>
   <button id="forecast-toggle-float" onclick="openForecastBar()">▶ Forecast</button>
   <button id="report-btn" onclick="openDashboard()" title="Dashboard คุณภาพน้ำ (rev12)" style="background:linear-gradient(135deg,#1040a0,#0a3080);border:none;border-radius:8px;padding:5px 12px;font-size:11px;color:#fff;cursor:pointer;font-weight:700;font-family:'Sarabun',sans-serif;box-shadow:0 2px 8px rgba(16,64,160,.2);letter-spacing:.3px;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">📊 Report</button>
-  <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับ Dark/Light Mode">🌙</button>
+  <button id="dark-toggle" onclick="toggleDarkMode()" title="สลับโหมดมืด/สว่าง" aria-label="สลับโหมดมืด/สว่าง"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
   <span id="clock"></span>
 </div>
 <div id="app">
@@ -3533,7 +3604,7 @@ body.dash-mode #feedback-btn:hover{color:var(--u-ink) !important;border-color:#c
 </div>
 </div>
 
-<div id="disclaimer-bar"><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v38.0 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) · 🌡 Auto K อุณหภูมิ Arrhenius E/R=8971K (TWQMS tmp_6, ref 32°C sync Firebase) · Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%) · Live sources - FRC Live 61 สถานี · RTU Live 236 สถานี ·</span></div></div>
+<div id="disclaimer-bar"><span id="dash-statusline"></span><div class="ticker-track" id="disclaimer-ticker"><span>⚠ v38.0 · Real-time FRC Contour Model · Decay EPANET first-order · Kb=0.778/day บางเขน, 0.400/day มหาสวัสดิ์ (ม.เกษตร กนว.32/2566) · 🌡 Auto K อุณหภูมิ Arrhenius E/R=8971K (TWQMS tmp_6, ref 32°C sync Firebase) · Pipe network: Trunk 1,008 + DMA distribution 21,628 = 22,636 เส้น (Kasetsart U/MWA) · Dijkstra 80,802 seg (พื้นที่ครอบคลุม ~92%) · Live sources - FRC Live 61 สถานี · RTU Live 236 สถานี ·</span></div></div>
 <!-- ═══ v8.6: 3D Map Overlay ═══ -->
 <div id="terrain3d-overlay">
   <div id="terrain3d-header">
@@ -3791,7 +3862,7 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
         <button id="dash-grp-src" class="on" onclick="setDashGroup('src')">ต้นทาง (สถานีสูบจ่าย)</button>
         <button id="dash-grp-avg" onclick="setDashGroup('avg')">เฉลี่ยพื้นที่อิทธิพล</button>
       </span>
-      <span class="dash-meta" id="dash-updated"></span>
+      <span class="dash-meta" id="dash-chart-thr"></span><span class="dash-meta" id="dash-updated"></span>
     </div>
     <div id="dash-chart-box"><canvas id="dash-chart"></canvas></div>
   </div>
