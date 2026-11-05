@@ -2932,7 +2932,10 @@ function buildMarkers() {
   const _ecFmt = ms => { const d = new Date(ms); return d.getDate()+' '+_TH_MON[d.getMonth()]+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   // [v45] แถบสีรายชั่วโมงอยู่บนกราฟ ใช้แกนเวลาเดียวกัน (ซ้าย = วัดที่นี่, ขวา = คาดการณ์)
   //       + เส้นคาดการณ์ย้อนหลัง (เขียวประ) ทับค่าจริง 24 ชม. ที่ผ่านมา
-  const EC_SVG = { W: 340, H: 178, PL: 40, PR: 8, PT: 20, STRIP: 16, GAP: 6, PB: 38 };
+  const EC_SVG = { W: 340, H: 168, PL: 34, PR: 6, PT: 18, STRIP: 14, GAP: 6, PB: 30 };
+  // [v45.4] กว้างเท่าพื้นที่จริงในป๊อปอัป (ป๊อปอัปกว้างสุด 480 − ขอบ) → ตัวอักษรขนาดจริง ไม่ถูกยืด
+  const _ecSvgW = () => Math.max(300, Math.min(440, (window.innerWidth || 400) - 60));
+  const EC_FONT = "font-family=\"Sarabun,'IBM Plex Sans Thai',system-ui,sans-serif\"";
   function _ecKnownGeo(d) {
     const { lo, hi } = _ecKnownY();
     const { W, H, PL, PR, PT, STRIP, GAP, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1), top = PT + STRIP + GAP;
@@ -2941,8 +2944,9 @@ function buildMarkers() {
       Y: v => top + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - top - PB) };
   }
   function _ecKnownSvg(d, sid) {
+    EC_SVG.W = _ecSvgW();
     const dk = document.body.classList.contains('dark');
-    const tx = dk ? '#f0f0f8' : '#111', grid = dk ? 'rgba(255,255,255,.18)' : '#d4d8de', soft = dk ? 'rgba(255,255,255,.14)' : '#cfd3d9';
+    const tx = dk ? '#f0f0f8' : '#111', ax = dk ? '#a9b0c2' : '#6b7280', grid = dk ? 'rgba(255,255,255,.12)' : '#e6e9ee', soft = dk ? 'rgba(255,255,255,.14)' : '#cfd3d9';
     const { W, H, PL, PR, PT, STRIP, PB } = EC_SVG;
     const { lo, hi, top, X, Y } = _ecKnownGeo(d);
     const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
@@ -2952,9 +2956,9 @@ function buildMarkers() {
     // แกนค่า + หน่วย
     for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
       g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
-        + '<text x="'+(PL-4)+'" y="'+(Y(v)+3.5).toFixed(1)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">'+v+'</text>';
+        + '<text x="'+(PL-5)+'" y="'+(Y(v)+3).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+ax+'">'+v+'</text>';
     }
-    g += '<text x="2" y="'+(top-2)+'" font-size="10" font-weight="700" fill="'+tx+'">µS/cm</text>';
+    g += '<text x="'+(PL-5)+'" y="'+(top-4)+'" font-size="8.5" text-anchor="end" fill="'+ax+'">µS/cm</text>';
     if (EC_WATCH > lo && EC_WATCH < hi) g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#d97a00" stroke-width="1.2" stroke-dasharray="4 3"/>';
     // ── แถบสีรายชั่วโมง (แกน X เดียวกับกราฟ) ──
     (d.strip || []).forEach(c => {
@@ -2962,31 +2966,30 @@ function buildMarkers() {
       const fill = c.v != null ? ecColorContour(c.v, c.k ? 0.95 : 0.55) : soft;
       g += '<rect x="'+(x0+0.3).toFixed(1)+'" y="'+PT+'" width="'+Math.max(0.5, x1-x0-0.6).toFixed(1)+'" height="'+STRIP+'" fill="'+fill+'"/>';
     });
-    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">ค่าที่ผ่านมา</text>'
-      + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
+    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+10)+'" font-size="8.5" font-weight="600" text-anchor="middle" fill="'+tx+'" opacity=".7">ค่าที่ผ่านมา</text>'
+      + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+10)+'" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
     // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
-    const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
+    const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 72 && W >= 380 ? 6 : 12;
     const t0 = new Date(d.now - 24 * 3600000); t0.setMinutes(0, 0, 0);
     let lastDay = -1, lastDayX = -99;
     for (let ms = t0.getTime() + Math.ceil(t0.getHours() / stepH) * stepH * 3600000 - t0.getHours() * 3600000; ms <= d.now + d.TT * 3600000; ms += stepH * 3600000) {
       const t = (ms - d.now) / 3600000; if (t < -24) continue;
       const x = X(t), dt = new Date(ms);
-      g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+tx+'" stroke-width="0.8"/>'
-        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+13)+'" font-size="9.5" font-weight="600" text-anchor="middle" fill="'+tx+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
+      g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+ax+'" stroke-width="0.6"/>'
+        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+12)+'" font-size="9" text-anchor="middle" fill="'+ax+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
       if (dt.getDate() !== lastDay && x - lastDayX >= 34) { lastDay = dt.getDate(); lastDayX = x;
-        g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+25)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#1040a0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
+        g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+23)+'" font-size="9" font-weight="600" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#2c5aa0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
     }
-    g += '<text x="'+(W-PR)+'" y="'+(H-2)+'" font-size="9.5" font-weight="700" text-anchor="end" fill="'+tx+'">เวลา (ชม.)</text>';
     // เส้น "ตอนนี้" ลากผ่านทั้งแถบและกราฟ
     g += '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+(PT-2)+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="1" stroke-dasharray="2 2"/>'
-      + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-5)+'" font-size="10" font-weight="700" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
+      + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-5)+'" font-size="9.5" font-weight="600" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
     if (d.pastFc && d.pastFc.length >= 2) g += '<path d="'+P(d.pastFc)+'" fill="none" stroke="#11875f" stroke-width="2" stroke-dasharray="5 3" opacity=".9"/>';
     if (d.past.length >= 2) g += '<path d="'+P(d.past)+'" fill="none" stroke="#1f6fd1" stroke-width="2"/>';
     if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2.2"/>';
     g += '<g id="ecky-tip-'+sid+'" style="pointer-events:none;"></g>'
       + '<rect x="'+PL+'" y="'+PT+'" width="'+(W-PL-PR)+'" height="'+(H-PT-PB)+'" fill="transparent" style="cursor:crosshair;"'
       + ' onmousemove="window._ecKnownTip(event,\''+sid+'\')" onclick="window._ecKnownTip(event,\''+sid+'\')" ontouchstart="window._ecKnownTip(event,\''+sid+'\')" ontouchmove="window._ecKnownTip(event,\''+sid+'\')" onmouseleave="window._ecKnownTip(null,\''+sid+'\')"/>';
-    return '<svg id="ecky-svg-'+sid+'" viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'+g+'</svg>'
+    return '<svg id="ecky-svg-'+sid+'" viewBox="0 0 '+W+' '+H+'" '+EC_FONT+' style="width:100%;max-width:'+W+'px;display:block;margin:0 auto;font-variant-numeric:tabular-nums;">'+g+'</svg>'
       + (out ? '<div style="font-size:11px;font-weight:600;color:#c0392b;">⚠ มี '+out+' จุดอยู่นอกช่วงแกน (แสดงชิดขอบ) — ปรับช่วงแกนด้านล่างเพื่อดูเต็ม</div>' : '');
   }
   // ชี้/แตะบนแถบหรือกราฟ → เส้นเวลา + ค่าวัดจริงและค่าคาดการณ์ ณ เวลานั้น (แสดงใต้กราฟ)
@@ -3091,8 +3094,8 @@ function buildMarkers() {
             + '<div style="font-size:12px;font-weight:500;">ถึงที่นี่ประมาณ'+tLabel(hit.h)+' (อีก '+Math.max(0,hit.h-w)+'–'+(hit.h+w)+' ชม.) · สูงสุด '+mxAll+' µS/cm · วัดจริงที่'+srcName+'แล้ว</div>';
         } else {
           vBg = dk?'#1f8f45':'#1f8f45'; vFg = '#ffffff';   // [v38.3] เขียวทึบ เด่นเป็นตัวสรุป
-          vHtml = '<div style="font-size:16px;font-weight:800;">✓ ปกติตลอด '+TTs+' ชม. ข้างหน้า</div>'
-            + '<div style="font-size:12px;font-weight:600;">สูงสุดที่จะมาถึง '+mxAll+' µS/cm · ไม่เกินระดับเฝ้าระวัง '+EC_WATCH+'</div>';
+          vHtml = '<div style="font-size:14px;font-weight:700;">✓ ปกติตลอด '+TTs+' ชม. ข้างหน้า</div>'
+            + '<div style="font-size:11.5px;font-weight:500;opacity:.92;">สูงสุดที่จะมาถึง '+mxAll+' µS/cm · ไม่เกินระดับเฝ้าระวัง '+EC_WATCH+'</div>';
         }
       }
       // ── เส้นทางน้ำ ──
@@ -3132,10 +3135,9 @@ function buildMarkers() {
       const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
       const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
       return '<div style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.12)':'#d0d8e0')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
-        + '<div style="padding:9px 11px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:10px;">'+vHtml+'</div>'
+        + '<div style="padding:7px 10px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:8px;">'+vHtml+'</div>'
         + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">เส้นทางน้ำ · รู้ล่วงหน้า '+TTs+' ชม.</div>'
-        + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:'+C.tx+';margin-bottom:10px;">'+route+'</div>'
-        + '<div style="font-size:12px;font-weight:700;margin-bottom:2px;">ย้อนหลัง 24 ชม. และคาดการณ์ '+TTs+' ชม.</div>'
+        + '<div style="display:flex;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:4px;">'+route+'</div>'
         + '<div id="ecky-chart-'+sid+'">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
         + '<div id="ecky-cell-'+sid+'" style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:2px;">ชี้หรือแตะบนแถบสี/กราฟ เพื่อดูค่าแต่ละช่วงเวลา</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
@@ -3143,7 +3145,6 @@ function buildMarkers() {
         +   '<span><span style="display:inline-block;width:14px;border-top:2.5px dashed #11875f;vertical-align:middle;"></span> คาดการณ์ย้อนหลัง</span>'
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
-        + (acc ? '<div style="margin-top:8px;padding:6px 8px;border-radius:6px;background:'+C.card+';font-size:11.5px;font-weight:600;">เทียบ 24 ชม. ที่ผ่านมา: คาดการณ์ต่างจากค่าจริงเฉลี่ย ±'+acc.mae.toFixed(1)+' µS/cm · มากสุด '+Math.round(acc.max)+' µS/cm ('+acc.n+' จุด)</div>' : '')
         + (srcNote ? '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+srcNote+'</div>' : '')
         + '</div>';
     } catch (e) { console.warn('[EC known card]', e.message); return null; }
@@ -4295,9 +4296,8 @@ function buildMarkers() {
       className:'',iconSize:[sz, _isVc ? sz+18 : sz],iconAnchor:[sz/2, _isVc ? sz/2 : sz/2]
     })}).addTo(sensorGroup)
     .bindPopup(`<div class="lpop">
-      <h4 style="color:#111">${s.name}</h4>
-      ${s.type === 'monitor' ? _frc3dBtn(s) : ''}
-      ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s) : ''}
+      <h4 style="color:#111;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${s.name}${(s.type === 'monitor' && typeof _frc3dReady === 'function' && _frc3dReady(s)) ? _frc3dBtn(s) : ''}</h4>
+      ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s, 'badge') : ''}
       <div class="bigval" style="color:${_vcClosed?'#999':c}">${_vcClosed?'— ปิด —':paramFormat(pv)+' <span style="font-size:14px;color:#555">'+paramUnit()+'</span>'}</div>
       <div class="pr"><span>พื้นที่รับน้ำ</span><span class="pv" style="color:#111">${_area}</span></div>
       <div class="pr"><span>สาขา</span><span class="pv" style="color:#111">${_branch}</span></div>
@@ -4310,6 +4310,7 @@ function buildMarkers() {
       ${(_vcClosed || (PARAM_MODE === 'ec' && _ecKnownShown)) ? '' : ttHtml}
       ${_vcClosed?'':(sourceChart && !decayChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
       ${_vcClosed?'':decayChart}
+      ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s, 'btn') : ''}
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
   }
 
@@ -15189,7 +15190,7 @@ function _c0For(sensor, dKm, distMult) {
 }
 
 // ── UI: popup badge + toggle button ─────────────────────────────────────────
-function _maintPopupHtml(s) {
+function _maintPopupHtml(s, part) {   // [v45.4] part: 'badge' (บนสุด) | 'btn' (ล่างสุด) | ไม่ระบุ = ทั้งคู่
   if (typeof s.id !== 'string' && typeof s.id !== 'number') return '';
   const code = String(s.id);
   const isMaint = _maintSet().has(code);
@@ -15197,7 +15198,9 @@ function _maintPopupHtml(s) {
   let badge = '';
   if (isMaint) badge = '<div style="margin:4px 0;padding:4px 8px;background:#f1f3f4;border:1px solid #dadce0;border-radius:6px;color:#5f6368;font-size:11px;font-weight:700;">🔧 ปิดซ่อมบำรุง — ไม่ใช้ค่านี้ใน contour</div>';
   else if (isStale) badge = '<div style="margin:4px 0;padding:4px 8px;background:#fef7e0;border:1px solid #f0d060;border-radius:6px;color:#8a6d00;font-size:11px;font-weight:700;">⚠ ค่าค้าง ≥' + STALE_HOURS + ' ชม. — ตัดออกจาก contour อัตโนมัติ</div>';
-  const btn = '<button onclick="toggleMaintenance(\'' + code.replace(/'/g,"\\'") + '\')" style="margin:3px 0 5px;width:100%;padding:5px 8px;font-size:11px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;cursor:pointer;border:1px solid ' + (isMaint ? '#80c090;background:#f0fff4;color:#006020' : '#e0a0b8;background:#fff5f8;color:#a01048') + ';">' + (isMaint ? '✅ เปิดใช้งานสถานีนี้' : '🔧 ปิดซ่อมบำรุงสถานีนี้') + '</button>';
+  const btn = '<div style="text-align:right;margin-top:8px;"><button onclick="toggleMaintenance(\'' + code.replace(/'/g,"\\'") + '\')" style="padding:3px 9px;font-size:10.5px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;cursor:pointer;border:1px solid ' + (isMaint ? '#80c090;background:#f0fff4;color:#006020' : '#e0a0b8;background:#fff5f8;color:#a01048') + ';">' + (isMaint ? '✅ เปิดใช้งานสถานีนี้' : '🔧 ปิดซ่อมบำรุงสถานีนี้') + '</button></div>';
+  if (part === 'badge') return badge;
+  if (part === 'btn') return btn;
   return badge + btn;
 }
 
@@ -16202,6 +16205,8 @@ const FRC3D_TOUR = [
   { m: /ปิ่นเกล้า/, short: 'รพ.สมเด็จพระปิ่นเกล้า' },   // [v40.1] S033 อยู่ในรายชื่อสถานีแล้ว → ใช้ค่าวัดจริง
   { m: /นิคมอุตสาหกรรมบางปู/, short: 'นิคมอุตสาหกรรมบางปู' },
 ];
+// [v45.4] ปุ่ม 3D เฉพาะสถานีที่ทำโมเดลแล้ว (รายชื่อใน FRC3D_TOUR)
+function _frc3dReady(s) { return FRC3D_TOUR.some(t => t.m.test(s.name || '')); }
 function _frc3dBtn(s) {
   return '<button class="frc3d-pbtn" onclick="open3DStation(\'' + String(s.id).replace(/['"\\<>]/g, '') + '\')">🏙 ดู 3 มิติ</button>';
 }
@@ -16267,7 +16272,7 @@ function open3DPicker() {
 (function initFrc3dUi() {
   const css = document.createElement('style');
   css.textContent =
-    '.frc3d-pbtn{display:inline-flex;align-items:center;gap:4px;margin:2px 0 6px;padding:5px 12px;border:0;border-radius:999px;cursor:pointer;' +
+    '.frc3d-pbtn{display:inline-flex;align-items:center;gap:4px;margin:0;padding:2px 10px;font-size:11.5px!important;border:0;border-radius:999px;cursor:pointer;' +
     'background:linear-gradient(135deg,#0f6fb8,#1aa0c8);color:#fff;font:700 12.5px Sarabun,sans-serif;box-shadow:0 2px 6px rgba(15,111,184,.35)}' +
     '.frc3d-pbtn:hover{filter:brightness(1.08)}' +
     '#frc3d-picker{position:fixed;z-index:99998;background:#fff;border-radius:16px;box-shadow:0 12px 36px rgba(15,23,42,.22);padding:12px;font-family:Sarabun,sans-serif;max-height:calc(100vh - 100px);overflow:auto}' +
