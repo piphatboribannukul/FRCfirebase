@@ -11926,9 +11926,8 @@ function submitFeedback(){
 
   // ── 1. สถานีน้ำดิบ กปน. (พิกัดปรับ rev19) ─────────────────────────
   const RAW_WATER_STATIONS = {
-    'T3': { name: 'วัดบ้านแป้ง',           lat: 14.2388, lon: 100.5755 },
+    // [v44.4] ตัดสถานีเหนือสำแล (T3 วัดบ้านแป้ง, S3 วัดไผ่ล้อม) — ต้นทางฝั่งตะวันออก = สำแล
     'S1': { name: 'สำแล',                 lat: 14.0406, lon: 100.5560 },
-    'S3': { name: 'วัดไผ่ล้อม',           lat: 14.0770, lon: 100.5254 },
     'S4': { name: 'วัดมะขาม',             lat: 14.0041, lon: 100.5405 },
     'T4': { name: 'สะพานพระนั่งเกล้า',    lat: 13.8636, lon: 100.4881 },
     'S7': { name: 'สะพานพระพุทธยอดฟ้า',  lat: 13.7404, lon: 100.5000 },
@@ -12095,7 +12094,7 @@ function submitFeedback(){
 
   // ── 6. River EC contour (polyline along river with EC gradient) ──────
   // rev19: เส้นแม่น้ำเจ้าพระยาจริง 81 waypoints (วัดบ้านแป้ง → อ่าวไทย)
-  const CHAO_PHRAYA_RIVER = [
+  const CHAO_PHRAYA_RIVER_FULL = [
     [14.23814,100.57665],[14.23299,100.57440],[14.22151,100.57216],[14.21479,100.57053],
     [14.20192,100.56358],[14.19460,100.55542],[14.19242,100.54460],[14.20212,100.51296],
     [14.20034,100.50745],[14.19361,100.50438],[14.15462,100.51234],[14.12671,100.52439],
@@ -12118,6 +12117,8 @@ function submitFeedback(){
     [13.59703,100.59246],[13.58260,100.58559],[13.56866,100.57735],[13.54955,100.58422],
     [13.53520,100.59744],
   ];
+  // [v44.4] วาดเส้นเริ่มที่สำแล (จุดที่ 18) — ตัดช่วงวัดบ้านแป้ง → สำแลออก
+  const CHAO_PHRAYA_RIVER = CHAO_PHRAYA_RIVER_FULL.slice(18);
 
   function drawRwContour() {
     if (_rwContourLayer) _rwLayerGroup.removeLayer(_rwContourLayer);
@@ -12159,7 +12160,7 @@ function submitFeedback(){
     _rwContourLayer.addLayer(riverMain);
 
     // ── EC contour ทับเส้นแม่น้ำ (สีตาม EC ถ้ามีข้อมูล) ─────────────
-    const riverOrder = ['T3','S1','S3','S4','T4','S7','T1','S6','T2'];
+    const riverOrder = ['S1','S4','T4','S7','T1','S6','T2'];
     const pts = [];
     riverOrder.forEach(sid => {
       const st = RAW_WATER_STATIONS[sid];
@@ -12609,6 +12610,10 @@ function submitFeedback(){
     'S13': { name: 'คลองตะวันตก กม.54', lat: 14.036174,  lon: 100.017652 },
     'S14': { name: 'คลองตะวันตก กม.14', lat: 13.910352,  lon: 100.336583 },
   };
+  // [v44.4] สถานีที่แสดงบนแผนที่ — ต้นทางฝั่งตะวันตก = บางเลน กม.35 (S12)
+  //   สถานีเหนือขึ้นไป (S11 เขื่อน, S9 ท่าม่วง, T5, S16, S13 กม.54) ยังโหลดข้อมูลอยู่ แต่ไม่แสดง
+  const MK_SHOW = ['S12', 'S14'];
+  const MK_MAIN = 'S12';
 
   // ── 2. API endpoint (เดียวกับที่ให้มา) ────────────────────────────
   const MK_API = 'https://bigdata.mwa.co.th/data-service/internal/big-data/api/v1/783f543c-666c-35b4-795b-40dd2446b291/7e911fa9-0a52-970a-eef5-2170851f3530/data?token=3XSOeKch6WiCXcw37EWhVX0Z0mPLncwmwTY6fgkm6tVCaIuNU11IiRRydPCUadnFGvfV2mPPrLc6hUk87JtA6rJSPVKNEr0HhJOuRPQ0CR3v3kaFIzk71Bm1N8uqST2b';
@@ -12628,7 +12633,7 @@ function submitFeedback(){
     'S9':  { ec:179, temp:29.78, tds:130, salinity:0.09, deo:5.12, ph:7.50, turbid:4.8, time:'2026-04-13T14:50' },
     'S12': { ec:166, temp:32.00, tds:120, salinity:0.09, deo:9.00, ph:8.20, turbid:4.5, time:'2026-04-13T14:50' },
     'S13': { ec:166, temp:32.37, tds:120, salinity:0.09, deo:9.37, ph:8.40, turbid:4.0, time:'2026-04-13T14:50' },
-    'S14': { ec:166, temp:32.00, tds:120, salinity:0.09, deo:9.00, ph:8.20, turbid:4.5, time:'2026-04-13T14:50' },
+    // [v44.4] ตัด S14 — ไม่มีในแหล่งข้อมูลใดแล้ว ค่า เม.ย. ค้างทำให้เข้าใจผิด → แสดง "ไม่มีข้อมูล"
   };
   // Pre-load fallback ทันที
   Object.entries(MK_FALLBACK).forEach(([sid, d]) => { _mkData[sid] = {...d}; });
@@ -12744,12 +12749,14 @@ function submitFeedback(){
     if (!_mkLayerGroup) _mkLayerGroup = L.layerGroup();
     _mkLayerGroup.clearLayers();
 
-    Object.entries(MK_STATIONS).forEach(([sid, st]) => {
+    MK_SHOW.forEach(sid => {
+      const st = MK_STATIONS[sid];
+      if (!st) return;
       const d = _mkData[sid];
       const ec = d ? d.ec : null;
 
-      // rev22: S11 เขื่อนแม่กลอง = ต้นทาง ใหญ่+สี EC, อื่นๆ = เล็ก+สีเทาเขียวเดียวกัน
-      const isMain = (sid === 'S11');
+      // [v44.4] S12 บางเลน กม.35 = ต้นทาง ใหญ่+สี EC, อื่นๆ = เล็ก
+      const isMain = (sid === MK_MAIN);
       const sz  = isMain ? 16 : 5;
       const tap = isMain ? 44 : 24;
       const color = isMain ? mkEcColor(ec) : '#0a8070';
@@ -12776,7 +12783,7 @@ function submitFeedback(){
         keepInView: false,
       });
 
-      // Label — S11 แสดงรหัส+ชื่อ, อื่นๆ แสดงแค่รหัส เล็กลง
+      // Label — ต้นทางแสดงรหัส+ชื่อ, อื่นๆ แสดงแค่รหัส เล็กลง
       if (isMain) {
         marker.bindTooltip(`${sid} ${st.name}`, {
           permanent: true, direction: 'top', offset: [0, -14],
@@ -12792,8 +12799,8 @@ function submitFeedback(){
       _mkLayerGroup.addLayer(marker);
     });
 
-    // Draw river line
-    drawMkRiver();
+    // [v44.4] ไม่วาดแม่น้ำแม่กลอง/แควใหญ่/แควน้อย แล้ว (อยู่เหนือต้นทาง กม.35)
+    if (_mkContour) { _mkLayerGroup.removeLayer(_mkContour); _mkContour = null; }
   }
 
   // ── 7. แม่น้ำแม่กลอง waypoints (เขื่อนแม่กลอง → ท่าม่วง → ลงใต้) ──
@@ -12948,7 +12955,7 @@ function submitFeedback(){
   //   กม.35.5 → มะสง กม.19 → มหาสวัสดิ์
   // ══════════════════════════════════════════════════════════════════════
 
-  const CANAL_WEST_WAYPOINTS = [
+  const CANAL_WEST_WAYPOINTS_FULL = [
     // ── จากเขื่อนแม่กลอง → ท่าม่วง → คลองส่งน้ำ → กม.54 ──
     [13.97161, 99.57782],   // เขื่อนแม่กลอง (S11)
     [13.97469, 99.62928],   // ท่าม่วง
@@ -12978,13 +12985,12 @@ function submitFeedback(){
     [13.86707, 100.37586],
     [13.81151, 100.40055],  // โรงงานผลิตน้ำมหาสวัสดิ์
   ];
+  // [v44.4] วาดเส้นเริ่มที่บางเลน กม.35 (จุดที่ 16) → มหาสวัสดิ์
+  const CANAL_WEST_WAYPOINTS = CANAL_WEST_WAYPOINTS_FULL.slice(16);
 
   // จุดสำคัญตามแนวคลอง (สำหรับ marker)
   const CANAL_WEST_POIS = [
-    { lat: 13.97161, lon: 99.57782, name: 'เขื่อนแม่กลอง', icon: '🌊', isStart: true },
-    { lat: 13.97469, lon: 99.62928, name: 'ท่าม่วง', icon: '📍' },
-    { lat: 14.03617, lon: 100.01765, name: 'กม.54', icon: '📍' },
-    { lat: 14.01068, lon: 100.18181, name: 'บางเลน กม.35', icon: '📍' },
+    // [v44.4] ตัดจุดเหนือ กม.35 ออก (บางเลน กม.35 มี marker S12 อยู่แล้ว)
     { lat: 13.91035, lon: 100.33658, name: 'คลองตะวันตก กม.14', icon: '⚠️', isAlert: true },
     { lat: 13.81151, lon: 100.40055, name: 'มหาสวัสดิ์', icon: '🏭', isFactory: true },
   ];
@@ -13012,13 +13018,13 @@ function submitFeedback(){
       color: '#0a6050', weight: 3, opacity: 0.9,
       dashArray: '10, 6', lineCap: 'round', lineJoin: 'round', interactive: false,
     });
-    canalLine.bindTooltip('คลองประปาฝั่งตะวันตก (แม่กลอง → มหาสวัสดิ์)', {
+    canalLine.bindTooltip('คลองประปาฝั่งตะวันตก (บางเลน กม.35 → มหาสวัสดิ์)', {
       sticky: true, className: 'mk-label',
     });
     _canalWestLayer.addLayer(canalLine);
 
-    // EC overlay ตามสีน้ำดิบ S11
-    const s11d = _mkData['S11'];
+    // EC overlay ตามสีน้ำดิบต้นทาง (S12 บางเลน กม.35)
+    const s11d = _mkData[MK_MAIN];
     if (s11d && s11d.ec != null) {
       const ecColor = mkEcColor(s11d.ec);
       _canalWestLayer.addLayer(L.polyline(CANAL_WEST_WAYPOINTS, {
@@ -13059,7 +13065,7 @@ function submitFeedback(){
           <div style="font-weight:700;color:${_dk?'#80c0ff':'#0a5050'};font-size:13px;">${poi.icon} ${poi.name}</div>
           <div style="font-size:10px;color:#888;">คลองประปาฝั่งตะวันตก</div>
           <hr style="margin:5px 0;border:none;border-top:1px solid ${_dk?'rgba(255,255,255,0.08)':'#d0e8e0'};">
-          <div style="font-size:11px;color:#555;">EC จากเขื่อนแม่กลอง: <b style="color:${_dk?'#80c0ff':'#0a6050'}">${ecInfo || '—'}</b></div>
+          <div style="font-size:11px;color:#555;">EC ที่บางเลน กม.35: <b style="color:${_dk?'#80c0ff':'#0a6050'}">${ecInfo || '—'}</b></div>
           ${s11d && s11d.time ? '<div style="font-size:9px;color:#999;margin-top:3px;">🕐 ข้อมูล: ' + new Date(s11d.time).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) + '</div>' : ''}
         </div>
       `, { maxWidth: 250, className: 'pk-pop' });
@@ -13091,7 +13097,9 @@ function submitFeedback(){
 
   // ── 8. API Fetch ────────────────────────────────────────────────────
   async function fetchMkData() {
-    const MAX_RETRY = 3;
+    // [v44.4] ข้าม bigdata แม่กลอง (ข้อมูลค้างตั้งแต่ ต.ค. 69 · retry 3 ครั้ง × timeout 30 วิ ทำให้ช้า)
+    //   ค่าปัจจุบัน/ประวัติอ่านจาก Firebase rawmk ที่ collector (RWC) เขียนทุก 10 นาที
+    const MAX_RETRY = window.MK_USE_BIGDATA ? 3 : 0;
     for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
     try {
       // rev29.1: MK_API เป็น endpoint แยกจาก RAW_WATER_API (คนละ UUID)
