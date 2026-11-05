@@ -2962,7 +2962,7 @@ function buildMarkers() {
       const fill = c.v != null ? ecColorContour(c.v, c.k ? 0.95 : 0.55) : soft;
       g += '<rect x="'+(x0+0.3).toFixed(1)+'" y="'+PT+'" width="'+Math.max(0.5, x1-x0-0.6).toFixed(1)+'" height="'+STRIP+'" fill="'+fill+'"/>';
     });
-    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">ค่าจริง</text>'
+    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">ค่าที่ผ่านมา</text>'
       + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
     // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
     const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
@@ -3008,7 +3008,7 @@ function buildMarkers() {
       + (f ? '<circle cx="'+X(f.t).toFixed(1)+'" cy="'+Y(f.v).toFixed(1)+'" r="3.5" fill="#11875f" stroke="#fff" stroke-width="1.2"/>' : '');
     const at = d.now + t * 3600000, sub = dk ? '#c0c0d0' : '#555';
     const L = t < 0
-      ? [[_ecFmt(at), tx, 700], ['ค่าจริง ' + (m ? Math.round(m.v) : '—') + ' µS/cm', '#1f6fd1', 700],
+      ? [[_ecFmt(at), tx, 700], ['ค่าที่ผ่านมา ' + (m ? Math.round(m.v) : '—') + ' µS/cm', '#1f6fd1', 700],
          ['คาดการณ์ไว้ ' + (f ? Math.round(f.v) : '—') + (m && f ? ' (ต่าง ' + Math.abs(m.v - f.v).toFixed(0) + ')' : ''), '#11875f', 600]]
       : [[_ecFmt(at), tx, 700], ['คาดการณ์ ' + (f ? Math.round(f.v) : '—') + ' µS/cm', '#11875f', 700],
          ['วัดจริงที่' + d.src + ' ' + _ecFmt(at - d.TT * 3600000), sub, 500]];
@@ -3139,7 +3139,7 @@ function buildMarkers() {
         + '<div id="ecky-chart-'+sid+'">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
         + '<div id="ecky-cell-'+sid+'" style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:2px;">ชี้หรือแตะบนแถบสี/กราฟ เพื่อดูค่าแต่ละช่วงเวลา</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
-        +   lg('#1f6fd1','ค่าจริง') + lg('#11875f','คาดการณ์')
+        +   lg('#1f6fd1','ค่าที่ผ่านมา') + lg('#11875f','คาดการณ์')
         +   '<span><span style="display:inline-block;width:14px;border-top:2.5px dashed #11875f;vertical-align:middle;"></span> คาดการณ์ย้อนหลัง</span>'
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
