@@ -2930,27 +2930,42 @@ function buildMarkers() {
   window._ecKnownData = window._ecKnownData || {};
   const _TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const _ecFmt = ms => { const d = new Date(ms); return d.getDate()+' '+_TH_MON[d.getMonth()]+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
-  const EC_SVG = { W: 340, H: 150, PL: 40, PR: 8, PT: 18, PB: 38 };
+  // [v45] แถบสีรายชั่วโมงอยู่บนกราฟ ใช้แกนเวลาเดียวกัน (ซ้าย = วัดที่นี่, ขวา = คาดการณ์)
+  //       + เส้นคาดการณ์ย้อนหลัง (เขียวประ) ทับค่าจริง 24 ชม. ที่ผ่านมา
+  const EC_SVG = { W: 340, H: 178, PL: 40, PR: 8, PT: 20, STRIP: 16, GAP: 6, PB: 38 };
+  function _ecKnownGeo(d) {
+    const { lo, hi } = _ecKnownY();
+    const { W, H, PL, PR, PT, STRIP, GAP, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1), top = PT + STRIP + GAP;
+    return { lo, hi, span, top,
+      X: t => PL + (t + 24) / span * (W - PL - PR),
+      Y: v => top + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - top - PB) };
+  }
   function _ecKnownSvg(d, sid) {
     const dk = document.body.classList.contains('dark');
-    const tx = dk ? '#f0f0f8' : '#111', grid = dk ? 'rgba(255,255,255,.18)' : '#d4d8de';
-    const { lo, hi } = _ecKnownY();
-    const { W, H, PL, PR, PT, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1);
-    const X = t => PL + (t + 24) / span * (W - PL - PR);
-    const Y = v => PT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - PT - PB);   // ค่านอกช่วงชิดขอบ
+    const tx = dk ? '#f0f0f8' : '#111', grid = dk ? 'rgba(255,255,255,.18)' : '#d4d8de', soft = dk ? 'rgba(255,255,255,.14)' : '#cfd3d9';
+    const { W, H, PL, PR, PT, STRIP, PB } = EC_SVG;
+    const { lo, hi, top, X, Y } = _ecKnownGeo(d);
     const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
     const out = d.past.concat(d.fut).filter(p => p.v < lo || p.v > hi).length;
     const step = (hi - lo) <= 150 ? 25 : (hi - lo) <= 400 ? 50 : (hi - lo) <= 1000 ? 100 : 250;
-    let g = '<rect x="'+X(0).toFixed(1)+'" y="'+PT+'" width="'+(X(d.TT)-X(0)).toFixed(1)+'" height="'+(H-PT-PB)+'" fill="'+(dk?'rgba(255,255,255,.05)':'#eef4f1')+'"/>';
+    let g = '<rect x="'+X(0).toFixed(1)+'" y="'+top+'" width="'+(X(d.TT)-X(0)).toFixed(1)+'" height="'+(H-top-PB)+'" fill="'+(dk?'rgba(255,255,255,.05)':'#eef4f1')+'"/>';
     // แกนค่า + หน่วย
     for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
       g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
         + '<text x="'+(PL-4)+'" y="'+(Y(v)+3.5).toFixed(1)+'" font-size="10" font-weight="600" text-anchor="end" fill="'+tx+'">'+v+'</text>';
     }
-    g += '<text x="2" y="'+(PT-6)+'" font-size="10" font-weight="700" fill="'+tx+'">µS/cm</text>';
+    g += '<text x="2" y="'+(top-2)+'" font-size="10" font-weight="700" fill="'+tx+'">µS/cm</text>';
     if (EC_WATCH > lo && EC_WATCH < hi) g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#d97a00" stroke-width="1.2" stroke-dasharray="4 3"/>';
+    // ── แถบสีรายชั่วโมง (แกน X เดียวกับกราฟ) ──
+    (d.strip || []).forEach(c => {
+      const x0 = X(c.h), x1 = X(Math.min(c.h + 1, d.TT));
+      const fill = c.v != null ? ecColorContour(c.v, c.k ? 0.95 : 0.55) : soft;
+      g += '<rect x="'+(x0+0.3).toFixed(1)+'" y="'+PT+'" width="'+Math.max(0.5, x1-x0-0.6).toFixed(1)+'" height="'+STRIP+'" fill="'+fill+'"/>';
+    });
+    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">วัดที่นี่</text>'
+      + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
     // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
-    const stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
+    const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
     const t0 = new Date(d.now - 24 * 3600000); t0.setMinutes(0, 0, 0);
     let lastDay = -1;
     for (let ms = t0.getTime() + Math.ceil(t0.getHours() / stepH) * stepH * 3600000 - t0.getHours() * 3600000; ms <= d.now + d.TT * 3600000; ms += stepH * 3600000) {
@@ -2962,41 +2977,45 @@ function buildMarkers() {
         g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+25)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#1040a0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
     }
     g += '<text x="'+(W-PR)+'" y="'+(H-2)+'" font-size="9.5" font-weight="700" text-anchor="end" fill="'+tx+'">เวลา (ชม.)</text>';
-    g += '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="0.8" stroke-dasharray="2 2"/>'
-      + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-6)+'" font-size="10" font-weight="700" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
+    // เส้น "ตอนนี้" ลากผ่านทั้งแถบและกราฟ
+    g += '<line x1="'+X(0).toFixed(1)+'" x2="'+X(0).toFixed(1)+'" y1="'+(PT-2)+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="1" stroke-dasharray="2 2"/>'
+      + '<text x="'+X(0).toFixed(1)+'" y="'+(PT-5)+'" font-size="10" font-weight="700" text-anchor="middle" fill="'+tx+'">ตอนนี้</text>';
+    if (d.pastFc && d.pastFc.length >= 2) g += '<path d="'+P(d.pastFc)+'" fill="none" stroke="#11875f" stroke-width="2" stroke-dasharray="5 3" opacity=".9"/>';
     if (d.past.length >= 2) g += '<path d="'+P(d.past)+'" fill="none" stroke="#1f6fd1" stroke-width="2"/>';
-    if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2"/>';
-    g += '<text x="'+(X(d.TT)-3).toFixed(1)+'" y="'+(PT+11)+'" font-size="10.5" font-weight="800" text-anchor="end" fill="#11875f">คาดการณ์ →</text>'
-      + '<text x="'+(X(0)-3).toFixed(1)+'" y="'+(PT+11)+'" font-size="10.5" font-weight="800" text-anchor="end" fill="#1f6fd1">← ย้อนหลัง</text>';
+    if (d.fut.length >= 2)  g += '<path d="'+P(d.fut)+'" fill="none" stroke="#11875f" stroke-width="2.2"/>';
     g += '<g id="ecky-tip-'+sid+'" style="pointer-events:none;"></g>'
       + '<rect x="'+PL+'" y="'+PT+'" width="'+(W-PL-PR)+'" height="'+(H-PT-PB)+'" fill="transparent" style="cursor:crosshair;"'
-      + ' onmousemove="window._ecKnownTip(event,\''+sid+'\')" onclick="window._ecKnownTip(event,\''+sid+'\')" onmouseleave="window._ecKnownTip(null,\''+sid+'\')"/>';
+      + ' onmousemove="window._ecKnownTip(event,\''+sid+'\')" onclick="window._ecKnownTip(event,\''+sid+'\')" ontouchstart="window._ecKnownTip(event,\''+sid+'\')" ontouchmove="window._ecKnownTip(event,\''+sid+'\')" onmouseleave="window._ecKnownTip(null,\''+sid+'\')"/>';
     return '<svg id="ecky-svg-'+sid+'" viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'+g+'</svg>'
       + (out ? '<div style="font-size:11px;font-weight:600;color:#c0392b;">⚠ มี '+out+' จุดอยู่นอกช่วงแกน (แสดงชิดขอบ) — ปรับช่วงแกนด้านล่างเพื่อดูเต็ม</div>' : '');
   }
-  // คลิก/ชี้บนกราฟ → วัน เวลา ค่า (ค่าจริงที่ใกล้ที่สุด)
+  // ชี้/แตะบนแถบหรือกราฟ → เส้นเวลา + ค่าวัดจริงและค่าคาดการณ์ ณ เวลานั้น (แสดงใต้กราฟ)
   window._ecKnownTip = function (ev, sid) {
-    const tip = document.getElementById('ecky-tip-' + sid), svg = document.getElementById('ecky-svg-' + sid), d = window._ecKnownData[sid];
+    const tip = document.getElementById('ecky-tip-' + sid), svg = document.getElementById('ecky-svg-' + sid),
+          el = document.getElementById('ecky-cell-' + sid), d = window._ecKnownData[sid];
     if (!tip || !svg || !d) return;
     if (!ev) { tip.innerHTML = ''; return; }
-    const { W, H, PL, PR, PT, PB } = EC_SVG, span = 24 + Math.max(d.TT, 1), { lo, hi } = _ecKnownY();
-    const r = svg.getBoundingClientRect(), vx = (ev.clientX - r.left) / r.width * W;
-    const t = (vx - PL) / (W - PL - PR) * span - 24;
-    const all = d.past.map(p => Object.assign({ k: 0 }, p)).concat(d.fut.map(p => Object.assign({ k: 1 }, p)));
-    if (!all.length) return;
-    const p = all.reduce((a, b) => Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a);
-    const x = PL + (p.t + 24) / span * (W - PL - PR), y = PT + (1 - (Math.min(hi, Math.max(lo, p.v)) - lo) / (hi - lo)) * (H - PT - PB);
-    const dk = document.body.classList.contains('dark'), col = p.k ? '#11875f' : '#1f6fd1';
-    const l1 = Math.round(p.v) + ' µS/cm';
-    const l2 = p.k ? 'คาดการณ์ถึงที่นี่ ~' + _ecFmt(d.now + p.t * 3600000) : 'วัดที่นี่ ' + _ecFmt(d.now + p.t * 3600000);
-    const l3 = p.k ? 'วัดที่' + d.src + ' ' + _ecFmt(d.now + (p.t - d.TT) * 3600000) : '';
-    const bw = 150, bh = l3 ? 44 : 31, bx = Math.min(W - PR - bw, Math.max(PL, x + (x > W / 2 ? -bw - 8 : 8))), by = PT;
-    tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+col+'" stroke-width="1"/>'
-      + '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.5" fill="'+col+'" stroke="#fff" stroke-width="1.2"/>'
-      + '<rect x="'+bx.toFixed(1)+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+(dk?'#1d1d2b':'#fff')+'" stroke="'+col+'" stroke-width="1"/>'
-      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+13)+'" font-size="11" font-weight="700" fill="'+col+'">'+l1+'</text>'
-      + '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+26)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#f0f0f8':'#111')+'">'+l2+'</text>'
-      + (l3 ? '<text x="'+(bx+7).toFixed(1)+'" y="'+(by+39)+'" font-size="9.5" font-weight="600" fill="'+(dk?'#c0c0d0':'#444')+'">'+l3+'</text>' : '');
+    const { W, H, PL, PR, PT, PB } = EC_SVG, { span, X, Y } = _ecKnownGeo(d);
+    const cx = ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX;
+    const r = svg.getBoundingClientRect(), vx = (cx - r.left) / r.width * W;
+    const t = Math.max(-24, Math.min(d.TT, (vx - PL) / (W - PL - PR) * span - 24));
+    const near = (arr, tol) => { let b = null; for (const p of arr || []) if (Math.abs(p.t - t) <= tol && (!b || Math.abs(p.t - t) < Math.abs(b.t - t))) b = p; return b; };
+    const dk = document.body.classList.contains('dark'), tx = dk ? '#f0f0f8' : '#111';
+    const m = t < 0 ? near(d.past, 0.75) : null, f = near(t < 0 ? d.pastFc : d.fut, 0.75);
+    const x = X(t);
+    tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="1"/>'
+      + (m ? '<circle cx="'+X(m.t).toFixed(1)+'" cy="'+Y(m.v).toFixed(1)+'" r="3.5" fill="#1f6fd1" stroke="#fff" stroke-width="1.2"/>' : '')
+      + (f ? '<circle cx="'+X(f.t).toFixed(1)+'" cy="'+Y(f.v).toFixed(1)+'" r="3.5" fill="#11875f" stroke="#fff" stroke-width="1.2"/>' : '');
+    if (!el) return;
+    const at = d.now + t * 3600000, sub = dk ? '#c0c0d0' : '#555';
+    if (t < 0) {
+      el.innerHTML = '<span style="color:#1f6fd1;">'+_ecFmt(at)+' · วัดได้ '+(m ? Math.round(m.v) : '—')+' µS/cm</span><br>'
+        + '<span style="color:#11875f;">คาดการณ์ไว้ '+(f ? Math.round(f.v) : '—')+' µS/cm</span>'
+        + (m && f ? ' <span style="font-weight:500;color:'+sub+';">(ต่าง '+Math.abs(m.v - f.v).toFixed(0)+')</span>' : '');
+    } else {
+      el.innerHTML = '<span style="color:#11875f;">'+_ecFmt(at)+' · คาดการณ์ '+(f ? Math.round(f.v) : '—')+' µS/cm</span><br>'
+        + '<span style="font-weight:500;color:'+sub+';">วัดจริงที่'+d.src+' '+_ecFmt(at - d.TT * 3600000)+'</span>';
+    }
   };
   window._ecKnownCell = function (sid, i) {
     const d = window._ecKnownData[sid], el = document.getElementById('ecky-cell-' + sid);
@@ -3090,18 +3109,25 @@ function buildMarkers() {
         route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:2px solid '+C.line+';margin:0 3px 14px;text-align:center;min-width:16px;"><span style="font-size:11px;font-weight:700;color:'+C.tx+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
           + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.line)+g.to+'</div>';
       });
-      // ── แถบเวลา ──
-      const sidS = String(s.id).replace(/[^\w-]/g, '_');
-      const strip = cells.map((c, i) => '<div title="'+_ecFmt(now + c.h * 3600000)+' · '+(c.v != null ? Math.round(c.v)+' µS/cm' : 'ไม่มีข้อมูล')+'" onclick="window._ecKnownCell(\''+sidS+'\','+i+')" onmouseenter="window._ecKnownCell(\''+sidS+'\','+i+')" style="flex:1;height:24px;cursor:pointer;background:'
-        + (c.v != null ? ecColorContour(c.v, 0.95) : (dk?'rgba(255,255,255,.14)':'#cfd3d9')) + ';"></div>').join('');
-      const qtr = [0, Math.round(nCell/3), Math.round(nCell*2/3)].filter((v,i,a)=>a.indexOf(v)===i);
       // ── กราฟ (แกน Y คงที่ ปรับได้) ──
       const past = ((loadHistory() || {})[String(s.id)] || []).filter(p => p.ec > 1 && p.ts >= now - 24*3600000)
         .map(p => ({ t: (p.ts - now) / 3600000, v: p.ec })).sort((a, b) => a.t - b.t);
       if (ecNow > 0) past.push({ t: 0, v: ecNow });
       const fut = known.map(c => ({ t: c.h, v: c.v }));
       const sid = String(s.id).replace(/[^\w-]/g, '_');
-      window._ecKnownData[sid] = { past, fut, TT, now, src: srcName, cells };
+      // [v45] คาดการณ์ย้อนหลัง 24 ชม. + แถบรายชั่วโมงบนแกนเวลาเดียวกับกราฟ + ความแม่นย้อนหลัง
+      const fcAt = t => valAt(now + (t - TT) * 3600000);
+      const pastFc = [];
+      for (let h = -24; h <= 0; h++) { const v = fcAt(h); if (v != null) pastFc.push({ t: h, v }); }
+      const strip = [];
+      for (let h = -24; h < 0; h++) {
+        const inHr = past.filter(p => p.t >= h && p.t < h + 1);
+        strip.push({ h, k: 0, v: inHr.length ? inHr.reduce((a, p) => a + p.v, 0) / inHr.length : null });
+      }
+      cells.forEach(c => strip.push({ h: c.h, k: 1, v: c.v }));
+      const errs = past.filter(p => p.t < 0).map(p => { const f = fcAt(p.t); return f == null ? null : Math.abs(p.v - f); }).filter(e => e != null);
+      const acc = errs.length >= 6 ? { mae: errs.reduce((a, b) => a + b, 0) / errs.length, max: Math.max(...errs), n: errs.length } : null;
+      window._ecKnownData[sid] = { past, fut, pastFc, strip, TT, now, src: srcName, cells };
       const yr = _ecKnownY();
       const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
       const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
@@ -3109,15 +3135,17 @@ function buildMarkers() {
         + '<div style="padding:9px 11px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:10px;">'+vHtml+'</div>'
         + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">เส้นทางน้ำ · รู้ล่วงหน้า '+TTs+' ชม.</div>'
         + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:'+C.tx+';margin-bottom:10px;">'+route+'</div>'
-        + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:2px;">'+qtr.map(h=>'<span>'+(h?_ecFmt(now + h * 3600000).replace(/^\d+ \S+ /,''):'ตอนนี้')+'</span>').join('')+'<span>'+_ecFmt(now + TT * 3600000)+'</span></div>'
-        + '<div style="display:flex;gap:1px;border-radius:5px;overflow:hidden;">'+strip+'</div>'
-        + '<div id="ecky-cell-'+sid+'" style="font-size:12px;font-weight:700;color:'+C.tx+';min-height:16px;margin-top:3px;"></div>'
-        + '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">แต่ละช่อง = EC ที่วัดจริงที่'+srcName+'แล้ว กำลังเดินทางมาถึงที่นี่'+(srcNote?'<br>'+srcNote:'')+'</div>'
-        + '<div id="ecky-chart-'+sid+'" style="margin-top:8px;">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:2px;">ย้อนหลัง 24 ชม. และคาดการณ์ '+TTs+' ชม.</div>'
+        + '<div id="ecky-chart-'+sid+'">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
+        + '<div id="ecky-cell-'+sid+'" style="font-size:12px;font-weight:700;color:'+C.tx+';min-height:34px;margin-top:3px;line-height:1.45;"><span style="font-weight:500;color:'+C.sub+';">ชี้หรือแตะบนแถบสี/กราฟ เพื่อดูค่าแต่ละช่วงเวลา</span></div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
-        +   lg('#1f6fd1','วัดที่นี่ (ย้อนหลัง)') + lg('#11875f','คาดการณ์ (น้ำที่กำลังเดินทางมา)')
+        +   lg('#1f6fd1','วัดที่นี่') + lg('#11875f','คาดการณ์')
+        +   '<span><span style="display:inline-block;width:14px;border-top:2.5px dashed #11875f;vertical-align:middle;"></span> คาดการณ์ย้อนหลัง</span>'
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
-        + '</div></div>';
+        + '</div>'
+        + (acc ? '<div style="margin-top:8px;padding:6px 8px;border-radius:6px;background:'+C.card+';font-size:11.5px;font-weight:600;">เทียบ 24 ชม. ที่ผ่านมา: คาดการณ์ต่างจากค่าจริงเฉลี่ย ±'+acc.mae.toFixed(1)+' µS/cm · มากสุด '+Math.round(acc.max)+' µS/cm ('+acc.n+' จุด)</div>' : '')
+        + (srcNote ? '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+srcNote+'</div>' : '')
+        + '</div>';
     } catch (e) { console.warn('[EC known card]', e.message); return null; }
   };
 
@@ -11967,6 +11995,61 @@ function submitFeedback(){
     return 'วิกฤต (น้ำเค็ม) 🔴';
   }
 
+
+  // ── [v45] ป๊อปอัปน้ำดิบ รูปแบบเดียวกับสถานีตรวจวัด ─────────────────────
+  //   ต้นทาง (S1 สำแล / S12 บางเลน กม.35) แสดง "น้ำที่วัดตอนนี้จะไปถึง" แทนคาดการณ์
+  const RAW_SOURCE_ROUTE = {
+    S1:  { plant: 'รง.บางเขน', legs: [{ h: 13, to: 'บางเขน' }, { h: 4, to: 'ออกโรงงาน' }],
+           arrive: [['ถึง รง.บางเขน', 13], ['ออกจากโรงงาน', 17]], root: 'RAW_SAMLE' },
+    S12: { plant: 'รง.มหาสวัสดิ์', est: true, legs: [{ h: 35, to: 'รง.มหาสวัสดิ์' }],
+           arrive: [['ถึง รง.มหาสวัสดิ์', 35]], note: 'เวลาเดินทางเป็นค่าประมาณ รอยืนยันด้วยข้อมูลจริง' },
+  };
+  window._RAW_SOURCE_ROUTE = RAW_SOURCE_ROUTE;
+  window._rawPopupHtml = function (o) {
+    const dk = document.body.classList.contains('dark');
+    const C = { tx: dk?'#f0f0f8':'#111', sub: dk?'#c4c8d6':'#4a5260', line: dk?'rgba(255,255,255,.14)':'#e0e6ee',
+                blue: dk?'#80c0ff':'#1a5090', card: dk?'rgba(255,255,255,.06)':'#f3f5f8' };
+    const d = o.d || {}, ec = d.ec != null && d.ec > 0 ? Math.round(d.ec * 10) / 10 : null;
+    const tMs = d.time ? new Date(d.time).getTime() : NaN;
+    const fmt = ms => new Date(ms).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const row = (k, v) => '<div style="color:'+C.sub+';">'+k+'</div><div style="text-align:right;font-weight:600;">'+v+'</div>';
+    const num = (v, u) => v != null && v !== '' && +v > 0 ? v + (u ? ' ' + u : '') : '—';
+    const status = ec == null ? '<span style="color:#999;">ไม่มีข้อมูล</span>'
+      : ec <= 500 ? '<span style="color:'+C.blue+';">ผ่านเกณฑ์ (≤500)</span>'
+      : ec <= 1200 ? '<span style="color:#b36b00;">เฝ้าระวัง (501–1,200)</span>' : '<span style="color:#c0392b;">สูงกว่าเกณฑ์ (>1,200)</span>';
+    let rows = row('แหล่งน้ำ', o.water) + row('รหัสสถานี', '<span style="font-family:JetBrains Mono,monospace;">'+o.sid+'</span>')
+      + row('ประเภท', o.route ? 'ต้นทางน้ำดิบ' : 'จุดวัดน้ำดิบ')
+      + row('อุณหภูมิ', num(d.temp, '°C')) + row('pH', num(d.ph)) + row('ความขุ่น', num(d.turbid, 'NTU'))
+      + (o.west ? row('DO', num(d.deo, 'mg/L')) : '') + row('Salinity', num(d.salinity, 'ppt')) + row('TDS', num(d.tds, 'mg/L'))
+      + row('วัดเมื่อ', isFinite(tMs) ? fmt(tMs) : '—') + row('สถานะ', status);
+    let route = '';
+    const R = o.route;
+    if (R && isFinite(tMs) && ec != null) {
+      let maxTT = 0;
+      if (R.root) Object.values(EC_ROOT_SOURCE_MAP).forEach(v => { if (v && v.root === R.root && v.ttRoot > maxTT) maxTT = v.ttRoot; });
+      const dot = c => '<div style="width:9px;height:9px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
+      let line = '<div style="text-align:center;white-space:nowrap;">'+dot('#1f6fd1')+o.name+'</div>';
+      R.legs.forEach((g, i) => {
+        line += '<div style="flex:'+g.h+';border-top:2px '+(R.est?'dashed':'solid')+' '+C.sub+';margin:0 3px 14px;text-align:center;min-width:16px;"><span style="font-size:11px;font-weight:700;">'+(R.est?'~':'+')+g.h+'</span></div>'
+          + '<div style="text-align:center;white-space:nowrap;">'+dot(i === R.legs.length - 1 ? C.tx : C.sub)+g.to+'</div>';
+      });
+      route = '<div style="padding:9px 11px;border-radius:8px;background:#1f6fd1;color:#fff;margin:10px 0 8px;">'
+        + '<div style="font-size:15px;font-weight:800;">น้ำที่วัดตอนนี้จะไปถึง</div>'
+        + '<div style="font-size:12px;font-weight:600;">'+R.plant+' ประมาณ '+R.legs[0].h+' ชม.'+(maxTT ? ' · ไกลสุดในเครือข่าย ~'+Math.round(maxTT)+' ชม.' : '')+(R.note ? ' ('+R.note+')' : '')+'</div></div>'
+        + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;margin-bottom:6px;">'+line+'</div>'
+        + '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px;">'
+        + R.arrive.map(([k, h]) => row(k, (R.est?'~':'')+fmt(tMs + h * 3600000)+' <span style="font-weight:500;color:'+C.sub+';">(+'+h+' ชม.)</span>')).join('') + '</div>';
+    }
+    return '<div class="lpop" style="font-family:\'Sarabun\',sans-serif;min-width:240px;max-width:360px;color:'+C.tx+';">'
+      + '<h4 style="font-size:15px;font-weight:700;color:'+C.tx+';border-bottom:1px solid '+C.line+';padding-bottom:7px;margin:0 0 8px;">'+o.name+'</h4>'
+      + '<span style="display:inline-block;background:#2a7fd4;color:#fff;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;">💧 น้ำดิบ</span>'
+      + '<div style="display:flex;align-items:baseline;gap:6px;margin:8px 0 6px;"><span style="font-size:28px;font-weight:700;color:'+C.blue+';">'+(ec != null ? ec : '—')+'</span><span style="font-size:13px;font-weight:600;color:'+C.sub+';">µS/cm</span></div>'
+      + '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px;">'+rows+'</div>'
+      + route
+      + (o.chart ? '<div style="border-top:1px solid '+C.line+';margin-top:10px;padding-top:6px;">'+o.chart+'</div>' : '')
+      + (o.footer ? '<div style="font-size:10.5px;font-weight:500;color:'+C.sub+';margin-top:6px;">'+o.footer+'</div>' : '')
+      + '</div>';
+  };
   // ── 5. Rich popup builder (เจ้าพระยา) — เหมือนสถานีน้ำประปา ──────
   function buildRwPopupHtml(sid, st, d, history) {
     const ec = d ? d.ec : null;
@@ -12018,30 +12101,8 @@ function submitFeedback(){
       }
     }
 
-    return `
-      <div class="lpop" style="font-family:'Sarabun',sans-serif;min-width:220px;max-width:380px;">
-        <h4 style="font-size:14px;color:${_dk?'#80c0ff':'#1a3a60'};border-bottom:1.5px solid ${_dk?'rgba(255,255,255,0.08)':'#e0e8f0'};padding-bottom:6px;">
-          🌊 ${st.name}
-        </h4>
-        <div style="font-size:10px;color:#888;">${sid} · น้ำดิบ · แม่น้ำเจ้าพระยา</div>
-        <div style="font-size:22px;font-weight:700;color:${_dk?'#80c0ff':'#1a5090'};margin:6px 0 2px;">⚡ ${ecStr}</div>
-        <div style="font-size:11px;color:${ec!=null?(_dk?'#4ecca3':'#1a6a40'):'#999'};font-weight:600;">${rwEcText(ec)}</div>
-        <div style="font-size:9px;color:#888;margin-top:4px;">🕐 ${timeStr}</div>
-        <div style="border-top:1px solid ${_dk?'rgba(255,255,255,0.06)':'#e8f0ff'};margin:8px 0 6px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11px;">
-          <div class="pr"><span>🌡 อุณหภูมิ</span><span class="pv">${tempStr}</span></div>
-          <div class="pr"><span>pH</span><span class="pv">${phStr}</span></div>
-          <div class="pr"><span>🌫 ความขุ่น</span><span class="pv">${turbStr}</span></div>
-          <div class="pr"><span>🧂 Salinity</span><span class="pv">${salStr}</span></div>
-          <div class="pr"><span>TDS</span><span class="pv">${tdsStr}</span></div>
-          <div class="pr"><span>📍 พิกัด</span><span class="pv">${st.lat.toFixed(4)}, ${st.lon.toFixed(4)}</span></div>
-        </div>
-        ${chartSvg}
-        <div style="margin-top:8px;padding-top:6px;border-top:1px solid ${_dk?'rgba(255,255,255,0.06)':'#e8f0ff'};">
-          <div style="font-size:9px;color:${_dk?'#6090cc':'#4060a0'};font-weight:600;">ℹ️ ค่า EC น้ำดิบนี้ใช้คาดการณ์ EC ที่โรงผลิตน้ำ</div>
-        </div>
-      </div>
-    `;
+    return window._rawPopupHtml({ sid, name: st.name, water: 'แม่น้ำเจ้าพระยา', d, chart: chartSvg,
+      route: RAW_SOURCE_ROUTE[sid], footer: sid === 'S1' ? 'ℹ️ ค่า EC น้ำดิบนี้ใช้คาดการณ์ EC ที่สถานีปลายทางฝั่งตะวันออก' : '' });
   }
 
   // ── 5b. Marker creation ─────────────────────────────────────────────
@@ -12716,29 +12777,9 @@ function submitFeedback(){
       }
     }
 
-    return `
-      <div class="lpop" style="font-family:'Sarabun',sans-serif;min-width:220px;max-width:340px;">
-        <h4 style="font-size:14px;color:${_dk?'#e8e8ff':'#1a3a60'};border-bottom:1.5px solid ${_dk?'rgba(255,255,255,0.08)':'#e0e8f0'};padding-bottom:6px;">
-          🏔️ ${st.name}
-        </h4>
-        <div style="font-size:10px;color:#888;">${sid} · น้ำดิบ · ลุ่มน้ำแม่กลอง</div>
-        <div style="font-size:22px;font-weight:700;color:${_dk?'#80c0ff':'#1a5090'};margin:6px 0 2px;">⚡ ${ecStr}</div>
-        <div style="font-size:11px;color:${ec!=null?(_dk?'#4ecca3':'#1a6a40'):'#999'};font-weight:600;">${mkEcText(ec)}</div>
-        <div style="font-size:9px;color:#888;margin-top:4px;">🕐 ${timeStr}</div>
-        <div style="border-top:1px solid ${_dk?'rgba(255,255,255,0.06)':'#e8f0ff'};margin:8px 0 6px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11px;">
-          <div class="pr"><span>🌡 อุณหภูมิ</span><span class="pv">${tempStr}</span></div>
-          <div class="pr"><span>pH</span><span class="pv">${phStr}</span></div>
-          <div class="pr"><span>🌫 ความขุ่น</span><span class="pv">${turbStr}</span></div>
-          <div class="pr"><span>💧 DO</span><span class="pv">${deoStr}</span></div>
-          <div class="pr"><span>🧪 NH₄</span><span class="pv">${nh4Str}</span></div>
-          <div class="pr"><span>🧂 Salinity</span><span class="pv">${salStr}</span></div>
-          <div class="pr"><span>TDS</span><span class="pv">${tdsStr}</span></div>
-          <div class="pr"><span>📏 ระดับน้ำ</span><span class="pv">${depthStr}</span></div>
-        </div>
-        ${chartSvg}
-      </div>
-    `;
+    return window._rawPopupHtml({ sid, name: st.name, water: 'คลองประปาฝั่งตะวันตก (ลุ่มน้ำแม่กลอง)', d, chart: chartSvg, west: true,
+      route: (window._RAW_SOURCE_ROUTE || {})[sid],
+      footer: sid === 'S12' ? 'ℹ️ ต้นทางน้ำดิบฝั่งตะวันตก (ข้อมูลจาก RWC เริ่ม 5 พ.ย. 69)' : '' });
   }
 
   // ── 6. Marker creation ──────────────────────────────────────────────
