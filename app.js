@@ -14712,10 +14712,10 @@ function buildDashboard() {
   const pct = st.n ? Math.round(st.pass / st.n * 100) : 0;
   const R = 44, C = 2 * Math.PI * R;
   const col = pct >= 95 ? '#16a34a' : pct >= 85 ? '#84cc16' : pct >= 70 ? '#f59e0b' : '#dc2626';
-  document.querySelector('#dash-summary h4').innerHTML = isEc ? '⚡ ภาพรวมความนำไฟฟ้า (EC)' : '💧 ภาพรวมคุณภาพน้ำ (FRC)';
+  document.querySelector('#dash-summary h4').innerHTML = isEc ? 'ภาพรวมความนำไฟฟ้า (EC)' : 'ภาพรวมคุณภาพน้ำ (FRC)';
   document.getElementById('dash-donut').innerHTML =
-    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="#eef2f7" stroke-width="11"/>` +
-    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round"` +
+    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="#e5e7eb" stroke-width="8"/>` +
+    `<circle cx="55" cy="55" r="${R}" fill="none" stroke="${col}" stroke-width="8"` +
     ` stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 55 55)"/>` +
     `<text x="55" y="51" text-anchor="middle" font-size="19" font-weight="800" fill="#1e3a5f" font-family="JetBrains Mono,monospace">${pct}%</text>` +
     `<text x="55" y="68" text-anchor="middle" font-size="9" fill="#94a3b8">${isEc ? 'เกณฑ์ดี' : 'ผ่านเกณฑ์'}</text>`;
@@ -14725,7 +14725,7 @@ function buildDashboard() {
 
   // ── watchlist ──
   document.querySelector('#dash-watch h4').innerHTML =
-    `⚠️ สถานีเฝ้าระวัง <span class="dash-meta" id="dash-watch-meta"></span>`;
+    `สถานีเฝ้าระวัง <span class="dash-meta" id="dash-watch-meta"></span>`;
   document.getElementById('dash-watch-meta').textContent =
     (isEc ? 'EC ≥ 300 ' + U : 'FRC < 0.3 ' + U) + ' · ' + st.watch.length + ' สถานี';
   const wl = document.getElementById('dash-watch-list');
@@ -14733,17 +14733,17 @@ function buildDashboard() {
     `<div class="dw-item" onclick="dashGoto(${m.lat},${m.lon})">` +
     `<span class="dw-name">${(m.name || m.id)}</span>` +
     `<span class="dw-val" style="color:${_dCol(_dVal(m))}">${_dFmt(_dVal(m))}</span></div>`).join('')
-    : `<div class="dw-empty">✅ ทุกสถานีอยู่ในเกณฑ์ดี</div>`;
+    : `<div class="dw-empty">ทุกสถานีอยู่ในเกณฑ์ดี</div>`;
 
   // ── system card ──
   const rtuN = SENSORS.filter(s => s.rtuPressure > 0).length;
   const tf = window._tempKFactor || 1;
   document.getElementById('dash-model').innerHTML =
-    `<h4>🧪 สถานะระบบ</h4>` +
+    `<h4>สถานะระบบ</h4>` +
     `<div style="font-size:11px;line-height:2;color:#475569;">` +
     `สถานะข้อมูล: <b style="color:${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '#16a34a' : '#d97706'}">${(typeof apiStatus !== 'undefined' && apiStatus === 'live') ? '● Live' : '⚠ ' + (typeof apiStatus !== 'undefined' ? apiStatus : '-')}</b>` +
     ` · RTU→sensor: <b>${rtuN}/${SENSORS.length}</b><br>` +
-    `🌡 อุณหภูมิระบบ: <b>${window._sysTempC ? window._sysTempC + '°C' : '–'}</b> · K factor: <b>×${tf.toFixed(2)}</b>${tf === 1 ? ' (OFF)' : ''}<br>` +
+    `อุณหภูมิระบบ: <b>${window._sysTempC ? window._sysTempC + '°C' : '–'}</b> · K factor: <b>×${tf.toFixed(2)}</b>${tf === 1 ? ' (OFF)' : ''}<br>` +
     `แหล่งจ่าย: Kb 0.778 บข. / 0.400 มส. (กนว.32/2566)</div>`;
 
   // ── zone cards ──
@@ -14755,9 +14755,8 @@ function buildDashboard() {
       ? (g.n ? `รับน้ำ ${g.n} สถานี · เฉลี่ยพื้นที่ ${_dFmt(g.avg)}` : 'ยังไม่มีจุดตรวจปลายทาง')
       : (g.n ? `ต้นทาง ${g.srcVal != null ? _dFmt(g.srcVal) : '–'} · รับน้ำ ${g.n} สถานี` : `ใช้ค่าต้นทาง (ไม่มีจุดตรวจปลายทาง)`);
     return `<div class="dz-card${String(g.key) === String(_dashSelKey) ? ' sel' : ''}" onclick="dashSelectZone('${String(g.key).replace(/'/g, "\\'")}')">` +
-      `<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="#eef2f7" stroke-width="5"/>` +
-      `<circle cx="17" cy="17" r="13" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(frac * 81.7).toFixed(1)} 81.7" transform="rotate(-90 17 17)"/></svg>` +
-      `<div class="dz-info"><div class="dz-name">${g.label}</div><div class="dz-sub">${sub}</div></div>` +
+      `<div class="dz-info"><div class="dz-name">${g.label}</div><div class="dz-sub">${sub}</div>` +
+      `<div class="dz-bar"><span style="width:${(frac * 100).toFixed(1)}%;background:${c}"></span></div></div>` +
       `<span class="dz-val" style="color:${c}">${_dFmt(v)}</span></div>`;
   }).join('');
 
@@ -14777,7 +14776,7 @@ function buildDashboard() {
 
   // ── bar chart ──
   document.getElementById('dash-chart-title').textContent =
-    `📊 ${isEc ? 'EC' : 'FRC'} รายพื้นที่อิทธิพล — ${DASH_GROUP === 'src' ? 'ค่าต้นทางสถานีสูบจ่าย' : 'เฉลี่ยทั้งพื้นที่ (ต้นทาง+ปลายทาง)'} (${U})`;
+    `${isEc ? 'EC' : 'FRC'} รายพื้นที่อิทธิพล — ${DASH_GROUP === 'src' ? 'ค่าต้นทางสถานีสูบจ่าย' : 'เฉลี่ยทั้งพื้นที่ (ต้นทาง+ปลายทาง)'} (${U})`;
   document.getElementById('dash-updated').textContent =
     'ปรับปรุงล่าสุด: ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   try {

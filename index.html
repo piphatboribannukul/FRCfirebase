@@ -1918,9 +1918,9 @@ if (window.innerWidth <= 640) document.documentElement.classList.add('mobile-ini
     var isMobile=window.innerWidth<=960;
     if(h1){
       if(isLand&&isMobile){
-        h1.innerHTML='💧 แผนที่ FRC เรียลไทม์';
+        h1.innerHTML='แผนที่ FRC เรียลไทม์';
       } else {
-        h1.innerHTML='💧 แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์';
+        h1.innerHTML='แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์';
       }
     }
     // ย้าย rev ไว้ใต้ clock ในแนวนอน
@@ -2398,24 +2398,88 @@ body.dark #header #param-switcher .param-btn:not(.active){background:#1c1c28 !im
   #header-title{font-size:12px !important;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} }
 @media (max-width:640px){ body #header #param-switcher .param-btn{font-size:11px !important;padding:4px 8px !important;} }
 </style>
+<style id="unslop-css">
+/* ═══ v44.3 unslop — โทนเรียบ: เส้นขอบแทนเงา, มุมเล็กลง, accent สีเดียว, ไม่มี emoji ═══ */
+:root{--u-ink:#1f2937;--u-mute:#6b7280;--u-faint:#9ca3af;--u-line:#e5e7eb;--u-bg:#f4f5f7;--u-acc:#1e3a5f;}
+body.dash-mode{background:var(--u-bg) !important;}
+#header{box-shadow:none !important;border-bottom:1px solid var(--u-line) !important;}
+#header h1{color:var(--u-ink) !important;font-weight:600 !important;}
+/* แท็บ: ข้อความ + เส้นใต้ แทน pill */
+#main-tabs{gap:2px !important;align-self:stretch;}
+.mtab{background:transparent !important;border:none !important;border-radius:0 !important;box-shadow:none !important;
+  color:var(--u-mute) !important;font-weight:500 !important;padding:6px 11px !important;
+  border-bottom:2px solid transparent !important;transition:color .15s,border-color .15s !important;}
+.mtab:hover{color:var(--u-ink) !important;background:transparent !important;}
+.mtab.active{color:var(--u-acc) !important;font-weight:700 !important;border-bottom-color:var(--u-acc) !important;background:transparent !important;}
+/* ตัวสลับพารามิเตอร์: segmented เรียบ */
+body #header #param-switcher{border-width:1px !important;border-radius:6px !important;box-shadow:none !important;}
+body #header #param-switcher .param-btn{font-weight:600 !important;font-size:12.5px !important;padding:5px 12px !important;}
+/* การ์ด: ขอบ 1px แทนเงา */
+.dash-card{border-radius:8px !important;box-shadow:none !important;border:1px solid var(--u-line);color:var(--u-ink);}
+.dash-card h4{font-size:12px !important;font-weight:700;color:var(--u-ink) !important;letter-spacing:.2px;
+  padding-bottom:7px;margin-bottom:8px !important;border-bottom:1px solid var(--u-line);}
+#dash-chart-head h4{border-bottom:none;padding-bottom:0;}
+body.dash-mode #map{border-radius:8px !important;box-shadow:none !important;border:1px solid var(--u-line) !important;}
+#dash-detail{border:1px solid var(--u-acc) !important;}
+#dash-map-legend{border-radius:6px !important;box-shadow:none !important;border:1px solid var(--u-line);backdrop-filter:none !important;}
+#dash-map-legend .dl-bar{border-radius:0 !important;}
+#dash-donut-stats{color:var(--u-mute) !important;}
+#dash-donut-stats b{color:var(--u-ink) !important;}
+.dw-item{border-radius:0 !important;}
+.dw-item:hover{background:#f9fafb !important;}
+.dw-empty{color:var(--u-mute) !important;}
+/* โซน: รายการเดียวในกรอบ แทนการ์ดลอย 23 ใบ */
+#dash-zones{gap:0 !important;background:#fff;border:1px solid var(--u-line);border-radius:8px;padding:0 !important;}
+.dz-card{border-radius:0 !important;box-shadow:none !important;border:none !important;border-bottom:1px solid #f0f1f3 !important;
+  border-left:3px solid transparent !important;padding:8px 12px 8px 11px !important;transition:background .12s !important;}
+.dz-card:last-child{border-bottom:none !important;}
+.dz-card:hover{transform:none !important;box-shadow:none !important;background:#f9fafb;}
+.dz-card.sel{border-left-color:var(--u-acc) !important;background:#f3f6fa;}
+.dz-name{color:var(--u-ink) !important;font-weight:600 !important;}
+.dz-sub{color:var(--u-faint) !important;}
+.dz-val{font-size:14px !important;font-weight:700 !important;}
+.dz-bar{height:3px;background:#eef0f3;margin-top:5px;}
+.dz-bar span{display:block;height:100%;}
+.dash-toggle{border:1px solid var(--u-line) !important;border-radius:6px !important;}
+.dash-toggle button.on{background:var(--u-acc) !important;}
+#header-badge{white-space:nowrap;font-size:10.5px !important;padding:2px 8px !important;border-radius:4px !important;}
+/* แถบ disclaimer ล่างสูง ~34px — ให้แผงจบเหนือแถบ ไม่โดนตัด */
+body.dash-mode #dash-right,body.dash-mode #dash-bottom{bottom:46px;}
+body.dash-mode #map{bottom:230px;}
+body.dash-mode #dash-map-legend{bottom:242px;}
+body.dash-mode.dash-popup #map{bottom:46px !important;}
+body.dash-mode.dash-popup #dash-map-legend{bottom:58px;}
+/* ปุ่มติดต่อ: เลิกลอยทับการ์ด → แถบเรียบใต้คอลัมน์ซ้าย */
+body.dash-mode #dash-left{bottom:86px;}
+body.dash-mode #feedback-btn{left:12px !important;bottom:46px !important;width:300px;justify-content:center;
+  background:#fff !important;color:var(--u-mute) !important;border:1px solid var(--u-line) !important;border-radius:8px !important;
+  box-shadow:none !important;opacity:1 !important;padding:8px 10px !important;font-weight:500 !important;transform:none !important;}
+body.dash-mode #feedback-btn:hover{color:var(--u-ink) !important;border-color:#cbd5e1 !important;}
+@media (max-width:1100px) and (min-width:769px){ body.dash-mode #feedback-btn{width:248px;} }
+@media (max-width:768px){
+  body.dash-mode #dash-left{bottom:auto;}
+  body.dash-mode #feedback-btn{width:auto;left:8px !important;bottom:44px !important;padding:5px 9px !important;}
+  .mtab{padding:6px 8px !important;}
+}
+</style>
 </head>
 <body class="dash-mode">
 <div id="header">
   <div class="live-dot"></div>
-  <h1 id="header-title" title="แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map)">💧 แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์</h1>
+  <h1 id="header-title" title="แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์ (Real-time FRC Contour Map)">แผนที่ความเข้มข้นคลอรีนอิสระคงเหลือแบบเรียลไทม์</h1>
   <div id="param-switcher" role="group" aria-label="เลือกพารามิเตอร์">
-    <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">💧 คลอรีนอิสระคงเหลือ</button>
-    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">⚡ ความนำไฟฟ้า</button>
+    <button class="param-btn active" id="btn-frc" onclick="setParam('frc')">คลอรีนอิสระคงเหลือ</button>
+    <button class="param-btn" id="btn-ec" onclick="setParam('ec')">ความนำไฟฟ้า</button>
   </div>
   <nav id="main-tabs">
-    <button class="mtab active" id="mtab-dash" onclick="setTab('dash')">📊 แดชบอร์ด</button>
-    <button class="mtab" id="mtab-map" onclick="setTab('map')">🗺️ แผนที่</button>
+    <button class="mtab active" id="mtab-dash" onclick="setTab('dash')">แดชบอร์ด</button>
+    <button class="mtab" id="mtab-map" onclick="setTab('map')">แผนที่</button>
     <button class="mtab" id="mtab-booster" title="ระบบตรวจสอบคุณภาพน้ำสถานีจ่ายคลอรีนเสริมปลายสาย"
-      onclick="window.open('https://piphatboribannukul.github.io/sandbox/frc_deckgl.html','_blank')">💠 คลอรีนเสริมปลายสาย ↗</button>
-    <button class="mtab" id="mtab-forecast" onclick="setTab('forecast')">📈 คาดการณ์</button>
-    <button class="mtab" id="mtab-report" onclick="setTab('report')">📋 รายงาน</button>
-    <button class="mtab" id="mtab-3d" onclick="dashOpen3D()">🧊 3D</button>
-    <button class="mtab" id="mtab-3dst" title="ทัวร์มุมมอง 3 มิติ ตู้วัดคุณภาพน้ำ 4 สถานี" onclick="start3DTour(false)">🏙 3D สถานี</button>
+      onclick="window.open('https://piphatboribannukul.github.io/sandbox/frc_deckgl.html','_blank')">คลอรีนเสริมปลายสาย ↗</button>
+    <button class="mtab" id="mtab-forecast" onclick="setTab('forecast')">คาดการณ์</button>
+    <button class="mtab" id="mtab-report" onclick="setTab('report')">รายงาน</button>
+    <button class="mtab" id="mtab-3d" onclick="dashOpen3D()">3D</button>
+    <button class="mtab" id="mtab-3dst" title="ทัวร์มุมมอง 3 มิติ ตู้วัดคุณภาพน้ำ 4 สถานี" onclick="start3DTour(false)">3D สถานี</button>
     <button class="mtab" id="mtab-cl2" onclick="dashOpenWhatIf()">Cl₂ จำลอง</button>
   </nav>
   <span class="badge" id="header-badge">15 ก.ค. 2568</span>
@@ -3704,14 +3768,14 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <div id="dash-left" class="dash-panel">
   <div class="dash-card" id="dash-detail"></div>
   <div class="dash-card" id="dash-summary">
-    <h4>💧 ภาพรวมคุณภาพน้ำ (FRC)</h4>
+    <h4>ภาพรวมคุณภาพน้ำ (FRC)</h4>
     <div id="dash-donut-wrap">
       <svg id="dash-donut" width="110" height="110" viewBox="0 0 110 110"></svg>
       <div id="dash-donut-stats"></div>
     </div>
   </div>
   <div class="dash-card" id="dash-watch">
-    <h4>⚠️ สถานีเฝ้าระวัง <span class="dash-meta" id="dash-watch-meta"></span></h4>
+    <h4>สถานีเฝ้าระวัง <span class="dash-meta" id="dash-watch-meta"></span></h4>
     <div id="dash-watch-list"></div>
   </div>
 </div>
@@ -3722,7 +3786,7 @@ I=ค่าจริง, AA=ค่า contour, tt=travel time<br>
 <div id="dash-bottom" class="dash-panel">
   <div class="dash-card" id="dash-chart-card">
     <div id="dash-chart-head">
-      <h4 style="margin:0;" id="dash-chart-title">📊 FRC เฉลี่ยรายพื้นที่</h4>
+      <h4 style="margin:0;" id="dash-chart-title">FRC เฉลี่ยรายพื้นที่</h4>
       <span class="dash-toggle">
         <button id="dash-grp-src" class="on" onclick="setDashGroup('src')">ต้นทาง (สถานีสูบจ่าย)</button>
         <button id="dash-grp-avg" onclick="setDashGroup('avg')">เฉลี่ยพื้นที่อิทธิพล</button>
