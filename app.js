@@ -2962,18 +2962,18 @@ function buildMarkers() {
       const fill = c.v != null ? ecColorContour(c.v, c.k ? 0.95 : 0.55) : soft;
       g += '<rect x="'+(x0+0.3).toFixed(1)+'" y="'+PT+'" width="'+Math.max(0.5, x1-x0-0.6).toFixed(1)+'" height="'+STRIP+'" fill="'+fill+'"/>';
     });
-    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">วัดที่นี่</text>'
+    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+tx+'" opacity=".75">ค่าจริง</text>'
       + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+11.5)+'" font-size="9" font-weight="700" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
     // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
     const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 80 ? 6 : 12;
     const t0 = new Date(d.now - 24 * 3600000); t0.setMinutes(0, 0, 0);
-    let lastDay = -1;
+    let lastDay = -1, lastDayX = -99;
     for (let ms = t0.getTime() + Math.ceil(t0.getHours() / stepH) * stepH * 3600000 - t0.getHours() * 3600000; ms <= d.now + d.TT * 3600000; ms += stepH * 3600000) {
       const t = (ms - d.now) / 3600000; if (t < -24) continue;
       const x = X(t), dt = new Date(ms);
       g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+tx+'" stroke-width="0.8"/>'
         + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+13)+'" font-size="9.5" font-weight="600" text-anchor="middle" fill="'+tx+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
-      if (dt.getDate() !== lastDay) { lastDay = dt.getDate();
+      if (dt.getDate() !== lastDay && x - lastDayX >= 34) { lastDay = dt.getDate(); lastDayX = x;
         g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+25)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#1040a0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
     }
     g += '<text x="'+(W-PR)+'" y="'+(H-2)+'" font-size="9.5" font-weight="700" text-anchor="end" fill="'+tx+'">เวลา (ชม.)</text>';
@@ -3006,16 +3006,16 @@ function buildMarkers() {
     tip.innerHTML = '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+PT+'" y2="'+(H-PB)+'" stroke="'+tx+'" stroke-width="1"/>'
       + (m ? '<circle cx="'+X(m.t).toFixed(1)+'" cy="'+Y(m.v).toFixed(1)+'" r="3.5" fill="#1f6fd1" stroke="#fff" stroke-width="1.2"/>' : '')
       + (f ? '<circle cx="'+X(f.t).toFixed(1)+'" cy="'+Y(f.v).toFixed(1)+'" r="3.5" fill="#11875f" stroke="#fff" stroke-width="1.2"/>' : '');
-    if (!el) return;
     const at = d.now + t * 3600000, sub = dk ? '#c0c0d0' : '#555';
-    if (t < 0) {
-      el.innerHTML = '<span style="color:#1f6fd1;">'+_ecFmt(at)+' · วัดได้ '+(m ? Math.round(m.v) : '—')+' µS/cm</span><br>'
-        + '<span style="color:#11875f;">คาดการณ์ไว้ '+(f ? Math.round(f.v) : '—')+' µS/cm</span>'
-        + (m && f ? ' <span style="font-weight:500;color:'+sub+';">(ต่าง '+Math.abs(m.v - f.v).toFixed(0)+')</span>' : '');
-    } else {
-      el.innerHTML = '<span style="color:#11875f;">'+_ecFmt(at)+' · คาดการณ์ '+(f ? Math.round(f.v) : '—')+' µS/cm</span><br>'
-        + '<span style="font-weight:500;color:'+sub+';">วัดจริงที่'+d.src+' '+_ecFmt(at - d.TT * 3600000)+'</span>';
-    }
+    const L = t < 0
+      ? [[_ecFmt(at), tx, 700], ['ค่าจริง ' + (m ? Math.round(m.v) : '—') + ' µS/cm', '#1f6fd1', 700],
+         ['คาดการณ์ไว้ ' + (f ? Math.round(f.v) : '—') + (m && f ? ' (ต่าง ' + Math.abs(m.v - f.v).toFixed(0) + ')' : ''), '#11875f', 600]]
+      : [[_ecFmt(at), tx, 700], ['คาดการณ์ ' + (f ? Math.round(f.v) : '—') + ' µS/cm', '#11875f', 700],
+         ['วัดจริงที่' + d.src + ' ' + _ecFmt(at - d.TT * 3600000), sub, 500]];
+    const bw = 158, bh = 12 + L.length * 13, top = PT + EC_SVG.STRIP + EC_SVG.GAP + 2;
+    const bx = Math.min(W - PR - bw, Math.max(PL, x > W / 2 ? x - bw - 8 : x + 8));
+    tip.innerHTML += '<rect x="'+bx.toFixed(1)+'" y="'+top+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+(dk?'#1d1d2b':'#fff')+'" stroke="'+(t < 0 ? '#1f6fd1' : '#11875f')+'" stroke-width="1" opacity=".97"/>'
+      + L.map((l, k) => '<text x="'+(bx+7).toFixed(1)+'" y="'+(top+14+k*13)+'" font-size="'+(k ? 10 : 10.5)+'" font-weight="'+l[2]+'" fill="'+l[1]+'">'+l[0]+'</text>').join('');
   };
   window._ecKnownCell = function (sid, i) {
     const d = window._ecKnownData[sid], el = document.getElementById('ecky-cell-' + sid);
@@ -3137,9 +3137,9 @@ function buildMarkers() {
         + '<div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:'+C.tx+';margin-bottom:10px;">'+route+'</div>'
         + '<div style="font-size:12px;font-weight:700;margin-bottom:2px;">ย้อนหลัง 24 ชม. และคาดการณ์ '+TTs+' ชม.</div>'
         + '<div id="ecky-chart-'+sid+'">'+_ecKnownSvg(window._ecKnownData[sid], sid)+'</div>'
-        + '<div id="ecky-cell-'+sid+'" style="font-size:12px;font-weight:700;color:'+C.tx+';min-height:34px;margin-top:3px;line-height:1.45;"><span style="font-weight:500;color:'+C.sub+';">ชี้หรือแตะบนแถบสี/กราฟ เพื่อดูค่าแต่ละช่วงเวลา</span></div>'
+        + '<div id="ecky-cell-'+sid+'" style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:2px;">ชี้หรือแตะบนแถบสี/กราฟ เพื่อดูค่าแต่ละช่วงเวลา</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
-        +   lg('#1f6fd1','วัดที่นี่') + lg('#11875f','คาดการณ์')
+        +   lg('#1f6fd1','ค่าจริง') + lg('#11875f','คาดการณ์')
         +   '<span><span style="display:inline-block;width:14px;border-top:2.5px dashed #11875f;vertical-align:middle;"></span> คาดการณ์ย้อนหลัง</span>'
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
