@@ -2932,7 +2932,7 @@ function buildMarkers() {
   const _ecFmt = ms => { const d = new Date(ms); return d.getDate()+' '+_TH_MON[d.getMonth()]+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   // [v45] แถบสีรายชั่วโมงอยู่บนกราฟ ใช้แกนเวลาเดียวกัน (ซ้าย = วัดที่นี่, ขวา = คาดการณ์)
   //       + เส้นคาดการณ์ย้อนหลัง (เขียวประ) ทับค่าจริง 24 ชม. ที่ผ่านมา
-  const EC_SVG = { W: 340, H: 168, PL: 34, PR: 6, PT: 18, STRIP: 14, GAP: 6, PB: 30 };
+  const EC_SVG = { W: 340, H: 172, PL: 36, PR: 6, PT: 18, STRIP: 15, GAP: 7, PB: 30 };
   // [v45.4] กว้างเท่าพื้นที่จริงในป๊อปอัป (ป๊อปอัปกว้างสุด 480 − ขอบ) → ตัวอักษรขนาดจริง ไม่ถูกยืด
   const _ecSvgW = () => Math.max(300, Math.min(440, (window.innerWidth || 400) - 60));
   const EC_FONT = "font-family=\"Sarabun,'IBM Plex Sans Thai',system-ui,sans-serif\"";
@@ -2946,7 +2946,7 @@ function buildMarkers() {
   function _ecKnownSvg(d, sid) {
     EC_SVG.W = _ecSvgW();
     const dk = document.body.classList.contains('dark');
-    const tx = dk ? '#f0f0f8' : '#111', ax = dk ? '#a9b0c2' : '#6b7280', grid = dk ? 'rgba(255,255,255,.12)' : '#e6e9ee', soft = dk ? 'rgba(255,255,255,.14)' : '#cfd3d9';
+    const tx = dk ? '#f0f0f8' : '#111', ax = dk ? '#dfe3ec' : '#2b2f36', grid = dk ? 'rgba(255,255,255,.12)' : '#e6e9ee', soft = dk ? 'rgba(255,255,255,.14)' : '#cfd3d9';
     const { W, H, PL, PR, PT, STRIP, PB } = EC_SVG;
     const { lo, hi, top, X, Y } = _ecKnownGeo(d);
     const P = a => a.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
@@ -2956,9 +2956,9 @@ function buildMarkers() {
     // แกนค่า + หน่วย
     for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
       g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+grid+'" stroke-width="0.6"/>'
-        + '<text x="'+(PL-5)+'" y="'+(Y(v)+3).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+ax+'">'+v+'</text>';
+        + '<text x="'+(PL-5)+'" y="'+(Y(v)+3).toFixed(1)+'" font-size="9.5" font-weight="500" text-anchor="end" fill="'+ax+'">'+v+'</text>';
     }
-    g += '<text x="'+(PL-5)+'" y="'+(top-4)+'" font-size="8.5" text-anchor="end" fill="'+ax+'">µS/cm</text>';
+    g += '<text x="'+(PL-5)+'" y="'+(PT+10)+'" font-size="9" font-weight="500" text-anchor="end" fill="'+ax+'">µS/cm</text>';
     if (EC_WATCH > lo && EC_WATCH < hi) g += '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(EC_WATCH).toFixed(1)+'" y2="'+Y(EC_WATCH).toFixed(1)+'" stroke="#d97a00" stroke-width="1.2" stroke-dasharray="4 3"/>';
     // ── แถบสีรายชั่วโมง (แกน X เดียวกับกราฟ) ──
     (d.strip || []).forEach(c => {
@@ -2966,8 +2966,8 @@ function buildMarkers() {
       const fill = c.v != null ? ecColorContour(c.v, c.k ? 0.95 : 0.55) : soft;
       g += '<rect x="'+(x0+0.3).toFixed(1)+'" y="'+PT+'" width="'+Math.max(0.5, x1-x0-0.6).toFixed(1)+'" height="'+STRIP+'" fill="'+fill+'"/>';
     });
-    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+10)+'" font-size="8.5" font-weight="600" text-anchor="middle" fill="'+tx+'" opacity=".7">ค่าที่ผ่านมา</text>'
-      + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+10)+'" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
+    g += '<text x="'+X(-12).toFixed(1)+'" y="'+(PT+11)+'" font-size="10" font-weight="600" text-anchor="middle" fill="'+tx+'" opacity=".75">ค่าที่ผ่านมา</text>'
+      + '<text x="'+X(d.TT/2).toFixed(1)+'" y="'+(PT+11)+'" font-size="10.5" font-weight="700" text-anchor="middle" fill="#0b3d2a">คาดการณ์ '+(+d.TT.toFixed(1))+' ชม.</text>';
     // แกนเวลา: นาฬิกา + วันที่เมื่อข้ามวัน
     const span = 24 + Math.max(d.TT, 1), stepH = span <= 36 ? 3 : span <= 72 && W >= 380 ? 6 : 12;
     const t0 = new Date(d.now - 24 * 3600000); t0.setMinutes(0, 0, 0);
@@ -2976,7 +2976,7 @@ function buildMarkers() {
       const t = (ms - d.now) / 3600000; if (t < -24) continue;
       const x = X(t), dt = new Date(ms);
       g += '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+3)+'" stroke="'+ax+'" stroke-width="0.6"/>'
-        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+12)+'" font-size="9" text-anchor="middle" fill="'+ax+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
+        + '<text x="'+x.toFixed(1)+'" y="'+(H-PB+12)+'" font-size="9.5" font-weight="500" text-anchor="middle" fill="'+ax+'">'+String(dt.getHours()).padStart(2,'0')+':00</text>';
       if (dt.getDate() !== lastDay && x - lastDayX >= 34) { lastDay = dt.getDate(); lastDayX = x;
         g += '<text x="'+x.toFixed(1)+'" y="'+(H-PB+23)+'" font-size="9" font-weight="600" text-anchor="middle" fill="'+(dk?'#8cc4ff':'#2c5aa0')+'">'+dt.getDate()+' '+_TH_MON[dt.getMonth()]+'</text>'; }
     }
@@ -3109,7 +3109,7 @@ function buildMarkers() {
       const dot = c => '<div style="width:9px;height:9px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
       let route = '<div style="text-align:center;white-space:nowrap;">'+dot('#1f6fd1')+srcName.replace(/ \(.*\)/,'')+'</div>';
       segs.forEach((g, i) => {
-        route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:2px solid '+C.line+';margin:0 3px 14px;text-align:center;min-width:16px;"><span style="font-size:11px;font-weight:700;color:'+C.tx+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
+        route += '<div style="flex:'+Math.max(g.h, 1)+';border-top:2px solid '+C.line+';margin:0 3px 15px;text-align:center;min-width:18px;"><span style="font-size:13px;font-weight:700;color:'+C.tx+';">'+(i ? '+' : '')+(+g.h.toFixed(1))+'</span></div>'
           + '<div style="text-align:center;white-space:nowrap;">'+dot(i === segs.length-1 ? C.tx : C.line)+g.to+'</div>';
       });
       // ── กราฟ (แกน Y คงที่ ปรับได้) ──
@@ -3143,6 +3143,9 @@ function buildMarkers() {
         + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-top:4px;">'
         +   lg('#1f6fd1','ค่าที่ผ่านมา') + lg('#11875f','คาดการณ์')
         +   '<span><span style="display:inline-block;width:14px;border-top:2.5px dashed #11875f;vertical-align:middle;"></span> คาดการณ์ย้อนหลัง</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;font-weight:600;color:'+C.tx+';">'
+        +   ((typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s, 'inline') : '')
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
         + (srcNote ? '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+srcNote+'</div>' : '')
@@ -4310,7 +4313,7 @@ function buildMarkers() {
       ${(_vcClosed || (PARAM_MODE === 'ec' && _ecKnownShown)) ? '' : ttHtml}
       ${_vcClosed?'':(sourceChart && !decayChart ? '<div class="'+ (_bangkhenIds.has(String(s.id)) ? 'bangkhen-source-chart' : '') +'">' + sourceChart + '</div>' : '')}
       ${_vcClosed?'':decayChart}
-      ${(typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s, 'btn') : ''}
+      ${(typeof _maintPopupHtml === 'function' && !(PARAM_MODE === 'ec' && _ecKnownShown)) ? _maintPopupHtml(s, 'btn') : ''}
     </div>`,{className:'pk-pop',maxWidth:Math.min(480,window.innerWidth-20),minWidth:Math.min(350,window.innerWidth-30),autoPan:true,autoPanPaddingTopLeft:[10,80],autoPanPaddingBottomRight:[10,40],keepInView:false});
   }
 
@@ -15201,6 +15204,7 @@ function _maintPopupHtml(s, part) {   // [v45.4] part: 'badge' (บนสุด)
   const btn = '<div style="text-align:right;margin-top:8px;"><button onclick="toggleMaintenance(\'' + code.replace(/'/g,"\\'") + '\')" style="padding:3px 9px;font-size:10.5px;font-weight:700;font-family:Sarabun,sans-serif;border-radius:6px;cursor:pointer;border:1px solid ' + (isMaint ? '#80c090;background:#f0fff4;color:#006020' : '#e0a0b8;background:#fff5f8;color:#a01048') + ';">' + (isMaint ? '✅ เปิดใช้งานสถานีนี้' : '🔧 ปิดซ่อมบำรุงสถานีนี้') + '</button></div>';
   if (part === 'badge') return badge;
   if (part === 'btn') return btn;
+  if (part === 'inline') return btn.replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '');
   return badge + btn;
 }
 
