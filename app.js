@@ -14808,7 +14808,7 @@ function buildDashboard() {
           scales: { y: { beginAtZero: true, border: { display: false }, grid: { color: '#eef0f3' },
                          ticks: { color: '#737373', font: { size: 11, family: 'JetBrains Mono' }, maxTicksLimit: 4 } },
                     x: { grid: { display: false }, border: { color: '#e5e7eb' },
-                         ticks: { color: '#525252', font: { size: 11, family: 'Sarabun' }, autoSkip: false, maxRotation: 50, minRotation: 50,
+                         ticks: { color: '#525252', font: { size: 11, family: 'Sarabun' }, autoSkip: false, maxRotation: window.innerWidth <= 768 ? 90 : 50, minRotation: window.innerWidth <= 768 ? 90 : 50,
                            callback(v) { const t = String(this.getLabelForValue(v)).replace('โรงงานผลิตน้ำ', 'รง.'); return t.length > 16 ? t.slice(0, 15) + '…' : t; } } } } } });
     }
   } catch (e) { console.warn('[Dash] chart:', e.message); }
