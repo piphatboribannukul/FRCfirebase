@@ -2321,7 +2321,7 @@
       const c = frcHex(st.frc), el = document.createElement('div');
       el.className = 'frc3d-card'; el.style.setProperty('--c', st.hq ? '#1d5fc0' : c);
       if (st.hq) { el.dataset.a = 'inside'; el.style.cursor = 'pointer'; el.title = 'ดูชั้น 5'; }
-      el.innerHTML = st.hq ? ('<div class="n">' + esc(st.name) + '</div><div class="v"><b style="color:#1d5fc0">ชั้น 5</b><span>Stakeholder Day · บูธ 20 บูธ</span></div><div class="s">แตะเพื่อดูผังการจัดงาน ▸</div>') : '<div class="n">' + esc(st.name || '') + '</div>' +
+      el.innerHTML = st.hq ? ('<div class="n">' + esc(st.name) + '</div><div class="v"><b style="color:#1d5fc0">ชั้น 5</b><span>Stakeholder Day · บูธ 22 บูธ</span></div><div class="s">แตะเพื่อดูผังการจัดงาน ▸</div>') : '<div class="n">' + esc(st.name || '') + '</div>' +
         '<div class="v"><b>' + (st.frc != null ? Number(st.frc).toFixed(2) : '—') + '</b><span>mg/L คลอรีนอิสระ · ' + frcText(st.frc) + '</span></div>' +
         (st.ec != null ? '<div class="s">ความนำไฟฟ้า ' + Math.round(st.ec) + ' µS/cm</div>' : '') +
         (tsTxt ? '<div class="s">' + tsTxt + '</div>' : '');

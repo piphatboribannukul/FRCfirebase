@@ -298,7 +298,7 @@
       { const st = liveTex(T, signCanvas, srgb, disposeList); const sm = new T.MeshBasicMaterial({ map: st, transparent: true }); if (fade) sm.transparent = true; E.mats.push(sm); disposeList.push(sm);
         const [x, z] = SL(-41.3, -89.5); const sg = new T.PlaneGeometry(13, 18.3); const sign = put(sg, sm, x - 0.02, 11.8, z, false); sign.rotation.y = -Math.PI / 2; }
       // ปีกยาว 4 ปีก (4 ชั้น) มีช่องแสงคั่น — ปีกตะวันออกมีโซลาร์บนหลังคา
-      for (const [e0, e1] of [[-34, -24], [-20, -10], [-7.5, 0], [9, 30]]) { ob(e0, e1, -160, -100, 0, OH * 4, 'old', 'roofT', 4); ob(e0 - 0.3, e1 + 0.3, -160.3, -100, OH * 4, 0.8, 'white', 'roofT'); }
+      for (const [e0, e1] of [[-7.5, 0], [9, 30]]) {   /* ปีกฝั่งตะวันตก 2 ปีกเอาออก (ลานพระรูปเปิดโล่ง) */ ob(e0, e1, -160, -100, 0, OH * 4, 'old', 'roofT', 4); ob(e0 - 0.3, e1 + 0.3, -160.3, -100, OH * 4, 0.8, 'white', 'roofT'); }
       ob(-7.5, 9, -160, -150, 0, OH * 4, 'old', 'roofT', 4);
       // ส่วนใต้ 3 ชั้น + โซลาร์ + หลังคาทางเข้า
       ob(0, 37.5, -215, -160, 0, OH * 3, 'old', 'roofT', 3); ob(-0.3, 37.8, -215.3, -160, OH * 3, 0.8, 'white', 'roofT');
@@ -309,7 +309,7 @@
       ob(8, 30, -219, -215, 3.4, 0.35, 'white', 'white');
       // ── ลานพระบรมราชานุสาวรีย์ (สนามหญ้า ทางเดินเหลือง ลานแดง) ──
       const grass = pm('#78a656'), grass2 = pm('#6d9c4c'), path = pm('#e2c14f'), pave = pm('#cfccc4'), red = pm('#c25a4b');
-      flat(-60, -36, -262, -100, 0.06, grass); flat(-36, -18, -200, -108, 0.06, grass2); flat(-36, -3, -262, -200, 0.06, grass);
+      flat(-60, -36, -262, -100, 0.06, grass); flat(-36, -18, -200, -100, 0.06, grass2); flat(-18, -8, -200, -100, 0.06, grass); flat(-36, -3, -262, -200, 0.06, grass);
       flat(-20.5, -15.5, -199, -128, 0.09, path); flat(-58, -42, -166, -162, 0.09, path); flat(-50, -15.5, -197.5, -193, 0.09, path);
       for (let i = 0; i < 10; i++) { const a = i / 9, e = -59 + 20 * a, n = -150 + 22 * Math.sin(a * Math.PI / 2); flat(e - 1.6, e + 1.6, n - 1.6, n + 1.6, 0.085, path); }   // ทางเดินโค้ง
       flat(-42, -20, -172, -153, 0.1, pave); flat(-40, -27, -192, -172, 0.1, red);
@@ -450,12 +450,16 @@
       const im = new T.InstancedMesh(pg, sm, rowsN.length * cols), m4 = new T.Matrix4(), q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), -0.22); let k = 0;
       for (const n of rowsN) for (let c = 0; c < cols; c++) { m4.compose(new T.Vector3(se0 + 1.05 + c * 2.05, wy + 0.5, -n), q, new T.Vector3(1, 1, 1)); im.setMatrixAt(k++, m4); }
       if (o.shadows) { im.castShadow = true; im.receiveShadow = true; } root.add(im); disp.push(pg);
-      // แนวหลังคาทางเดินริมคลอง ฝั่ง กปน.
-      const post = M({ color: 0x5a4a3c, roughness: 0.7 }), postG = new T.BoxGeometry(0.25, 2.8, 0.25), beamG = new T.BoxGeometry(3.2, 0.12, 4.0);
-      const ns = []; for (let n = -255; n < -20; n += 4) ns.push(n);
-      const ip = new T.InstancedMesh(postG, post, ns.length * 2), ib = new T.InstancedMesh(beamG, M({ color: 0x6c5a48, roughness: 0.7 }), ns.length); let j = 0;
-      ns.forEach((n, i) => { for (const e of [-56.6, -53.6]) { m4.compose(new T.Vector3(e, 1.4, -n), new T.Quaternion(), new T.Vector3(1, 1, 1)); ip.setMatrixAt(j++, m4); } m4.compose(new T.Vector3(-55.1, 2.86, -n - 2), new T.Quaternion(), new T.Vector3(1, 1, 1)); ib.setMatrixAt(i, m4); });
-      if (o.shadows) { ip.castShadow = ib.castShadow = true; } root.add(ip, ib); disp.push(postG, beamG);
+      // ริมคลองฝั่ง กปน.: แนวรั้วโปร่งสีเขียวเข้ม + แถวต้นไม้บนสนามหญ้า (ตามภาพดาวเทียม)
+      const fenceM = M({ color: 0x2f4f3a, roughness: 0.6 }), ns = []; for (let n = -255; n < 430; n += 2.5) if (n < -8 || n > 8) ns.push(n);
+      const postG = new T.BoxGeometry(0.08, 1.8, 0.08), ip = new T.InstancedMesh(postG, fenceM, ns.length); ns.forEach((n, i) => { m4.compose(new T.Vector3(-58.4, 0.9, -n), new T.Quaternion(), new T.Vector3(1, 1, 1)); ip.setMatrixAt(i, m4); }); root.add(ip); disp.push(postG);
+      for (const y of [0.25, 1.0, 1.75]) blk(-58.45, -58.35, -255, 430, y, 0.05, fenceM);
+      const meshM = M({ color: 0x3d5f48, roughness: 0.8, transparent: true, opacity: 0.35, side: T.DoubleSide }); { const g = new T.PlaneGeometry(685, 1.5); g.rotateY(Math.PI / 2); const me = add(g, meshM, -58.4, 1.0, -(-255 + 430) / 2); me.renderOrder = 1; }
+      const tr = []; for (let n = -250; n < 420; n += 8.5) if (Math.abs(n) > 12 && !(n > 300 && n < 330)) tr.push(n);
+      const canG = new T.IcosahedronGeometry(1, 1), trunkG = new T.CylinderGeometry(0.18, 0.26, 1, 7);
+      const ic = new T.InstancedMesh(canG, M({ color: 0x5f9a4c, roughness: 0.85 }), tr.length), it = new T.InstancedMesh(trunkG, M({ color: 0x6f5a46, roughness: 0.9 }), tr.length);
+      tr.forEach((n, i) => { const k = 2.6 + ((n * 7.3) % 1.4), e = -54.5 + ((n * 3.1) % 1.6) - 0.8; m4.compose(new T.Vector3(e, 2.4 + k * 0.8, -n), new T.Quaternion(), new T.Vector3(k, k * 0.85, k)); ic.setMatrixAt(i, m4); m4.compose(new T.Vector3(e, 1.3, -n), new T.Quaternion(), new T.Vector3(1, 2.6, 1)); it.setMatrixAt(i, m4); });
+      if (o.shadows) ic.castShadow = true; root.add(ic, it); disp.push(canG, trunkG);
       flat([-59.4, -50, -262, -20], M({ color: 0x76a454 }), 0.05);
     }
     // ── อ่างเก็บน้ำดิบ (เหนือสนามกีฬา) ──
