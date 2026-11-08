@@ -11,7 +11,6 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -84,17 +83,25 @@ const ROOMS = [
   { id: 'hall', zone: 'hall', r: [1108, 188, 1390, 350], floor: 'carpet', gaps: { s: [[1112, 1150], [1335, 1375]] } },
   { id: 'elec', zone: 'other', r: [1397, 188, 1565, 350], floor: 'plain', gaps: { s: [[1460, 1500]] } },
   { id: 'aud', zone: 'aud', r: [1155, 435, 1520, 755], floor: 'aud', gaps: { n: [[1290, 1330]] }, h: AUD_H },
+  { id: 'mr1', zone: 'other', r: [603, 463, 675, 522], floor: 'plain', gaps: { e: [[480, 505]] } },
+  { id: 'mr2', zone: 'other', r: [603, 557, 675, 615], floor: 'plain', gaps: { e: [[575, 600]] } },
+  { id: 'mr3', zone: 'other', r: [603, 648, 675, 707], floor: 'plain', gaps: { e: [[665, 690]] } },
   { id: 'mr4', zone: 'other', r: [623, 768, 725, 897], floor: 'plain', gaps: { e: [[790, 820]] } },
   { id: 'wc', zone: 'other', r: [977, 823, 1078, 908], floor: 'plain', gaps: { w: [[882, 906]] } },
 ];
 const CLOSED = [                                           // พื้นที่ไม่ใช้จัดงาน (ทึบ)
-  { r: [958, 432, 1153, 761], t: 'พื้นที่สำนักงาน' }, { r: [972, 188, 1106, 350], t: 'ปิด (ไม่ใช้)' },
+  { r: [972, 188, 1106, 350], t: 'ปิด (ไม่ใช้)' },
+  { r: [727, 453, 885, 676], t: 'ส่วนบริการ', core: true }, { r: [600, 523, 602, 556], t: '' },
   { r: [1080, 762, 1565, 910], t: 'พื้นที่สำนักงาน' }, { r: [1522, 352, 1565, 760], t: '' },
   { r: [727, 765, 768, 910], t: '' },
   { r: [600, 708, 676, 766], t: '' }, { r: [832, 765, 940, 786], t: '' },
 ];
+// บล็อกระหว่างทางเดิน กปน. กับ Auditorium (ตามรูป 4): ห้องประชุม 6 ห้อง · ลิฟต์ 2 ตัว · ห้องน้ำชาย/หญิง · ทางเดินภายใน 2 แนว (แสดงไว้ ไม่พาเดิน)
+[432, 479, 526, 573, 626, 679].forEach((y, i, a) => CLOSED.push({ r: [958, y, 1002, a[i + 1] || 761], t: 'ห้องประชุม', small: true, kind: 'room' }));
+CLOSED.push({ r: [1002, 432, 1044, 526], t: '' }, { r: [1002, 526, 1044, 573], t: 'ลิฟต์', small: true, kind: 'lift' }, { r: [1002, 573, 1044, 620], t: 'ลิฟต์', small: true, kind: 'lift' }, { r: [1002, 620, 1044, 761], t: '' });
+CLOSED.push({ r: [1076, 432, 1115, 520], t: '' }, { r: [1076, 520, 1115, 614], t: 'ห้องน้ำชาย', small: true, kind: 'wcm' }, { r: [1076, 614, 1115, 708], t: 'ห้องน้ำหญิง', small: true, kind: 'wcf' }, { r: [1076, 708, 1115, 761], t: '' });
 const GLASS_WALLS = [];
-const EXTRA_WALLS = [[940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], ];
+const EXTRA_WALLS = [[940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], [676, 522, 676, 557], [676, 615, 676, 648]];
 
 const ZONES = {
   lobby: { name: 'โถงลิฟต์ · ลงทะเบียน', c: [X(806), Z(830)] },
@@ -638,7 +645,6 @@ function makeScene(root, opt) {
       };
       composer.addPass(gtao);
     }
-    bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.85, 0.45, 2.8); bloom.enabled = false; composer.addPass(bloom);   // แสงเรืองตอนแยกชั้น
     composer.addPass(new OutputPass());
   }
   return { renderer, scene, camera, controls, sun, hemi, setupComposer, get composer() { return composer; }, get gtao() { return gtao; }, get bloom() { return bloom; }, DPR };
@@ -691,8 +697,8 @@ function buildWorld(ctx) {
   // ── พื้นฐานชั้น + พื้นทางเดิน (หินขัด)
   const stoneT = floorCanvas('stone'); stoneT.repeat.set(FW / TILE.stone, FD / TILE.stone);
   const slabTop = new THREE.MeshStandardMaterial({ map: stoneT, roughness: 0.38, metalness: 0.0 });
-  // พื้นชั้นตามแนวกระจกอาคาร: ฝั่งตะวันตกของทางเดิน กปน. เป็นภายนอก (ไม่มีพื้น)
-  const OUTLINE = [[FX0, Z(676)], [X(885), Z(676)], [X(885), Z(350)], [X(855), Z(350)], [X(855), FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1]];
+  // พื้นชั้นตามแนวกระจกอาคาร: บล็อกสำนักงานมุมตะวันตกเฉียงเหนือเป็นภายนอก (ไม่มีพื้น) · กระจกใสตามขอบบนส่วนบริการ ข้างทางเดิน กปน. และห้องอาหาร
+  const OUTLINE = [[FX0, Z(453)], [X(885), Z(453)], [X(885), Z(350)], [X(855), Z(350)], [X(855), FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1]];
   { const sh = new THREE.Shape(OUTLINE.map(([x, z]) => new THREE.Vector2(x, -z)));
     const sg = new THREE.ExtrudeGeometry(sh, { depth: 0.6, bevelEnabled: false }); sg.rotateX(-Math.PI / 2); sg.translate(0, -0.6, 0);
     const st2 = floorCanvas('stone'); st2.repeat.set(1 / TILE.stone, 1 / TILE.stone);
@@ -735,15 +741,17 @@ function buildWorld(ctx) {
   }
   GLASS_WALLS.forEach(([a, b, c, d]) => glassWall(X(a), Z(b), X(c), Z(d), WALL_H));
   // ── พื้นที่ทึบ + ตัวอักษรบนหลังคาก้อน
+  const topKind = { room: new THREE.MeshStandardMaterial({ color: '#dfe8f4', roughness: 0.9 }), lift: new THREE.MeshStandardMaterial({ color: '#7f9bbf', roughness: 0.8 }),
+    wcm: new THREE.MeshStandardMaterial({ color: '#bfdcf3', roughness: 0.9 }), wcf: new THREE.MeshStandardMaterial({ color: '#f1d3dc', roughness: 0.9 }) };
   for (const cb of CLOSED) {
     const [a, b, c, d] = cb.r, w = X(c) - X(a), dd = Z(d) - Z(b), h = cb.core ? WALL_H + 0.2 : WALL_H;
-    const m = add('other', box(w, h, dd), [cb.glassE ? M.closed : M.closed, M.closed, M.closedTop, M.closed, M.closed, M.closed], (X(a) + X(c)) / 2, h / 2, (Z(b) + Z(d)) / 2);
+    const m = add('other', box(w, h, dd), [M.closed, M.closed, topKind[cb.kind] || M.closedTop, M.closed, M.closed, M.closed], (X(a) + X(c)) / 2, h / 2, (Z(b) + Z(d)) / 2);
     if (cb.glassE) glassWall(X(c) + 0.02, Z(b), X(c) + 0.02, Z(d), h);
     markWall(m, 'other', h); walls.push(m);
-    if (cb.t && w > 6 && dd > 6) {
+    if (cb.t && (cb.small || (w > 6 && dd > 6))) {
       const c2 = document.createElement('canvas'); c2.width = 1024; c2.height = 256; const g = c2.getContext('2d');
-      g.fillStyle = 'rgba(70,86,102,.6)'; g.textAlign = 'center'; g.textBaseline = 'middle'; fitText(g, cb.t, 600, 120, F_HEAD, 980); g.fillText(cb.t, 512, 128);
-      const tw = Math.min(w * 0.8, 14), mat = ZM.reg('other', new THREE.MeshBasicMaterial({ map: canvasTex(c2), transparent: true, depthWrite: false }));
+      g.fillStyle = cb.small ? 'rgba(40,60,85,.85)' : 'rgba(70,86,102,.6)'; g.textAlign = 'center'; g.textBaseline = 'middle'; fitText(g, cb.t, cb.small ? 700 : 600, cb.small ? 190 : 120, F_HEAD, 980); g.fillText(cb.t, 512, 128);
+      const tw = cb.small ? w * 0.96 : Math.min(w * 0.8, 14), mat = ZM.reg('other', new THREE.MeshBasicMaterial({ map: canvasTex(c2), transparent: true, depthWrite: false }));
       const p = new THREE.Mesh(new THREE.PlaneGeometry(tw, tw / 4), mat); p.rotation.x = -Math.PI / 2; p.position.set((X(a) + X(c)) / 2, h + 0.02, (Z(b) + Z(d)) / 2); zg('other').add(p); m.userData.label = p;
     }
   }
@@ -771,7 +779,7 @@ function buildWorld(ctx) {
   }
   // ── ทางเข้า: ผนังฉากต้อนรับกลางทางเดิน ชิดผนังส่วนบริการ + โต๊ะลงทะเบียนยาวด้านหน้า (แบบงาน IWA) + ป้ายตั้ง + เสากั้นแถว
   {
-    const zw = Z(676) + WT / 2, xc = X(842), WW = 6.2, WH = 3.0;
+    const zw = Z(676) + WT / 2, xc = X(822), WW = 6.2, WH = 3.0;
     const wm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: regWallTex(), roughness: 0.55, emissive: '#ffffff', emissiveIntensity: 0.14 })); wm.emissiveMap = wm.map;
     add('lobby', box(WW + 0.2, WH + 0.2, 0.12), M.white, xc, (WH + 0.2) / 2, zw + 0.06);
     const p = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH), wm); p.position.set(xc, WH / 2 + 0.1, zw + 0.125); zg('lobby').add(p);
@@ -1326,7 +1334,7 @@ function tourSteps(W) {
     { t: 'ภาพรวมชั้น 5', d: 'ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. → ห้องแสดงบริษัทพันธมิตร → ห้องประชุม Auditorium มีเส้นนำทางบนพื้นตลอดเส้นทาง', focus: null, cam: [-6, 61, 57], tgt: [4, 0, 4], j: -1 },
     { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เดินมาที่ผนังต้อนรับกลางทางเดิน โต๊ะลงทะเบียนยาวด้านหน้า ป้ายแยกช่องลงทะเบียนล่วงหน้า หน้างาน และประชาสัมพันธ์ แล้วเลี้ยวขวาตามเส้นนำทาง', focus: 'lobby', cam: P(790, 880, 5.0), tgt: P(842, 700, 1.4), j: 0 },
     { t: 'ผนังต้อนรับ · Stakeholder Day', d: 'ผนังฉากกว้าง 6 ม. สูง 3 ม. ด้านหลังโต๊ะลงทะเบียน ตรา กปน. และข้อความต้อนรับ เป็นจุดถ่ายรูปแรกของงาน', focus: 'lobby', cam: P(842, 800, 2.3), tgt: P(842, 676, 1.7), j: 0 },
-    { t: 'ทางเดินนวัตกรรม กปน.', d: 'ผนังกระจกฝั่งซ้าย: วารีกุญชร หุ่นยนต์สำรวจคลองส่งน้ำดิบ (เหรียญเงิน iENA 2022 เยอรมนี) บนแท่นจัดแสดง ตามด้วยบูธ กปน. 06 · 08 · 07 ทางเดินกว้างราว 4.5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
+    { t: 'ทางเดินนวัตกรรม กปน.', d: 'ชิดผนังส่วนบริการฝั่งซ้าย: วารีกุญชร หุ่นยนต์สำรวจคลองส่งน้ำดิบ (เหรียญเงิน iENA 2022 เยอรมนี) บนแท่นจัดแสดง ตามด้วยบูธ กปน. 06 · 08 · 07 ทางเดินกว้างราว 4.5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
     { t: 'นิทรรศการ กปน.', d: 'ชิดผนังทางเดินเหนือ เรียงแบบงานจริง: Chlorine Care · เส้นทางน้ำประปาดื่มได้ (WSP) · คลินิกน้ำสะอาด · TWQ Online', focus: 'north', cam: P(1190, 478, 7.0), tgt: P(1250, 352, 1.2), j: 2},
     { t: 'Chlorine Care · ระบบเติมคลอรีนอัตโนมัติ', d: 'ชุดถังจำลองพร้อมท่อ ตู้ควบคุม PLC และแท็บเล็ต โต๊ะปั๊มจ่ายสารพร้อมถังเคมี หน้าผ้าตึงไดอะแกรมระบบ', focus: 'north', booth: 'M02', cam: P(1185, 425, 2.9), tgt: P(1182, 352, 1.25), j: 2},
     { t: 'คลินิกน้ำสะอาด · TWQ Online', d: 'โพเดียมคลินิกน้ำสะอาด และเคาน์เตอร์โค้ง TWQ Online พร้อมจอแผนที่จุดตรวจวัดออนไลน์ ป้ายตั้ง “น้ำประปาดื่มได้” สแกน QR', focus: 'north', booth: 'M01', cam: P(1300, 428, 3.0), tgt: P(1295, 352, 1.25), j: 2},
@@ -1561,7 +1569,7 @@ function play(opt = {}) {
     // 2.6–5.0 ชั้น 6–12 ลอยแยกขึ้นทีละชั้นจากบนสุดแล้วสลาย · 3.0–4.6 ชั้นล่างกลายเป็นโครงเส้น · 3.6–4.8 ผนังกระจกชั้น 5 เรืองแล้วสลาย
     // 4.6–7.8 ผนังห้อง บูธ เส้นนำทาง ผู้คน · กล้องเครนขึ้นมุมสูงแล้วลงสู่ภาพรวมชั้น 5
     if (!st.bigShadow !== !(t < INTRO_END - 0.6)) { st.bigShadow = t < INTRO_END - 0.6; shadowBox(st.bigShadow); }
-    const intro = t < INTRO_END - 0.05; if (ctx.bloom) ctx.bloom.enabled = intro && t > 0.9 && t < 6.2;
+    const intro = t < INTRO_END - 0.05; if (ctx.gtao && !st.aoOff) ctx.gtao.enabled = !(t > 0.9 && t < 6.4);   // ไม่คิด AO ช่วงแยกชั้น (วัตถุโปร่งใสทำให้เกิดแผ่นดำ)
     const topY = (NF - F5) * FH + 8.5, scanY = lerp(topY, 0.05, eOut(ss(1.0, 2.6, t)));
     { const S = W.scan, on = t > 0.95 && t < 5.6; S.visible = on;
       if (on) { S.position.y = scanY; const a = Math.min(ss(0.95, 1.25, t), 1 - ss(4.6, 5.6, t)); S.userData.cm.opacity = a * (t < 2.7 ? 1 : 0.35); S.userData.lm.opacity = a; } }
@@ -1632,7 +1640,7 @@ function play(opt = {}) {
     simPeople(dt, now);
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
-      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 45 && ctx.gtao) { ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
+      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 45 && ctx.gtao) { st.aoOff = true; ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
     if (ctx.composer) ctx.composer.render(); else renderer.render(scene, camera);
     placeLabels();
     st.raf = requestAnimationFrame(frame);
