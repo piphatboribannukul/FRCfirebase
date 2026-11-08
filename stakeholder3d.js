@@ -82,6 +82,9 @@
 .frc3d-title .rm{display:block;font-weight:600;font-size:12px;color:#0f6fb8;margin-top:1px}
 .frc3d-road{pointer-events:none;white-space:nowrap;font:700 12.5px Sarabun,'Noto Sans Thai',sans-serif;color:#24303c;background:rgba(255,255,255,.9);border:1.5px solid #8a96a3;border-radius:6px;padding:2px 8px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 .frc3d-road:before{content:'🛣 ';font-size:11px}
+.frc3d-site{pointer-events:none;white-space:nowrap;font:600 12.5px 'Bai Jamjuree','IBM Plex Sans Thai',Sarabun,sans-serif;color:#0f3b6e;background:rgba(255,255,255,.92);border:1.5px solid #7fb0e0;border-radius:999px;padding:3px 10px;box-shadow:0 2px 8px rgba(16,40,80,.18)}
+.frc3d-site:before{content:'💧 ';font-size:11px}
+.frc3d-night .frc3d-site{background:rgba(20,26,38,.85);color:#dbe9f8;border-color:#3d6d9e}
 .frc3d-night .frc3d-road{background:rgba(20,26,38,.85);color:#e8eef6;border-color:#5b6878}
 .frc3d-sp{flex:1}
 .frc3d-btn{background:rgba(255,255,255,.94);color:#1a1a1a;border:0;border-radius:10px;padding:8px 12px;font:600 13px Sarabun,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
@@ -2159,6 +2162,7 @@
     inner.position.set(hq.cx, 0, hq.cz); inner.rotation.y = hq.rot;
     const B = window.SUTHI.build(T, { W: hq.W, D: hq.D });
     inner.add(B.grp);
+    const site = window.SUTHI.buildSite(T, {}); grp.add(site.grp);           // โรงงานผลิตน้ำบางเขน · สนามกีฬา · คลองประปา
     // แถบชั้น 5 เน้นสี (จุดจัดงาน)
     const bb = B.bbox, FH = B.FH;
     const band5 = new T.Mesh(new T.BoxGeometry(bb.x1 - bb.x0 + 1.6, 0.4, bb.z1 - bb.z0 + 1.6), new T.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.85 }));
@@ -2368,6 +2372,10 @@
       state.layer.setCity(c); hideBase(map, st, R_CITY);
       const sh = st.cabShift || [0, 0], cx = c.cabXZ[0] + sh[0], cz = c.cabXZ[1] - sh[1]; state.cabLL = [st.lon + cx / kx, st.lat - cz / kz]; if (cx || cz) mk.setLngLat(state.cabLL);
       try { roadLabels(state, osm, P, cx, cz, kx, kz); } catch (e) { console.warn('[FRC3D] ชื่อถนน', e); }
+      if (st.hq && window.SUTHI && window.SUTHI.SITE_LABELS) for (const l of window.SUTHI.SITE_LABELS) {   // ป้ายชื่อส่วนต่างๆ ของโรงงาน
+        const el = document.createElement('div'); el.className = 'frc3d-site'; el.textContent = l.text;
+        new window.maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([st.lon + l.x / kx, st.lat - l.z / kz]).addTo(map);
+      }
       state.cityReady = true; setTimeout(() => flyIn(state), INTRO_HOLD);   // เมืองขึ้นแล้ว → ค้างภาพมุมสูง 2 วิ ก่อนบิน
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';

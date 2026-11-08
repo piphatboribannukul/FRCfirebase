@@ -81,6 +81,7 @@
       return c;
     },
   };
+  function PAINT_SOLAR() { const [c, g] = cv(128, 128); g.fillStyle = '#26406a'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#9fb3cc'; for (let i = 0; i <= 128; i += 32) g.fillRect(i, 0, 2, 128); for (let j = 0; j <= 128; j += 16) g.fillRect(0, j, 128, 1); return c; }
   function logoCanvas() {                       // ตราวงกลม (ภาพย่อแบบเรียบ)
     const [c, g] = cv(512, 512);
     g.fillStyle = '#ffffff'; g.beginPath(); g.arc(256, 256, 252, 0, 7); g.fill();
@@ -256,18 +257,18 @@
       }
       // สะพานลอยเชื่อมอาคารเดิม (ชั้น 4)
       if (f === 3) {
-        const bx = X(-15.5), bw = 4.6, z0 = tZ1 + 0.3, z1 = Z(54.4), y0 = 0.35, h = 3.2;
+        const bx = X(-15.5), bw = 4.6, z0 = tZ1 + 0.3, z1 = Z(106), y0 = 0.35, h = 3.2;
         fbox(L, bx - bw / 2, bx + bw / 2, z0, z1, y0 + 0.35, h - 0.7, 'gplain', 'frame');
         fbox(L, bx - bw / 2 - 0.15, bx + bw / 2 + 0.15, z0, z1, y0, 0.4, 'frame', 'frame');
         fbox(L, bx - bw / 2 - 0.15, bx + bw / 2 + 0.15, z0, z1, y0 + h - 0.35, 0.45, 'frame', 'frame');
-        sbox(L, 1.0, 3 * FH + y0, 1.0, 'col', bx, -(3 * FH) / 2 + y0 / 2, (z0 + z1) / 2);
+        for (const k of [0.33, 0.67]) sbox(L, 1.0, 3 * FH + y0, 1.0, 'col', bx, -(3 * FH) / 2 + y0 / 2, z0 + (z1 - z0) * k);
       }
       L.g.userData.level = f;
     }
 
     // ── อาคารเดิมด้านใต้ (ปลายสะพาน) ──
     {
-      const ox0 = X(-24), ox1 = X(20), oz0 = Z(54.4), oz1 = Z(112), OH = 4.0, NO = 5;
+      const ox0 = X(-38), ox1 = X(38), oz0 = Z(106), oz1 = Z(231), OH = 4.0, NO = 5;   // ตำแหน่งจากภาพดาวเทียม
       const E = extras;
       const pm = (key, ru) => { const B = E, k = key + '|' + ru; if (B.cache[k]) return B.cache[k]; const m = PAINT[key] ? new T.MeshStandardMaterial({ map: tex(key, ru, 1), roughness: 0.6 }) : new T.MeshStandardMaterial(Object.assign({}, SOLID[key])); if (fade) m.transparent = true; B.cache[k] = m; B.mats.push(m); disposeList.push(m); return m; };
       for (let f = 0; f < NO; f++) {
@@ -277,6 +278,10 @@
       }
       const rg = new T.BoxGeometry(ox1 - ox0 + 0.6, 1.0, oz1 - oz0 + 0.6); disposeList.push(rg);
       const rf = new T.Mesh(rg, pm('white')); rf.position.set((ox0 + ox1) / 2, NO * OH + 0.5, (oz0 + oz1) / 2); E.g.add(rf);
+      { const c = PAINT_SOLAR(); const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(12, 30); srgb(t); disposeList.push(t);   // แผงโซลาร์บนหลังคา (ตามภาพดาวเทียม)
+        const sm2 = new T.MeshStandardMaterial({ map: t, roughness: 0.4 }); if (fade) sm2.transparent = true; E.mats.push(sm2); disposeList.push(sm2);
+        const sg2 = new T.BoxGeometry((ox1 - ox0) * 0.62, 0.25, (oz1 - oz0) * 0.78); disposeList.push(sg2);
+        const so = new T.Mesh(sg2, sm2); so.position.set((ox0 + ox1) / 2, NO * OH + 1.2, (oz0 + oz1) / 2); E.g.add(so); }
       // ป้ายชื่อ + ตรา บนผนังฝั่งถนน
       const st = new T.CanvasTexture(signCanvas()); srgb(st); st.anisotropy = 8; disposeList.push(st);
       const sm = new T.MeshBasicMaterial({ map: st, transparent: true, depthWrite: false }); E.mats.push(sm); disposeList.push(sm);
@@ -295,5 +300,184 @@
     };
   }
 
-  window.SUTHI = { build, FH, NL };
+  // ═════════════════════════════════════════════════════════════════════════
+  //  บริเวณรอบอาคาร: โรงงานผลิตน้ำบางเขน + สนามกีฬา + คลองประปา
+  //  พิกัดวัดจากภาพ Google Earth (ภาพตรงลงพื้น) ปรับให้ตรงกับรอยอาคาร OSM แล้ว
+  //  ระบบพิกัดของผัง: e = ตามแนวขวาง (ตะวันออก), n = ตามแนวยาวของโรงงาน (เหนือ) เอียง 13.4° · หน่วยเมตร จากหมุด กปน.
+  // ═════════════════════════════════════════════════════════════════════════
+  const SITE_ROT = -0.2330;                                   // หมุนแกน (e, −n) → (ตอ., ใต้)
+  const SITE = {
+    tanks: { e: [210.5, 292.4, 375.1, 456.3], n0: 92.1, dn: 66.24, dc: 0.6, R: 30.5, empty: ['2,4', '3,4', '3,5'], channels: [251.4, 415.8], road: 333.7 },
+    tankField: [172, 506, 50, 470],
+    filters: { blocks: [[178, 254], [259, 336], [345, 421], [426, 503]], n: [-54, 46], rows: 8, solarBlock: 3 },
+    plantYard: [168, 512, -84, 50],
+    sludge: [142, 648, -330, -88],
+    lagoons: { e: [552, 722], n: [[388, 505, 'dry'], [242, 378, 'dry2'], [96, 232, 'marsh'], [-62, 86, 'water']] },
+    stadium: { e: 5, n: 274.5, w: 84, l: 165 },
+    stand: [-51, -37, 248, 310],
+    canal: [-90, -67, -700, 560],
+    solar: [[-310, -176], [-170, -46], [-36, 108]],
+    reservoir: [[-70, 392], [92, 392], [118, 418], [118, 600], [-70, 600]],
+  };
+  const siteToWorld = (e, n) => [0.973 * e + 0.231 * n, 0.231 * e - 0.973 * n];          // → (x ตอ., z ใต้)
+
+  const SP = {                                                 // พื้นผิวของโรงงาน
+    tank(empty) {
+      const [c, g] = cv(512, 512), C = 256;
+      const gr = g.createRadialGradient(C, C, 20, C, C, 256);
+      if (empty) { gr.addColorStop(0, '#d6d4cb'); gr.addColorStop(1, '#b6b3a9'); } else { gr.addColorStop(0, '#5aa59b'); gr.addColorStop(0.7, '#3b847c'); gr.addColorStop(1, '#2c6e68'); }
+      g.fillStyle = gr; g.beginPath(); g.arc(C, C, 256, 0, 7); g.fill();
+      g.strokeStyle = empty ? 'rgba(110,108,100,.55)' : 'rgba(225,240,236,.32)'; g.lineWidth = 2;
+      for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2; g.beginPath(); g.moveTo(C + Math.cos(a) * 46, C + Math.sin(a) * 46); g.lineTo(C + Math.cos(a) * 222, C + Math.sin(a) * 222); g.stroke(); }
+      g.strokeStyle = empty ? '#a19e94' : '#a9bdb5'; g.lineWidth = 14; g.beginPath(); g.arc(C, C, 232, 0, 7); g.stroke();
+      g.strokeStyle = empty ? '#8e8b82' : 'rgba(210,225,220,.55)'; g.lineWidth = 4; g.beginPath(); g.arc(C, C, 150, 0, 7); g.stroke();
+      g.fillStyle = '#d4d6d0'; g.beginPath(); g.arc(C, C, 40, 0, 7); g.fill(); g.strokeStyle = '#7d8580'; g.lineWidth = 4; g.stroke();
+      return c;
+    },
+    solar() {
+      const [c, g] = cv(128, 128);
+      g.fillStyle = '#26406a'; g.fillRect(0, 0, 128, 128);
+      const gr = g.createLinearGradient(0, 0, 128, 128); gr.addColorStop(0, 'rgba(160,190,230,.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+      g.fillStyle = '#9fb3cc'; for (let i = 0; i <= 128; i += 32) { g.fillRect(i, 0, 2, 128); } for (let j = 0; j <= 128; j += 16) g.fillRect(0, j, 128, 1);
+      return c;
+    },
+    stadium() {                                               // 100 × 180 ม. · 5.12 px/ม.
+      const k = 5.12, W = 512, H = 922, [c, g] = cv(W, H), cx = W / 2, cy = H / 2;
+      g.fillStyle = '#86ab68'; g.fillRect(0, 0, W, H);
+      const lane = (hw, hl, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(cx - hw * k, cy - hl * k); g.arc(cx, cy - hl * k, hw * k, Math.PI, 0); g.lineTo(cx + hw * k, cy + hl * k); g.arc(cx, cy + hl * k, hw * k, 0, Math.PI); g.closePath(); g.fill(); };
+      const hl = 82.5 - 42; lane(42, hl, '#b9574a');
+      g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.2;
+      for (let i = 1; i < 8; i++) { const hw = 42 - i * 1.22; g.beginPath(); g.moveTo(cx - hw * k, cy - hl * k); g.arc(cx, cy - hl * k, hw * k, Math.PI, 0); g.lineTo(cx + hw * k, cy + hl * k); g.arc(cx, cy + hl * k, hw * k, 0, Math.PI); g.closePath(); g.stroke(); }
+      lane(32.2, hl, '#5e9d48');
+      for (let i = -6; i < 6; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)'; g.fillRect(cx - 30 * k, cy + i * 9 * k, 60 * k, 9 * k); }
+      g.strokeStyle = '#f5f7f2'; g.lineWidth = 2.2; const pw = 30, ph = 50;
+      g.strokeRect(cx - pw * k, cy - ph * k, 2 * pw * k, 2 * ph * k); g.beginPath(); g.moveTo(cx - pw * k, cy); g.lineTo(cx + pw * k, cy); g.stroke();
+      g.beginPath(); g.arc(cx, cy, 9 * k, 0, 7); g.stroke();
+      for (const s of [-1, 1]) { g.strokeRect(cx - 20 * k, cy + s * ph * k - (s > 0 ? 16 : 0) * k, 40 * k, 16 * k); g.strokeRect(cx - 9 * k, cy + s * ph * k - (s > 0 ? 5.5 : 0) * k, 18 * k, 5.5 * k); }
+      return c;
+    },
+    sludge() {                                                // ลานตากตะกอน (แปลงสี่เหลี่ยม)
+      const [c, g] = cv(1024, 512), r = rnd(11), NC = 26, NR = 12, cw = 1024 / NC, ch = 512 / NR;
+      g.fillStyle = '#c8bca2'; g.fillRect(0, 0, 1024, 512);
+      for (let i = 0; i < NC; i++) for (let j = 0; j < NR; j++) {
+        const t = r(), base = t < 0.12 ? [92, 82, 66] : t < 0.3 ? [150, 128, 98] : [168 + r() * 18, 150 + r() * 14, 120 + r() * 12];
+        g.fillStyle = `rgb(${base.map(v => v | 0)})`; g.fillRect(i * cw + 2, j * ch + 2, cw - 4, ch - 4);
+        g.strokeStyle = 'rgba(80,66,50,.35)'; g.lineWidth = 1;
+        for (let q = 0; q < 6; q++) { g.beginPath(); const x = i * cw + 4 + r() * (cw - 8), y = j * ch + 4 + r() * (ch - 8); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 18, y + (r() - 0.5) * 14); g.stroke(); }
+      }
+      return c;
+    },
+    lagoon(kind) {
+      const [c, g] = cv(256, 256), r = rnd(kind.length * 31 + 5);
+      const P = { dry: ['#c2b58f', '#9aa877'], dry2: ['#b9ab88', '#8ea06c'], marsh: ['#7f9d6c', '#a7b88e'], water: ['#8db49c', '#6f9a86'] }[kind];
+      g.fillStyle = P[0]; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 70; i++) { g.fillStyle = P[1]; g.globalAlpha = 0.25 + r() * 0.4; g.beginPath(); g.ellipse(r() * 256, r() * 256, 4 + r() * 22, 3 + r() * 14, r() * 3, 0, 7); g.fill(); }
+      g.globalAlpha = 1; return c;
+    },
+    ground(col, dots) { const [c, g] = cv(128, 128), r = rnd(3); g.fillStyle = col; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 220; i++) { g.fillStyle = dots[i % dots.length]; g.globalAlpha = 0.35; g.fillRect(r() * 128, r() * 128, 2 + r() * 3, 2 + r() * 3); } g.globalAlpha = 1; return c; },
+  };
+
+  function buildSite(T, o) {
+    o = o || {};
+    const ver = parseInt(T.REVISION, 10) || 0;
+    const srgb = t => { if (!o.srgb) return; if (ver >= 152 && T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace; else if (T.sRGBEncoding) t.encoding = T.sRGBEncoding; };
+    const disp = [], mats = [];
+    const grp = new T.Group(), root = new T.Group(); root.rotation.y = SITE_ROT; grp.add(root);   // ภายใน root: x = e, z = −n
+    const ctex = (c, ru, rv) => { const t = new T.CanvasTexture(c); srgb(t); t.anisotropy = 8; if (ru || rv) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(ru || 1, rv || 1); } disp.push(t); return t; };
+    const M = (p) => { const m = new T.MeshStandardMaterial(Object.assign({ roughness: 0.9 }, p)); if (o.fadeable) m.transparent = true; mats.push(m); disp.push(m); return m; };
+    const add = (geo, m, x, y, z, parent) => { const me = new T.Mesh(geo, m); me.position.set(x, y, z); if (o.shadows) me.receiveShadow = true; (parent || root).add(me); disp.push(geo); return me; };
+    // ระนาบบนพื้นในกรอบ [e0,e1,n0,n1]
+    const flat = (r, m, y) => { const g = new T.PlaneGeometry(r[1] - r[0], r[3] - r[2]); g.rotateX(-Math.PI / 2); return add(g, m, (r[0] + r[1]) / 2, y, -(r[2] + r[3]) / 2); };
+    const blk = (e0, e1, n0, n1, y0, h, m, cast) => { const me = add(new T.BoxGeometry(e1 - e0, h, n1 - n0), m, (e0 + e1) / 2, y0 + h / 2, -(n0 + n1) / 2); if (o.shadows && cast) me.castShadow = true; return me; };
+    const water = c => M({ color: c, roughness: 0.25, metalness: o.env ? 0.15 : 0 });
+    const concrete = M({ color: 0xd2d0c8, roughness: 0.85 });
+
+    // ── คลองประปา + แผงโซลาร์ลอยน้ำ ──
+    const [ce0, ce1, cn0, cn1] = SITE.canal;
+    flat([ce0, ce1, cn0, cn1], water(0x6d9c8b), 0.12);
+    blk(ce0 - 1.2, ce0, cn0, cn1, 0, 0.7, concrete); blk(ce1, ce1 + 1.2, cn0, cn1, 0, 0.7, concrete);
+    const solarM = M({ map: ctex(SP.solar(), 1, 1), roughness: 0.35, metalness: o.env ? 0.3 : 0 });
+    for (const [a, b] of SITE.solar) {
+      const me = blk(ce0 + 2, ce1 - 2.5, a, b, 0.6, 0.18, solarM, true);
+      const t = me.material.map.clone(); t.repeat.set(4, (b - a) / 3); t.needsUpdate = true; disp.push(t);
+      me.material = solarM.clone(); me.material.map = t; mats.push(me.material); disp.push(me.material);
+    }
+    // ── อ่างเก็บน้ำดิบ (เหนือสนามกีฬา) ──
+    { const sh = new T.Shape(SITE.reservoir.map(([e, n]) => new T.Vector2(e, n))); const g = new T.ShapeGeometry(sh); g.rotateX(-Math.PI / 2); add(g, water(0x86a58a), 0, 0.12, 0); }
+    // ── สนามกีฬา กปน. ──
+    { const s = SITE.stadium; flat([s.e - 50, s.e + 50, s.n - 90, s.n + 90], M({ map: ctex(SP.stadium()) }), 0.14);
+      const [a0, a1, b0, b1] = SITE.stand, seat = M({ color: 0x5b8fc9, roughness: 0.6 }), roofM = M({ color: 0xe9edf1, roughness: 0.6 });
+      for (let i = 0; i < 4; i++) blk(a0, a1 - i * 2.6, b0, b1, 0, 1.2 + i * 1.6, i ? seat : concrete, true);
+      const roof = blk(a0 - 1, a1 + 1.5, b0 - 1, b1 + 1, 8.6, 0.35, roofM, true); roof.rotation.z = 0.08;
+      for (let n = b0; n <= b1; n += 15.5) blk(a0 - 0.6, a0 + 0.2, n - 0.4, n + 0.4, 0, 8.8, concrete, true); }
+    // ── ถังตกตะกอน 24 ถัง ──
+    {
+      const tk = SITE.tanks, R = tk.R, list = [];
+      flat(SITE.tankField, M({ map: ctex(SP.ground('#8f8e66', ['#7c7b55', '#a29d77', '#6f7a52']), 40, 50) }), 0.08);
+      tk.e.forEach((e, c) => { for (let r = 0; r < 6; r++) list.push({ e, n: tk.n0 + tk.dc * c + tk.dn * r, empty: tk.empty.includes(c + ',' + r), ch: tk.channels[c < 2 ? 0 : 1] }); });
+      const m4 = new T.Matrix4(), q = new T.Quaternion(), one = new T.Vector3(1, 1, 1);
+      const inst = (geo, m, arr, fn) => { const im = new T.InstancedMesh(geo, m, arr.length); arr.forEach((t, i) => { fn(t, m4); im.setMatrixAt(i, m4); }); if (o.shadows) { im.castShadow = true; im.receiveShadow = true; } root.add(im); disp.push(geo); return im; };
+      const wallM = M({ color: 0xd9d8d0, roughness: 0.8, side: T.DoubleSide });
+      inst(new T.CylinderGeometry(R, R, 2.2, 72, 1, true), wallM, list, (t, m) => m.compose(new T.Vector3(t.e, 1.1, -t.n), q, one));
+      const rim = new T.RingGeometry(R - 0.9, R, 72); rim.rotateX(-Math.PI / 2);
+      inst(rim, concrete, list, (t, m) => m.compose(new T.Vector3(t.e, 2.2, -t.n), q, one));
+      const disc = new T.CircleGeometry(R - 0.9, 72); disc.rotateX(-Math.PI / 2);
+      const wet = list.filter(t => !t.empty), dry = list.filter(t => t.empty);
+      inst(disc, M({ map: ctex(SP.tank(false)), roughness: 0.3, metalness: o.env ? 0.1 : 0 }), wet, (t, m) => m.compose(new T.Vector3(t.e, 1.75, -t.n), q, one));
+      inst(disc.clone(), M({ map: ctex(SP.tank(true)) }), dry, (t, m) => m.compose(new T.Vector3(t.e, 0.9, -t.n), q, one));
+      inst(new T.CylinderGeometry(3.4, 3.8, 3.2, 24), concrete, list, (t, m) => m.compose(new T.Vector3(t.e, 1.6, -t.n), q, one));
+      const bridgeM = M({ color: 0xeef0ee, roughness: 0.6 });
+      inst(new T.BoxGeometry(1, 1, 1), bridgeM, list, (t, m) => { const L = Math.abs(t.ch - t.e); m.compose(new T.Vector3((t.e + t.ch) / 2, 3.0, -t.n), q, new T.Vector3(L, 0.9, 2.4)); });
+      inst(new T.BoxGeometry(1, 1, 1), M({ color: 0x5c6b70, roughness: 0.6 }), list, (t, m) => { const a = (t.e * 7 + t.n) % 6.28; m.compose(new T.Vector3(t.e + Math.cos(a) * R * 0.45, 2.5, -t.n + Math.sin(a) * R * 0.45), new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), -a), new T.Vector3(R * 0.9, 0.6, 1.3)); });  // สะพานกวาดตะกอน
+      for (const e of tk.channels) blk(e - 2, e + 2, 58, 462, 0, 2.6, concrete, true);
+      flat([tk.road - 3.5, tk.road + 3.5, 54, 466], M({ color: 0xa9aaa4 }), 0.1);
+    }
+    // ── ระบบกรอง (ถังกรองทราย 4 แถว) ──
+    {
+      const F = SITE.filters, yardM = M({ map: ctex(SP.ground('#c9c6bc', ['#b8b5aa', '#d6d3ca']), 30, 12) });
+      flat(SITE.plantYard, yardM, 0.09);
+      const basins = [], empties = [], solars = [], kiosks = [];
+      const rowH = (F.n[1] - F.n[0]) / F.rows, rr = rnd(21);
+      F.blocks.forEach(([e0, e1], bi) => {
+        blk(e0, e1, F.n[0], F.n[1], 0, 1.5, concrete, true);
+        const mid = (e0 + e1) / 2, gw = 8;
+        blk(mid - gw / 2, mid + gw / 2, F.n[0] + 1, F.n[1] - 1, 0, 4.2, M({ color: 0xf1f2ef, roughness: 0.6 }), true);
+        for (let r = 0; r < F.rows; r++) for (const side of [-1, 1]) {
+          const a = side < 0 ? e0 + 1.2 : mid + gw / 2 + 0.8, b = side < 0 ? mid - gw / 2 - 0.8 : e1 - 1.2, n0 = F.n[0] + r * rowH + 0.7, n1 = n0 + rowH - 1.4;
+          const cell = { e: (a + b) / 2, n: (n0 + n1) / 2, w: b - a, d: n1 - n0 };
+          if (bi === F.solarBlock && side > 0) solars.push(cell); else if (rr() < 0.16) empties.push(cell); else basins.push(cell);
+          if (side > 0) kiosks.push({ e: mid, n: (n0 + n1) / 2 });
+        }
+      });
+      const pl = new T.PlaneGeometry(1, 1); pl.rotateX(-Math.PI / 2);
+      const put = (arr, m, y) => { if (!arr.length) return; const im = new T.InstancedMesh(pl.clone(), m, arr.length), m4 = new T.Matrix4(), q = new T.Quaternion(); arr.forEach((c, i) => { m4.compose(new T.Vector3(c.e, y, -c.n), q, new T.Vector3(c.w, 1, c.d)); im.setMatrixAt(i, m4); }); if (o.shadows) im.receiveShadow = true; root.add(im); disp.push(im.geometry); };
+      put(basins, water(0x2f6266), 1.52); put(empties, M({ color: 0x9c9d96, roughness: 0.9 }), 0.9);
+      const st = SP.solar(); put(solars, M({ map: ctex(st, 3, 2), roughness: 0.35 }), 2.2);
+      const km = new T.InstancedMesh(new T.BoxGeometry(3, 2.2, 3.2), M({ color: 0xffffff, roughness: 0.5 }), kiosks.length), m4 = new T.Matrix4(), q = new T.Quaternion(), one = new T.Vector3(1, 1, 1);
+      kiosks.forEach((k, i) => { m4.compose(new T.Vector3(k.e, 5.3, -k.n), q, one); km.setMatrixAt(i, m4); }); if (o.shadows) km.castShadow = true; root.add(km); disp.push(km.geometry);
+    }
+    // ── ถังเก็บน้ำใส (ถังใต้ดินขนาดใหญ่ หลังคาเป็นแปลงตาราง) ──
+    { const s = SITE.sludge, top = M({ map: ctex(SP.sludge()) }), side = M({ color: 0xc9c3b2, roughness: 0.9 });
+      const me = blk(s[0], s[1], s[2], s[3], 0, 2.4, [side, side, top, side, side, side], true); me.castShadow = false; }
+    // ── ลานตากตะกอน / บ่อพักตะกอน ด้านตะวันออก ──
+    { const L = SITE.lagoons, dyke = M({ color: 0xb6ad94, roughness: 0.95 });
+      for (const [n0, n1, kind] of L.n) { flat([L.e[0], L.e[1], n0, n1], M({ map: ctex(SP.lagoon(kind), 2, 2), roughness: kind === 'water' ? 0.3 : 0.95 }), 0.1);
+        blk(L.e[0] - 3, L.e[1] + 3, n1, n1 + 3, 0, 1.4, dyke); blk(L.e[0] - 3, L.e[1] + 3, n0 - 3, n0, 0, 1.4, dyke); blk(L.e[0] - 3, L.e[0], n0, n1, 0, 1.4, dyke); } }
+    return {
+      grp, mats,
+      dispose() { disp.forEach(d => d && d.dispose && d.dispose()); },
+    };
+  }
+  // พื้นที่ที่โมเดลโรงงานแทนแล้ว — ใช้ซ่อนรอยอาคาร Overture / ต้นไม้สุ่ม (รูปแบบ [ตอ., เหนือ] เมตร)
+  function siteHide() {
+    const R = (e0, e1, n0, n1) => [[e0, n0], [e1, n0], [e1, n1], [e0, n1]].map(([e, n]) => { const [x, z] = siteToWorld(e, n); return [x, -z]; });
+    const s = SITE, st = s.stadium;
+    return [R(...s.tankField), R(...s.plantYard.slice(0, 2), -56, 50), R(...s.sludge), R(s.lagoons.e[0] - 4, s.lagoons.e[1] + 4, -66, 508), R(st.e - 44, st.e + 44, st.n - 84, st.n + 84), R(s.canal[0] - 1, s.canal[1] + 1, -700, 560)];
+  }
+  const SITE_LABELS = [
+    { e: 333, n: 262, t: 'ถังตกตะกอน 24 ถัง' }, { e: 340, n: 10, t: 'ระบบกรองน้ำ' }, { e: 395, n: -205, t: 'ถังเก็บน้ำใส' }, { e: 637, n: 300, t: 'ลานตากตะกอน' },
+    { e: 5, n: 274, t: 'สนามกีฬา กปน.' }, { e: -78, n: 200, t: 'คลองประปา · โซลาร์ลอยน้ำ' }, { e: 112, n: 215, t: 'โรงงานผลิตน้ำบางเขน' },
+  ].map(l => { const [x, z] = siteToWorld(l.e, l.n); return { x, z, text: l.t }; });
+
+  window.SUTHI = { build, buildSite, siteHide, SITE_LABELS, FH, NL };
 })();

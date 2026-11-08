@@ -703,21 +703,23 @@ function buildWorld(ctx) {
   const gy = -F5 * FH;
   const gc = document.createElement('canvas'); gc.width = gc.height = 1024; { const g = gc.getContext('2d'); const gr = g.createRadialGradient(512, 512, 60, 512, 512, 512); gr.addColorStop(0, '#c9d3c4'); gr.addColorStop(0.55, '#d3dbd2'); gr.addColorStop(1, '#dfe5eb'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 1024);
     g.strokeStyle = 'rgba(120,135,150,.10)'; g.lineWidth = 1; for (let i = 0; i <= 1024; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 1024); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(1024, i); g.stroke(); } }
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ map: canvasTex(gc), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = gy; ground.receiveShadow = true; world.add(ground);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1800, 1800), new THREE.MeshStandardMaterial({ map: canvasTex(gc), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = gy; ground.receiveShadow = true; world.add(ground);
   {
     const plaza = new THREE.Mesh(box(100, 0.12, 78), new THREE.MeshStandardMaterial({ color: '#d9d8d2', roughness: 0.9 })); plaza.position.set(0, gy + 0.06, 3); plaza.receiveShadow = true; world.add(plaza);
     // ถนนหน้าอาคาร + คลองประปา (ฝั่งตะวันตก) ตามแนวจริง
-    const strip = (z0, z1, y, h, col, rough, met) => { const m = new THREE.Mesh(box(520, h, z1 - z0), new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: met || 0 })); m.position.set(0, gy + y + h / 2, (z0 + z1) / 2); m.receiveShadow = true; world.add(m); return m; };
-    strip(-46, -38, 0, 0.1, '#8d939a', 0.95); strip(-75, -65, 0, 0.1, '#8d939a', 0.95);
-    strip(-48.2, -46, 0, 0.16, '#d4d6d2', 0.9); strip(-65, -62.8, 0, 0.16, '#d4d6d2', 0.9);
-    strip(-62.8, -48.2, -1.0, 0.95, '#5b93b8', 0.1, 0.15);
-    { const dash = new THREE.InstancedMesh(box(3, 0.02, 0.18), new THREE.MeshBasicMaterial({ color: '#f4f4ef' }), 160), m4d = new THREE.Matrix4(); let n = 0;
-      for (const z of [-42, -70]) for (let x = -250; x < 250 && n < 160; x += 6.5) { m4d.makeTranslation(x, gy + 0.11, z); dash.setMatrixAt(n++, m4d); } dash.count = n; world.add(dash); }
+    const strip = (z0, z1, y, h, col, rough, met) => { const m = new THREE.Mesh(box(1600, h, z1 - z0), new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: met || 0 })); m.position.set(0, gy + y + h / 2, (z0 + z1) / 2); m.receiveShadow = true; world.add(m); return m; };
+    strip(-102, -91, 0, 0.1, '#8d939a', 0.95); strip(-64, -56, 0, 0.1, '#8d939a', 0.95);          // ถ.ประชาชื่น · ถ.เลียบคลองประปา
+    { const dash = new THREE.InstancedMesh(box(3, 0.02, 0.18), new THREE.MeshBasicMaterial({ color: '#f4f4ef' }), 400), m4d = new THREE.Matrix4(); let n = 0;
+      for (const z of [-96.5, -60]) for (let x = -700; x < 700 && n < 400; x += 6.5) { m4d.makeTranslation(x, gy + 0.11, z); dash.setMatrixAt(n++, m4d); } dash.count = n; world.add(dash); }
+    // โรงงานผลิตน้ำบางเขน · สนามกีฬา · คลองประปา (โมเดลเดียวกับฉากแผนที่) — แปลงจากพิกัดรอบหมุดเป็นพิกัดผังชั้น 5
+    { const wrap = new THREE.Group(); wrap.rotation.y = -Math.PI / 2; wrap.position.set((FX0 + FX1) / 2, gy, (FZ0 + FZ1) / 2);
+      const inner = new THREE.Group(); inner.rotation.y = 0.2215; inner.position.set(-0.154, 0, 9.106); wrap.add(inner);
+      const site = window.SUTHI.buildSite(THREE, { srgb: true, env: true, shadows: true }); inner.add(site.grp); world.add(wrap); }
     const tp0 = []; for (let i = 0; i < 110; i++) { const a = rnd() * Math.PI * 2, r = 58 + rnd() * 80; tp0.push([Math.cos(a) * r, Math.sin(a) * r * 0.85]); }
     for (let x = FX0 - 10; x <= FX1 + 10; x += 7) tp0.push([x, FZ1 + 11]);
-    for (let x = -150; x <= 150; x += 8.5) { tp0.push([x + rnd() * 2, -35.2]); tp0.push([x + rnd() * 2, -77.6]); }       // ต้นไม้ริมถนน/ริมคลอง
-    const clear = [[-114, -50, -28, 24], [-43, -18, 21, 40], [-56, -34, -24, -8]];        // อาคารเดิม · อาคารโค้ง · ใต้สะพาน
-    const tp = tp0.filter(([x, z]) => !(z < -36 && z > -76) && !clear.some(([x0, x1, z0, z1]) => x > x0 - 3 && x < x1 + 3 && z > z0 - 3 && z < z1 + 3));
+    for (let x = -150; x <= 150; x += 8.5) { tp0.push([x + rnd() * 2, -52.5]); tp0.push([x + rnd() * 2, -105.5]); }       // ต้นไม้ริมถนน/ริมคลอง
+    const clear = [[-230, -100, -42, 42], [-43, -18, 21, 40], [-104, -34, -24, -8]];        // อาคารเดิม · อาคารโค้ง · ใต้สะพาน
+    const tp = tp0.filter(([x, z]) => !(z < -36 && z > -105 && z !== -52.5) && !(z < -53 && z > -105) && !clear.some(([x0, x1, z0, z1]) => x > x0 - 3 && x < x1 + 3 && z > z0 - 3 && z < z1 + 3));
     const cr = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85 }), tp.length);
     const tr = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.26, 1, 8), new THREE.MeshStandardMaterial({ color: '#7a6a58', roughness: 0.9 }), tp.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
@@ -1007,6 +1009,7 @@ function play(opt = {}) {
         F.edgeM.opacity = 0.55 * lowF; F.g.position.y = F.f * FH - lowF * (F5 - F.f) * 1.2; } }
     { const o = ss(1.9, 2.9, t); for (const m of W.oldBldg.mats) { m.opacity = lerp(1, 0.16, o); m.depthWrite = o < 0.3; } }
     setOp(W.f5shell, 1 - shell, 1 - shell, shell < 0.02); W.f5shell.g.visible = shell < 0.99;
+    { const k = ss(4.6, INTRO_END, t); ctx.scene.fog.near = lerp(420, 170, k); ctx.scene.fog.far = lerp(1500, 430, k); }   // ตอนเห็นทั้งโรงงาน มองได้ไกล
     st.wallIntro = Math.max(0.001, ss(3.4, 4.8, t));
     W.booths.forEach((b, i) => { const k = Math.max(0.001, ss(4.2 + i * 0.05, 5.0 + i * 0.05, t)); b.group.scale.setScalar(k); });
     W.routeU.uProg.value = ss(4.8, 6.4, t);
