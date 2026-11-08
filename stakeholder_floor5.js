@@ -24,14 +24,14 @@ const FH = 4.2, NF = 12, F5 = 4;                           // ความสู
 const WALL_H = 3.0, AUD_H = 4.4, WT = 0.22;
 
 // ลิฟต์ → ลงทะเบียน (ผนังฉากหลัง) → ทางเดิน กปน. → นิทรรศการ กปน. (ทางเดินเหนือ) → เข้าห้องแสดง 1 ประตูตะวันออก → ออกประตูตะวันตก → หน้าห้องประชุม → Auditorium
-const ROUTE_PX = [[843, 893], [806, 893], [806, 752], [921, 752], [921, 385], [1310, 385], [1310, 290], [1088, 290], [1088, 410], [1300, 410], [1300, 470]];
+const ROUTE_PX = [[843, 893], [806, 893], [806, 752], [932, 752], [932, 385], [1310, 385], [1310, 290], [1088, 290], [1088, 410], [1300, 410], [1300, 470]];
 
 const MWA_BOOTHS = [
   { name: 'TWQ Online', sub: 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', prop: 'cabinet' },
   { name: 'Chlorine Care', sub: 'ระบบเติมคลอรีนอัตโนมัติ', prop: 'dosing' },
   { name: 'คลินิกน้ำสะอาด', sub: 'การประปานครหลวง', prop: 'bottles' },
   { name: 'Water Safety Plan', sub: 'แผนน้ำประปาปลอดภัย', prop: 'screen' },
-  { name: 'วารีกุญชร', sub: 'การประปานครหลวง', prop: 'screen' },
+  { name: 'วารีกุญชร', sub: 'หุ่นยนต์สำรวจคลองส่งน้ำดิบ · Wari Kunchorn', prop: 'screen' },
   { name: 'บูธ กปน. 06', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
   { name: 'บูธ กปน. 07', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
 ];
@@ -55,7 +55,7 @@ const MWA_COL = ['#1d5fc0', '#0f8fb8', '#14a39a', '#2a6fdb', '#3653c4', '#1d5fc0
 function boothSlots() {
   const S = [];
   const xW = X(885) + WT / 2;                              // ผนังตะวันตกของทางเดิน กปน.
-  [680, 587, 494].forEach((py, k) => S.push({ own: 'mwa', i: 4 + k, x: xW + 0.65, z: Z(py), face: 'e', zone: 'mwa', kind: 'generic', w: 3, d: 1.3 }));
+  [680, 587, 494].forEach((py, k) => S.push({ own: 'mwa', i: 4 + k, x: xW + (k ? 0.65 : 0.95), z: Z(py), face: 'e', zone: 'mwa', kind: k ? 'generic' : 'wari', w: 3, d: k ? 1.3 : 1.9 }));
   // นิทรรศการ กปน. ชิดผนังทางเดินเหนือ (ระหว่างประตูห้องแสดง 1) เรียงแบบภาพงานจริง: Chlorine Care · WSP · คลินิกน้ำสะอาด · TWQ Online
   const zc = Z(350) + WT / 2 + 0.65, xa = X(1108) + 0.3;
   S.push({ own: 'mwa', i: 1, x: xa + 2.45, z: zc, face: 's', zone: 'north', kind: 'cc', w: 4.6, d: 1.3 });
@@ -93,7 +93,7 @@ const EXTRA_WALLS = [[885, 352, 885, 453], [940, 787, 940, 882], [940, 882, 977,
 
 const ZONES = {
   lobby: { name: 'โถงลิฟต์ · ลงทะเบียน', c: [X(806), Z(830)] },
-  mwa: { name: 'ทางเดินนวัตกรรม กปน.', c: [X(921), Z(580)] },
+  mwa: { name: 'ทางเดินนวัตกรรม กปน.', c: [X(932), Z(580)] },
   north: { name: 'นิทรรศการ กปน. · ทางเดินหน้าห้องประชุม', c: [X(1200), Z(392)] },
   hall: { name: 'ห้องแสดง 1 · พันธมิตร', c: [X(1181), Z(269)] },
   dining: { name: 'ห้องรับประทานอาหาร', c: [X(912), Z(269)] },
@@ -253,6 +253,32 @@ function mwaBoothCanvas(kind, b) {
     for (let i = 0; i < 62; i++) { const x = 280 + R() * 980, y = 380 + R() * 700; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 15, 0, 7); g.fill(); g.fillStyle = R() < 0.9 ? '#2fb36a' : '#f2b632'; g.beginPath(); g.arc(x, y, 10, 0, 7); g.fill(); }
     g.fillStyle = '#1d5fc0'; g.beginPath(); g.roundRect(230, 290, 560, 60, 30); g.fill(); g.fillStyle = '#fff'; g.font = `600 30px ${F_BODY}`; g.fillText('https://twqonline.mwa.co.th', 260, 330);
     drop(g, 1360, 1030, 0.6);
+  } else if (kind === 'wari') {
+    // ป้าย "WARI KUNCHORN · RAW WATER CANAL SURVEY ROBOT" (ตามภาพงานจริง)
+    g.fillStyle = '#f6f7f8'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#1b2a3a'; g.font = `700 54px ${F_HEAD}`; g.fillText('WARI KUNCHORN', 70, 95);
+    g.fillStyle = '#0d2a4f'; fitText(g, 'RAW WATER CANAL SURVEY ROBOT', 800, 112, F_HEAD, 1080); g.fillText('RAW WATER CANAL SURVEY ROBOT', 70, 205);
+    g.fillStyle = '#4a5a6c'; g.font = `500 34px ${F_BODY}`; g.fillText('Unmanned Surface Vehicle for Raw Water Canal Survey', 70, 255);
+    // ธงเยอรมนี + เหรียญรางวัล
+    [['#1b1b1b', 0], ['#dd2a2a', 1], ['#f2c230', 2]].forEach(([c2, i]) => { g.fillStyle = c2; g.fillRect(1180, 50 + i * 45, 270, 45); });
+    g.fillStyle = '#c9ced4'; g.beginPath(); g.arc(1300, 420, 120, 0, 7); g.fill(); g.strokeStyle = '#8f98a2'; g.lineWidth = 10; g.stroke();
+    g.fillStyle = '#2c3a4a'; g.textAlign = 'center'; g.font = `800 52px ${F_HEAD}`; g.fillText('iENA', 1300, 410); g.font = `600 28px ${F_BODY}`; g.fillText('2022', 1300, 450);
+    g.font = `700 30px ${F_HEAD}`; g.fillStyle = '#0d2a4f'; g.fillText('SILVER MEDAL', 1300, 590); g.font = `500 24px ${F_BODY}`; g.fillText('& SPECIAL AWARDS · Nuremberg, Germany', 1300, 625); g.textAlign = 'left';
+    // คำอธิบาย + ไอคอนคุณสมบัติ
+    emblem(g, 120, 360, 55); g.fillStyle = '#c9a54a'; g.beginPath(); g.arc(250, 360, 55, 0, 7); g.fill(); g.fillStyle = '#2d6ab8'; g.beginPath(); g.arc(380, 360, 55, 0, 7); g.fill();
+    g.fillStyle = '#4a5a6c'; g.font = `400 26px ${F_BODY}`;
+    ['An innovative unmanned surface vehicle designed for raw water', 'source survey with a sonar depth measurement, IoT technology', 'and connected devices for real-time monitoring and safety.'].forEach((t, i) => g.fillText(t, 60, 470 + i * 34));
+    ['DEPTH\nMEASUREMENT', 'SAFE-PROOF\nSURVEY', 'IoT &\nREMOTE', 'EASY\nOPERATION'].forEach((t, i) => { const x = 60 + i * 120; g.fillStyle = '#0d2a4f'; g.beginPath(); g.arc(x + 45, 620, 38, 0, 7); g.fill(); g.fillStyle = '#ffffff'; g.font = `700 30px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('✓', x + 45, 632);
+      g.fillStyle = '#0d2a4f'; g.font = `600 17px ${F_BODY}`; t.split('\n').forEach((l, j) => g.fillText(l, x + 45, 685 + j * 20)); g.textAlign = 'left'; });
+    // ภาพเรือบนผิวน้ำ + เมืองนูเรมเบิร์ก (ภาพประกอบเรียบ)
+    const ix = 540, iy = 300, iw = 600, ih = 420;
+    const sky = g.createLinearGradient(0, iy, 0, iy + ih); sky.addColorStop(0, '#cfe3f3'); sky.addColorStop(0.55, '#e8f1f8'); sky.addColorStop(0.56, '#3f78a8'); sky.addColorStop(1, '#2b5d8a'); g.fillStyle = sky; g.fillRect(ix, iy, iw, ih);
+    g.fillStyle = '#9b7b5e'; [[20, 120, 70], [100, 90, 40], [150, 150, 55], [230, 110, 45], [300, 170, 60], [380, 100, 50], [450, 140, 70], [530, 120, 50]].forEach(([dx, h, w]) => { g.fillRect(ix + dx, iy + ih * 0.55 - h, w, h); g.beginPath(); g.moveTo(ix + dx, iy + ih * 0.55 - h); g.lineTo(ix + dx + w / 2, iy + ih * 0.55 - h - 40); g.lineTo(ix + dx + w, iy + ih * 0.55 - h); g.fill(); });
+    g.fillStyle = '#e9dfc6'; g.fillRect(ix + 170, iy + 300, 260, 34); g.fillRect(ix + 150, iy + 334, 300, 24); g.fillStyle = '#1e3550'; g.fillRect(ix + 200, iy + 255, 200, 14); g.fillStyle = '#2c4a78'; g.fillRect(ix + 190, iy + 240, 220, 16);
+    g.strokeStyle = '#c9ced4'; g.lineWidth = 6; g.strokeRect(ix, iy, iw, ih);
+    // คอลัมน์ขวา + แถบล่าง
+    g.fillStyle = '#0d2a4f'; g.font = `700 26px ${F_HEAD}`; ['ACCURATE & EFFICIENT SURVEY', 'IoT TECHNOLOGY', 'USER-FRIENDLY SYSTEM', 'COST-EFFECTIVE'].forEach((t, i) => { g.fillText('▸ ' + t, 1180, 720 + i * 62); });
+    g.fillStyle = '#0d2a4f'; g.fillRect(0, 1040, W, 160); g.fillStyle = '#ffffff'; g.font = `700 44px ${F_HEAD}`; g.fillText('INTERNATIONAL RECOGNITION', 70, 1130); g.font = `500 30px ${F_BODY}`; g.fillText('การประปานครหลวง · Metropolitan Waterworks Authority', 760, 1128);
   } else {
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#0a2f66'); gr.addColorStop(1, b.col); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     waves(g, W, H, 900, 0.35);
@@ -749,8 +775,8 @@ function buildWorld(ctx) {
     booths.push(b);
   });
   function mwaBooth(kind, b, A, zone, inner) {
-    const W3 = 3.0, BZ = -0.55;
-    A(box(kind === 'cc' ? 4.6 : 3.2, 0.02, 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
+    const W3 = 3.0, BZ = kind === 'wari' ? -0.85 : -0.55;
+    A(box(kind === 'cc' ? 4.6 : 3.2, 0.02, kind === 'wari' ? 1.9 : 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
     // ผ้าตึง: โครง + ผืนพิมพ์ + ฐานขาตั้ง
     A(new RoundedBoxGeometry(W3, 2.4, 0.07, 3, 0.03), fabricFrame, 0, 1.2, BZ);
     const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic(kind, b), roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
@@ -789,6 +815,28 @@ function buildWorld(ctx) {
       const lp = A(box(0.34, 0.015, 0.24), M.dark, 0.45, 1.03, 0.1, { cast: false }); const ls = A(box(0.34, 0.22, 0.012), M.screen, 0.45, 1.14, -0.01, { cast: false }); ls.rotation.x = -0.25;
       const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: standeeTex(), transparent: true, alphaTest: 0.5, roughness: 0.6 }));
       const sd = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.35), sm); sd.position.set(1.95, 0.68, 0.35); sd.rotation.y = -0.35; sd.castShadow = true; inner.add(sd);
+    } else if (kind === 'wari') {
+      // แท่นกลม + หุ่นยนต์สำรวจคลอง (เรือสองท้อง แผงโซลาร์ กล่องอุปกรณ์ ใบพัดท้าย)
+      const cream = new THREE.MeshStandardMaterial({ color: '#e7dcc2', roughness: 0.45 }), creamD = new THREE.MeshStandardMaterial({ color: '#cfc3a6', roughness: 0.5 });
+      const rz = 0.25, rx = 0.15;
+      A(new THREE.CylinderGeometry(0.98, 1.0, 0.12, 48), M.white, rx, 0.06, rz); A(new THREE.TorusGeometry(0.99, 0.018, 8, 64), top, rx, 0.12, rz).rotation.x = Math.PI / 2;
+      A(new THREE.CylinderGeometry(0.9, 0.9, 0.01, 48), greyM, rx, 0.125, rz, { cast: false });
+      const robot = new THREE.Group(); robot.position.set(rx, 0.13, rz); robot.rotation.y = 0.55; inner.add(robot);
+      const R = (geo, mat, x, y, z, rxx = 0, ryy = 0, rzz = 0) => { const m = new THREE.Mesh(geo, ZM.m(zone, mat)); m.position.set(x, y, z); m.rotation.set(rxx, ryy, rzz); m.castShadow = true; m.receiveShadow = true; robot.add(m); return m; };
+      for (const hx of [-0.36, 0.36]) {
+        const hull = R(new THREE.CapsuleGeometry(0.15, 1.15, 6, 16), cream, hx, 0.16, 0, Math.PI / 2); hull.scale.set(1, 1, 0.82);
+        R(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 20, 1, true), creamD, hx, 0.14, -0.8, Math.PI / 2);                       // ท่อใบพัด
+        for (let k = 0; k < 3; k++) R(new THREE.BoxGeometry(0.2, 0.02, 0.05), M.dark, hx, 0.14, -0.8, 0, 0, k * Math.PI / 3);
+        R(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 10), M.dark, hx, 0.14, -0.72, Math.PI / 2);
+      }
+      for (const bz of [-0.38, 0.38]) R(new THREE.BoxGeometry(0.9, 0.05, 0.08), creamD, 0, 0.33, bz);
+      R(new RoundedBoxGeometry(0.5, 0.3, 0.6, 3, 0.04), cream, 0, 0.5, 0.05);
+      R(new THREE.BoxGeometry(0.3, 0.17, 0.01), M.screen, 0, 0.52, 0.355);
+      for (const [lx, lz] of [[-0.32, -0.3], [0.32, -0.3], [-0.32, 0.32], [0.32, 0.32]]) R(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 6), M.alu, lx, 0.62, lz);
+      const sol = new THREE.MeshStandardMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#1d2f4f'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#8aa0bd'; for (let i = 0; i <= 256; i += 32) { g.fillRect(i, 0, 2, 256); g.fillRect(0, i, 256, 2); } return canvasTex(c, 8); })(), roughness: 0.3, metalness: 0.3 });
+      R(new THREE.BoxGeometry(0.86, 0.025, 0.78), sol, 0, 0.84, 0.0, -0.08);
+      R(new THREE.BoxGeometry(0.9, 0.02, 0.82), M.alu, 0, 0.825, 0.0, -0.08);
+      R(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), M.dark, 0.18, 1.0, -0.25);
     } else if (kind === 'generic') {
       const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('g'), roughness: 0.5 }));
       A(new RoundedBoxGeometry(1.3, 0.98, 0.5, 3, 0.05), M.white, 0.55, 0.49, 0.2); const cp = new THREE.Mesh(new THREE.PlaneGeometry(1.26, 0.9), cm); cp.position.set(0.55, 0.49, 0.452); inner.add(cp);
@@ -1050,7 +1098,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
       const px = b.x + fv[0] * dist + (fv[1] !== 0 ? side : 0), pz = b.z + fv[1] * dist + (fv[0] !== 0 ? side : 0);
       const p = merged(who(), { armR: rnd() < 0.5 ? -0.7 : -0.1, armL: -0.05 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.6; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
-    if (!b.tbc) { const p = merged(who({ staff: true }), { armL: -0.55, armR: -0.55 }); const lx = b.kind === 'cc' ? -0.55 : b.kind ? 0.35 : 0.42, lz = b.kind === 'cc' ? 0.55 : b.kind === 'twq' ? -0.55 : -0.15, c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
+    if (!b.tbc) { const p = merged(who({ staff: true }), { armL: -0.55, armR: -0.55 }); const lx = b.kind === 'cc' ? -0.55 : b.kind === 'wari' ? -1.15 : b.kind ? 0.35 : 0.42, lz = b.kind === 'cc' ? 0.55 : b.kind === 'twq' ? -0.55 : b.kind === 'wari' ? 0.2 : -0.15, c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
       p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face]; p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); }
   });
   // คนพักดื่มกาแฟ (ยกแก้ว)
@@ -1070,7 +1118,7 @@ function tourSteps(W) {
     { t: 'ภาพรวมชั้น 5', d: 'ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. → ห้องแสดงบริษัทพันธมิตร → ห้องประชุม Auditorium มีเส้นน้ำบนพื้นนำทางตลอดเส้นทาง', focus: null, cam: [-6, 61, 57], tgt: [4, 0, 4], j: -1 },
     { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เดินตรงมาที่ผนังฉาก “เส้นทางน้ำ” โต๊ะลงทะเบียนยาวชิดผนัง มีป้ายแยกช่องลงทะเบียนล่วงหน้า หน้างาน และประชาสัมพันธ์ รับ Water Passport แล้วเลี้ยวขวาตามเส้นน้ำ', focus: 'lobby', cam: P(840, 860, 5.2), tgt: P(772, 735, 1.4), j: 0 },
     { t: 'ผนังฉาก “เส้นทางน้ำ”', d: 'ผนังฉากกว้าง 6 ม. สูง 3 ม. ด้านหลังโต๊ะลงทะเบียน เป็นจุดถ่ายรูปแรกของงาน', focus: 'lobby', cam: P(780, 805, 2.4), tgt: P(766, 720, 1.7), j: 0 },
-    { t: 'ทางเดินนวัตกรรม กปน.', d: 'บูธ กปน. แบบผ้าตึง 3 ม. ชิดผนังฝั่งซ้าย · วารีกุญชร · บูธ กปน. 06 · บูธ กปน. 07 ทางเดินเหลือกว้างราว 5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
+    { t: 'ทางเดินนวัตกรรม กปน.', d: 'วารีกุญชร หุ่นยนต์สำรวจคลองส่งน้ำดิบ (เหรียญเงิน iENA 2022 เยอรมนี) บนแท่นจัดแสดง ตามด้วยบูธ กปน. 06 · 07 ทางเดินเหลือกว้างราว 5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
     { t: 'นิทรรศการ กปน.', d: 'ชิดผนังทางเดินเหนือ เรียงแบบงานจริง: Chlorine Care · เส้นทางน้ำประปาดื่มได้ (WSP) · คลินิกน้ำสะอาด · TWQ Online', focus: 'north', cam: P(1150, 470, 7.0), tgt: P(1210, 352, 1.2), j: 2 },
     { t: 'Chlorine Care · ระบบเติมคลอรีนอัตโนมัติ', d: 'ชุดถังจำลองพร้อมท่อ ตู้ควบคุม PLC และแท็บเล็ต โต๊ะปั๊มจ่ายสารพร้อมถังเคมี หน้าผ้าตึงไดอะแกรมระบบ', focus: 'north', booth: 'M02', cam: P(1145, 418, 2.9), tgt: P(1140, 352, 1.25), j: 2 },
     { t: 'คลินิกน้ำสะอาด · TWQ Online', d: 'โพเดียมคลินิกน้ำสะอาด และเคาน์เตอร์โค้ง TWQ Online พร้อมจอแผนที่จุดตรวจวัดออนไลน์ ป้ายตั้ง “น้ำประปาดื่มได้” สแกน QR', focus: 'north', booth: 'M01', cam: P(1262, 420, 3.0), tgt: P(1255, 352, 1.25), j: 2 },
