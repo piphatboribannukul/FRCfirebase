@@ -53,7 +53,7 @@
     </div>
     <div class="steps">
       <div><b>1 · แผนที่</b>บินเข้าหาอาคาร กปน.</div>
-      <div><b>2 · แยกชั้น</b>ยกชั้น 6–10 ออก</div>
+      <div><b>2 · แยกชั้น</b>อาคารสุทธิอุทกากร 12 ชั้น → ชั้น 5</div>
       <div><b>3 · ชั้น 5</b>บูธ 19 บูธ · ทางเดิน 4–5 ม.</div>
       <div><b>4 · นำชม</b>ทีละส่วน 12 ขั้น</div>
     </div>
@@ -62,6 +62,7 @@
   </div>
 </div>
 
+<script src="stakeholder_building.js"></script>
 <script src="stakeholder3d.js"></script>
 <script type="module">
   const err = document.getElementById('err');
@@ -71,8 +72,11 @@
   const HQ = {
     name: 'การประปานครหลวง สำนักงานใหญ่',
     lat: 13.88052289121317, lon: 100.55175371285173,
-    // รอยอาคารจริง (OSM/Overture) รอบหมุด: ศูนย์กลางห่างหมุด 2.1 ม. ตอ. 8.9 ม. เหนือ · 71 × 51 ม. · แกนยาวเอียง 13° จากทิศเหนือ
-    hq: { cx: 2.1, cz: -8.9, w: 71, d: 50.7, rot: 1.3456, bearing: 72, zoom: 17.75 },
+    // อาคารสุทธิอุทกากร: กรอบรวมจากรอยอาคารจริง (OSM/Overture) · กลางกรอบห่างหมุด 2.2 ม. ตอ. 8.9 ม. เหนือ
+    // 50.7 (ตอ.–ตต.) × 70.8 (เหนือ–ใต้) ม. · แกนยาวเอียง 12.7° ไปทางตะวันออกของทิศเหนือ
+    hq: { cx: 2.15, cz: -8.85, W: 50.7, D: 70.8, rot: -0.2215, bearing: 68, zoom: 18.2 },
+    // ซ่อนรอยอาคาร OSM ที่โมเดลแทนที่แล้ว (หอ/ฐาน/อาคารโค้ง/ใต้สะพาน/อาคารเดิม) และรอยที่ตรวจจับผิด (เงาตึกริมคลอง)
+    bld: { '-997': { hide: true }, '-998': { hide: true }, '-1000': { hide: true }, '-1001': { hide: true }, '-1002': { hide: true }, '-989': { hide: true }, '-990': { hide: true }, '-991': { hide: true }, '-992': { hide: true } },
     hideR: 30, fixed: true, yaw: 0, note: 'Stakeholder Day', cityFile: 'SP01.json',
   };
   const land = document.getElementById('land');

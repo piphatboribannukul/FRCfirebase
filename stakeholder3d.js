@@ -2153,42 +2153,18 @@
 
   // ── custom layer: วาด three.js ร่วมกับแผนที่ (depth เดียวกับอาคาร) ────────
 
-  // ── อาคารสำนักงานใหญ่ กปน. (ภาพจำลอง 10 ชั้น วางบนรอยอาคารจริงจาก OSM) ─────────────
-  function hqGlassTex(T) {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d');
-    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#b4d6f2'); gr.addColorStop(0.5, '#6da6dc'); gr.addColorStop(1, '#4a86c8'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
-    g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(0, 0, 256, 70);
-    g.fillStyle = '#dfe9f2'; for (let x = 0; x < 256; x += 64) g.fillRect(x, 0, 6, 256); g.fillRect(0, 168, 256, 4);
-    const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; if (T.sRGBEncoding) t.encoding = T.sRGBEncoding; return t;
-  }
+  // ── อาคารสุทธิอุทกากร สำนักงานใหญ่ กปน. (12 ชั้น · โมเดลจาก stakeholder_building.js วางบนรอยอาคารจริง) ──
   function buildHQ(T, hq) {
     const grp = new T.Group(), inner = new T.Group(); grp.add(inner);
     inner.position.set(hq.cx, 0, hq.cz); inner.rotation.y = hq.rot;
-    const W = hq.w, D = hq.d, FH = 4.2, N = 10, tex = hqGlassTex(T);
-    const white = new T.MeshStandardMaterial({ color: 0xf4f6f8, roughness: 0.75 });
-    const glass = new T.MeshStandardMaterial({ map: tex, color: 0xffffff, roughness: 0.35, metalness: 0.0, emissive: 0xffe2a8, emissiveIntensity: 0 });
-    const glassS = glass.clone(); glassS.map = tex.clone(); glassS.map.needsUpdate = true;
-    tex.repeat.set(W / 3.2, 1); glassS.map.repeat.set(D / 3.2, 1);
-    const box = (w, h, d, m, x, y, z) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(x, y, z); inner.add(o); return o; };
-    for (let f = 0; f < N; f++) {
-      box(W + 0.7, 0.9, D + 0.7, white, 0, f * FH + 0.45, 0);
-      box(W, FH - 0.9, D, [glassS, glassS, white, white, glass, glass], 0, f * FH + 0.9 + (FH - 0.9) / 2, 0);
-    }
-    box(W + 0.7, 0.7, D + 0.7, white, 0, N * FH + 0.35, 0);
-    [[-14, 8, 10, 3, 9], [10, -6, 14, 2.6, 8], [22, 10, 7, 3.4, 7]].forEach(([x, z, w, h, d]) => box(w, h, d, white, x, N * FH + 0.7 + h / 2, z));
-    // หอกระจกมุมอาคาร + ตราวงกลม (ฝั่งคลองประปา)
-    const prism = new T.MeshStandardMaterial({ color: 0x3f86d6, roughness: 0.25, metalness: 0.1, emissive: 0x9fd0ff, emissiveIntensity: 0 });
-    box(10, N * FH + 7, 17, prism, W / 2 - 9, (N * FH + 7) / 2, -D / 2 + 6.5);
-    const disc = new T.Mesh(new T.CircleGeometry(3.2, 40), new T.MeshBasicMaterial({ color: 0xffffff })); disc.position.set(W / 2 - 9, N * FH + 2.5, -D / 2 - 2.05); disc.rotation.y = Math.PI; inner.add(disc);
-    const ring = new T.Mesh(new T.RingGeometry(2.2, 2.9, 40), new T.MeshBasicMaterial({ color: 0x1d5fc0 })); ring.position.copy(disc.position); ring.position.z -= 0.02; ring.rotation.y = Math.PI; inner.add(ring);
-    // หลังคาทางเข้า
-    box(22, 0.5, 7, white, -6, 4.6, -D / 2 - 3.6);
-    [-16, 4].forEach(x => box(0.5, 4.4, 0.5, white, x, 2.2, -D / 2 - 6.6));
+    const B = window.SUTHI.build(T, { W: hq.W, D: hq.D });
+    inner.add(B.grp);
     // แถบชั้น 5 เน้นสี (จุดจัดงาน)
-    const band5 = new T.Mesh(new T.BoxGeometry(W + 1.2, 0.35, D + 1.2), new T.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.85 }));
-    band5.position.set(0, 4 * FH + 0.95, 0); inner.add(band5);
+    const bb = B.bbox, FH = B.FH;
+    const band5 = new T.Mesh(new T.BoxGeometry(bb.x1 - bb.x0 + 1.6, 0.4, bb.z1 - bb.z0 + 1.6), new T.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.85 }));
+    band5.position.set((bb.x0 + bb.x1) / 2, 4 * FH + 0.25, (bb.z0 + bb.z1) / 2); inner.add(band5);
     const dropMat = new T.MeshStandardMaterial();
-    return { grp, dropMat, band5, setShowcase(on, night) { glass.emissiveIntensity = glassS.emissiveIntensity = night ? 0.55 : 0; prism.emissiveIntensity = night ? 0.35 : 0; } };
+    return { grp, dropMat, band5, H: B.H, setShowcase(on, night) { B.setNight(!!night); } };
   }
 
   function cabinetLayer(st) {
@@ -2349,7 +2325,7 @@
       const lift = () => {
         const z = map.getZoom(), k = exag(z);
         const mpp = 40075016.686 * Math.cos(st.lat * Math.PI / 180) / (512 * Math.pow(2, z));
-        const h = st.hq ? 50 : (beamAlpha(z) > 0.05 ? (2 + BEAM_H) : 4.4) * k;
+        const h = st.hq ? 78 : (beamAlpha(z) > 0.05 ? (2 + BEAM_H) : 4.4) * k;
         const px = h / mpp * Math.sin(map.getPitch() * Math.PI / 180);
         const y = map.project(mk.getLngLat()).y, room = y - el.offsetHeight - 78;   // ไม่ให้ป้ายชนแถบเมนูด้านบน
         mk.setOffset([0, -Math.round(Math.max(30, Math.min(room, px + 14)))]);
@@ -2493,7 +2469,7 @@
     if (state.st.hq) {                                   // บินเข้าหาอาคาร (ไม่ใช่ตู้)
       const h = state.st.hq, kxm = 111320 * Math.cos(state.st.lat * Math.PI / 180), c = [state.st.lon + h.cx / kxm, state.st.lat - h.cz / 110540];
       state.cabLL = c; let b0 = m.getBearing(); while (b0 - h.bearing > 180) b0 -= 360; while (h.bearing - b0 > 180) b0 += 360; if (Math.abs(h.bearing - b0) < 90) m.setBearing(h.bearing - 140);
-      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 60, bearing: h.bearing, duration: 9500, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
+      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 62, bearing: h.bearing, duration: 9500, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
       m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 10; if (state.onArrive) state.onArrive(); else autoInside(state); if (state.orbit) setTimeout(() => sway(state, h.bearing, 1), 600); });
       return;
     }
@@ -2553,7 +2529,7 @@
     if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
     else if (a === 'inside') { if (!window.MWA_FLOOR5) return; if (s.onUser) s.onUser(); playInside(s, { st: s.st, mode: 'tour' }); }   // ภายในตู้ (frc3d_inside.js) — นำชมทีละชิ้น
-    else if (a === 'near' && s.st.hq) { s.spin = false; s.phase = 'idle'; s.map.stop(); const h = s.st.hq, kxm = 111320 * Math.cos(s.st.lat * Math.PI / 180); s.map.easeTo({ center: [s.st.lon + h.cx / kxm, s.st.lat - h.cz / 110540], zoom: 18.35, pitch: 66, bearing: h.bearing + 20, duration: 3000, easing: easeIO }); }
+    else if (a === 'near' && s.st.hq) { s.spin = false; s.phase = 'idle'; s.map.stop(); const h = s.st.hq, kxm = 111320 * Math.cos(s.st.lat * Math.PI / 180); s.map.easeTo({ center: [s.st.lon + h.cx / kxm, s.st.lat - h.cz / 110540], zoom: 18.9, pitch: 72, bearing: h.bearing + 20, duration: 3000, easing: easeIO }); }
     else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); { const c = s.cabLL || [s.st.lon, s.st.lat], ff = frontBearing(s) - (s.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
       s.layer && s.layer.setShowcase(true); s.map.easeTo({ center: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], zoom: 22.35, pitch: 76, bearing: ff, duration: 3000, easing: easeIO }); } }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
     else if (a === 'night') {
