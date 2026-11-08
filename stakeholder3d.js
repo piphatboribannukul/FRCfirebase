@@ -2203,6 +2203,12 @@
         this.map = map;
       },
       setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); propsRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); const sh = st.cabShift || [0, 0]; cabRoot.position.set(c.cabXZ[0] + sh[0], 0, c.cabXZ[1] - sh[1]); /* cabShift = เลื่อนตู้ [ตอ., เหนือ] ม. โดยฉากไม่เลื่อนตาม */ cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
+      camLocal() {                                     // กล้องแผนที่ในพิกัดโมเดล (เมตร · x ตะวันออก y ขึ้น z ใต้) สำหรับต่อภาพเข้าฉากชั้น 5
+        const m = this.map, cp = m.transform.getCameraPosition(), P = ml.MercatorCoordinate.fromLngLat(cp.lngLat, cp.altitude), C = ml.MercatorCoordinate.fromLngLat(m.getCenter(), 0), s = mpu;
+        const toL = q => new T.Vector3((q.x - merc.x) / s, (q.z - merc.z) / s, (q.y - merc.y) / s);
+        cab.grp.updateMatrixWorld(true); const inv = new T.Matrix4().copy(cab.grp.matrixWorld).invert();
+        return { pos: toL(P).applyMatrix4(inv).toArray(), tgt: toL(C).applyMatrix4(inv).toArray(), fov: (m.transform && m.transform.fov) || 36.87 };
+      },
       setShowcase(on) { if (!cab) return; this._show = on; cab.setShowcase(on || night, night); this.map && this.map.triggerRepaint(); },
       setNight(on) {
         if (!lights.hemi) return;
@@ -2507,8 +2513,9 @@
     setTimeout(() => {
       if (_cur !== state || _tour || state.phase !== 'idle' || state.userTook || state.insideShown) return;
       if (!window.MWA_FLOOR5 || window.MWA_FLOOR5.isOn()) return;
-      state.insideShown = true; playInside(state, { st: state.st, mode: 'auto' });
-    }, state.st.hq ? 700 : 2500);
+      state.insideShown = true; let fromCam = null; try { if (state.st.hq && state.layer && state.layer.camLocal) fromCam = state.layer.camLocal(); } catch (e) {}
+      playInside(state, { st: state.st, mode: 'auto', fromCam });
+    }, state.st.hq ? 0 : 2500);
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
@@ -2537,7 +2544,7 @@
     if (!s.map) return;
     if (a === 'replay') { s.orbit = true; s.spin = false; s.wrap.querySelector('[data-a="orbit"]').classList.remove('on'); fly(s); }
     else if (a === 'orbit') setOrbit(s, !s.orbit);
-    else if (a === 'inside') { if (!window.MWA_FLOOR5) return; if (s.onUser) s.onUser(); playInside(s, { st: s.st, mode: 'tour' }); }   // ภายในตู้ (frc3d_inside.js) — นำชมทีละชิ้น
+    else if (a === 'inside') { if (!window.MWA_FLOOR5) return; if (s.onUser) s.onUser(); let fromCam = null; try { if (s.st.hq && s.layer && s.layer.camLocal) fromCam = s.layer.camLocal(); } catch (e) {} playInside(s, { st: s.st, mode: 'tour', fromCam }); }   // ภายในตู้ (frc3d_inside.js) — นำชมทีละชิ้น
     else if (a === 'near' && s.st.hq) { s.spin = false; s.phase = 'idle'; s.map.stop(); const h = s.st.hq, kxm = 111320 * Math.cos(s.st.lat * Math.PI / 180); s.map.easeTo({ center: [s.st.lon + h.cx / kxm, s.st.lat - h.cz / 110540], zoom: 18.9, pitch: 72, bearing: h.bearing + 20, duration: 3000, easing: easeIO }); }
     else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); { const c = s.cabLL || [s.st.lon, s.st.lat], ff = frontBearing(s) - (s.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
       s.layer && s.layer.setShowcase(true); s.map.easeTo({ center: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], zoom: 22.35, pitch: 76, bearing: ff, duration: 3000, easing: easeIO }); } }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
@@ -2669,6 +2676,7 @@
         return { c, ff, cc: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], ready: !!st.cityReady }; },
       hold: () => { const st = _cur; st.userTook = true; st.phase = 'user'; st.map.stop(); },
       showcase: on => _cur && _cur.layer && _cur.layer.setShowcase(on),
+      camLocal: () => _cur && _cur.layer && _cur.layer.camLocal(), phase: () => _cur && _cur.phase,
       night: on => { const st = _cur; if (!!st.night !== !!on) { const b = st.wrap.querySelector('[data-a="night"]'); b && b.click(); } },
     },
     open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a),
