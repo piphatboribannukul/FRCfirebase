@@ -1238,6 +1238,8 @@ function buildWorld(ctx) {
   };
   const R0 = mkPath(ROUTE_PX, 0), { path, cum, L } = R0;
   const sDoor = (() => { let best = 1e9, bs = 0; for (let s = 0; s <= L; s += 0.1) { const p = R0.at(s), d = Math.hypot(p.x - X(1310), p.z - Z(441)); if (d < best) { best = d; bs = s; } } return bs; })();
+  const sAt = (px, py) => { let best = 1e9, bs = 0; for (let s = 0; s <= L; s += 0.1) { const p = R0.at(s), d = Math.hypot(p.x - X(px), p.z - Z(py)); if (d < best) { best = d; bs = s; } } return bs; };
+  const sHall = sAt(1355, 345), sHallOut = sAt(1131, 360);            // เข้าห้องแสดงทางประตูตะวันออก · ออกทางประตูตะวันตก
   const RE = (() => { const r = mkPath(ROUTE_E_PX, sDoor); return { at: s => r.at(s < sDoor ? sDoor : s), L: r.L, r, base: R0 }; })();
   const routeU = { uTime: { value: 0 }, uProg: { value: 0 }, uLen: { value: Math.max(L, RE.L) }, uA: { value: new THREE.Color('#7f9a52') }, uB: { value: new THREE.Color('#14b8d6') }, uC: { value: new THREE.Color('#3f8cff') }, uOp: { value: 1 } };
   const mkRibbon = (w, y, frag, P = R0) => {
@@ -1325,7 +1327,7 @@ function buildWorld(ctx) {
   const people = makePeople(interior, booths, seats, routeAt, L);
   const routes = [{ at: routeAt, L }, { at: RE.at, L: RE.L }];
 
-  return { world, interior, ZM, zoneGroups, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, seats, people, gy, siteM };
+  return { world, interior, ZM, zoneGroups, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM };
 }
 
 function roundedPath(pts, r) {
@@ -1638,7 +1640,7 @@ function play(opt = {}) {
   // ── นำชมแบบเดินตามทาง: กล้องระดับสายตาคน เดินจากลิฟต์ตามเส้นนำทาง ชะลอและหันมองเมื่อผ่านบูธ
   const WALK = { v: 2.7, slow: 1.15, eye: 1.62 };
   const jOf = s => { const bs = W.booths; const first = z => { const q = bs.filter(b => b.zone === z); return q.length ? Math.min(...q.map(b => b.along)) : 1e9; }, last = z => { const q = bs.filter(b => b.zone === z); return q.length ? Math.max(...q.map(b => b.along)) : -1e9; };
-    if (s < first('mwa') - 4) return 0; if (s < first('north') - 4) return 1; if (s < first('hall') - 3) return 2; if (s < last('hall') + 3) return 3; if (s < W.sDoor - 1) return 4; return 5; };
+    if (s < first('mwa') - 4) return 0; if (s < first('north') - 4) return 1; if (s < W.sHall) return 2; if (s < W.sHallOut) return 3; if (s < W.sDoor - 1) return 4; return 5; };
   function setWalkCard(j) {
     if (st.walkJ === j) return; st.walkJ = j;
     const si = STEPS.findIndex(q => q.j === j); const s = STEPS[si] || STEPS[0];
