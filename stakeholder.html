@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stakeholder Day · ชั้น 5 กปน.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Sarabun:wght@400;600;700&display=swap">
+<script>
+  // three.js r160 (ES module) สำหรับฉากชั้น 5 · ?local = ใช้ไฟล์ในเครื่อง (ทดสอบแบบออฟไลน์)
+  (function () {
+    var L = /[?&]local\b/.test(location.search);
+    var map = { imports: {
+      three: L ? './node_modules/three/build/three.module.js' : 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+      'three/addons/': L ? './node_modules/three/examples/jsm/' : 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/' } };
+    document.write('<script type="importmap">' + JSON.stringify(map) + '<\/script>');
+  })();
+  window.SD3D_CONFIG = { cityBase: 'data/city/', autoInside: true };
+</script>
+<style>
+  :root { --ink:#0f1d2b; --dim:#5b6b7c; --blue:#1d5fc0; --bg:#e3e9ee; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif; }
+  #land { position:fixed; inset:0; display:grid; place-items:center; padding:24px; box-sizing:border-box;
+    background: radial-gradient(90% 70% at 50% 35%, #f6f9fb 0%, #e3e9ee 70%); transition:opacity .5s; }
+  #land.off { opacity:0; pointer-events:none; }
+  .box { width:min(720px,100%); text-align:center; }
+  .eyebrow { font:600 13px "Bai Jamjuree",sans-serif; letter-spacing:.14em; color:var(--blue); text-transform:uppercase; }
+  h1 { margin:10px 0 6px; font:700 clamp(38px,6vw,72px)/1.05 "Bai Jamjuree",sans-serif; letter-spacing:-.01em; }
+  .sub { font-size:clamp(15px,1.7vw,19px); color:var(--dim); }
+  .line { width:220px; height:4px; border-radius:2px; margin:20px auto 26px; background:linear-gradient(90deg,#8a9a5b,#3fb0a6,#3fd0ff); }
+  .acts { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .acts button { font:600 16px "Bai Jamjuree",sans-serif; border-radius:12px; padding:14px 22px; cursor:pointer; border:1px solid #cfd8e2; background:#fff; color:var(--ink); box-shadow:0 6px 20px rgba(16,34,56,.08); }
+  .acts button.pri { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .acts button:focus-visible { outline:3px solid #7fc4ff; outline-offset:2px; }
+  .steps { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:30px; }
+  .steps div { background:rgba(255,255,255,.75); border:1px solid #dbe3ea; border-radius:10px; padding:9px 12px; font-size:13px; color:var(--dim); text-align:left; }
+  .steps b { display:block; color:var(--ink); font:600 13.5px "Bai Jamjuree",sans-serif; }
+  .keys { margin-top:22px; font-size:12.5px; color:#7b8898; }
+  kbd { font:600 11.5px ui-monospace,monospace; background:#fff; border:1px solid #d5dde6; border-bottom-width:2px; border-radius:5px; padding:1px 6px; }
+  #err { margin-top:14px; color:#b42318; font-size:13px; min-height:1em; }
+</style>
+</head>
+<body>
+<div id="land">
+  <div class="box">
+    <div class="eyebrow">การประปานครหลวง · MWA</div>
+    <h1>Stakeholder Day</h1>
+    <div class="sub">ภาพจำลองการจัดงาน ชั้น 5 อาคารสำนักงานใหญ่ · เส้นทางน้ำ จากลิฟต์สู่ห้องประชุม</div>
+    <div class="line"></div>
+    <div class="acts">
+      <button class="pri" id="goMap">▶ เริ่มนำเสนอ · บินเข้าอาคาร</button>
+      <button id="goF5">ไปชั้น 5 ทันที</button>
+    </div>
+    <div class="steps">
+      <div><b>1 · แผนที่</b>บินเข้าหาอาคาร กปน.</div>
+      <div><b>2 · แยกชั้น</b>ยกชั้น 6–10 ออก</div>
+      <div><b>3 · ชั้น 5</b>บูธ 19 บูธ · ทางเดิน 4–5 ม.</div>
+      <div><b>4 · นำชม</b>ทีละส่วน 12 ขั้น</div>
+    </div>
+    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ทีละขั้น · <kbd>Space</kbd> นำชมอัตโนมัติ · <kbd>Esc</kbd> ย้อนกลับ · คลิกบูธเพื่อดูรายละเอียด</div>
+    <div id="err"></div>
+  </div>
+</div>
+
+<script src="stakeholder3d.js"></script>
+<script type="module">
+  const err = document.getElementById('err');
+  try { await import('./stakeholder_floor5.js'); } catch (e) { err.textContent = 'โหลดฉากชั้น 5 ไม่สำเร็จ: ' + e.message; }
+  try { await Promise.all(['700 40px "Bai Jamjuree"', '600 40px "Bai Jamjuree"', '500 40px "Bai Jamjuree"', '500 40px "IBM Plex Sans Thai"', '600 40px "IBM Plex Sans Thai"'].map(f => document.fonts.load(f, 'กขค Ab'))); } catch (e) {}
+
+  const HQ = {
+    name: 'การประปานครหลวง สำนักงานใหญ่',
+    lat: 13.88052289121317, lon: 100.55175371285173,
+    // รอยอาคารจริง (OSM/Overture) รอบหมุด: ศูนย์กลางห่างหมุด 2.1 ม. ตอ. 8.9 ม. เหนือ · 71 × 51 ม. · แกนยาวเอียง 13° จากทิศเหนือ
+    hq: { cx: 2.1, cz: -8.9, w: 71, d: 50.7, rot: 1.3456, bearing: 72, zoom: 17.75 },
+    hideR: 30, fixed: true, yaw: 0, note: 'Stakeholder Day', cityFile: 'SP01.json',
+  };
+  const land = document.getElementById('land');
+  const show = on => land.classList.toggle('off', !on);
+  let watch = null;
+  function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); } }, 800); }
+  function goMap() { show(false); window.SD3D.open(HQ); watchBack(); }
+  const LITE = new URLSearchParams(location.search).has('lite');
+  function goF5() { show(false); window.MWA_FLOOR5.play({ onDone: () => {}, ao: !LITE, dpr: LITE ? 1 : 2 }); watchBack(); }
+  document.getElementById('goMap').onclick = goMap;
+  document.getElementById('goF5').onclick = goF5;
+  const q = new URLSearchParams(location.search);
+  if (q.has('floor5')) goF5(); else if (q.has('go')) goMap();
+  window.F5READY = true;
+</script>
+</body>
+</html>
