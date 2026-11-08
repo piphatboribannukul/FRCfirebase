@@ -2162,7 +2162,7 @@
     inner.position.set(hq.cx, 0, hq.cz); inner.rotation.y = hq.rot;
     const B = window.SUTHI.build(T, { W: hq.W, D: hq.D });
     inner.add(B.grp);
-    const site = window.SUTHI.buildSite(T, {}); grp.add(site.grp);           // โรงงานผลิตน้ำบางเขน · สนามกีฬา · คลองประปา
+    const site = window.SUTHI.buildSite(T, { softShadow: true }); grp.add(site.grp);   // โรงงานผลิตน้ำบางเขน · สนามกีฬา · คลองประปา
     // แถบชั้น 5 เน้นสี (จุดจัดงาน)
     const bb = B.bbox, FH = B.FH;
     const band5 = new T.Mesh(new T.BoxGeometry(bb.x1 - bb.x0 + 1.6, 0.4, bb.z1 - bb.z0 + 1.6), new T.MeshBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.85 }));
@@ -2198,6 +2198,7 @@
         ring = new T.Mesh(new T.RingGeometry(1.6, 2.1, 48), ringMat);
         ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; cabRoot.add(ring);
         renderer = new T.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
+        if (st.hq) { lights.sun.intensity = 0.72; lights.sun.position.set(-40, 70, 25); }   // แดดแรงขึ้นเล็กน้อย ให้ผนังอาคารมีมิติ
         renderer.autoClear = false;
         this.map = map;
       },
@@ -2207,7 +2208,7 @@
         if (!lights.hemi) return;
         if (city) { city.wallMats.forEach(m => { m.emissiveIntensity = on ? 0.85 : 0; }); city.nightMats.forEach(([m, v]) => { m.emissiveIntensity = on ? v : 0; }); }
         night = on; beamMat.blending = on ? T.AdditiveBlending : T.NormalBlending; beamMat.needsUpdate = true;
-        lights.hemi.intensity = on ? 0.42 : 0.78; lights.sun.intensity = on ? 0.18 : 0.62;
+        lights.hemi.intensity = on ? 0.42 : 0.78; lights.sun.intensity = on ? 0.18 : (st.hq ? 0.72 : 0.62);
         cab.dropMat.emissiveIntensity = on ? 0.9 : 0.15;
         cab.setShowcase(on || this._show, on);
       },
