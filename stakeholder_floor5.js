@@ -1390,8 +1390,14 @@ function makePeople(parent, booths, seats, routeAt, L) {
     const legSkin = f && (o.skirt || o.dress), legC = legSkin ? sk : lower, shoe = f ? pick(['#1b1b1f', '#3a2a22', '#1b1b1f'], k) : '#121316';
     const P = [];
     for (const g of ['legL', 'legR']) {
-      P.push([g, legSkin ? G.thighF : G.thigh, legC, 0, -0.23, 0], [g, legSkin ? G.kneeF : G.knee, legC, 0, -0.46, 0.004], [g, legSkin ? G.shinF : G.shin, legC, 0, -0.67, 0], [g, G.shoe, shoe, 0, -0.92, 0.035]);
-      if (f) P.push([g, G.heel, shoe, 0, -0.89, -0.05]);
+      P.push([g, legSkin ? G.thighF : G.thigh, legC, 0, -0.23, 0], [g, legSkin ? G.kneeF : G.knee, legC, 0, -0.46, 0.004]);
+      if (o.sit) {                                         // นั่ง: งอเข่า หน้าแข้งตั้งฉากพื้น
+        P.push([g, legSkin ? G.shinF : G.shin, legC, 0, -0.46, -0.21, Math.PI / 2], [g, G.shoe, shoe, 0, -0.495, -0.46, Math.PI / 2]);
+        if (f) P.push([g, G.heel, shoe, 0, -0.41, -0.43, Math.PI / 2]);
+      } else {
+        P.push([g, legSkin ? G.shinF : G.shin, legC, 0, -0.67, 0], [g, G.shoe, shoe, 0, -0.92, 0.035]);
+        if (f) P.push([g, G.heel, shoe, 0, -0.89, -0.05]);
+      }
     }
     P.push(['root', G.pelvis, lower, 0, 0.95, 0]);
     P.push(['root', G.torso, jacket, 0, 0.99, 0]);
@@ -1455,7 +1461,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
     for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who(), { armR: -1.15 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
   });
   // ผู้นั่งใน Auditorium
-  for (let i = 0; i < 120; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.4, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
+  for (let i = 0; i < 120; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false, sit: true }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.36, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
   return list;
 }
 
@@ -1648,7 +1654,7 @@ function play(opt = {}) {
     w.seen = w.seen || {};
     if (near && near.kind && /wari|cc|twq/.test(near.kind) && !w.seen[near.code] && w.s >= near.along - 0.4) { w.seen[near.code] = true; w.hold = 2.2; }   // แวะดูบูธเด่นสักครู่
     if (w.hold > 0) { w.hold -= dt; w.v = lerp(w.v, 0, Math.min(1, dt * 5)); }
-    else { const toEnd = W.L - w.s, onStair = w.s > W.sDoor + 3; w.v = lerp(w.v, toEnd < 0.2 ? 0 : toEnd < 3 ? Math.max(0.35, toEnd * 0.45) : onStair ? 1.25 : slow ? WALK.slow : WALK.v, Math.min(1, dt * 2.2)); }
+    else { const toEnd = W.L - w.s, onStair = w.s > W.sDoor + 3; w.v = lerp(w.v, toEnd < 3 ? Math.max(0.3, toEnd * 0.45) : onStair ? 1.25 : slow ? WALK.slow : WALK.v, Math.min(1, dt * 2.2)); }
     w.s = Math.min(W.L, w.s + w.v * dt);
     const q = W.routeAt(w.s), ahead = W.routeAt(Math.min(w.s + 5.5, W.L));
     const fy = floorY(q.x, q.z); w.fy = w.fy == null ? fy : lerp(w.fy, fy, Math.min(1, dt * 7));          // ลงบันไดนุ่มๆ
@@ -1660,7 +1666,7 @@ function play(opt = {}) {
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
     setWalkCard(jOf(w.s));
     for (const pp of W.people) if (pp.mode === 'stand') pp.g.visible = Math.hypot(pp.g.position.x - pos.x, pp.g.position.z - pos.z) > 1.1;
-    if (w.s >= W.L - 0.01) { w.endT = (w.endT || 0) + dt; if (w.endT > 2.6) { setAuto(false); goStep(STEPS.length - 1); } }
+    if (w.s >= W.L - 0.02) { w.endT = (w.endT || 0) + dt; if (w.endT > 2.6) { setAuto(false); goStep(STEPS.length - 1); } }
   }
   function setAuto(on) {
     st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.textContent = on ? '❚❚ หยุดเดินชม' : '▶ เดินชม';
