@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    stakeholder_floor5.js — Stakeholder Day · ชั้น 5 อาคารสำนักงานใหญ่ กปน.
    ─ ฉาก 3 มิติคุณภาพสูง (three.js r160 + GTAO) แยกจากแผนที่: อาคารสุทธิอุทกากร 12 ชั้น แยกชั้น → ชั้น 5
-   ─ ผังตามภาพร่าง (14 px ≈ 1 ม.) · บูธ 2 × 1 ม. ชิดผนัง · ทัวร์ทีละส่วน (ส่วนอื่นจางลง)
+   ─ ผังตามภาพร่าง (11.5 px ≈ 1 ม.) · บูธ กปน. ผ้าตึง 3 ม. · บูธเอกชน 2 × 1 ม. · ทัวร์ทีละส่วน (ส่วนอื่นจางลง)
    ใช้:  window.MWA_FLOOR5.play({ onDone })   ·  .stop()  ·  .isOn()
    ═══════════════════════════════════════════════════════════════════════════ */
 import * as THREE from 'three';
@@ -15,15 +15,16 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ───────────────────────────── ข้อมูลผัง ─────────────────────────────
-const PXM = 13, OX = 1082, OY = 547;                       // ภาพร่าง: 13 px ≈ 1 ม. (ขยายจากร่างแรก ให้ทางเดินกว้างขึ้น) · จุดกลางชั้น
+const PXM = 11.5, OX = 1082, OY = 547;                     // ภาพร่าง: 11.5 px ≈ 1 ม. (ขยายจากร่างแรก ให้โล่งขึ้น) · จุดกลางชั้น
 const K = 14 / PXM;                                         // ตัวคูณสำหรับค่าที่กำหนดเป็นเมตรไว้ตอนใช้ 14 px/ม.
 const X = px => (px - OX) / PXM, Z = py => (py - OY) / PXM;
-const FX0 = X(600), FX1 = X(1565), FZ0 = Z(185), FZ1 = Z(910); // ขอบชั้น ≈ 74 × 56 ม.
+const FX0 = X(600), FX1 = X(1565), FZ0 = Z(185), FZ1 = Z(910); // ขอบชั้น ≈ 84 × 63 ม.
 const FW = FX1 - FX0, FD = FZ1 - FZ0;
 const FH = 4.2, NF = 12, F5 = 4;                           // ความสูงชั้น · 12 ชั้น · ชั้น 5 (index 4)
-const WALL_H = 3.0, AUD_H = 4.4, WT = 0.16;
+const WALL_H = 3.0, AUD_H = 4.4, WT = 0.22;
 
-const ROUTE_PX = [[843, 893], [800, 893], [800, 742], [928, 742], [928, 388], [1088, 388], [1088, 282], [1310, 282], [1310, 470]];
+// ลิฟต์ → ลงทะเบียน (ผนังฉากหลัง) → ทางเดิน กปน. → นิทรรศการ กปน. (ทางเดินเหนือ) → เข้าห้องแสดง 1 ประตูตะวันออก → ออกประตูตะวันตก → หน้าห้องประชุม → Auditorium
+const ROUTE_PX = [[843, 893], [806, 893], [806, 752], [921, 752], [921, 385], [1310, 385], [1310, 290], [1088, 290], [1088, 410], [1300, 410], [1300, 470]];
 
 const MWA_BOOTHS = [
   { name: 'TWQ Online', sub: 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', prop: 'cabinet' },
@@ -50,16 +51,21 @@ const PARTNERS = [
 ];
 const MWA_COL = ['#1d5fc0', '#0f8fb8', '#14a39a', '#2a6fdb', '#3653c4', '#1d5fc0', '#1d5fc0'];
 
-// ตำแหน่งบูธ (ม.) · face = ทิศหน้าบูธ e/w/n/s
+// ตำแหน่งบูธ (ม.) · face = ทิศหน้าบูธ e/w/n/s · kind = แบบบูธ กปน. ตามภาพงานจริง (กว้าง 3 ม.)
 function boothSlots() {
   const S = [];
-  const xW = X(885) + WT / 2 + 0.5;                       // ผนังตะวันตกของทางเดิน กปน.
-  [10.9, 6.65, 2.4, -1.85, -6.1].forEach((z, i) => S.push({ own: 'mwa', i, x: xW, z: z * K, face: 'e', zone: 'mwa' }));
-  const zN = Z(432) - WT / 2 - 0.5;                       // หน้าผนัง Auditorium (ทางเดิน 5 ม.)
-  [11.3, 21.6].forEach((x, k) => S.push({ own: 'mwa', i: 5 + k, x: x * K, z: zN, face: 'n', zone: 'audf' }));
-  const zHN = Z(188) + WT / 2 + 0.5, zHS = Z(350) - WT / 2 - 0.5;
-  for (let k = 0; k < 8; k++) S.push({ own: 'p', i: k, x: (-5.55 + k * 3.75) * K, z: zHN, face: 's', zone: 'hall' });
-  [3.45, 6.7, 9.95, 13.2].forEach((x, k) => S.push({ own: 'p', i: 8 + k, x: x * K, z: zHS, face: 'n', zone: 'hall' }));
+  const xW = X(885) + WT / 2;                              // ผนังตะวันตกของทางเดิน กปน.
+  [680, 587, 494].forEach((py, k) => S.push({ own: 'mwa', i: 4 + k, x: xW + 0.65, z: Z(py), face: 'e', zone: 'mwa', kind: 'generic', w: 3, d: 1.3 }));
+  // นิทรรศการ กปน. ชิดผนังทางเดินเหนือ (ระหว่างประตูห้องแสดง 1) เรียงแบบภาพงานจริง: Chlorine Care · WSP · คลินิกน้ำสะอาด · TWQ Online
+  const zc = Z(350) + WT / 2 + 0.65, xa = X(1108) + 0.3;
+  S.push({ own: 'mwa', i: 1, x: xa + 2.45, z: zc, face: 's', zone: 'north', kind: 'cc', w: 4.6, d: 1.3 });
+  S.push({ own: 'mwa', i: 3, x: xa + 6.35, z: zc, face: 's', zone: 'north', kind: 'wsp', w: 3, d: 1.3 });
+  S.push({ own: 'mwa', i: 2, x: xa + 9.4, z: zc, face: 's', zone: 'north', kind: 'clinic', w: 3, d: 1.3 });
+  S.push({ own: 'mwa', i: 0, x: xa + 12.45, z: zc, face: 's', zone: 'north', kind: 'twq', w: 3, d: 1.3 });
+  // บริษัทพันธมิตรในห้องแสดง 1 (บูธ 2 × 1 ม.)
+  const zHN = Z(188) + WT / 2 + 0.5, zHS = Z(350) - WT / 2 - 0.5, x0 = X(980) + 2.2, sp = (X(1385) - X(980) - 4.4) / 7;
+  for (let k = 0; k < 8; k++) S.push({ own: 'p', i: k, x: x0 + k * sp, z: zHN, face: 's', zone: 'hall', w: 2, d: 1 });
+  for (let k = 0; k < 4; k++) S.push({ own: 'p', i: 8 + k, x: xa + 1.9 + k * 3.8, z: zHS, face: 'n', zone: 'hall', w: 2, d: 1 });
   return S;
 }
 const FACE = { s: 0, e: Math.PI / 2, n: Math.PI, w: -Math.PI / 2 };   // หมุนให้หน้าบูธ (แกน +z ของบูธ) ชี้ไปทิศนั้น
@@ -86,12 +92,12 @@ const CLOSED = [                                           // พื้นที
 const EXTRA_WALLS = [[885, 352, 885, 453], [940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], [676, 522, 676, 557], [676, 615, 676, 648]];
 
 const ZONES = {
-  lobby: { name: 'โถงลิฟต์ · ลงทะเบียน', c: [X(800), Z(830)] },
-  mwa: { name: 'ทางเดินนวัตกรรม กปน.', c: [X(928), Z(580)] },
-  north: { name: 'ทางเดินหน้าห้องประชุม 5 ม.', c: [X(1000), Z(392)] },
+  lobby: { name: 'โถงลิฟต์ · ลงทะเบียน', c: [X(806), Z(830)] },
+  mwa: { name: 'ทางเดินนวัตกรรม กปน.', c: [X(921), Z(580)] },
+  north: { name: 'นิทรรศการ กปน. · ทางเดินหน้าห้องประชุม', c: [X(1200), Z(392)] },
   hall: { name: 'ห้องแสดง 1 · พันธมิตร', c: [X(1181), Z(269)] },
   dining: { name: 'ห้องรับประทานอาหาร', c: [X(912), Z(269)] },
-  audf: { name: 'หน้าห้อง Auditorium', c: [X(1310), Z(400)] },
+  audf: { name: 'หน้าห้อง Auditorium', c: [X(1420), Z(400)] },
   aud: { name: 'ห้องประชุม Auditorium', c: [X(1337), Z(520)] },
 };
 
@@ -173,6 +179,139 @@ function counterGraphic(b) {
   g.fillStyle = b.own === 'mwa' ? 'rgba(255,255,255,.75)' : b.col; g.font = `600 40px ${F_BODY}`; g.fillText(b.code, 300, 420);
   return canvasTex(c, 8);
 }
+// ── กราฟิกบูธ กปน. แบบผ้าตึง 3 × 2.4 ม. (ตามภาพงานจริง) ──
+function drop(g, x, y, s, flip) {                          // มาสคอตหยดน้ำ (วาดแบบเรียบ)
+  g.save(); g.translate(x, y); g.scale(flip ? -s : s, s);
+  const gr = g.createLinearGradient(0, -120, 0, 110); gr.addColorStop(0, '#7fd0ff'); gr.addColorStop(1, '#1f7fe0');
+  g.fillStyle = gr; g.strokeStyle = '#0d4f9e'; g.lineWidth = 6;
+  g.beginPath(); g.moveTo(0, -125); g.bezierCurveTo(45, -60, 90, -10, 90, 35); g.arc(0, 35, 90, 0, Math.PI); g.bezierCurveTo(-90, -10, -45, -60, 0, -125); g.fill(); g.stroke();
+  g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(-30, 20, 22, 28, 0, 0, 7); g.ellipse(30, 20, 22, 28, 0, 0, 7); g.fill();
+  g.fillStyle = '#0b2f5c'; g.beginPath(); g.arc(-26, 26, 11, 0, 7); g.arc(34, 26, 11, 0, 7); g.fill();
+  g.strokeStyle = '#0b2f5c'; g.lineWidth = 7; g.beginPath(); g.arc(4, 58, 26, 0.25, Math.PI - 0.25); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(-42, -30, 12, 24, 0.5, 0, 7); g.fill();
+  g.restore();
+}
+function waves(g, W, H, y0, a) { g.save(); g.globalAlpha = a; for (let k = 0; k < 5; k++) { const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, '#4fb4ff'); gr.addColorStop(1, '#1d5fc0'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= W; x += 12) g.lineTo(x, y0 + k * 26 + Math.sin(x / 160 + k) * 24); g.lineTo(W, H); g.fill(); } g.restore(); }
+const LOGO_IMG = (() => { try { const i = new Image(); i.src = window.SUTHI_LOGO || 'stakeholder_logo.png'; return i; } catch (e) { return null; } })();   // ตรา กปน. จริง (โหลดล่วงหน้า)
+function emblem(g, x, y, r) { if (LOGO_IMG && LOGO_IMG.complete && LOGO_IMG.naturalWidth) { g.drawImage(LOGO_IMG, x - r, y - r, r * 2, r * 2); return; } g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.strokeStyle = '#1d5fc0'; g.lineWidth = r * 0.12; g.beginPath(); g.arc(x, y, r * 0.88, 0, 7); g.stroke(); g.fillStyle = '#bfe3f7'; g.beginPath(); g.arc(x, y, r * 0.6, 0, 7); g.fill(); }
+function mwaBoothCanvas(kind, b) {
+  const W = 1500, H = 1200, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  g.textBaseline = 'alphabetic';
+  const roundTop = () => { g.save(); g.beginPath(); g.moveTo(0, H); g.lineTo(0, 90); g.quadraticCurveTo(0, 0, 90, 0); g.lineTo(W - 90, 0); g.quadraticCurveTo(W, 0, W, 90); g.lineTo(W, H); g.closePath(); g.clip(); };
+  roundTop();
+  if (kind === 'cc') {
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#1659c8'); gr.addColorStop(1, '#0c3a8e'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(60, 50, 520, 150, 75); g.fill();
+    g.fillStyle = '#1659c8'; g.font = `700 64px ${F_HEAD}`; g.fillText('CHLORINE', 200, 115); g.font = `800 92px ${F_HEAD}`; g.fillText('CARE', 200, 190);
+    drop(g, 120, 135, 0.42);
+    g.fillStyle = '#ffffff'; fitText(g, 'ระบบเติมคลอรีนอัตโนมัติ', 700, 92, F_HEAD, 760); g.fillText('ระบบเติมคลอรีนอัตโนมัติ', 620, 160);
+    emblem(g, W - 110, 120, 70);
+    g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(70, 250, W - 140, 880, 30); g.fill();
+    g.fillStyle = '#0c3a8e'; g.font = `600 40px ${F_BODY}`; g.fillText('Chlorine Care', 110, 320);
+    g.fillStyle = '#5b6b7c'; g.font = `400 28px ${F_BODY}`; ['ระบบควบคุมค่าคลอรีนอิสระคงเหลืออัตโนมัติ ด้วยหลักการ P.I.D.', 'ร่วมกับเซนเซอร์ Polarographic พร้อมระบบ Bead Cleaning', 'ติดตามผลแบบ Real-Time ผ่านเว็บแอปพลิเคชัน'].forEach((t, i) => g.fillText(t, 110, 370 + i * 40));
+    // ไดอะแกรม
+    g.strokeStyle = '#2d6ab8'; g.lineWidth = 6; g.fillStyle = '#dfeaf7';
+    g.fillRect(560, 520, 170, 210); g.strokeRect(560, 520, 170, 210); g.fillStyle = '#2d6ab8'; g.font = `600 22px ${F_BODY}`; g.fillText('PLC & IoT', 585, 560);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { g.fillStyle = ['#e04848', '#36b24a', '#f2b632'][j]; g.beginPath(); g.arc(600 + j * 45, 600 + i * 40, 12, 0, 7); g.fill(); }
+    g.fillStyle = '#9fd0f5'; g.fillRect(480, 870, 560, 120); g.strokeRect(480, 870, 560, 120);
+    g.beginPath(); g.moveTo(150, 840); g.lineTo(1350, 840); g.moveTo(645, 730); g.lineTo(645, 840); g.moveTo(380, 640); g.lineTo(560, 640); g.moveTo(1150, 640); g.lineTo(730, 640); g.stroke();
+    g.fillStyle = '#2d6ab8'; g.beginPath(); g.arc(380, 880, 60, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `700 30px ${F_HEAD}`; g.fillText('NaOCl', 330, 890);
+    g.fillStyle = '#e8eef6'; g.fillRect(1080, 480, 300, 200); g.strokeRect(1080, 480, 300, 200); g.fillStyle = '#2d6ab8'; g.font = `600 22px ${F_BODY}`; g.fillText('Web Application', 1140, 520);
+    g.fillStyle = '#bcd3ec'; for (let i = 0; i < 4; i++) g.fillRect(1100 + i * 68, 640 - i * 22, 46, 30 + i * 22);
+  } else if (kind === 'wsp') {
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#eaf5ff'); gr.addColorStop(1, '#bfe0fb'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    waves(g, W, H, 1010, 0.6);
+    g.fillStyle = '#1d5fc0'; fitText(g, 'เส้นทางน้ำประปาดื่มได้', 700, 120, F_HEAD, 1050); g.fillText('เส้นทางน้ำประปาดื่มได้', 110, 190);
+    g.fillStyle = '#5b86b8'; g.font = `500 40px ${F_BODY}`; g.fillText('Water Safety Plan · Quality Water for Quality Living', 110, 250);
+    emblem(g, W - 110, 120, 70);
+    const cols = ['#7fb36a', '#4f8fc9', '#c2d7e8', '#89a6c0', '#6aa3d8', '#a8c890', '#5b7a99', '#d8c7a0'];
+    const lbl = ['ต้นน้ำ', 'ผลิต', 'ส่งจ่าย', 'เฝ้าระวัง', 'ห้องปฏิบัติการ', 'ถึงก๊อก', 'ประเมินความเสี่ยง', 'ทบทวนแผน'];
+    for (let i = 0; i < 8; i++) { const x = 110 + (i % 4) * 330, y = 320 + Math.floor(i / 4) * 330; g.fillStyle = '#ffffff'; g.fillRect(x - 8, y - 8, 286, 236); g.fillStyle = cols[i]; g.fillRect(x, y, 270, 170);
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.moveTo(x, y + 170); g.lineTo(x + 90, y + 90); g.lineTo(x + 160, y + 140); g.lineTo(x + 270, y + 60); g.lineTo(x + 270, y + 170); g.fill();
+      g.fillStyle = '#1d4f9e'; g.font = `600 30px ${F_BODY}`; g.fillText(lbl[i], x + 6, y + 210); }
+    drop(g, 1290, 900, 0.75);
+  } else if (kind === 'clinic') {
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#d9efff'); gr.addColorStop(1, '#8cc8f5'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 30; i++) { g.beginPath(); g.arc((i * 337) % W, (i * 211) % 700, 14 + (i % 5) * 9, 0, 7); g.fill(); }
+    waves(g, W, H, 1000, 0.5);
+    g.fillStyle = '#1d5fc0'; fitText(g, 'คลินิกน้ำสะอาด', 700, 170, F_HEAD, 900); g.fillText('คลินิกน้ำสะอาด', 110, 270);
+    g.fillStyle = '#0d3f86'; g.font = `800 130px ${F_HEAD}`; g.fillText('MWA', 110, 410);
+    g.fillStyle = '#2d6ab8'; g.font = `500 52px ${F_BODY}`; g.fillText('Clean Water Clinic', 110, 480);
+    g.fillStyle = '#1d5fc0'; g.beginPath(); g.roundRect(110, 530, 520, 70, 35); g.fill(); g.fillStyle = '#fff'; g.font = `600 34px ${F_BODY}`; g.fillText('MWACleanwaterclinic', 150, 578);
+    drop(g, 1000, 470, 1.25); drop(g, 1270, 520, 1.05, true);
+  } else if (kind === 'twq') {
+    g.fillStyle = '#f4f9ff'; g.fillRect(0, 0, W, H);
+    const hg = g.createLinearGradient(0, 0, 0, 260); hg.addColorStop(0, '#2f7fd8'); hg.addColorStop(1, '#1d5fc0'); g.fillStyle = hg; g.fillRect(0, 0, W, 250);
+    g.fillStyle = '#fff'; fitText(g, 'Tap Water Quality Monitoring System', 700, 78, F_HEAD, 1300); g.textAlign = 'center'; g.fillText('Tap Water Quality Monitoring System', W / 2, 120);
+    fitText(g, 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', 600, 64, F_HEAD, 1200); g.fillText('ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', W / 2, 210); g.textAlign = 'left';
+    // แผนที่จุดตรวจวัด
+    g.fillStyle = '#e1edf8'; g.beginPath(); g.moveTo(220, 330); g.bezierCurveTo(600, 280, 1100, 300, 1300, 420); g.bezierCurveTo(1340, 700, 1200, 1050, 800, 1120); g.bezierCurveTo(500, 1150, 230, 1000, 200, 700); g.closePath(); g.fill();
+    g.strokeStyle = '#a9c4de'; g.lineWidth = 3; for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(200 + i * 80, 300); g.lineTo(260 + i * 70, 1140); g.stroke(); }
+    g.strokeStyle = '#6fa7dc'; g.lineWidth = 10; g.beginPath(); g.moveTo(560, 300); g.bezierCurveTo(620, 600, 520, 800, 640, 1140); g.stroke();
+    let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 62; i++) { const x = 280 + R() * 980, y = 380 + R() * 700; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 15, 0, 7); g.fill(); g.fillStyle = R() < 0.9 ? '#2fb36a' : '#f2b632'; g.beginPath(); g.arc(x, y, 10, 0, 7); g.fill(); }
+    g.fillStyle = '#1d5fc0'; g.beginPath(); g.roundRect(230, 290, 560, 60, 30); g.fill(); g.fillStyle = '#fff'; g.font = `600 30px ${F_BODY}`; g.fillText('https://twqonline.mwa.co.th', 260, 330);
+    drop(g, 1360, 1030, 0.6);
+  } else {
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#0a2f66'); gr.addColorStop(1, b.col); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    waves(g, W, H, 900, 0.35);
+    g.fillStyle = '#7fd6ff'; g.font = `600 48px ${F_BODY}`; g.fillText('การประปานครหลวง · MWA', 110, 150);
+    g.fillStyle = '#ffffff'; fitText(g, b.name, 700, 170, F_HEAD, W - 220); g.fillText(b.name, 110, 430);
+    g.fillStyle = 'rgba(255,255,255,.85)'; fitText(g, b.sub, 500, 64, F_BODY, W - 220); g.fillText(b.sub, 110, 530);
+    emblem(g, W - 120, 130, 72);
+    if (b.tbc) { g.fillStyle = 'rgba(255,255,255,.7)'; g.font = `600 52px ${F_BODY}`; g.fillText('(รอกำหนดหัวข้อ)', 110, 640); }
+  }
+  g.restore();
+  return c;
+}
+function counterPrint(kind) {                                // ผ้าพิมพ์หน้าเคาน์เตอร์ (แบบเดียวกับภาพงาน)
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 700; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 700); gr.addColorStop(0, '#e8f4ff'); gr.addColorStop(1, '#b9dcf8'); g.fillStyle = gr; g.fillRect(0, 0, 1200, 700);
+  waves(g, 1200, 700, 560, 0.55);
+  g.fillStyle = '#1d5fc0'; fitText(g, 'คลินิกน้ำสะอาด', 700, 120, F_HEAD, 700); g.fillText('คลินิกน้ำสะอาด', 80, 210);
+  g.fillStyle = '#0d3f86'; g.font = `800 120px ${F_HEAD}`; g.fillText('MWA', 80, 340); g.fillStyle = '#2d6ab8'; g.font = `500 44px ${F_BODY}`; g.fillText('Clean Water Clinic', 80, 400);
+  drop(g, 930, 300, 0.9); g.fillStyle = '#0d3f86'; g.font = `700 46px ${F_HEAD}`; g.fillText('☎ 1125', 80, 650);
+  return canvasTex(c, 8);
+}
+function standeeTex() {
+  const c = document.createElement('canvas'); c.width = 600; c.height = 900; const g = c.getContext('2d');
+  g.clearRect(0, 0, 600, 900);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(40, 30, 520, 300, 40); g.fill();
+  g.fillStyle = '#1d5fc0'; g.font = `800 66px ${F_HEAD}`; g.fillText('อยากรู้', 70, 110); g.font = `700 50px ${F_HEAD}`; g.fillText('คุณภาพน้ำ สแกนเลย', 70, 175);
+  g.fillStyle = '#0b2f5c'; for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) if ((i * 7 + j * 3) % 4 < 2 || i % 8 === 0 || j % 8 === 0) g.fillRect(420 + i * 13, 190 + j * 13, 12, 12);
+  drop(g, 290, 600, 2.1);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(70, 760, 460, 120, 30); g.fill(); g.fillStyle = '#1d5fc0'; g.font = `800 64px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('น้ำประปาดื่มได้', 300, 845);
+  return canvasTex(c, 8);
+}
+function regWallCanvas() {                                      // ผนังลงทะเบียน (แบบงาน IWA)
+  const W = 2400, H = 1000, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1d5fc0'); gr.addColorStop(1, '#2f8fe8'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  waves(g, W, H, 820, 0.4);
+  g.globalAlpha = .12; g.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc((i * 523) % W, (i * 271) % 700, 10 + (i % 6) * 12, 0, 7); g.fill(); } g.globalAlpha = 1;
+  emblem(g, W / 2, 210, 130);
+  g.fillStyle = '#fff'; g.textAlign = 'center';
+  g.font = `700 150px ${F_HEAD}`; g.fillText('Stakeholder Day', W / 2, 520);
+  g.font = `600 80px ${F_HEAD}`; g.fillText('เส้นทางน้ำ · การประปานครหลวง', W / 2, 640);
+  g.font = `500 52px ${F_BODY}`; g.globalAlpha = .9; g.fillText('ต้นน้ำ  →  ผลิต  →  ส่งจ่าย  →  ถึงก๊อก', W / 2, 740);
+  return c;
+}
+function totemCanvas(t1, t2) {
+  const c = document.createElement('canvas'); c.width = 400; c.height = 1200; const g = c.getContext('2d');
+  g.fillStyle = '#123f86'; g.fillRect(0, 0, 400, 1200); waves(g, 400, 1200, 1050, 0.45);
+  emblem(g, 200, 150, 90); g.fillStyle = '#fff'; g.textAlign = 'center';
+  g.font = `600 40px ${F_BODY}`; g.fillText('Stakeholder Day', 200, 310);
+  fitText(g, t1, 700, 66, F_HEAD, 360); g.fillText(t1, 200, 620); g.fillStyle = '#bfe3ff'; fitText(g, t2, 500, 40, F_BODY, 360); g.fillText(t2, 200, 690);
+  return c;
+}
+function withLogo(make, aniso) {                            // วาดใหม่เมื่อภาพตรา กปน. โหลดเสร็จ
+  const t = canvasTex(make(), aniso);
+  if (LOGO_IMG && !(LOGO_IMG.complete && LOGO_IMG.naturalWidth)) LOGO_IMG.addEventListener('load', () => { t.image = make(); t.needsUpdate = true; }, { once: true });
+  return t;
+}
+const mwaBoothGraphic = (kind, b) => withLogo(() => mwaBoothCanvas(kind, b), 12);
+const regWallTex = () => withLogo(regWallCanvas, 12);
+const totemTex = (t1, t2) => withLogo(() => totemCanvas(t1, t2), 8);
 function signCanvas(lines, bg, fg, w = 1024, h = 300) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
   g.fillStyle = bg; g.fillRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -325,13 +464,13 @@ function build(opt) {
   <div class="brand"><div class="logo">M</div><div><b>MWA · Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
   <div class="search"><span style="color:#8a97a6">⌕</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
   <div class="sp"></div>
-  <div class="chip"><div class="dot">F5</div><div><b>ชั้น 5 · 19 บูธ</b><br>ทางเดิน 4–5 ม. · บูธ 2 × 1 ม.</div></div>
+  <div class="chip"><div class="dot">F5</div><div><b>ชั้น 5 · 19 บูธ</b><br>กปน. ผ้าตึง 3 ม. · เอกชน 2 × 1 ม.</div></div>
   <div class="clock"><i></i><span id="f5clk">08:30</span><span id="f5spd" style="font-weight:500;opacity:.8">×1</span></div>
   ${opt.onDone ? '<button class="btn" data-k="back" title="ย้อนกลับ (Esc)">⟵ กลับ</button>' : ''}
 </div>
 <div class="ui kpis hide-intro">
   <div class="kpi card"><div class="ic">▦</div><div><span>บูธทั้งหมด</span><strong>19<em>บูธ</em></strong><small>กปน. 7 · เอกชน 12</small></div></div>
-  <div class="kpi card"><div class="ic">↝</div><div><span>เส้นทาง ลิฟต์ → ห้องประชุม</span><strong id="f5len">–<em>ม.</em></strong><small>ทางเดินกว้าง 4–5 ม.</small></div></div>
+  <div class="kpi card"><div class="ic">↝</div><div><span>เส้นทาง ลิฟต์ → ห้องประชุม</span><strong id="f5len">–<em>ม.</em></strong><small>ทางเดินกว้าง 5–7 ม.</small></div></div>
   <div class="kpi card"><div class="ic">◫</div><div><span>ที่นั่ง Auditorium (โดยประมาณ)</span><strong id="f5seat">–<em>ที่</em></strong><small>ที่นั่งขั้นบันได</small></div></div>
   <div class="kpi card"><div class="ic">◷</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
 </div>
@@ -375,7 +514,7 @@ function makeScene(root, opt) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
   scene.environmentIntensity = 0.42;
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.3, 1200);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.3, 1400);
 
   const hemi = new THREE.HemisphereLight('#f4f8ff', '#a9a49a', 0.55); scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff6ea', 2.0);
@@ -436,7 +575,7 @@ function buildWorld(ctx) {
   const M = {
     white: new THREE.MeshStandardMaterial({ color: '#f7f8f9', roughness: 0.82 }),
     wall: new THREE.MeshStandardMaterial({ color: '#f6f7f8', roughness: 0.85 }),
-    cap: new THREE.MeshStandardMaterial({ color: '#c3ccd6', roughness: 0.9 }),
+    cap: new THREE.MeshStandardMaterial({ color: '#40566e', roughness: 0.8 }),
     closed: new THREE.MeshStandardMaterial({ color: '#d3d9df', roughness: 0.95 }),
     closedTop: new THREE.MeshStandardMaterial({ color: '#bfc8d1', roughness: 0.95 }),
     alu: new THREE.MeshStandardMaterial({ color: '#c9d0d7', metalness: 0.75, roughness: 0.32 }),
@@ -451,6 +590,7 @@ function buildWorld(ctx) {
     plant: new THREE.MeshStandardMaterial({ color: '#4f9b5c', roughness: 0.85 }),
     pot: new THREE.MeshStandardMaterial({ color: '#e9e4db', roughness: 0.7 }),
   };
+  const lightStripLobby = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#fff6e0', emissiveIntensity: 1.4 });
   const add = (zone, geo, mat, x, y, z, opts = {}) => {
     const m = new THREE.Mesh(geo, Array.isArray(mat) ? mat.map(q => ZM.m(zone, q)) : ZM.m(zone, mat));
     m.position.set(x, y, z); if (opts.ry) m.rotation.y = opts.ry;
@@ -521,25 +661,31 @@ function buildWorld(ctx) {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.41), sg); p.position.set(zx0 - 0.06, 2.75, z); p.rotation.y = -Math.PI / 2; zg('lobby').add(p);
     });
   }
-  // ── ลงทะเบียน (ชิดผนังตะวันตกของทางเดินลิฟต์)
+  // ── ทางเข้า "เส้นทางน้ำ": ผนังฉากใหญ่ชิดผนังส่วนบริการ + โต๊ะลงทะเบียนยาวด้านหน้า (แบบงาน IWA) + ป้ายตั้ง + เสากั้นแถว
   {
-    const x = X(770) + WT / 2 + 0.45, z = Z(818);
-    add('lobby', new RoundedBoxGeometry(0.62, 1.05, 3.6, 3, 0.06), M.white, x, 0.525, z);
-    const ft = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน', 700, 150, 120], ['Registration · รับ Water Passport', 500, 70, 230, 'rgba(255,255,255,.85)', F_BODY]], '#1d5fc0', '#fff', 1200, 330), roughness: 0.5 }));
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.94), ft); p.position.set(x + 0.315, 0.53, z); p.rotation.y = Math.PI / 2; zg('lobby').add(p);
-    add('lobby', box(0.7, 0.05, 3.7), M.wood, x, 1.07, z);
-    // ป้ายตั้ง
-    const st = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ยินดีต้อนรับ', 700, 120, 110], ['Stakeholder Day', 600, 96, 230], ['เดินตามเส้นน้ำบนพื้น ↗', 500, 64, 340, '#bfe9ff', F_BODY]], '#0a2f66', '#fff', 760, 420), roughness: 0.6 }));
-    const sp = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.47), st); sp.position.set(X(800) + 1.2, 1.55, Z(870)); sp.rotation.y = -Math.PI / 2 - 0.5; sp.castShadow = true; zg('lobby').add(sp);
-    add('lobby', box(0.04, 1.4, 0.04), M.alu, X(800) + 1.2, 0.7, Z(870));
-  }
-  // ── ฉากถ่ายรูป "เส้นทางน้ำ" ที่ผนังใต้ของส่วนบริการ (หันใต้ ตรงหัวมุมทางเดิน)
-  {
-    const w = 4.6, x = X(780), z = Z(720) + 0.06;
-    const mat = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: backdropTex(), roughness: 0.55, emissive: '#ffffff', emissiveIntensity: 0.12, emissiveMap: null }));
-    mat.emissiveMap = mat.map;
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.625), mat); p.position.set(x, 1.55, z); zg('lobby').add(p);
-    add('lobby', box(w + 0.1, 0.06, 0.6), M.white, x, 0.03, z + 0.4, { cast: false });
+    const zw = Z(720) + WT / 2, xc = X(766), WW = 6.2, WH = 3.0;
+    const wm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: regWallTex(), roughness: 0.55, emissive: '#ffffff', emissiveIntensity: 0.14 })); wm.emissiveMap = wm.map;
+    add('lobby', box(WW + 0.2, WH + 0.2, 0.12), M.white, xc, (WH + 0.2) / 2, zw + 0.06);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH), wm); p.position.set(xc, WH / 2 + 0.1, zw + 0.125); zg('lobby').add(p);
+    add('lobby', box(WW + 0.2, 0.06, 0.25), lightStripLobby, xc, WH + 0.23, zw + 0.2, { cast: false });
+    // โต๊ะลงทะเบียน (หน้าโต๊ะสีน้ำเงินเข้ม "ลงทะเบียน · WELCOME")
+    const dz = zw + 1.55, DW = 4.6;
+    const fm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน · WELCOME', 700, 110, 150], ['รับ Water Passport แล้วเดินตามเส้นน้ำบนพื้น', 500, 54, 245, '#bfe3ff', F_BODY]], '#123f86', '#fff', 1600, 340), roughness: 0.5 }));
+    add('lobby', new RoundedBoxGeometry(DW, 1.0, 0.65, 3, 0.04), M.white, xc, 0.5, dz);
+    const fp = new THREE.Mesh(new THREE.PlaneGeometry(DW - 0.06, 0.94), fm); fp.position.set(xc, 0.5, dz + 0.327); zg('lobby').add(fp);
+    add('lobby', box(DW + 0.06, 0.04, 0.72), M.wood, xc, 1.02, dz);
+    for (const dx of [-1.4, 0, 1.4]) { add('lobby', box(0.42, 0.28, 0.03), M.dark, xc + dx, 1.2, dz - 0.15).rotation.x = -0.2; add('lobby', box(0.04, 0.06, 0.04), M.alu, xc + dx, 1.07, dz - 0.18); }
+    // ป้ายตั้ง 3 ป้าย
+    [['ลงทะเบียนล่วงหน้า', 'Pre-Registered', -2.1], ['ลงทะเบียนหน้างาน', 'Onsite Registration', -0.5], ['ประชาสัมพันธ์', 'Helpdesk', 1.6]].forEach(([t1, t2, dx]) => {
+      const tm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: totemTex(t1, t2), roughness: 0.55 }));
+      add('lobby', box(0.62, 1.9, 0.08), tm, xc + dx, 0.97, dz + 1.15);
+      add('lobby', box(0.7, 0.04, 0.36), M.dark, xc + dx, 0.02, dz + 1.15, { cast: false });
+    });
+    // เสากั้นแถว + สายผ้า
+    const belt = new THREE.MeshStandardMaterial({ color: '#123f86', roughness: 0.6 });
+    const posts = [[-1.8, 1.75], [-1.0, 1.75], [-0.2, 1.75], [0.6, 1.75]];
+    posts.forEach(([dx, dd]) => { add('lobby', new THREE.CylinderGeometry(0.03, 0.03, 0.95, 10), M.alu, xc + dx, 0.48, dz + dd); add('lobby', new THREE.CylinderGeometry(0.16, 0.16, 0.03, 18), M.alu, xc + dx, 0.015, dz + dd, { cast: false }); });
+    add('lobby', box(2.4, 0.05, 0.01), belt, xc - 0.6, 0.9, dz + 1.75, { cast: false });
   }
 
   // ── บูธ
@@ -554,6 +700,19 @@ function buildWorld(ctx) {
     bottle: new THREE.MeshPhysicalMaterial({ color: '#bfe6ff', roughness: 0.05, transmission: 0.0, transparent: true, opacity: 0.6 }),
     screenOn: new THREE.MeshStandardMaterial({ color: '#0d2a4a', emissive: '#2f7df0', emissiveIntensity: 0.35, roughness: 0.3 }),
   };
+  // บูธ กปน. แบบผ้าตึงโค้ง 3 × 2.4 ม. + เคาน์เตอร์/อุปกรณ์ ตามภาพงานจริง
+  const fabricFrame = new THREE.MeshStandardMaterial({ color: '#f1f4f7', roughness: 0.55 });
+  const acrylic = new THREE.MeshPhysicalMaterial({ color: '#dff2ff', roughness: 0.04, transparent: true, opacity: 0.28, depthWrite: false });
+  const waterM = new THREE.MeshStandardMaterial({ color: '#4fa8e0', roughness: 0.15, transparent: true, opacity: 0.55 });
+  const pvcBlue = new THREE.MeshStandardMaterial({ color: '#3d8fd6', roughness: 0.4 });
+  const cabBlue = new THREE.MeshStandardMaterial({ color: '#4fa3dc', roughness: 0.45 });
+  const greyM = new THREE.MeshStandardMaterial({ color: '#a9b0b7', roughness: 0.55 });
+  const carpetMWA = new THREE.MeshStandardMaterial({ color: '#d9dee4', roughness: 0.95 });
+  function panelTex(make) { const c = document.createElement('canvas'); c.width = 512; c.height = 512; make(c.getContext('2d')); return canvasTex(c, 8); }
+  const cabPanel = panelTex(g => { g.fillStyle = '#6fb6e6'; g.fillRect(0, 0, 512, 512); g.fillStyle = '#d5dbe0'; g.fillRect(90, 60, 332, 300); g.strokeStyle = '#7d8790'; g.lineWidth = 8; g.strokeRect(90, 60, 332, 300);
+    g.fillStyle = '#1b232c'; g.fillRect(130, 90, 110, 46); g.fillRect(272, 90, 110, 46); const cs = ['#e04848', '#36b24a', '#f2b632', '#2d6ab8'];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { g.fillStyle = cs[(i + j) % 4]; g.beginPath(); g.arc(150 + j * 70, 180 + i * 42, 14, 0, 7); g.fill(); } g.fillStyle = '#c92a2a'; g.beginPath(); g.arc(380, 330, 20, 0, 7); g.fill();
+    g.fillStyle = '#1b232c'; g.fillRect(170, 400, 170, 100); g.fillStyle = '#e8f3ff'; g.fillRect(180, 410, 150, 80); });
   const lightStrip = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#fff6e0', emissiveIntensity: 1.2 });
   slots.forEach((sl, idx) => {
     const src = sl.own === 'mwa' ? MWA_BOOTHS[sl.i] : PARTNERS[sl.i];
@@ -562,6 +721,8 @@ function buildWorld(ctx) {
     const g = new THREE.Group(); g.position.set(sl.x, 0, sl.z); g.rotation.y = FACE[sl.face]; zg(zone).add(g);
     const inner = new THREE.Group(); g.add(inner);
     const A = (geo, mat, x, y, z, o = {}) => add(zone, geo, mat, x, y, z, Object.assign({ parent: inner }, o));
+    if (sl.kind) mwaBooth(sl.kind, b, A, zone, inner);
+    else {
     // พรมบูธ
     const carpet = new THREE.MeshStandardMaterial({ color: sl.own === 'mwa' ? '#1b4f9c' : '#4d5a67', roughness: 0.95 });
     A(box(2.0, 0.025, 1.0), carpet, 0, 0.0125, 0, { cast: false });
@@ -582,10 +743,59 @@ function buildWorld(ctx) {
     for (const sx of [-0.55, 0.55]) { A(box(0.025, 0.025, 0.32), propMat.steel, sx, 2.48, -0.27, { cast: false }); const lh = A(new THREE.CylinderGeometry(0.045, 0.06, 0.13, 14), M.dark, sx, 2.44, -0.1, { cast: false }); lh.rotation.x = 0.9; }
     A(box(1.96, 0.035, 0.035), lightStrip, 0, 2.43, -0.38, { cast: false });
     A(box(0.24, 0.2, 0.07), propMat.white, 0.74, 1.12, 0.26, { cast: false }); A(box(0.2, 0.16, 0.012), topMat, 0.74, 1.15, 0.30, { cast: false });
-    const hit = new THREE.Mesh(box(2.1, 2.6, 1.3), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, 1.3, 0); hit.userData.booth = b; inner.add(hit);
+    }
+    const hit = new THREE.Mesh(box((sl.w || 2) + 0.1, 2.6, (sl.d || 1) + 0.3), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, 1.3, 0); hit.userData.booth = b; inner.add(hit);
     b.group = g; b.inner = inner; b.hit = hit; b.zone = zone;
     booths.push(b);
   });
+  function mwaBooth(kind, b, A, zone, inner) {
+    const W3 = 3.0, BZ = -0.55;
+    A(box(kind === 'cc' ? 4.6 : 3.2, 0.02, 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
+    // ผ้าตึง: โครง + ผืนพิมพ์ + ฐานขาตั้ง
+    A(new RoundedBoxGeometry(W3, 2.4, 0.07, 3, 0.03), fabricFrame, 0, 1.2, BZ);
+    const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic(kind, b), roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
+    const gp = new THREE.Mesh(new THREE.PlaneGeometry(W3 - 0.04, 2.36), gm); gp.position.set(0, 1.2, BZ + 0.037); inner.add(gp);
+    for (const fx of [-1.1, 1.1]) A(box(0.06, 0.03, 0.55), greyM, fx, 0.015, BZ, { cast: false });
+    const top = pMat['#1d5fc0'] || (pMat['#1d5fc0'] = new THREE.MeshStandardMaterial({ color: '#1d5fc0', roughness: 0.35 }));
+    if (kind === 'cc') {
+      // ชุดถังจำลอง (ฐานเทา + ถังอะคริลิก + ท่อสีฟ้า + แผ่นหลังพิมพ์ลาย)
+      const tx = -1.75;
+      A(box(1.0, 0.55, 0.55), greyM, tx, 0.3, 0.1); A(box(0.95, 0.42, 0.5), acrylic, tx, 0.78, 0.1, { cast: false }); A(box(0.9, 0.22, 0.45), waterM, tx, 0.68, 0.1, { cast: false });
+      A(box(0.5, 1.85, 0.03), M.white, tx + 0.15, 1.5, -0.25);
+      const pipe = (h, x, y, z, rz = 0, rx = 0) => { const m = A(new THREE.CylinderGeometry(0.035, 0.035, h, 12), pvcBlue, x, y, z); m.rotation.z = rz; m.rotation.x = rx; return m; };
+      pipe(1.3, tx - 0.25, 1.55, 0.05); pipe(0.6, tx + 0.05, 2.2, 0.05, Math.PI / 2); pipe(0.9, tx + 0.35, 1.75, 0.05); pipe(0.5, tx - 0.25, 0.95, 0.15, 0, Math.PI / 2);
+      A(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 14), M.alu, tx + 0.05, 2.2, 0.05);
+      // ตู้ควบคุมสีฟ้า + แท็บเล็ต
+      const cx = -0.55; A(box(0.7, 0.08, 0.6), greyM, cx, 0.12, 0.05); A(box(0.66, 1.7, 0.45), cabBlue, cx, 1.02, 0.0);
+      const pm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cabPanel, roughness: 0.5 })); const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), pm); pp.position.set(cx, 1.5, 0.228); inner.add(pp);
+      A(box(0.5, 0.06, 0.32), cabBlue, cx, 0.95, 0.35); const tb = A(box(0.32, 0.22, 0.02), M.screen, cx, 1.08, 0.38); tb.rotation.x = -0.5;
+      // โต๊ะ + ปั๊ม + ถังเคมีขาว
+      const t2 = 0.5; A(box(0.55, 0.03, 0.45), M.white, t2, 0.78, 0.15); for (const [dx, dz] of [[-0.24, -0.18], [0.24, -0.18], [-0.24, 0.38], [0.24, 0.38]]) A(box(0.03, 0.78, 0.03), M.alu, t2 + dx, 0.39, 0.1 + dz * 0.5);
+      A(new RoundedBoxGeometry(0.2, 0.14, 0.14, 2, 0.03), top, t2, 0.87, 0.15); A(new THREE.CylinderGeometry(0.19, 0.2, 0.5, 20), M.white, t2 + 0.05, 0.26, 0.1);
+      A(new THREE.CylinderGeometry(0.012, 0.012, 0.9, 6), M.white, t2 - 0.5, 0.6, 0.2).rotation.z = 1.2;
+    } else if (kind === 'clinic') {
+      // โพเดียมกลมพิมพ์ลาย + ชั้นวางโบรชัวร์
+      const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('clinic'), roughness: 0.5 }));
+      A(new THREE.CylinderGeometry(0.62, 0.62, 0.98, 36, 1, false, -Math.PI / 2.6, Math.PI / 1.3), cm, 0, 0.49, -0.05);
+      A(new THREE.CylinderGeometry(0.64, 0.64, 0.04, 36, 1, false, -Math.PI / 2.6, Math.PI / 1.3), M.white, 0, 1.0, -0.05);
+      A(box(0.26, 0.3, 0.12), M.white, -0.2, 1.17, 0.25, { cast: false }); A(box(0.22, 0.24, 0.02), top, -0.2, 1.2, 0.31, { cast: false });
+    } else if (kind === 'twq') {
+      // เคาน์เตอร์โค้งยาว + จอแผนที่บนขาตั้ง + แล็ปท็อป + ป้ายตั้งมาสคอต
+      const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('twq'), roughness: 0.5 }));
+      const geo = new THREE.CylinderGeometry(1.6, 1.6, 0.98, 40, 1, true, -0.55, 1.1); A(geo, cm, 0, 0.49, -1.25);
+      const tg = new THREE.CylinderGeometry(1.66, 1.66, 0.04, 40, 1, false, -0.56, 1.12); A(tg, M.white, 0, 1.0, -1.25);
+      A(box(0.05, 1.5, 0.05), M.alu, -0.2, 0.75, -0.2); const scrM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic('twq', b), emissive: '#ffffff', emissiveIntensity: 0.35, roughness: 0.3 })); scrM.emissiveMap = scrM.map;
+      A(box(0.98, 0.58, 0.05), M.dark, -0.2, 1.62, -0.2); const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.52), scrM); sc.position.set(-0.2, 1.62, -0.172); inner.add(sc);
+      const lp = A(box(0.34, 0.015, 0.24), M.dark, 0.45, 1.03, 0.1, { cast: false }); const ls = A(box(0.34, 0.22, 0.012), M.screen, 0.45, 1.14, -0.01, { cast: false }); ls.rotation.x = -0.25;
+      const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: standeeTex(), transparent: true, alphaTest: 0.5, roughness: 0.6 }));
+      const sd = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.35), sm); sd.position.set(1.95, 0.68, 0.35); sd.rotation.y = -0.35; sd.castShadow = true; inner.add(sd);
+    } else if (kind === 'generic') {
+      const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('g'), roughness: 0.5 }));
+      A(new RoundedBoxGeometry(1.3, 0.98, 0.5, 3, 0.05), M.white, 0.55, 0.49, 0.2); const cp = new THREE.Mesh(new THREE.PlaneGeometry(1.26, 0.9), cm); cp.position.set(0.55, 0.49, 0.452); inner.add(cp);
+      A(new RoundedBoxGeometry(1.36, 0.04, 0.56, 2, 0.015), top, 0.55, 1.0, 0.2);
+      A(box(0.05, 1.3, 0.05), M.alu, -0.7, 0.65, -0.2); A(box(0.9, 0.53, 0.05), M.dark, -0.7, 1.5, -0.2); A(box(0.84, 0.47, 0.01), propMat.screenOn, -0.7, 1.5, -0.17, { cast: false });
+    }
+  }
   function prop(kind, A, P, M) {
     if (kind === 'cabinet') {                       // ตู้ตรวจวัด + จอแสดงค่า
       A(box(0.62, 1.55, 0.42), P.white, -0.55, 0.8, -0.12); A(box(0.66, 0.06, 0.46), P.steel, -0.55, 1.6, -0.12);
@@ -636,7 +846,7 @@ function buildWorld(ctx) {
     add('hall', new THREE.CylinderGeometry(0.26, 0.26, 0.02, 20), M.alu, x, 0.01, z, { cast: false });
   });
   // ── ต้นไม้กระถาง
-  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(780), Z(745)], [X(1150), Z(395)]].forEach(([x, z]) => {
+  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(985), Z(372)], [X(1060), Z(372)], [X(845), Z(735)]].forEach(([x, z]) => {
     add('other', new THREE.CylinderGeometry(0.28, 0.22, 0.5, 20), M.pot, x, 0.25, z);
     add('other', new THREE.IcosahedronGeometry(0.5, 2), M.plant, x, 1.05, z);
   });
@@ -833,14 +1043,14 @@ function makePeople(parent, booths, seats, routeAt, L) {
   for (let i = 0; i < 30; i++) list.push(Object.assign(rigged(who()), { mode: 'walk', s0: i * (L / 30), v: 0.9 + rnd() * 0.35, off: (rnd() - 0.5) * 1.6, ph: rnd() * 6 }));
   // คนยืนหน้าบูธ (แขนลงข้างตัว / ถือเอกสาร)
   booths.forEach(b => {
-    const n = b.tbc ? (rnd() < 0.4 ? 1 : 0) : 1 + Math.floor(rnd() * 3);
+    const n = b.tbc ? (rnd() < 0.4 ? 1 : 0) : ((b.w || 2) > 2 ? 2 : 1) + Math.floor(rnd() * 3);
     const fv = FACEV[b.face];
     for (let j = 0; j < n; j++) {
-      const side = (j - (n - 1) / 2) * 0.72 + (rnd() - 0.5) * 0.2, dist = 1.15 + rnd() * 0.5;
+      const big = (b.w || 2) > 2, side = (j - (n - 1) / 2) * (big ? 1.1 : 0.72) + (rnd() - 0.5) * 0.2, dist = (big ? 1.45 : 1.15) + rnd() * 0.5;
       const px = b.x + fv[0] * dist + (fv[1] !== 0 ? side : 0), pz = b.z + fv[1] * dist + (fv[0] !== 0 ? side : 0);
       const p = merged(who(), { armR: rnd() < 0.5 ? -0.7 : -0.1, armL: -0.05 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.6; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
-    if (!b.tbc) { const p = merged(who({ staff: true }), { armL: -0.55, armR: -0.55 }); const lx = 0.42, lz = -0.15, c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
+    if (!b.tbc) { const p = merged(who({ staff: true }), { armL: -0.55, armR: -0.55 }); const lx = b.kind === 'cc' ? -0.55 : b.kind ? 0.35 : 0.42, lz = b.kind === 'cc' ? 0.55 : b.kind === 'twq' ? -0.55 : -0.15, c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
       p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face]; p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); }
   });
   // คนพักดื่มกาแฟ (ยกแก้ว)
@@ -855,24 +1065,25 @@ function makePeople(parent, booths, seats, routeAt, L) {
 // ───────────────────────────── ทัวร์ ─────────────────────────────
 function tourSteps(W) {
   const b = c => W.booths.find(q => q.code === c);
+  const P = (px, py, h) => [X(px), h, Z(py)];
   const st = [
-    { t: 'ภาพรวมชั้น 5', d: 'ทางเดินจากลิฟต์ถึงห้องประชุม มีเส้นน้ำบนพื้นนำทาง บูธ กปน. 7 บูธ และบูธเอกชน 12 บูธ ทุกบูธขนาด 2 × 1 ม. วางชิดผนัง', focus: null, cam: [-7.06, 63.5, 59.6], tgt: [2.79, 0, 3.71], j: -1 },
-    { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เลี้ยวซ้าย โต๊ะลงทะเบียนชิดผนังฝั่งซ้าย (ทางเดินกว้าง 4 ม.) รับ Water Passport แล้วเดินตามเส้นน้ำ', focus: 'lobby', cam: [-9.5, 9.5, 31], tgt: [-20.5, 0.8, 18], j: 0 },
-    { t: 'ฉากถ่ายรูป “เส้นทางน้ำ”', d: 'หัวมุมทางเดินก่อนเลี้ยวขวา มีฉากถ่ายรูปหันหน้ารับคนที่เดินขึ้นมา เป็นจุดเช็กอินแรกของงาน', focus: 'lobby', cam: [-19.5, 3.6, 21.5], tgt: [-21.5, 1.6, 12.4], j: 0 },
-    { t: 'ทางเดินนวัตกรรม กปน.', d: 'บูธ กปน. 5 บูธ ชิดผนังฝั่งซ้าย ลึก 1 ม. เหลือทางเดิน 3 ม. · TWQ Online · Chlorine Care · คลินิกน้ำสะอาด · Water Safety Plan · วารีกุญชร', focus: 'mwa', cam: [-8.6, 6.4, 18.5], tgt: [-13, 1.2, 3], j: 1 },
-    { t: 'TWQ Online และ Chlorine Care', d: 'บูธแรกของทางเดิน มีตู้ตรวจวัดและจอแสดงข้อมูล ถัดไปเป็นชุดสาธิตการเติมคลอรีนอัตโนมัติ', focus: 'mwa', booth: 'M01', cam: [-7.6, 4.0, 15.6], tgt: [-13.2, 1.2, 8.0], j: 1 },
-    { t: 'ทางเดินหน้าห้อง 5 ม. → ห้องแสดง 1', d: 'เลี้ยวขวาเข้าทางเดินกว้าง 5 ม. แล้วเลี้ยวซ้ายเข้าห้องแสดง 1 ทางประตูแรก ห้องรับประทานอาหารอยู่ฝั่งซ้าย', focus: 'north', cam: [-20, 9, -2], tgt: [-2, 0.5, -13], j: 2 },
-    { t: 'ห้องแสดง 1 · บูธพันธมิตร 12 บูธ', d: 'ผนังฝั่งเหนือ 8 บูธ ผนังฝั่งใต้ 4 บูธ ทางเดินกลางกว้างประมาณ 9.5 ม. เข้าประตูแรก เดินชมเป็นทางเดียว ออกประตูที่สอง', focus: 'hall', cam: [8, 17, -2.5], tgt: [8, 0, -20.5], j: 3 },
-    { t: 'แถวบูธฝั่งเหนือ', d: 'Yokogawa · Petroinstrument · ProMinent · DKD · UHM · GF · IWAKI · HACH บูธละ 2 × 1 ม. ห่างกัน 1.75 ม.', focus: 'hall', cam: [-2.5, 4.2, -16.2], tgt: [9, 1.2, -25], j: 3 },
-    { t: 'แถวบูธฝั่งใต้ (ระหว่างประตู)', d: 'บูธพันธมิตรอีก 4 บูธ (รอยืนยัน) อยู่ระหว่างประตูเข้าและประตูออก หันหน้าเข้ากลางห้อง', focus: 'hall', cam: [3, 4.4, -22.5], tgt: [9, 1.1, -14.6], j: 3 },
-    { t: 'ห้องรับประทานอาหาร · Coffee break', d: 'ติดกับห้องแสดง 1 เข้าจากทางเดิน 5 ม. มีเคาน์เตอร์อาหารว่างและโต๊ะยืน', focus: 'dining', cam: [-2.5, 10.5, -8.5], tgt: [-11.5, 0.5, -21.5], j: 2 },
-    { t: 'หน้าห้อง Auditorium', d: 'ออกจากห้องแสดง 1 ทางประตูที่สอง บูธ กปน. อีก 2 บูธขนาบประตูห้องประชุม สแกน Water Passport ก่อนเข้าห้อง', focus: 'audf', cam: [16.3, 6.5, -20.5], tgt: [16.3, 1.2, -9], j: 4 },
-    { t: 'ห้องประชุม Auditorium', d: 'ที่นั่งขั้นบันได เวทีและจอด้านหน้า แขกนั่งประจำที่พร้อมเริ่มการประชุม', focus: 'aud', cam: [16.3, 7.4, -7.2], tgt: [18.2, 1.2, 12], j: 5 },
+    { t: 'ภาพรวมชั้น 5', d: 'ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. → ห้องแสดงบริษัทพันธมิตร → ห้องประชุม Auditorium มีเส้นน้ำบนพื้นนำทางตลอดเส้นทาง', focus: null, cam: [-6, 61, 57], tgt: [4, 0, 4], j: -1 },
+    { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เดินตรงมาที่ผนังฉาก “เส้นทางน้ำ” โต๊ะลงทะเบียนยาวชิดผนัง มีป้ายแยกช่องลงทะเบียนล่วงหน้า หน้างาน และประชาสัมพันธ์ รับ Water Passport แล้วเลี้ยวขวาตามเส้นน้ำ', focus: 'lobby', cam: P(840, 860, 5.2), tgt: P(772, 735, 1.4), j: 0 },
+    { t: 'ผนังฉาก “เส้นทางน้ำ”', d: 'ผนังฉากกว้าง 6 ม. สูง 3 ม. ด้านหลังโต๊ะลงทะเบียน เป็นจุดถ่ายรูปแรกของงาน', focus: 'lobby', cam: P(780, 805, 2.4), tgt: P(766, 720, 1.7), j: 0 },
+    { t: 'ทางเดินนวัตกรรม กปน.', d: 'บูธ กปน. แบบผ้าตึง 3 ม. ชิดผนังฝั่งซ้าย · วารีกุญชร · บูธ กปน. 06 · บูธ กปน. 07 ทางเดินเหลือกว้างราว 5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
+    { t: 'นิทรรศการ กปน.', d: 'ชิดผนังทางเดินเหนือ เรียงแบบงานจริง: Chlorine Care · เส้นทางน้ำประปาดื่มได้ (WSP) · คลินิกน้ำสะอาด · TWQ Online', focus: 'north', cam: P(1150, 470, 7.0), tgt: P(1210, 352, 1.2), j: 2 },
+    { t: 'Chlorine Care · ระบบเติมคลอรีนอัตโนมัติ', d: 'ชุดถังจำลองพร้อมท่อ ตู้ควบคุม PLC และแท็บเล็ต โต๊ะปั๊มจ่ายสารพร้อมถังเคมี หน้าผ้าตึงไดอะแกรมระบบ', focus: 'north', booth: 'M02', cam: P(1145, 418, 2.9), tgt: P(1140, 352, 1.25), j: 2 },
+    { t: 'คลินิกน้ำสะอาด · TWQ Online', d: 'โพเดียมคลินิกน้ำสะอาด และเคาน์เตอร์โค้ง TWQ Online พร้อมจอแผนที่จุดตรวจวัดออนไลน์ ป้ายตั้ง “น้ำประปาดื่มได้” สแกน QR', focus: 'north', booth: 'M01', cam: P(1262, 420, 3.0), tgt: P(1255, 352, 1.25), j: 2 },
+    { t: 'ห้องแสดง 1 · บริษัทพันธมิตร 12 บูธ', d: 'เข้าทางประตูตะวันออก เดินชมบูธผนังเหนือ 8 บูธ และผนังใต้ 4 บูธ แล้วออกประตูตะวันตก', focus: 'hall', cam: P(1185, 425, 17), tgt: P(1185, 262, 0), j: 3 },
+    { t: 'แถวบูธฝั่งเหนือ', d: 'Yokogawa · Petroinstrument · ProMinent · DKD · UHM · GF · IWAKI · HACH บูธละ 2 × 1 ม.', focus: 'hall', cam: P(1360, 300, 4.0), tgt: P(1150, 200, 1.2), j: 3 },
+    { t: 'แถวบูธฝั่งใต้', d: 'บูธพันธมิตรอีก 4 บูธ (รอยืนยัน) ระหว่างประตูทั้งสอง หลังชนกับนิทรรศการ กปน.', focus: 'hall', cam: P(1060, 240, 4.2), tgt: P(1200, 340, 1.1), j: 3 },
+    { t: 'ห้องรับประทานอาหาร · Coffee break', d: 'ติดกับห้องแสดง 1 เข้าจากทางเดินเหนือ มีเคาน์เตอร์อาหารว่างและโต๊ะยืน', focus: 'dining', cam: P(1010, 400, 10), tgt: P(905, 255, 0.5), j: 3 },
+    { t: 'หน้าห้อง Auditorium', d: 'ออกจากห้องแสดง 1 เดินทางเดินฝั่งใต้ไปประตูห้องประชุม สแกน Water Passport ก่อนเข้าห้อง', focus: 'audf', cam: P(1175, 315, 8.5), tgt: P(1305, 440, 0.9), j: 4 },
+    { t: 'ห้องประชุม Auditorium', d: 'ที่นั่งขั้นบันได เวทีและจอด้านหน้า แขกนั่งประจำที่พร้อมเริ่มการประชุม', focus: 'aud', cam: P(1310, 448, 8.0), tgt: P(1337, 715, 1.2), j: 5 },
   ];
-  st.forEach(q => { q.cam = q.cam.map(v => v * K); q.tgt = q.tgt.map(v => v * K); });
   return st;
 }
-const JOURNEY = ['ลิฟต์ · ลงทะเบียน', 'ทางเดิน กปน.', 'ทางเดิน 5 ม.', 'ห้องแสดง 1', 'หน้าห้องประชุม', 'Auditorium'];
+const JOURNEY = ['ลิฟต์ · ลงทะเบียน', 'ทางเดิน กปน.', 'นิทรรศการ กปน.', 'ห้องแสดง 1', 'หน้าห้องประชุม', 'Auditorium'];
 
 // ───────────────────────────── เล่น ─────────────────────────────
 function play(opt = {}) {
@@ -932,7 +1143,7 @@ function play(opt = {}) {
     } else {
       const list = W.booths.filter(b => (q ? (b.name + b.sub + b.code).toLowerCase().includes(q) : b.own === tab));
       html = list.map(b => `<div class="it${st.sel === b ? ' on' : ''}" data-b="${b.code}"><div class="sw" style="background:${b.col}">${b.code}</div><div class="mid"><b>${esc(b.name)}</b><small>${esc(ZONES[b.zone].name)} · ลำดับ ${b.order}/19</small></div>
-        <span class="st ${b.tbc ? 'tbc' : 'ok'}">${b.tbc ? 'รอยืนยัน' : '2 × 1 ม.'}</span><div class="bar"><i style="width:${Math.round(b.order / 19 * 100)}%"></i></div></div>`).join('') || '<div style="padding:12px;color:#8a97a6;font-size:13px">ไม่พบบูธ</div>';
+        <span class="st ${b.tbc ? 'tbc' : 'ok'}">${b.tbc ? 'รอยืนยัน' : (b.w || 2) + ' × ' + (b.d || 1) + ' ม.'}</span><div class="bar"><i style="width:${Math.round(b.order / 19 * 100)}%"></i></div></div>`).join('') || '<div style="padding:12px;color:#8a97a6;font-size:13px">ไม่พบบูธ</div>';
     }
     items.innerHTML = html;
   }
@@ -950,16 +1161,16 @@ function play(opt = {}) {
     det.innerHTML = `<div class="hd"><div class="sw" style="background:${b.col}">${b.code}</div><div><h3>${esc(b.name)}</h3><div class="sub">${esc(b.sub)}</div></div><button class="x" data-k="desel" aria-label="ปิด">✕</button></div>
       <div class="pill ${b.tbc ? 'tbc' : own ? 'mwa' : 'p'}"><i></i>${own ? 'บูธ กปน.' : 'บริษัทพันธมิตร'}${b.tbc ? ' · รอยืนยัน' : ''}</div>
       <div class="row"><span>โซน</span><b>${esc(ZONES[b.zone].name)}</b></div>
-      <div class="row"><span>ขนาดบูธ</span><b>กว้าง 2 ม. × ลึก 1 ม.</b></div>
-      <div class="row"><span>การวาง</span><b>ชิดผนัง ${{ e: 'ฝั่งตะวันตก', w: 'ฝั่งตะวันออก', n: 'ฝั่งใต้', s: 'ฝั่งเหนือ' }[b.face]}</b></div>
+      <div class="row"><span>ขนาดบูธ</span><b>กว้าง ${b.w || 2} ม. × ลึก ${b.d || 1} ม.</b></div>
+      <div class="row"><span>การวาง</span><b>${b.kind ? 'ผ้าตึงโค้ง + เคาน์เตอร์ ชิดผนัง' : 'ชิดผนัง'} ${{ e: 'ฝั่งตะวันตก', w: 'ฝั่งตะวันออก', n: 'ฝั่งใต้', s: 'ฝั่งเหนือ' }[b.face]}</b></div>
       <div class="row"><span>ลำดับบนเส้นทาง</span><b>${b.order} จาก 19 · ${Math.round(b.along)} ม. จากลิฟต์</b></div>
       <div class="nav"><button class="btn" data-k="bprev">◀ บูธก่อนหน้า</button><button class="btn pri" data-k="bnext">บูธถัดไป ▶</button></div>`;
     det.classList.add('on');
-    if (fly) { const fv = FACEV[b.face]; flyTo([b.x + fv[0] * 5.2 + fv[1] * 1.6, 3.4, b.z + fv[1] * 5.2 - fv[0] * 1.6], [b.x, 1.2, b.z], 1.5); setFocus(b.zone); }
+    if (fly) { const fv = FACEV[b.face], k = (b.w || 2) > 2 ? 1.35 : 1; flyTo([b.x + fv[0] * 5.2 * k + fv[1] * 1.6, 3.4, b.z + fv[1] * 5.2 * k - fv[0] * 1.6], [b.x, 1.2, b.z], 1.5); setFocus(b.zone); }
   }
 
   // ── จางโซน
-  const REL = { lobby: ['lobby'], mwa: ['mwa'], north: ['north', 'dining', 'audf'], hall: ['hall'], dining: ['dining'], audf: ['audf', 'aud'], aud: ['aud'] };
+  const REL = { lobby: ['lobby'], mwa: ['mwa'], north: ['north', 'hall', 'audf'], hall: ['hall'], dining: ['dining'], audf: ['audf', 'aud'], aud: ['aud'] };
   const ALLZ = ['lobby', 'mwa', 'north', 'hall', 'dining', 'audf', 'aud', 'other', 'base', 'shell'];
   ALLZ.forEach(z => st.zoneA[z] = 1);
   function setFocus(z) { st.focus = z; }
@@ -1016,7 +1227,7 @@ function play(opt = {}) {
     else if (k === 'prev') { setAuto(false); goStep(st.step - 1); }
     else if (k === 'auto') setAuto(!st.auto);
     else if (k === 'home') { setAuto(false); goStep(0); }
-    else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([3, 104, 10], [3, 0, 2], 1.6); }
+    else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([4, 112, 12], [4, 0, 3], 1.6); }
     else if (k === 'spin') { st.spin = !st.spin; controls.autoRotate = st.spin; controls.autoRotateSpeed = 0.7; st.tween = null; }
     else if (k === 'zin' || k === 'zout') { const d = controls.target.clone().sub(camera.position); camera.position.addScaledVector(d, k === 'zin' ? 0.28 : -0.4); }
     else if (k === 'explode') { st.intro = 0.8; st.introOn = true; root.classList.add('intro'); setFocus(null); selectBooth(null); }
