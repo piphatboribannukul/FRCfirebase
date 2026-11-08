@@ -2377,7 +2377,7 @@
         const el = document.createElement('div'); el.className = 'frc3d-site'; el.textContent = l.text;
         new window.maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([st.lon + l.x / kx, st.lat - l.z / kz]).addTo(map);
       }
-      state.cityReady = true; setTimeout(() => flyIn(state), INTRO_HOLD);   // เมืองขึ้นแล้ว → ค้างภาพมุมสูง 2 วิ ก่อนบิน
+      state.cityReady = true; setTimeout(() => flyIn(state), st.hq ? 900 : INTRO_HOLD);   // เมืองขึ้นแล้ว → ค้างภาพมุมสูง 2 วิ ก่อนบิน
       console.log('[FRC3D] เมือง:', c.nBuild, 'อาคาร,', c.nTree, 'ต้นไม้ · ข้อมูล', got.src, Math.round(tLoad), 'ms · สร้าง', Math.round(performance.now() - t0), 'ms');
       const srcTxt = got.src === 'prebuilt' ? 'ข้อมูล OSM เตรียมไว้' + (got.updated ? ' (อัปเดต ' + new Date(got.updated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ')' : '') : 'ข้อมูล OSM สด';
       say('🏙 อาคาร ' + c.nBuild.toLocaleString() + ' หลัง · ต้นไม้ ' + c.nTree.toLocaleString() + ' ต้น · ' + srcTxt + ' · ' + (tLoad / 1000).toFixed(1) + ' วิ', 6000);
@@ -2478,7 +2478,7 @@
     if (state.st.hq) {                                   // บินเข้าหาอาคาร (ไม่ใช่ตู้)
       const h = state.st.hq, kxm = 111320 * Math.cos(state.st.lat * Math.PI / 180), c = [state.st.lon + h.cx / kxm, state.st.lat - h.cz / 110540];
       state.cabLL = c; let b0 = m.getBearing(); while (b0 - h.bearing > 180) b0 -= 360; while (h.bearing - b0 > 180) b0 += 360; if (Math.abs(h.bearing - b0) < 90) m.setBearing(h.bearing - 140);
-      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 62, bearing: h.bearing, duration: 9500, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
+      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 62, bearing: h.bearing, duration: 7000, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
       m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 10; if (state.onArrive) state.onArrive(); else autoInside(state); if (state.orbit) setTimeout(() => sway(state, h.bearing, 1), 600); });
       return;
     }
@@ -2508,7 +2508,7 @@
       if (_cur !== state || _tour || state.phase !== 'idle' || state.userTook || state.insideShown) return;
       if (!window.MWA_FLOOR5 || window.MWA_FLOOR5.isOn()) return;
       state.insideShown = true; playInside(state, { st: state.st, mode: 'auto' });
-    }, state.st.hq ? 3500 : 2500);
+    }, state.st.hq ? 700 : 2500);
   }
   function sway(state, fb, dir) {                    // แกว่งซ้าย-ขวาเล็กน้อยหน้าตู้ (ไม่หมุนรอบ)
     const m = state.map; if (!m || _cur !== state || state.phase !== 'idle' || !state.orbit || state.spin) return;
@@ -2519,7 +2519,7 @@
     state.userTook = false; state.spin = false; m.stop();
     const c = state.cabLL || [state.st.lon, state.st.lat];
     m.jumpTo({ center: c, zoom: INTRO_Z, pitch: 48, bearing: frontBearing(state) - 160 });
-    state.phase = 'intro'; setTimeout(() => flyIn(state), INTRO_HOLD);
+    state.phase = 'intro'; setTimeout(() => flyIn(state), state.st.hq ? 900 : INTRO_HOLD);
   }
   function orbitStep(state) {
     const m = state.map; if (!m || !state.orbit || !state.spin || _cur !== state) return;

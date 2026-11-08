@@ -367,7 +367,7 @@
     tank(empty) {
       const [c, g] = cv(512, 512), C = 256;
       const gr = g.createRadialGradient(C, C, 20, C, C, 256);
-      if (empty) { gr.addColorStop(0, '#d6d4cb'); gr.addColorStop(1, '#b6b3a9'); } else { gr.addColorStop(0, '#5aa59b'); gr.addColorStop(0.7, '#3b847c'); gr.addColorStop(1, '#2c6e68'); }
+      if (empty) { gr.addColorStop(0, '#d6d4cb'); gr.addColorStop(1, '#b6b3a9'); } else { gr.addColorStop(0, '#7cc0ea'); gr.addColorStop(0.7, '#4a98d6'); gr.addColorStop(1, '#3a84c4'); }
       g.fillStyle = gr; g.beginPath(); g.arc(C, C, 256, 0, 7); g.fill();
       g.strokeStyle = empty ? 'rgba(110,108,100,.55)' : 'rgba(225,240,236,.32)'; g.lineWidth = 2;
       for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2; g.beginPath(); g.moveTo(C + Math.cos(a) * 46, C + Math.sin(a) * 46); g.lineTo(C + Math.cos(a) * 222, C + Math.sin(a) * 222); g.stroke(); }
@@ -416,6 +416,7 @@
       for (let i = 0; i < 70; i++) { g.fillStyle = P[1]; g.globalAlpha = 0.25 + r() * 0.4; g.beginPath(); g.ellipse(r() * 256, r() * 256, 4 + r() * 22, 3 + r() * 14, r() * 3, 0, 7); g.fill(); }
       g.globalAlpha = 1; return c;
     },
+    whiteRoof() { const [c, g] = cv(256, 256); g.fillStyle = '#f1f3f4'; g.fillRect(0, 0, 256, 256); g.fillStyle = 'rgba(150,160,170,.25)'; g.fillRect(0, 0, 256, 2); g.fillRect(0, 0, 2, 256); g.fillStyle = 'rgba(160,170,180,.5)'; g.beginPath(); g.arc(128, 128, 7, 0, 7); g.fill(); return c; },
     softDisc() { const [c, g] = cv(256, 256), gr = g.createRadialGradient(128, 128, 70, 128, 128, 128); gr.addColorStop(0, 'rgba(20,30,30,.55)'); gr.addColorStop(0.75, 'rgba(20,30,30,.28)'); gr.addColorStop(1, 'rgba(20,30,30,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); return c; },
     wallGrad() { const [c, g] = cv(8, 128), gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#f2f1ec'); gr.addColorStop(0.75, '#d3d1c8'); gr.addColorStop(1, '#a9a79e'); g.fillStyle = gr; g.fillRect(0, 0, 8, 128); return c; },
     ground(col, dots) { const [c, g] = cv(128, 128), r = rnd(3); g.fillStyle = col; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 220; i++) { g.fillStyle = dots[i % dots.length]; g.globalAlpha = 0.35; g.fillRect(r() * 128, r() * 128, 2 + r() * 3, 2 + r() * 3); } g.globalAlpha = 1; return c; },
@@ -476,13 +477,13 @@
       // ผนังถังสูง 3.6 ม. · รางรับน้ำรอบขอบ · ผิวน้ำ · บ่อกลาง · สะพานกวาดตะกอน · ทางเดินไปรางน้ำ
       { const sg = new T.PlaneGeometry(1, 1); sg.rotateX(-Math.PI / 2); const sm = new T.MeshBasicMaterial({ map: ctex(SP.softDisc()), transparent: true, depthWrite: false }); if (o.fadeable) sm.transparent = true; mats.push(sm); disp.push(sm);   // เงานุ่มใต้ถัง (เยื้องตามแดด)
         const isd = new T.InstancedMesh(sg, sm, list.length); list.forEach((t, i) => { m4.compose(new T.Vector3(t.e + 2.2, 0.16, -t.n + 2.0), q, new T.Vector3(2 * R + 7, 1, 2 * R + 7)); isd.setMatrixAt(i, m4); }); isd.renderOrder = 1; root.add(isd); disp.push(sg); }
-      const H = 3.6, wallM = M({ map: ctex(SP.wallGrad()), roughness: 0.82, side: T.DoubleSide }), dark = M({ color: 0x9a9a92, roughness: 0.9, side: T.DoubleSide });
+      const H = 5.6, wallM = M({ map: ctex(SP.wallGrad()), roughness: 0.82, side: T.DoubleSide }), dark = M({ color: 0x9a9a92, roughness: 0.9, side: T.DoubleSide });
       const at = (y) => (t, m) => m.compose(new T.Vector3(t.e, y, -t.n), q, one);
       inst(new T.CylinderGeometry(R, R, H, 96, 1, true), wallM, list, at(H / 2));
       const ring = (r0, r1) => { const g = new T.RingGeometry(r0, r1, 96); g.rotateX(-Math.PI / 2); return g; };
       inst(ring(R - 0.55, R), concrete, list, at(H + 0.01));
       inst(new T.CylinderGeometry(R - 1.9, R - 1.9, 0.75, 96, 1, true), wallM, wet, at(H - 0.38));
-      inst(ring(R - 1.9, R - 0.55), M({ color: 0x5f8f87, roughness: 0.4 }), wet, at(H - 0.45));
+      inst(ring(R - 1.9, R - 0.55), M({ color: 0x4f98d2, roughness: 0.3 }), wet, at(H - 0.45));
       inst(ring(R - 2.1, R - 1.85), concrete, wet, at(H));
       const disc = new T.CircleGeometry(R - 1.9, 96); disc.rotateX(-Math.PI / 2);
       inst(disc, M({ map: ctex(SP.tank(false)), roughness: 0.22, metalness: o.env ? 0.12 : 0 }), wet, at(H - 0.55));
@@ -504,7 +505,7 @@
       inst(unit.clone(), M({ color: 0x3e5560, roughness: 0.5 }), list, sweep(H + 0.95, 0.9, 1.6, 0));
       inst(unit.clone(), M({ color: 0xf5b528, roughness: 0.5 }), list, sweep(H + 1.75, 0.1, 0.1, 0.85)); inst(unit.clone(), M({ color: 0xf5b528, roughness: 0.5 }), list, sweep(H + 1.75, 0.1, 0.1, -0.85));
       inst(unit.clone(), M({ color: 0x3e5560, roughness: 0.5 }), list, (t, m) => { const a = ang(t); m.compose(new T.Vector3(t.e + Math.cos(a) * (R - 0.4), H + 0.9, -t.n + Math.sin(a) * (R - 0.4)), new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), -a), new T.Vector3(1.6, 1.6, 2.6)); });
-      for (const e of tk.channels) { blk(e - 2.2, e + 2.2, 58, 462, 0, 4.3, concrete, true); flat([e - 1.4, e + 1.4, 58, 462], M({ color: 0x5f8f87, roughness: 0.4 }), 4.32); }
+      for (const e of tk.channels) { blk(e - 2.2, e + 2.2, 58, 462, 0, 6.3, concrete, true); flat([e - 1.4, e + 1.4, 58, 462], M({ color: 0x4f98d2, roughness: 0.3 }), 6.32); }
       flat([tk.road - 3.5, tk.road + 3.5, 54, 466], M({ color: 0xa9aaa4 }), 0.1);
     }
     // ── ระบบกรอง (ถังกรองทราย 4 แถว) ──
@@ -535,7 +536,7 @@
       kiosks.forEach((k, i) => { m4.compose(new T.Vector3(k.e, 5.3, -k.n), q, one); km.setMatrixAt(i, m4); }); if (o.shadows) km.castShadow = true; root.add(km); disp.push(km.geometry);
     }
     // ── ถังเก็บน้ำใส (ถังใต้ดินขนาดใหญ่ หลังคาเป็นแปลงตาราง) ──
-    { const s = SITE.sludge, top = M({ map: ctex(SP.sludge()) }), side = M({ color: 0xc9c3b2, roughness: 0.9 });
+    { const s = SITE.sludge, top = M({ map: ctex(SP.whiteRoof(), 6, 3), roughness: 0.85 }), side = M({ color: 0xdfe2e4, roughness: 0.9 });
       const me = blk(s[0], s[1], s[2], s[3], 0, 2.4, [side, side, top, side, side, side], true); me.castShadow = false; }
     // ── ลานตากตะกอน / บ่อพักตะกอน ด้านตะวันออก ──
     { const L = SITE.lagoons, dyke = M({ color: 0xb6ad94, roughness: 0.95 });

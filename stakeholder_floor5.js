@@ -11,6 +11,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -24,7 +25,7 @@ const FH = 4.2, NF = 12, F5 = 4;                           // ความสู
 const WALL_H = 3.0, AUD_H = 4.4, WT = 0.22;
 
 // ลิฟต์ → ลงทะเบียน (ผนังฉากหลัง) → ทางเดิน กปน. → นิทรรศการ กปน. (ทางเดินเหนือ) → เข้าห้องแสดง 1 ประตูตะวันออก → ออกประตูตะวันตก → หน้าห้องประชุม → Auditorium
-const ROUTE_PX = [[843, 893], [806, 893], [806, 752], [932, 752], [932, 385], [1310, 385], [1310, 290], [1088, 290], [1088, 410], [1300, 410], [1300, 470]];
+const ROUTE_PX = [[843, 893], [806, 893], [806, 778], [932, 778], [932, 385], [1310, 385], [1310, 290], [1088, 290], [1088, 410], [1300, 410], [1300, 470]];
 
 const MWA_BOOTHS = [
   { name: 'TWQ Online', sub: 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', prop: 'cabinet' },
@@ -57,11 +58,11 @@ function boothSlots() {
   const xW = X(885) + WT / 2;                              // ผนังตะวันตกของทางเดิน กปน.
   [680, 587, 494].forEach((py, k) => S.push({ own: 'mwa', i: 4 + k, x: xW + (k ? 0.65 : 0.95), z: Z(py), face: 'e', zone: 'mwa', kind: k ? 'generic' : 'wari', w: 3, d: k ? 1.3 : 1.9 }));
   // นิทรรศการ กปน. ชิดผนังทางเดินเหนือ (ระหว่างประตูห้องแสดง 1) เรียงแบบภาพงานจริง: Chlorine Care · WSP · คลินิกน้ำสะอาด · TWQ Online
-  const zc = Z(350) + WT / 2 + 0.65, xa = X(1108) + 0.3;
-  S.push({ own: 'mwa', i: 1, x: xa + 2.45, z: zc, face: 's', zone: 'north', kind: 'cc', w: 4.6, d: 1.3 });
-  S.push({ own: 'mwa', i: 3, x: xa + 6.35, z: zc, face: 's', zone: 'north', kind: 'wsp', w: 3, d: 1.3 });
-  S.push({ own: 'mwa', i: 2, x: xa + 9.4, z: zc, face: 's', zone: 'north', kind: 'clinic', w: 3, d: 1.3 });
-  S.push({ own: 'mwa', i: 0, x: xa + 12.45, z: zc, face: 's', zone: 'north', kind: 'twq', w: 3, d: 1.3 });
+  const zc = Z(350) + WT / 2 + 0.65, xa = X(1108) + 0.12;
+  S.push({ own: 'mwa', i: 1, x: xa + 2.5, z: zc, face: 's', zone: 'north', kind: 'cc', w: 5.0, d: 1.3 });
+  S.push({ own: 'mwa', i: 3, x: xa + 6.7, z: zc, face: 's', zone: 'north', kind: 'wsp', w: 3, d: 1.3 });
+  S.push({ own: 'mwa', i: 2, x: xa + 9.9, z: zc, face: 's', zone: 'north', kind: 'clinic', w: 3, d: 1.3 });
+  S.push({ own: 'mwa', i: 0, x: xa + 13.6, z: zc, face: 's', zone: 'north', kind: 'twq', w: 3.9, d: 1.3 });
   // บริษัทพันธมิตรในห้องแสดง 1 (บูธ 2 × 1 ม.)
   const zHN = Z(188) + WT / 2 + 0.5, zHS = Z(350) - WT / 2 - 0.5, x0 = X(980) + 2.2, sp = (X(1385) - X(980) - 4.4) / 7;
   for (let k = 0; k < 8; k++) S.push({ own: 'p', i: k, x: x0 + k * sp, z: zHN, face: 's', zone: 'hall', w: 2, d: 1 });
@@ -86,7 +87,7 @@ const ROOMS = [
 const CLOSED = [                                           // พื้นที่ไม่ใช้จัดงาน (ทึบ)
   { r: [600, 185, 853, 452], t: 'พื้นที่สำนักงาน' }, { r: [958, 432, 1153, 761], t: 'พื้นที่สำนักงาน' },
   { r: [1080, 762, 1565, 910], t: 'พื้นที่สำนักงาน' }, { r: [1522, 352, 1565, 760], t: '' },
-  { r: [727, 453, 885, 720], t: 'ส่วนบริการ', core: true }, { r: [727, 765, 768, 910], t: '' },
+  { r: [727, 453, 885, 676], t: 'ส่วนบริการ', core: true }, { r: [727, 765, 768, 910], t: '' },
   { r: [600, 708, 676, 766], t: '' }, { r: [832, 765, 940, 786], t: '' }, { r: [600, 523, 602, 556], t: '' },
 ];
 const EXTRA_WALLS = [[885, 352, 885, 453], [940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], [676, 522, 676, 557], [676, 615, 676, 648]];
@@ -201,24 +202,53 @@ function mwaBoothCanvas(kind, b) {
   const roundTop = () => { g.save(); g.beginPath(); g.moveTo(0, H); g.lineTo(0, 90); g.quadraticCurveTo(0, 0, 90, 0); g.lineTo(W - 90, 0); g.quadraticCurveTo(W, 0, W, 90); g.lineTo(W, H); g.closePath(); g.clip(); };
   roundTop();
   if (kind === 'cc') {
-    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#1659c8'); gr.addColorStop(1, '#0c3a8e'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(60, 50, 520, 150, 75); g.fill();
-    g.fillStyle = '#1659c8'; g.font = `700 64px ${F_HEAD}`; g.fillText('CHLORINE', 200, 115); g.font = `800 92px ${F_HEAD}`; g.fillText('CARE', 200, 190);
-    drop(g, 120, 135, 0.42);
-    g.fillStyle = '#ffffff'; fitText(g, 'ระบบเติมคลอรีนอัตโนมัติ', 700, 92, F_HEAD, 760); g.fillText('ระบบเติมคลอรีนอัตโนมัติ', 620, 160);
-    emblem(g, W - 110, 120, 70);
-    g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(70, 250, W - 140, 880, 30); g.fill();
-    g.fillStyle = '#0c3a8e'; g.font = `600 40px ${F_BODY}`; g.fillText('Chlorine Care', 110, 320);
-    g.fillStyle = '#5b6b7c'; g.font = `400 28px ${F_BODY}`; ['ระบบควบคุมค่าคลอรีนอิสระคงเหลืออัตโนมัติ ด้วยหลักการ P.I.D.', 'ร่วมกับเซนเซอร์ Polarographic พร้อมระบบ Bead Cleaning', 'ติดตามผลแบบ Real-Time ผ่านเว็บแอปพลิเคชัน'].forEach((t, i) => g.fillText(t, 110, 370 + i * 40));
-    // ไดอะแกรม
-    g.strokeStyle = '#2d6ab8'; g.lineWidth = 6; g.fillStyle = '#dfeaf7';
-    g.fillRect(560, 520, 170, 210); g.strokeRect(560, 520, 170, 210); g.fillStyle = '#2d6ab8'; g.font = `600 22px ${F_BODY}`; g.fillText('PLC & IoT', 585, 560);
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { g.fillStyle = ['#e04848', '#36b24a', '#f2b632'][j]; g.beginPath(); g.arc(600 + j * 45, 600 + i * 40, 12, 0, 7); g.fill(); }
-    g.fillStyle = '#9fd0f5'; g.fillRect(480, 870, 560, 120); g.strokeRect(480, 870, 560, 120);
-    g.beginPath(); g.moveTo(150, 840); g.lineTo(1350, 840); g.moveTo(645, 730); g.lineTo(645, 840); g.moveTo(380, 640); g.lineTo(560, 640); g.moveTo(1150, 640); g.lineTo(730, 640); g.stroke();
-    g.fillStyle = '#2d6ab8'; g.beginPath(); g.arc(380, 880, 60, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `700 30px ${F_HEAD}`; g.fillText('NaOCl', 330, 890);
-    g.fillStyle = '#e8eef6'; g.fillRect(1080, 480, 300, 200); g.strokeRect(1080, 480, 300, 200); g.fillStyle = '#2d6ab8'; g.font = `600 22px ${F_BODY}`; g.fillText('Web Application', 1140, 520);
-    g.fillStyle = '#bcd3ec'; for (let i = 0; i < 4; i++) g.fillRect(1100 + i * 68, 640 - i * 22, 46, 30 + i * 22);
+    // ตามป้ายจริง: พื้นน้ำเงินเข้ม · แถบหัวฟ้า "CHLORINE CARE ระบบเติมคลอรีนอัตโนมัติ" · กล่องคำอธิบาย · Web App · ไดอะแกรมระบบ
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1f4fb8'); gr.addColorStop(1, '#0b2f86'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(120,190,255,.35)'; for (let i = 0; i < 9; i++) for (let j = 0; j < 7; j++) if ((i * 3 + j * 5) % 4) g.fillRect(40 + i * 16, 330 + j * 16, 9, 9);
+    const hb = g.createLinearGradient(0, 0, W, 0); hb.addColorStop(0, '#3d9cf0'); hb.addColorStop(1, '#2b7fe0'); g.fillStyle = hb; g.beginPath(); g.roundRect(60, 50, 1230, 170, 40); g.fill();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 16; g.beginPath(); g.arc(160, 135, 62, 0.5, Math.PI * 2 - 0.5); g.stroke(); drop(g, 160, 140, 0.32);
+    g.fillStyle = '#ffffff'; g.font = `700 58px ${F_HEAD}`; g.fillText('HLORINE', 225, 120); g.fillText('ARE', 225, 190);
+    fitText(g, 'ระบบเติมคลอรีนอัตโนมัติ', 700, 104, F_HEAD, 720); g.fillText('ระบบเติมคลอรีนอัตโนมัติ', 520, 172);
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(W - 105, 135, 92, 0, 7); g.fill(); emblem(g, W - 105, 135, 84);
+    g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(190, 250, 780, 250, 18); g.fill(); g.strokeStyle = '#7fb8ee'; g.lineWidth = 4; g.stroke();
+    g.fillStyle = '#2b7fe0'; g.font = `600 46px ${F_BODY}`; g.fillText('Chlorine Care', 220, 305); g.fillRect(220, 318, 720, 3);
+    g.fillStyle = '#26364a'; g.font = `400 22px ${F_BODY}`;
+    ['ระบบควบคุมค่าคลอรีนอิสระคงเหลืออัตโนมัติให้ได้ตามเกณฑ์อย่างต่อเนื่อง โดยควบคุม', 'การปรับจ่ายด้วยหลักการ P.I.D. (Proportional Integrated Derivative) ร่วมกับ', 'เซนเซอร์ตรวจวัดคลอรีนอิสระคงเหลือแบบ Polarographic ที่มีระบบทำความสะอาด', 'ชนิด Bead Cleaning พร้อมเทคโนโลยีดิจิทัลสั่งการผ่านเว็บแอปฯ แบบ Real-Time', 'และมีระบบแจ้งเตือนเพิ่มความปลอดภัยในการควบคุมการเติมคลอรีนอัตโนมัติ'].forEach((t, i) => g.fillText(t, 220, 355 + i * 30));
+    g.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(1000 + i * 40, 280); g.lineTo(1022 + i * 40, 292); g.lineTo(1000 + i * 40, 304); g.fill(); }
+    // แผงล่าง (ไดอะแกรม)
+    const pb = g.createLinearGradient(0, 520, 0, H); pb.addColorStop(0, '#e8f3fd'); pb.addColorStop(1, '#a9d1f3'); g.fillStyle = pb; g.beginPath(); g.roundRect(150, 520, 1300, 640, 26); g.fill();
+    // Web App: จอ + มือถือ
+    g.fillStyle = '#eef4fb'; g.beginPath(); g.roundRect(1040, 430, 400, 300, 18); g.fill(); g.strokeStyle = '#c7d7e8'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = '#1b2633'; g.beginPath(); g.roundRect(1110, 440, 170, 44, 8); g.fill(); g.fillStyle = '#fff'; g.font = `600 18px ${F_BODY}`; g.fillText('Chlorine Care', 1140, 460); g.fillText('Web Application', 1128, 479);
+    g.fillStyle = '#2b3440'; g.fillRect(1060, 505, 240, 150); g.fillStyle = '#f6f9fc'; g.fillRect(1066, 511, 228, 138); g.fillStyle = '#2b3440'; g.fillRect(1160, 655, 40, 30); g.fillRect(1130, 683, 100, 8);
+    g.fillStyle = '#3d9cf0'; g.fillRect(1072, 520, 100, 8); for (let i = 0; i < 4; i++) { g.fillStyle = ['#2b7fe0', '#36b24a', '#f2b632', '#e04848'][i]; g.beginPath(); g.arc(1110 + i * 45, 590, 12, 0, 7); g.fill(); }
+    g.fillStyle = '#2b3440'; g.beginPath(); g.roundRect(1320, 490, 100, 200, 14); g.fill(); g.fillStyle = '#f6f9fc'; g.fillRect(1328, 505, 84, 170); g.strokeStyle = '#2b7fe0'; g.lineWidth = 3; g.beginPath(); g.moveTo(1332, 640); for (let i = 0; i < 9; i++) g.lineTo(1336 + i * 9, 620 - Math.sin(i) * 14); g.stroke();
+    g.strokeStyle = '#b05ec0'; g.lineWidth = 4; g.beginPath(); g.moveTo(870, 700); g.lineTo(1030, 700); g.stroke(); g.fillStyle = '#b05ec0'; g.font = `700 34px ${F_HEAD}`; g.fillText('((·))', 905, 680);
+    // ตู้ควบคุม
+    g.fillStyle = '#1b2633'; g.beginPath(); g.roundRect(600, 545, 210, 44, 8); g.fill(); g.fillStyle = '#fff'; g.font = `600 18px ${F_BODY}`; g.fillText('Control Cabinet', 640, 565); g.fillText('PLC & IOT Router', 632, 583);
+    g.fillStyle = '#b9c2cb'; g.fillRect(625, 600, 160, 210); g.fillStyle = '#7d8892'; g.fillRect(637, 612, 136, 186);
+    g.fillStyle = '#1b2633'; g.fillRect(650, 625, 50, 22); g.fillRect(710, 625, 50, 22);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) { g.fillStyle = ['#e04848', '#36b24a', '#e04848', '#1b2633'][j]; g.beginPath(); g.arc(660 + j * 30, 670 + i * 32, 9, 0, 7); g.fill(); } g.fillStyle = '#e04848'; g.beginPath(); g.arc(705, 780, 13, 0, 7); g.fill();
+    // เส้นควบคุม P.I.D. (เขียว) · ท่อจ่ายสาร (ส้ม) · ท่อน้ำ (น้ำเงิน)
+    g.strokeStyle = '#2f9a52'; g.lineWidth = 4; g.beginPath(); g.moveTo(625, 700); g.lineTo(380, 700); g.lineTo(380, 860); g.moveTo(785, 760); g.lineTo(1260, 760); g.lineTo(1260, 900); g.stroke();
+    g.fillStyle = '#26364a'; g.font = `500 26px ${F_BODY}`; g.fillText('P.I.D. Control', 400, 690);
+    g.strokeStyle = '#f0a040'; g.lineWidth = 9; g.beginPath(); g.moveTo(410, 900); g.lineTo(410, 830); g.lineTo(700, 830); g.stroke(); g.fillStyle = '#f0a040'; g.beginPath(); g.moveTo(700, 815); g.lineTo(725, 830); g.lineTo(700, 845); g.fill();
+    g.strokeStyle = '#2b7fe0'; g.lineWidth = 9; g.beginPath(); g.moveTo(725, 830); g.lineTo(1260, 830); g.moveTo(780, 830); g.lineTo(780, 960); g.moveTo(1130, 830); g.lineTo(1130, 1080); g.lineTo(1430, 1080); g.moveTo(170, 1080); g.lineTo(560, 1080); g.lineTo(560, 990); g.stroke();
+    g.fillStyle = '#2b3440'; g.beginPath(); g.moveTo(1430, 1062); g.lineTo(1452, 1080); g.lineTo(1430, 1098); g.fill();
+    // ถังน้ำ
+    const tw = g.createLinearGradient(0, 960, 0, 1060); tw.addColorStop(0, '#62b2ef'); tw.addColorStop(1, '#2b7fe0'); g.fillStyle = tw; g.fillRect(590, 960, 470, 100); g.strokeStyle = '#1b2633'; g.lineWidth = 3; g.strokeRect(590, 940, 470, 120);
+    g.fillStyle = '#ffffff'; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(640 + i * 72, 975); g.lineTo(656 + i * 72, 995); g.lineTo(624 + i * 72, 995); g.fill(); }
+    // ถังสาร NaOCl + ปั๊มจ่าย
+    g.fillStyle = '#5ab0f0'; g.beginPath(); g.ellipse(410, 990, 70, 26, 0, 0, 7); g.fill(); g.fillRect(340, 990, 140, 90); g.fillStyle = '#ffffff'; g.font = `800 34px ${F_HEAD}`; g.fillText('NaOCl', 362, 1050);
+    g.fillStyle = '#2b5fae'; g.beginPath(); g.roundRect(370, 900, 80, 60, 12); g.fill();
+    g.fillStyle = '#1b2633'; g.beginPath(); g.roundRect(455, 880, 120, 60, 8); g.fill(); g.fillStyle = '#fff'; g.font = `600 20px ${F_BODY}`; g.fillText('Dosing', 478, 905); g.fillText('Pump', 485, 928);
+    g.fillStyle = '#26364a'; g.font = `500 22px ${F_BODY}`; g.fillText('Level', 490, 1010); g.fillText('Sensor', 485, 1034); g.fillText('Level', 650, 930); g.fillText('Sensor', 645, 954);
+    // เครื่องวิเคราะห์ + ปั๊มหมุนเวียน
+    g.fillStyle = '#2b5fae'; g.beginPath(); g.roundRect(1225, 900, 70, 90, 10); g.fill(); g.fillStyle = '#d7ecfb'; g.fillRect(1236, 912, 48, 30);
+    g.fillStyle = '#1b2633'; g.beginPath(); g.roundRect(1310, 900, 150, 56, 8); g.fill(); g.fillStyle = '#fff'; g.font = `600 17px ${F_BODY}`; g.fillText('Free Residual', 1330, 922); g.fillText('Chlorine Analyzer', 1318, 944);
+    g.fillStyle = '#3a4a5c'; g.beginPath(); g.ellipse(1130, 1030, 34, 22, 0, 0, 7); g.fill();
+    g.fillStyle = '#1b2633'; g.beginPath(); g.roundRect(1175, 1005, 170, 56, 8); g.fill(); g.fillStyle = '#fff'; g.font = `600 17px ${F_BODY}`; g.fillText('Circulation Pump', 1192, 1027); g.fillText('(Sampling Pump)', 1192, 1049);
+    for (const [t, x] of [['Inlet', 210], ['Outlet', 1300]]) { g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(x, 1100, 120, 40, 6); g.fill(); g.fillStyle = '#26364a'; g.font = `500 22px ${F_BODY}`; g.fillText(t, x + 30, 1128); }
   } else if (kind === 'wsp') {
     const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#eaf5ff'); gr.addColorStop(1, '#bfe0fb'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     waves(g, W, H, 1010, 0.6);
@@ -241,24 +271,43 @@ function mwaBoothCanvas(kind, b) {
     g.fillStyle = '#1d5fc0'; g.beginPath(); g.roundRect(110, 530, 520, 70, 35); g.fill(); g.fillStyle = '#fff'; g.font = `600 34px ${F_BODY}`; g.fillText('MWACleanwaterclinic', 150, 578);
     drop(g, 1000, 470, 1.25); drop(g, 1270, 520, 1.05, true);
   } else if (kind === 'twq') {
-    g.fillStyle = '#f4f9ff'; g.fillRect(0, 0, W, H);
-    const hg = g.createLinearGradient(0, 0, 0, 260); hg.addColorStop(0, '#2f7fd8'); hg.addColorStop(1, '#1d5fc0'); g.fillStyle = hg; g.fillRect(0, 0, W, 250);
-    g.fillStyle = '#fff'; fitText(g, 'Tap Water Quality Monitoring System', 700, 78, F_HEAD, 1300); g.textAlign = 'center'; g.fillText('Tap Water Quality Monitoring System', W / 2, 120);
-    fitText(g, 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', 600, 64, F_HEAD, 1200); g.fillText('ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', W / 2, 210); g.textAlign = 'left';
-    // แผนที่จุดตรวจวัด
-    g.fillStyle = '#e1edf8'; g.beginPath(); g.moveTo(220, 330); g.bezierCurveTo(600, 280, 1100, 300, 1300, 420); g.bezierCurveTo(1340, 700, 1200, 1050, 800, 1120); g.bezierCurveTo(500, 1150, 230, 1000, 200, 700); g.closePath(); g.fill();
-    g.strokeStyle = '#a9c4de'; g.lineWidth = 3; for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(200 + i * 80, 300); g.lineTo(260 + i * 70, 1140); g.stroke(); }
-    g.strokeStyle = '#6fa7dc'; g.lineWidth = 10; g.beginPath(); g.moveTo(560, 300); g.bezierCurveTo(620, 600, 520, 800, 640, 1140); g.stroke();
-    let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 62; i++) { const x = 280 + R() * 980, y = 380 + R() * 700; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 15, 0, 7); g.fill(); g.fillStyle = R() < 0.9 ? '#2fb36a' : '#f2b632'; g.beginPath(); g.arc(x, y, 10, 0, 7); g.fill(); }
-    g.fillStyle = '#1d5fc0'; g.beginPath(); g.roundRect(230, 290, 560, 60, 30); g.fill(); g.fillStyle = '#fff'; g.font = `600 30px ${F_BODY}`; g.fillText('https://twqonline.mwa.co.th', 260, 330);
-    drop(g, 1360, 1030, 0.6);
+    // ตามป้ายจริง: แถบหัวฟ้า · แผนที่เขตบริการ (ฟ้าอ่อน) + หมุดค่าคลอรีน · URL + มาสคอต · ภาพหอถัง/อาคารเดิม/อาคารใหม่ด้านล่าง
+    const hg = g.createLinearGradient(0, 0, 0, 230); hg.addColorStop(0, '#3a9ae8'); hg.addColorStop(1, '#2b86dc'); g.fillStyle = hg; g.fillRect(0, 0, W, 230);
+    g.fillStyle = '#fff'; g.textAlign = 'center'; fitText(g, 'Tap Water Quality Monitoring System', 700, 92, F_HEAD, 1380); g.fillText('Tap Water Quality Monitoring System', W / 2, 110);
+    fitText(g, 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', 700, 84, F_HEAD, 1250); g.fillText('ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', W / 2, 205); g.textAlign = 'left';
+    g.fillStyle = '#efe9dc'; g.fillRect(0, 230, W, 870);                              // พื้นแผนที่
+    g.strokeStyle = 'rgba(200,120,110,.35)'; g.lineWidth = 3; let sd = 11; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 22; i++) { g.beginPath(); const y = 240 + R() * 850; g.moveTo(0, y); g.bezierCurveTo(500, y + (R() - .5) * 200, 1000, y + (R() - .5) * 200, W, y + (R() - .5) * 120); g.stroke(); }
+    g.strokeStyle = 'rgba(200,120,110,.25)'; for (let i = 0; i < 14; i++) { g.beginPath(); const x = R() * W; g.moveTo(x, 230); g.lineTo(x + (R() - .5) * 300, 1100); g.stroke(); }
+    // เขตบริการ: ตารางเบี้ยวในขอบเขต
+    g.save(); g.beginPath(); g.moveTo(250, 290); g.lineTo(560, 250); g.lineTo(980, 300); g.lineTo(1260, 360); g.lineTo(1290, 700); g.lineTo(1200, 950); g.lineTo(900, 1020); g.lineTo(560, 990); g.lineTo(330, 900); g.lineTo(230, 640); g.closePath(); g.clip();
+    const cols = ['#b7d6f0', '#a3cbed', '#c7e0f4', '#8fbfe8', '#d2e7f7'];
+    for (let i = 0; i < 9; i++) for (let j = 0; j < 7; j++) { const x = 200 + i * 125 + (R() - .5) * 40, y = 240 + j * 120 + (R() - .5) * 40; g.fillStyle = cols[Math.floor(R() * cols.length)]; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 130 + R() * 20, y + (R() - .5) * 30); g.lineTo(x + 125, y + 125 + R() * 20); g.lineTo(x - 5, y + 120); g.closePath(); g.fill(); g.strokeStyle = 'rgba(90,110,140,.55)'; g.lineWidth = 2; g.stroke(); }
+    g.restore();
+    // หมุดค่า FRC
+    const pin = (x, y, v, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(x, y - 46); g.bezierCurveTo(x + 22, y - 20, x + 26, y - 6, x + 26, y + 4); g.arc(x, y + 4, 26, 0, Math.PI); g.bezierCurveTo(x - 26, y - 6, x - 22, y - 20, x, y - 46); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y + 4, 19, 0, 7); g.fill(); g.fillStyle = '#1b2633'; g.font = `600 17px ${F_BODY}`; g.textAlign = 'center'; g.fillText(v, x, y + 10); g.textAlign = 'left'; };
+    for (let i = 0; i < 58; i++) { const x = 300 + R() * 920, y = 340 + R() * 620; pin(x, y, (0.27 + R() * 1.38).toFixed(2), '#7fbf6a'); }
+    pin(1060, 560, '0.00', '#e05a5a'); g.fillStyle = '#8a929b'; g.beginPath(); g.arc(1030, 610, 22, 0, 7); g.arc(1110, 660, 22, 0, 7); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(420, 270, 560, 70, 35); g.fill(); g.strokeStyle = '#c9d6e2'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#1b2633'; g.font = `600 40px ${F_BODY}`; g.fillText('https://twqonline.mwa.co.th', 452, 320);
+    g.fillStyle = '#3b4a5a'; g.beginPath(); g.roundRect(1000, 262, 52, 90, 8); g.fill(); g.fillStyle = '#7fbf6a'; g.fillRect(1006, 272, 40, 70); drop(g, 1110, 300, 0.42);
+    // ภาพอาคารด้านล่าง
+    g.fillStyle = '#2b86dc'; g.fillRect(0, 1100, W, 100); g.fillStyle = '#7fbfee'; g.fillRect(0, 1088, W, 14);
+    g.fillStyle = '#e9edf1'; g.fillRect(70, 700, 200, 400); g.fillStyle = '#d3d9df'; g.fillRect(70, 700, 200, 24); g.fillRect(70, 1060, 200, 40); emblem(g, 170, 830, 80);         // หอถังสูง
+    g.fillStyle = '#f4f6f8'; g.fillRect(320, 900, 520, 200); g.fillRect(520, 860, 120, 240);                                                                         // อาคารเดิม
+    for (let i = 0; i < 10; i++) for (let j = 0; j < 3; j++) { g.fillStyle = (i + j) % 3 ? '#2b5fae' : '#5fa6e6'; g.fillRect(338 + i * 50, 925 + j * 52, 34, 36); }
+    g.fillStyle = '#2b5fae'; g.fillRect(545, 880, 70, 60); g.beginPath(); g.arc(580, 872, 20, 0, 7); g.fillStyle = '#5fa6e6'; g.fill(); g.fillStyle = '#1b2633'; g.fillRect(552, 1040, 56, 60);
+    g.fillStyle = '#7fae5a'; for (const x of [310, 860]) { g.fillRect(x, 1000, 10, 100); g.beginPath(); g.arc(x + 5, 995, 34, 0, 7); g.fill(); }
+    g.fillStyle = '#2b5fae'; g.fillRect(900, 880, 380, 220); for (let i = 0; i < 12; i++) for (let j = 0; j < 4; j++) { g.fillStyle = (i * j) % 4 ? '#3d78c8' : '#8fc4f0'; g.fillRect(910 + i * 30, 895 + j * 46, 24, 38); }   // อาคารใหม่
+    g.fillStyle = '#245ca8'; g.fillRect(1280, 640, 110, 460); for (let j = 0; j < 14; j++) for (let i = 0; i < 4; i++) { g.fillStyle = '#4f8fd8'; g.fillRect(1288 + i * 26, 680 + j * 29, 20, 22); }
+    g.strokeStyle = '#ffffff'; g.lineWidth = 12; g.beginPath(); g.arc(1335, 600, 34, 0, 7); g.stroke();
+    g.fillStyle = '#7fae5a'; for (let i = 0; i < 7; i++) { g.beginPath(); g.arc(940 + i * 48, 1080, 22, 0, 7); g.fill(); }
   } else if (kind === 'wari') {
     // ป้าย "WARI KUNCHORN · RAW WATER CANAL SURVEY ROBOT" (ตามภาพงานจริง)
     g.fillStyle = '#f6f7f8'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#1b2a3a'; g.font = `700 54px ${F_HEAD}`; g.fillText('WARI KUNCHORN', 70, 95);
-    g.fillStyle = '#0d2a4f'; fitText(g, 'RAW WATER CANAL SURVEY ROBOT', 800, 112, F_HEAD, 1080); g.fillText('RAW WATER CANAL SURVEY ROBOT', 70, 205);
-    g.fillStyle = '#4a5a6c'; g.font = `500 34px ${F_BODY}`; g.fillText('Unmanned Surface Vehicle for Raw Water Canal Survey', 70, 255);
+    g.fillStyle = '#0d2a4f'; g.font = `800 130px ${F_HEAD}`; g.fillText('วารีกุญชร', 70, 150);
+    g.fillStyle = '#c9961a'; fitText(g, 'หุ่นยนต์สำรวจคลองส่งน้ำดิบ', 700, 60, F_HEAD, 1050); g.fillText('หุ่นยนต์สำรวจคลองส่งน้ำดิบ', 70, 225);
+    g.fillStyle = '#4a5a6c'; g.font = `500 32px ${F_BODY}`; g.fillText('WARI KUNCHORN · Raw Water Canal Survey Robot', 70, 272);
     // ธงเยอรมนี + เหรียญรางวัล
     [['#1b1b1b', 0], ['#dd2a2a', 1], ['#f2c230', 2]].forEach(([c2, i]) => { g.fillStyle = c2; g.fillRect(1180, 50 + i * 45, 270, 45); });
     g.fillStyle = '#c9ced4'; g.beginPath(); g.arc(1300, 420, 120, 0, 7); g.fill(); g.strokeStyle = '#8f98a2'; g.lineWidth = 10; g.stroke();
@@ -317,9 +366,10 @@ function regWallCanvas() {                                      // ผนัง�
   g.globalAlpha = .12; g.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc((i * 523) % W, (i * 271) % 700, 10 + (i % 6) * 12, 0, 7); g.fill(); } g.globalAlpha = 1;
   emblem(g, W / 2, 210, 130);
   g.fillStyle = '#fff'; g.textAlign = 'center';
-  g.font = `700 150px ${F_HEAD}`; g.fillText('Stakeholder Day', W / 2, 520);
-  g.font = `600 80px ${F_HEAD}`; g.fillText('เส้นทางน้ำ · การประปานครหลวง', W / 2, 640);
-  g.font = `500 52px ${F_BODY}`; g.globalAlpha = .9; g.fillText('ต้นน้ำ  →  ผลิต  →  ส่งจ่าย  →  ถึงก๊อก', W / 2, 740);
+  g.font = `600 70px ${F_HEAD}`; g.fillText('ยินดีต้อนรับ · WELCOME', W / 2, 420);
+  g.font = `700 160px ${F_HEAD}`; g.fillText('Stakeholder Day', W / 2, 580);
+  g.font = `600 74px ${F_HEAD}`; g.fillText('การประปานครหลวง · Metropolitan Waterworks Authority', W / 2, 690);
+  g.font = `500 56px ${F_BODY}`; g.globalAlpha = .92; g.fillText('“ประปาคุณภาพ เพื่อชีวิตที่ดี”', W / 2, 780);
   return c;
 }
 function totemCanvas(t1, t2) {
@@ -514,7 +564,7 @@ function build(opt) {
   <div class="jh">↝ เส้นทางผู้เข้าร่วม<small>ลิฟต์ → Auditorium</small></div>
   <div class="steps" id="f5steps"><div class="fill"></div></div>
   <div class="tour"><div class="n" id="f5n">1 / 10</div><div class="tx"><h4 id="f5t"></h4><p id="f5d"></p></div>
-    <div class="ctl"><button class="btn" data-k="prev" title="ก่อนหน้า (←)">◀</button><button class="btn" data-k="next" title="ถัดไป (→)">▶</button><button class="btn" data-k="auto" id="f5auto" title="นำชมอัตโนมัติ">▶ นำชม</button></div></div>
+    <div class="ctl"><button class="btn" data-k="prev" title="ก่อนหน้า (←)">◀</button><button class="btn" data-k="next" title="ถัดไป (→)">▶</button><button class="btn" data-k="auto" id="f5auto" title="เดินชมตามเส้นทาง จากลิฟต์ถึงห้องประชุม (Space)">▶ เดินชม</button></div></div>
 </div>
 <div class="ttl" id="f5ttl"><h1>Stakeholder Day</h1><p>การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่</p><div class="ln"></div></div>
 <button class="ui btn skip" data-k="skip">ข้าม ▸</button>
@@ -555,7 +605,7 @@ function makeScene(root, opt) {
   controls.screenSpacePanning = false;
 
   // หลังประมวลผล
-  let composer = null, gtao = null;
+  let composer = null, gtao = null, bloom = null;
   const useAO = opt.ao !== false;
   function setupComposer(w, h) {
     const rt = new THREE.WebGLRenderTarget(w * DPR, h * DPR, { type: THREE.HalfFloatType, samples: 4 });
@@ -576,9 +626,10 @@ function makeScene(root, opt) {
       };
       composer.addPass(gtao);
     }
+    bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.85, 0.45, 2.8); bloom.enabled = false; composer.addPass(bloom);   // แสงเรืองตอนแยกชั้น
     composer.addPass(new OutputPass());
   }
-  return { renderer, scene, camera, controls, sun, hemi, setupComposer, get composer() { return composer; }, get gtao() { return gtao; }, DPR };
+  return { renderer, scene, camera, controls, sun, hemi, setupComposer, get composer() { return composer; }, get gtao() { return gtao; }, get bloom() { return bloom; }, DPR };
 }
 
 // วัสดุแยกโซน (ใช้จางโซนอื่นตอนนำชม)
@@ -600,9 +651,9 @@ function buildWorld(ctx) {
   const zoneGroups = {}; const zg = z => zoneGroups[z] || (zoneGroups[z] = (() => { const g = new THREE.Group(); g.name = z; interior.add(g); return g; })());
   const M = {
     white: new THREE.MeshStandardMaterial({ color: '#f7f8f9', roughness: 0.82 }),
-    wall: new THREE.MeshStandardMaterial({ color: '#f6f7f8', roughness: 0.85 }),
+    wall: new THREE.MeshStandardMaterial({ color: '#eceff3', roughness: 0.85 }),
     cap: new THREE.MeshStandardMaterial({ color: '#40566e', roughness: 0.8 }),
-    closed: new THREE.MeshStandardMaterial({ color: '#d3d9df', roughness: 0.95 }),
+    closed: new THREE.MeshStandardMaterial({ color: '#cdd4dc', roughness: 0.95 }),
     closedTop: new THREE.MeshStandardMaterial({ color: '#bfc8d1', roughness: 0.95 }),
     alu: new THREE.MeshStandardMaterial({ color: '#c9d0d7', metalness: 0.75, roughness: 0.32 }),
     dark: new THREE.MeshStandardMaterial({ color: '#1b232c', roughness: 0.45, metalness: 0.2 }),
@@ -645,7 +696,9 @@ function buildWorld(ctx) {
     m.rotation.y = -Math.atan2(bz - az, bx - ax); markWall(m, zone, h); return m;
   }
   const walls = [];
-  function markWall(m, zone, h) { m.userData.wall = true; m.userData.zone = zone; m.userData.h = h; m.userData.k = 1; [].concat(m.material).forEach(q => { q.userData.noFade = true; }); }
+  const edgeLine = new THREE.LineBasicMaterial({ color: '#33465b', transparent: true, opacity: 0.85 });
+  function outline(m) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 30), edgeLine); e.raycast = () => {}; m.add(e); }
+  function markWall(m, zone, h) { outline(m); m.userData.wall = true; m.userData.zone = zone; m.userData.h = h; m.userData.k = 1; [].concat(m.material).forEach(q => { q.userData.noFade = true; }); }
   function rectWalls(r, gaps, h, zone) {
     const [x0, y0, x1, y1] = r;
     const side = (a, b, fixed, horiz, gs = []) => { let cur = a; [...gs, [b, b]].sort((p, q) => p[0] - q[0]).forEach(([g0, g1]) => { if (g0 > cur) walls.push(horiz ? wall(cur, fixed, g0, fixed, h, zone) : wall(fixed, cur, fixed, g0, h, zone)); cur = Math.max(cur, g1); }); };
@@ -687,31 +740,31 @@ function buildWorld(ctx) {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.41), sg); p.position.set(zx0 - 0.06, 2.75, z); p.rotation.y = -Math.PI / 2; zg('lobby').add(p);
     });
   }
-  // ── ทางเข้า "เส้นทางน้ำ": ผนังฉากใหญ่ชิดผนังส่วนบริการ + โต๊ะลงทะเบียนยาวด้านหน้า (แบบงาน IWA) + ป้ายตั้ง + เสากั้นแถว
+  // ── ทางเข้า: ผนังฉากต้อนรับกลางทางเดิน ชิดผนังส่วนบริการ + โต๊ะลงทะเบียนยาวด้านหน้า (แบบงาน IWA) + ป้ายตั้ง + เสากั้นแถว
   {
-    const zw = Z(720) + WT / 2, xc = X(766), WW = 6.2, WH = 3.0;
+    const zw = Z(676) + WT / 2, xc = X(842), WW = 6.2, WH = 3.0;
     const wm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: regWallTex(), roughness: 0.55, emissive: '#ffffff', emissiveIntensity: 0.14 })); wm.emissiveMap = wm.map;
     add('lobby', box(WW + 0.2, WH + 0.2, 0.12), M.white, xc, (WH + 0.2) / 2, zw + 0.06);
     const p = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH), wm); p.position.set(xc, WH / 2 + 0.1, zw + 0.125); zg('lobby').add(p);
     add('lobby', box(WW + 0.2, 0.06, 0.25), lightStripLobby, xc, WH + 0.23, zw + 0.2, { cast: false });
     // โต๊ะลงทะเบียน (หน้าโต๊ะสีน้ำเงินเข้ม "ลงทะเบียน · WELCOME")
     const dz = zw + 1.55, DW = 4.6;
-    const fm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน · WELCOME', 700, 110, 150], ['รับ Water Passport แล้วเดินตามเส้นน้ำบนพื้น', 500, 54, 245, '#bfe3ff', F_BODY]], '#123f86', '#fff', 1600, 340), roughness: 0.5 }));
+    const fm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน · Registration', 700, 110, 150], ['Stakeholder Day · การประปานครหลวง', 500, 56, 248, '#bfe3ff', F_BODY]], '#123f86', '#fff', 1600, 340), roughness: 0.5 }));
     add('lobby', new RoundedBoxGeometry(DW, 1.0, 0.65, 3, 0.04), M.white, xc, 0.5, dz);
     const fp = new THREE.Mesh(new THREE.PlaneGeometry(DW - 0.06, 0.94), fm); fp.position.set(xc, 0.5, dz + 0.327); zg('lobby').add(fp);
     add('lobby', box(DW + 0.06, 0.04, 0.72), M.wood, xc, 1.02, dz);
     for (const dx of [-1.4, 0, 1.4]) { add('lobby', box(0.42, 0.28, 0.03), M.dark, xc + dx, 1.2, dz - 0.15).rotation.x = -0.2; add('lobby', box(0.04, 0.06, 0.04), M.alu, xc + dx, 1.07, dz - 0.18); }
     // ป้ายตั้ง 3 ป้าย
-    [['ลงทะเบียนล่วงหน้า', 'Pre-Registered', -2.1], ['ลงทะเบียนหน้างาน', 'Onsite Registration', -0.5], ['ประชาสัมพันธ์', 'Helpdesk', 1.6]].forEach(([t1, t2, dx]) => {
+    [['ลงทะเบียนล่วงหน้า', 'Pre-Registered', -2.75], ['ลงทะเบียนหน้างาน', 'Onsite Registration', 2.75], ['ประชาสัมพันธ์', 'Helpdesk', 3.6]].forEach(([t1, t2, dx]) => { const dd = 0.15;
       const tm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: totemTex(t1, t2), roughness: 0.55 }));
-      add('lobby', box(0.62, 1.9, 0.08), tm, xc + dx, 0.97, dz + 1.15);
-      add('lobby', box(0.7, 0.04, 0.36), M.dark, xc + dx, 0.02, dz + 1.15, { cast: false });
+      add('lobby', box(0.62, 1.9, 0.08), tm, xc + dx, 0.97, dz + dd);
+      add('lobby', box(0.7, 0.04, 0.36), M.dark, xc + dx, 0.02, dz + dd, { cast: false });
     });
     // เสากั้นแถว + สายผ้า
     const belt = new THREE.MeshStandardMaterial({ color: '#123f86', roughness: 0.6 });
-    const posts = [[-1.8, 1.75], [-1.0, 1.75], [-0.2, 1.75], [0.6, 1.75]];
+    const posts = [[-2.0, 1.3], [-0.7, 1.3], [0.6, 1.3], [1.9, 1.3]];
     posts.forEach(([dx, dd]) => { add('lobby', new THREE.CylinderGeometry(0.03, 0.03, 0.95, 10), M.alu, xc + dx, 0.48, dz + dd); add('lobby', new THREE.CylinderGeometry(0.16, 0.16, 0.03, 18), M.alu, xc + dx, 0.015, dz + dd, { cast: false }); });
-    add('lobby', box(2.4, 0.05, 0.01), belt, xc - 0.6, 0.9, dz + 1.75, { cast: false });
+    for (const a of [-1.35, 1.25]) add('lobby', box(1.25, 0.05, 0.01), belt, xc + a, 0.9, dz + 1.3, { cast: false });
   }
 
   // ── บูธ
@@ -734,6 +787,24 @@ function buildWorld(ctx) {
   const cabBlue = new THREE.MeshStandardMaterial({ color: '#4fa3dc', roughness: 0.45 });
   const greyM = new THREE.MeshStandardMaterial({ color: '#a9b0b7', roughness: 0.55 });
   const carpetMWA = new THREE.MeshStandardMaterial({ color: '#d9dee4', roughness: 0.95 });
+  const redM = new THREE.MeshStandardMaterial({ color: '#d63a3a', roughness: 0.5 }), steelM = new THREE.MeshStandardMaterial({ color: '#c8ced4', metalness: 0.85, roughness: 0.3 });
+  const acrylicEdge = new THREE.MeshStandardMaterial({ color: '#bfe3f5', roughness: 0.2 }), toolboxM = new THREE.MeshStandardMaterial({ color: '#7d93a8', roughness: 0.5 });
+  const lampM = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 1.2 }), pumpBlue = new THREE.MeshStandardMaterial({ color: '#2a4f9a', roughness: 0.45 });
+  const platM = new THREE.MeshStandardMaterial({ color: '#8fa3b8', roughness: 0.6 }), skirtTop = new THREE.MeshStandardMaterial({ color: '#5a8fd0', roughness: 0.85 });
+  const skirtCache = {}; const skirtM = w => skirtCache[w] || (skirtCache[w] = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+    for (let x = 0; x < 512; x += 16) { const gr = g.createLinearGradient(x, 0, x + 16, 0); gr.addColorStop(0, '#4f86c9'); gr.addColorStop(0.5, '#6da0dc'); gr.addColorStop(1, '#3f74b8'); g.fillStyle = gr; g.fillRect(x, 0, 16, 256); }
+    g.fillStyle = '#ffffff'; g.fillRect(0, 236, 512, 6); for (let x = 0; x < 512; x += 10) { g.beginPath(); g.arc(x + 5, 244, 5, 0, Math.PI); g.fill(); } g.fillRect(0, 36, 512, 4);
+    const t = canvasTex(c, 8); t.wrapS = THREE.RepeatWrapping; t.repeat.set(Math.max(1, Math.round(w / 0.9)), 1); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }); })());
+  const mkTex = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); return canvasTex(c, 8); };
+  const demoBoardTex = mkTex(256, 840, (g, w, h) => { g.fillStyle = '#eef3f7'; g.fillRect(0, 0, w, h); g.fillStyle = '#c9dbea'; for (let i = 0; i < 9; i++) g.fillRect(10 + i * 26, 520 - (i % 4) * 60, 22, 260 + (i % 4) * 60);
+    g.fillStyle = '#4f8fd0'; g.fillRect(70, 160, 120, 380); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(130, 240, 44, 0, 7); g.fill(); g.fillStyle = '#9fc6ea'; g.beginPath(); g.arc(130, 240, 34, 0, 7); g.fill();
+    g.fillStyle = '#7fb6e6'; g.fillRect(0, 780, w, 60); g.fillStyle = '#5a9bd8'; g.fillRect(0, 760, w, 22); });
+  const tabletScreen = new THREE.MeshStandardMaterial({ map: mkTex(256, 160, (g, w, h) => { g.fillStyle = '#f4f8fc'; g.fillRect(0, 0, w, h); g.fillStyle = '#2b7fe0'; g.fillRect(0, 0, w, 18); g.strokeStyle = '#2b7fe0'; g.lineWidth = 4; g.strokeRect(40, 50, 60, 70); g.strokeRect(150, 60, 60, 50); g.beginPath(); g.moveTo(100, 85); g.lineTo(150, 85); g.stroke(); }), emissive: '#ffffff', emissiveIntensity: 0.5 });
+  tabletScreen.emissiveMap = tabletScreen.map;
+  const qrTex = mkTex(128, 96, (g) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 96); g.fillStyle = '#2b7fe0'; g.fillRect(0, 0, 128, 14); g.fillStyle = '#111'; for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) if ((i * 7 + j * 13 + i * j) % 3 === 0 || i % 9 === 0 || j % 9 === 0) g.fillRect(64 + i * 5, 26 + j * 6, 5, 6); });
+  const twqScreen = mkTex(640, 360, (g, w, h) => { g.fillStyle = '#eaf2fa'; g.fillRect(0, 0, w, h); g.fillStyle = '#2b86dc'; g.fillRect(0, 0, w, 34); g.fillStyle = '#fff'; g.font = `600 20px ${F_BODY}`; g.fillText('twqonline.mwa.co.th · ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', 14, 23);
+    g.fillStyle = '#b7d6f0'; g.beginPath(); g.moveTo(80, 70); g.lineTo(420, 60); g.lineTo(560, 140); g.lineTo(520, 320); g.lineTo(200, 340); g.lineTo(60, 230); g.closePath(); g.fill();
+    let sd = 3; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let i = 0; i < 40; i++) { g.fillStyle = R() < 0.92 ? '#4fae5a' : '#e05a5a'; g.beginPath(); g.arc(110 + R() * 400, 90 + R() * 220, 7, 0, 7); g.fill(); } });
   function panelTex(make) { const c = document.createElement('canvas'); c.width = 512; c.height = 512; make(c.getContext('2d')); return canvasTex(c, 8); }
   const cabPanel = panelTex(g => { g.fillStyle = '#6fb6e6'; g.fillRect(0, 0, 512, 512); g.fillStyle = '#d5dbe0'; g.fillRect(90, 60, 332, 300); g.strokeStyle = '#7d8790'; g.lineWidth = 8; g.strokeRect(90, 60, 332, 300);
     g.fillStyle = '#1b232c'; g.fillRect(130, 90, 110, 46); g.fillRect(272, 90, 110, 46); const cs = ['#e04848', '#36b24a', '#f2b632', '#2d6ab8'];
@@ -775,30 +846,59 @@ function buildWorld(ctx) {
     booths.push(b);
   });
   function mwaBooth(kind, b, A, zone, inner) {
-    const W3 = 3.0, BZ = kind === 'wari' ? -0.85 : -0.55;
-    A(box(kind === 'cc' ? 4.6 : 3.2, 0.02, kind === 'wari' ? 1.9 : 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
+    const W3 = 3.0, BZ = kind === 'wari' ? -1.05 : -0.55, BX = kind === 'cc' ? 1.0 : kind === 'twq' ? 0.45 : 0, BH = kind === 'cc' ? 2.3 : 2.4;
+    A(box(kind === 'cc' ? 5.0 : kind === 'twq' ? 3.9 : 3.2, 0.02, kind === 'wari' ? 2.3 : 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
     // ผ้าตึง: โครง + ผืนพิมพ์ + ฐานขาตั้ง
-    A(new RoundedBoxGeometry(W3, 2.4, 0.07, 3, 0.03), fabricFrame, 0, 1.2, BZ);
+    A(new RoundedBoxGeometry(W3, BH, 0.07, 3, 0.03), fabricFrame, BX, BH / 2 + 0.05, BZ);
     const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic(kind, b), roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
-    const gp = new THREE.Mesh(new THREE.PlaneGeometry(W3 - 0.04, 2.36), gm); gp.position.set(0, 1.2, BZ + 0.037); inner.add(gp);
-    for (const fx of [-1.1, 1.1]) A(box(0.06, 0.03, 0.55), greyM, fx, 0.015, BZ, { cast: false });
+    const gp = new THREE.Mesh(new THREE.PlaneGeometry(W3 - 0.04, BH - 0.04), gm); gp.position.set(BX, BH / 2 + 0.05, BZ + 0.037); inner.add(gp);
+    for (const fx of [-1.1, 1.1]) A(box(0.06, 0.03, 0.55), greyM, BX + fx, 0.015, BZ, { cast: false });
     const top = pMat['#1d5fc0'] || (pMat['#1d5fc0'] = new THREE.MeshStandardMaterial({ color: '#1d5fc0', roughness: 0.35 }));
     if (kind === 'cc') {
-      // ชุดถังจำลอง (ฐานเทา + ถังอะคริลิก + ท่อสีฟ้า + แผ่นหลังพิมพ์ลาย)
-      const tx = -1.75;
-      A(box(1.0, 0.55, 0.55), greyM, tx, 0.3, 0.1); A(box(0.95, 0.42, 0.5), acrylic, tx, 0.78, 0.1, { cast: false }); A(box(0.9, 0.22, 0.45), waterM, tx, 0.68, 0.1, { cast: false });
-      A(box(0.5, 1.85, 0.03), M.white, tx + 0.15, 1.5, -0.25);
-      const pipe = (h, x, y, z, rz = 0, rx = 0) => { const m = A(new THREE.CylinderGeometry(0.035, 0.035, h, 12), pvcBlue, x, y, z); m.rotation.z = rz; m.rotation.x = rx; return m; };
-      pipe(1.3, tx - 0.25, 1.55, 0.05); pipe(0.6, tx + 0.05, 2.2, 0.05, Math.PI / 2); pipe(0.9, tx + 0.35, 1.75, 0.05); pipe(0.5, tx - 0.25, 0.95, 0.15, 0, Math.PI / 2);
-      A(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 14), M.alu, tx + 0.05, 2.2, 0.05);
-      // ตู้ควบคุมสีฟ้า + แท็บเล็ต
-      const cx = -0.55; A(box(0.7, 0.08, 0.6), greyM, cx, 0.12, 0.05); A(box(0.66, 1.7, 0.45), cabBlue, cx, 1.02, 0.0);
-      const pm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cabPanel, roughness: 0.5 })); const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), pm); pp.position.set(cx, 1.5, 0.228); inner.add(pp);
-      A(box(0.5, 0.06, 0.32), cabBlue, cx, 0.95, 0.35); const tb = A(box(0.32, 0.22, 0.02), M.screen, cx, 1.08, 0.38); tb.rotation.x = -0.5;
-      // โต๊ะ + ปั๊ม + ถังเคมีขาว
-      const t2 = 0.5; A(box(0.55, 0.03, 0.45), M.white, t2, 0.78, 0.15); for (const [dx, dz] of [[-0.24, -0.18], [0.24, -0.18], [-0.24, 0.38], [0.24, 0.38]]) A(box(0.03, 0.78, 0.03), M.alu, t2 + dx, 0.39, 0.1 + dz * 0.5);
-      A(new RoundedBoxGeometry(0.2, 0.14, 0.14, 2, 0.03), top, t2, 0.87, 0.15); A(new THREE.CylinderGeometry(0.19, 0.2, 0.5, 20), M.white, t2 + 0.05, 0.26, 0.1);
-      A(new THREE.CylinderGeometry(0.012, 0.012, 0.9, 6), M.white, t2 - 0.5, 0.6, 0.2).rotation.z = 1.2;
+      // ── ตามภาพงานจริง (ซ้าย→ขวา): ชุดถังจำลอง · ตู้ควบคุมสีฟ้า · โต๊ะปั๊มจ่ายสาร + ถังสารเคมี · ผ้าตึงไดอะแกรม
+      const pipe = (L, x, y, z, ax = 'y', r = 0.032, mat = pvcBlue) => { const m = A(new THREE.CylinderGeometry(r, r, L, 14), mat, x, y, z); if (ax === 'x') m.rotation.z = Math.PI / 2; if (ax === 'z') m.rotation.x = Math.PI / 2; return m; };
+      const elbow = (x, y, z) => A(new THREE.SphereGeometry(0.042, 12, 10), pvcBlue, x, y, z);
+      const valve = (x, y, z) => { A(new THREE.CylinderGeometry(0.045, 0.045, 0.09, 12), pvcBlue, x, y, z); A(box(0.12, 0.02, 0.025), redM, x, y + 0.06, z + 0.03); };
+      const caster = (x, z) => { A(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 12), M.dark, x, 0.035, z).rotation.z = Math.PI / 2; };
+      // 1) ชุดถังจำลอง: ฐานเทาบนล้อ + ถังอะคริลิก + แผ่นหลังพิมพ์ลาย + ท่อ PVC ฟ้า + สายถักสเตนเลส + เซนเซอร์
+      const tx = -2.05;
+      for (const [dx, dz] of [[-0.4, -0.22], [0.4, -0.22], [-0.4, 0.3], [0.4, 0.3]]) caster(tx + dx, 0.05 + dz);
+      A(box(0.92, 0.55, 0.62), greyM, tx, 0.34, 0.05);
+      A(box(0.8, 0.36, 0.5), acrylic, tx + 0.02, 0.8, 0.12, { cast: false }); A(box(0.76, 0.2, 0.46), waterM, tx + 0.02, 0.72, 0.12, { cast: false });
+      for (const [dx, dz] of [[-0.4, -0.13], [0.42, -0.13], [-0.4, 0.37], [0.42, 0.37]]) A(box(0.012, 0.36, 0.012), acrylicEdge, tx + dx, 0.8, dz, { cast: false });
+      const bm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: demoBoardTex, roughness: 0.6 }));
+      A(box(0.62, 1.95, 0.04), greyM, tx + 0.12, 1.6, -0.22); const bp = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 1.9), bm); bp.position.set(tx + 0.12, 1.6, -0.198); inner.add(bp);
+      pipe(1.45, tx - 0.36, 1.45, 0.02); elbow(tx - 0.36, 2.18, 0.02); pipe(0.5, tx - 0.11, 2.18, 0.02, 'x', 0.016, steelM);
+      A(box(0.14, 0.08, 0.08), steelM, tx + 0.18, 2.18, 0.02); A(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 10), M.dark, tx + 0.18, 2.06, 0.06);
+      pipe(0.9, tx + 0.42, 1.65, 0.05); elbow(tx + 0.42, 2.1, 0.05); pipe(0.55, tx + 0.15, 1.3, 0.05, 'x'); elbow(tx - 0.12, 1.3, 0.05); elbow(tx + 0.42, 1.3, 0.05);
+      pipe(0.45, tx - 0.12, 1.08, 0.05); pipe(0.6, tx + 0.15, 0.62, 0.38, 'x'); valve(tx - 0.2, 0.62, 0.38); valve(tx - 0.12, 1.5, 0.05); valve(tx + 0.42, 1.0, 0.05);
+      A(new THREE.ConeGeometry(0.07, 0.12, 14, 1, true), acrylic, tx + 0.3, 1.42, 0.16, { cast: false });
+      const hose = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(tx + 0.3, 2.18, 0.02), new THREE.Vector3(tx + 0.55, 2.25, 0.05), new THREE.Vector3(tx + 0.62, 1.6, 0.1), new THREE.Vector3(tx + 0.75, 0.75, 0.2), new THREE.Vector3(-1.3, 0.4, 0.25)]), 40, 0.012, 8);
+      A(hose, steelM, 0, 0, 0, { cast: false });
+      // 2) ตู้ควบคุมสีฟ้า: ตู้บน (ประตูเทา จอตัวเลข ปุ่ม ไฟ E-stop) + คอนโซลเอียง + แท็บเล็ต + ชั้นล่างวางกล่องเครื่องมือ
+      const cx = -1.12;
+      for (const [dx, dz] of [[-0.3, -0.16], [0.3, -0.16], [-0.3, 0.3], [0.3, 0.3]]) caster(cx + dx, 0.07 + dz);
+      A(box(0.74, 0.04, 0.64), greyM, cx, 0.07, 0.07);
+      for (const dx of [-0.34, 0.34]) A(box(0.04, 0.72, 0.5), cabBlue, cx + dx, 0.43, 0.03);
+      A(box(0.64, 0.03, 0.46), greyM, cx, 0.42, 0.03);
+      A(new RoundedBoxGeometry(0.34, 0.16, 0.24, 2, 0.02), toolboxM, cx - 0.05, 0.53, 0.05); A(box(0.42, 0.18, 0.3), acrylic, cx, 0.17, 0.05, { cast: false });
+      const con = new THREE.Shape([new THREE.Vector2(-0.25, 0), new THREE.Vector2(0.25, 0), new THREE.Vector2(0.25, 0.34), new THREE.Vector2(-0.25, 0.1)]);
+      const cg = new THREE.ExtrudeGeometry(con, { depth: 0.72, bevelEnabled: false }); cg.rotateY(Math.PI / 2); cg.translate(-0.36, 0, 0.0);
+      A(cg, cabBlue, cx, 0.79, 0.05);
+      const tb = A(box(0.3, 0.2, 0.015), M.screen, cx, 1.02, 0.17); tb.rotation.x = -1.18; const tbs = A(box(0.27, 0.17, 0.004), tabletScreen, cx, 1.03, 0.175, { cast: false }); tbs.rotation.x = -1.18;
+      A(box(0.74, 0.04, 0.5), cabBlue, cx, 1.14, -0.02);
+      A(box(0.74, 0.8, 0.46), cabBlue, cx, 1.56, -0.05); A(box(0.76, 0.06, 0.48), cabBlue, cx, 1.99, -0.05);
+      const pm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cabPanel, roughness: 0.5 })); const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.66), pm); pp.position.set(cx - 0.05, 1.56, 0.182); inner.add(pp);
+      for (const dx of [-0.11, 0.0]) A(new THREE.CylinderGeometry(0.022, 0.022, 0.02, 14), lampM, cx - 0.05 + dx, 1.84, 0.19, { cast: false }).rotation.x = Math.PI / 2;
+      // 3) โต๊ะเทา: ปั๊มจ่ายสาร ขวดสาร ป้าย QR · ถังสาร 60 ลิตรใต้โต๊ะ · สายยางขาวโยงไปตู้
+      const t2 = -0.36;
+      A(box(0.5, 0.03, 0.46), greyM, t2, 0.86, 0.1); for (const [dx, dz] of [[-0.22, -0.2], [0.22, -0.2], [-0.22, 0.2], [0.22, 0.2]]) A(box(0.03, 0.86, 0.03), greyM, t2 + dx, 0.43, 0.1 + dz);
+      A(new RoundedBoxGeometry(0.18, 0.12, 0.14, 2, 0.03), pumpBlue, t2 + 0.05, 0.94, 0.05); A(new THREE.CylinderGeometry(0.035, 0.035, 0.07, 12), M.dark, t2 + 0.16, 0.94, 0.05).rotation.z = Math.PI / 2;
+      A(new THREE.CylinderGeometry(0.035, 0.04, 0.14, 12), M.white, t2 - 0.17, 0.95, 0.0);
+      const qm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: qrTex, roughness: 0.5 })); const q = A(box(0.16, 0.12, 0.01), qm, t2 - 0.08, 0.94, 0.27); q.rotation.x = -0.35;
+      A(new THREE.CylinderGeometry(0.2, 0.21, 0.55, 24), M.white, t2 + 0.02, 0.28, 0.1); A(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 12), M.white, t2 + 0.02, 0.58, 0.1);
+      const tube = (pts) => A(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))), 30, 0.008, 6), M.white, 0, 0, 0, { cast: false });
+      tube([[t2 + 0.02, 0.6, 0.1], [t2 - 0.1, 0.8, 0.2], [t2 + 0.05, 0.94, 0.13]]); tube([[t2 + 0.16, 0.94, 0.05], [t2 + 0.4, 1.1, 0.0], [t2 + 0.55, 0.8, -0.2]]); tube([[cx + 0.37, 1.2, 0.05], [t2 - 0.3, 0.9, 0.25], [t2 - 0.12, 0.95, 0.05]]);
     } else if (kind === 'clinic') {
       // โพเดียมกลมพิมพ์ลาย + ชั้นวางโบรชัวร์
       const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('clinic'), roughness: 0.5 }));
@@ -806,22 +906,26 @@ function buildWorld(ctx) {
       A(new THREE.CylinderGeometry(0.64, 0.64, 0.04, 36, 1, false, -Math.PI / 2.6, Math.PI / 1.3), M.white, 0, 1.0, -0.05);
       A(box(0.26, 0.3, 0.12), M.white, -0.2, 1.17, 0.25, { cast: false }); A(box(0.22, 0.24, 0.02), top, -0.2, 1.2, 0.31, { cast: false });
     } else if (kind === 'twq') {
-      // เคาน์เตอร์โค้งยาว + จอแผนที่บนขาตั้ง + แล็ปท็อป + ป้ายตั้งมาสคอต
-      const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrint('twq'), roughness: 0.5 }));
-      const geo = new THREE.CylinderGeometry(1.6, 1.6, 0.98, 40, 1, true, -0.55, 1.1); A(geo, cm, 0, 0.49, -1.25);
-      const tg = new THREE.CylinderGeometry(1.66, 1.66, 0.04, 40, 1, false, -0.56, 1.12); A(tg, M.white, 0, 1.0, -1.25);
-      A(box(0.05, 1.5, 0.05), M.alu, -0.2, 0.75, -0.2); const scrM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic('twq', b), emissive: '#ffffff', emissiveIntensity: 0.35, roughness: 0.3 })); scrM.emissiveMap = scrM.map;
-      A(box(0.98, 0.58, 0.05), M.dark, -0.2, 1.62, -0.2); const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.52), scrM); sc.position.set(-0.2, 1.62, -0.172); inner.add(sc);
-      const lp = A(box(0.34, 0.015, 0.24), M.dark, 0.45, 1.03, 0.1, { cast: false }); const ls = A(box(0.34, 0.22, 0.012), M.screen, 0.45, 1.14, -0.01, { cast: false }); ls.rotation.x = -0.25;
+      // ── ตามภาพงานจริง: โต๊ะคลุมผ้าจับจีบสีฟ้าขอบลูกไม้ขาว + ทีวีจอใหญ่บนขาตั้ง (ซ้าย) · ผ้าตึงแผนที่ (ขวา) · ป้ายตั้งมาสคอต
+      const TX = -1.2, TW = 1.5, TD = 0.75, TH = 0.76;
+      A(box(TW, 0.03, TD), skirtTop, TX, TH, 0.0);
+      const sk = (w, x, z, ry) => { const m = A(box(w, TH - 0.02, 0.012), skirtM(w), x, (TH - 0.02) / 2 + 0.01, z); m.rotation.y = ry; };
+      sk(TW + 0.04, TX, TD / 2 + 0.01, 0); sk(TD + 0.02, TX - TW / 2 - 0.01, 0, Math.PI / 2); sk(TD + 0.02, TX + TW / 2 + 0.01, 0, Math.PI / 2);
+      A(box(TW + 0.05, 0.05, TD + 0.05), skirtTop, TX, TH - 0.02, 0.0, { cast: false });
+      // ทีวี 55 นิ้ว
+      for (const dx of [-0.42, 0.42]) { const l = A(box(0.03, 0.02, 0.26), M.dark, TX + dx, TH + 0.025, 0.02); l.rotation.y = dx < 0 ? 0.35 : -0.35; }
+      A(box(1.24, 0.72, 0.05), M.dark, TX, TH + 0.43, -0.02); const scrM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: twqScreen, emissive: '#ffffff', emissiveIntensity: 0.55, roughness: 0.25 })); scrM.emissiveMap = scrM.map;
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(1.19, 0.67), scrM); sc.position.set(TX, TH + 0.43, 0.006); inner.add(sc);
+      A(box(0.18, 0.02, 0.05), M.dark, TX - 0.3, TH + 0.025, 0.25, { cast: false });
       const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: standeeTex(), transparent: true, alphaTest: 0.5, roughness: 0.6 }));
-      const sd = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.35), sm); sd.position.set(1.95, 0.68, 0.35); sd.rotation.y = -0.35; sd.castShadow = true; inner.add(sd);
+      const sd = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.2), sm); sd.position.set(1.62, 0.6, 0.35); sd.rotation.y = -0.4; sd.castShadow = true; inner.add(sd);
     } else if (kind === 'wari') {
       // แท่นกลม + หุ่นยนต์สำรวจคลอง (เรือสองท้อง แผงโซลาร์ กล่องอุปกรณ์ ใบพัดท้าย)
-      const cream = new THREE.MeshStandardMaterial({ color: '#e7dcc2', roughness: 0.45 }), creamD = new THREE.MeshStandardMaterial({ color: '#cfc3a6', roughness: 0.5 });
-      const rz = 0.25, rx = 0.15;
-      A(new THREE.CylinderGeometry(0.98, 1.0, 0.12, 48), M.white, rx, 0.06, rz); A(new THREE.TorusGeometry(0.99, 0.018, 8, 64), top, rx, 0.12, rz).rotation.x = Math.PI / 2;
-      A(new THREE.CylinderGeometry(0.9, 0.9, 0.01, 48), greyM, rx, 0.125, rz, { cast: false });
-      const robot = new THREE.Group(); robot.position.set(rx, 0.13, rz); robot.rotation.y = 0.55; inner.add(robot);
+      const cream = new THREE.MeshStandardMaterial({ color: '#f2c21b', roughness: 0.38 }), creamD = new THREE.MeshStandardMaterial({ color: '#d9a400', roughness: 0.45 });   // เรือสีเหลือง
+      const rz = 0.2, rx = 0.15;
+      A(new THREE.CylinderGeometry(1.08, 1.1, 0.3, 56), M.white, rx, 0.15, rz); A(new THREE.TorusGeometry(1.09, 0.025, 8, 72), top, rx, 0.3, rz).rotation.x = Math.PI / 2;
+      A(new THREE.CylinderGeometry(1.0, 1.0, 0.01, 56), platM, rx, 0.305, rz, { cast: false });
+      const robot = new THREE.Group(); robot.position.set(rx, 0.31, rz); robot.rotation.y = 0.75; robot.scale.setScalar(1.25); inner.add(robot);
       const R = (geo, mat, x, y, z, rxx = 0, ryy = 0, rzz = 0) => { const m = new THREE.Mesh(geo, ZM.m(zone, mat)); m.position.set(x, y, z); m.rotation.set(rxx, ryy, rzz); m.castShadow = true; m.receiveShadow = true; robot.add(m); return m; };
       for (const hx of [-0.36, 0.36]) {
         const hull = R(new THREE.CapsuleGeometry(0.15, 1.15, 6, 16), cream, hx, 0.16, 0, Math.PI / 2); hull.scale.set(1, 1, 0.82);
@@ -894,7 +998,7 @@ function buildWorld(ctx) {
     add('hall', new THREE.CylinderGeometry(0.26, 0.26, 0.02, 20), M.alu, x, 0.01, z, { cast: false });
   });
   // ── ต้นไม้กระถาง
-  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(985), Z(372)], [X(1060), Z(372)], [X(845), Z(735)]].forEach(([x, z]) => {
+  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(985), Z(372)], [X(1060), Z(372)], [X(770), Z(700)]].forEach(([x, z]) => {
     add('other', new THREE.CylinderGeometry(0.28, 0.22, 0.5, 20), M.pot, x, 0.25, z);
     add('other', new THREE.IcosahedronGeometry(0.5, 2), M.plant, x, 1.05, z);
   });
@@ -970,11 +1074,11 @@ function buildWorld(ctx) {
     const W2 = FW + 3.2, D2 = FD + 3.2, cx = (FX0 + FX1) / 2, cz = (FZ0 + FZ1) / 2;
     const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 256);
     gr.addColorStop(0, 'rgba(63,208,255,0)'); gr.addColorStop(0.85, 'rgba(63,208,255,.55)'); gr.addColorStop(1, 'rgba(180,240,255,.95)'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
-    const cm = new THREE.MeshBasicMaterial({ map: canvasTex(c), transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false });
+    const cm = new THREE.MeshBasicMaterial({ map: canvasTex(c), color: new THREE.Color(2.2, 2.6, 3.0), transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false });
     const H2 = 5.5;
     [[W2, cx, cz - D2 / 2, 0], [W2, cx, cz + D2 / 2, 0], [D2, cx - W2 / 2, cz, Math.PI / 2], [D2, cx + W2 / 2, cz, Math.PI / 2]].forEach(([len, x, z, ry]) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(len, H2), cm); m.position.set(x, -H2 / 2, z); m.rotation.y = ry; m.userData.noAO = true; scan.add(m); });
-    const lm = new THREE.LineBasicMaterial({ color: '#7fe3ff', transparent: true, opacity: 1, toneMapped: false });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(len, H2), cm); m.position.set(x, H2 / 2, z); m.rotation.x = Math.PI; m.rotation.y = ry; m.userData.noAO = true; scan.add(m); });
+    const lm = new THREE.LineBasicMaterial({ color: new THREE.Color(2.5, 6, 8), transparent: true, opacity: 1, toneMapped: false });
     const ln = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(W2, 0.02, D2)), lm); ln.position.set(cx, 0, cz); scan.add(ln);
     scan.userData = { cm, lm };
   }
@@ -1034,36 +1138,66 @@ function roundedPath(pts, r) {
 function makePeople(parent, booths, seats, routeAt, L) {
   // คนแบบละเอียด: รองเท้า ขา สะโพก ลำตัว คอ ศีรษะ ผม แขน มือ บัตรห้อยคอ · ผู้หญิงบางคนใส่กระโปรง/ผมยาว
   // คนที่ยืนหรือนั่งนิ่ง รวมเป็น mesh เดียวต่อคน (สีตามจุดยอด) ให้เบาเครื่อง · คนเดินแยกชิ้นเพื่อแกว่งแขนขา
-  const shirts = ['#f4f6f8', '#dfe9f4', '#2b3a4c', '#8fbfe6', '#e9e2d6', '#3c4d63', '#ffffff', '#c9d8e8', '#5e86b8', '#d8cfc2', '#1f2b38', '#b9c7d4', '#e8d9e4', '#cfe0d4'];
-  const pants = ['#1f2732', '#2c3440', '#3b4655', '#4a4f57', '#22303f', '#6b6458'];
-  const skirts = ['#1f2732', '#2b4d7a', '#6a2f3e', '#3b4655', '#7a6a58'];
-  const skins = ['#d9b08c', '#c48f6a', '#e6c3a2', '#b98a65', '#cf9f7c'];
-  const hairs = ['#1d1915', '#2a221c', '#3a2c22', '#151312', '#4a3a2e'];
-  const vmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72 });
-  const cache = {}, mm = c => cache[c] || (cache[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.72 }));
+  // ชุดทางการแบบงานสัมมนา: สูท/กางเกงโทนเข้ม เสื้อเชิ้ตขาว/ฟ้า · ผู้หญิงสูท/เดรส/กระโปรง · เจ้าหน้าที่ กปน. เสื้อโปโลฟ้า
+  const suits = ['#1c2433', '#232b3a', '#2f3644', '#1e2a44', '#3a3f48', '#14181f', '#4a4f57', '#2b3a55'];
+  const shirtsW = ['#ffffff', '#f2f5f8', '#dbe8f5', '#cfe0f2', '#ffffff'];
+  const blouses = ['#ffffff', '#e9dfd3', '#d9e6f2', '#f1d9de', '#c9d8e6', '#2b3a55', '#7a2f3e'];
+  const casual = ['#e9eef3', '#cfdbe7', '#ffffff', '#c8b8a2', '#8fa3b8'];
+  const skins = ['#d7a985', '#c8936c', '#e3bc98', '#b88563', '#cf9d78', '#dcb08c'];
+  const hairs = ['#1a1714', '#231d18', '#2e241c', '#141210', '#3b2e24'];
+  const vmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
+  const cache = {}, mm = c => cache[c] || (cache[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.78 }));
+  const lathe = (pts, seg = 18) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+  const taper = (r0, r1, h, seg = 12) => new THREE.CylinderGeometry(r0, r1, h, seg, 1);
   const G = {
-    shoe: new RoundedBoxGeometry(0.11, 0.07, 0.25, 2, 0.03), leg: new THREE.CapsuleGeometry(0.068, 0.66, 4, 10), legF: new THREE.CapsuleGeometry(0.052, 0.66, 4, 10),
-    hip: new RoundedBoxGeometry(0.33, 0.17, 0.21, 2, 0.06), torso: new THREE.CapsuleGeometry(0.165, 0.3, 4, 14), skirt: new THREE.CylinderGeometry(0.17, 0.25, 0.5, 18, 1),
-    neck: new THREE.CylinderGeometry(0.048, 0.055, 0.1, 10), head: new THREE.SphereGeometry(0.105, 20, 16), hairS: new THREE.SphereGeometry(0.112, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.52),
-    hairL: new THREE.CapsuleGeometry(0.1, 0.16, 4, 12), arm: new THREE.CapsuleGeometry(0.047, 0.46, 4, 10), hand: new THREE.SphereGeometry(0.046, 10, 8),
-    badge: new THREE.BoxGeometry(0.075, 0.1, 0.01), strap: new THREE.TorusGeometry(0.13, 0.008, 4, 20, Math.PI),
+    thigh: taper(0.074, 0.058, 0.46), shin: taper(0.056, 0.044, 0.42), knee: new THREE.SphereGeometry(0.058, 12, 8),
+    thighF: taper(0.064, 0.05, 0.46), shinF: taper(0.046, 0.034, 0.42), kneeF: new THREE.SphereGeometry(0.049, 12, 8),
+    shoe: lathe([[0.001, 0], [0.05, 0.005], [0.055, 0.04], [0.045, 0.07], [0.001, 0.075]], 14), heel: taper(0.012, 0.012, 0.06, 6),
+    pelvis: new RoundedBoxGeometry(0.31, 0.19, 0.2, 3, 0.07),
+    torso: lathe([[0.13, 0], [0.135, 0.06], [0.155, 0.18], [0.175, 0.3], [0.18, 0.38], [0.16, 0.44], [0.09, 0.48], [0.055, 0.5]], 22),
+    jacketHem: lathe([[0.165, 0], [0.16, 0.1], [0.14, 0.2]], 22),
+    skirt: lathe([[0.16, 0.42], [0.2, 0.25], [0.235, 0]], 22), dress: lathe([[0.15, 0.62], [0.17, 0.45], [0.21, 0.2], [0.24, 0]], 22),
+    vee: new THREE.CircleGeometry(0.085, 3), tie: new THREE.BoxGeometry(0.035, 0.24, 0.01), collar: taper(0.062, 0.07, 0.05, 14),
+    shoulder: new THREE.SphereGeometry(0.056, 14, 10),
+    upper: taper(0.056, 0.047, 0.3), fore: taper(0.046, 0.036, 0.27), handG: new THREE.SphereGeometry(0.042, 10, 8),
+    neck: taper(0.045, 0.05, 0.1), head: new THREE.SphereGeometry(0.1, 22, 18), ear: new THREE.SphereGeometry(0.022, 8, 6),
+    hairS: new THREE.SphereGeometry(0.106, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hairL: lathe([[0.1, 0.24], [0.11, 0.15], [0.105, 0.05], [0.085, 0]], 18),
+    bun: new THREE.SphereGeometry(0.05, 12, 10), badge: new THREE.BoxGeometry(0.07, 0.095, 0.01), strap: new THREE.TorusGeometry(0.12, 0.007, 4, 20, Math.PI),
+    doc: new THREE.BoxGeometry(0.22, 0.3, 0.012),
   };
-  G.torso.scale(1.12, 1, 0.68);
+  G.torso.scale(1.13, 1, 0.64); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3); G.head.scale(0.86, 1.08, 0.96); G.hairS.scale(0.88, 1.06, 1.0); G.hairL.scale(0.95, 1, 0.8);
+  G.skirt.scale(1.05, 1, 0.75); G.dress.scale(1.05, 1, 0.75); G.handG.scale(0.8, 1.5, 0.6); G.vee.rotateZ(-Math.PI / 2); G.vee.scale(0.75, 1.5, 1); G.shoe.rotateX(0);
   const list = [];
-  // ชิ้นส่วนของคนหนึ่งคน: [ชื่อกลุ่ม, geometry, สี, x, y, z, rx, ry, rz] · กลุ่ม = root/legL/legR/armL/armR
+  const pick = (arr, k) => arr[((k % arr.length) + arr.length) % arr.length];
+  // ชิ้นส่วนของคนหนึ่งคน: [กลุ่ม, geometry, สี, x, y, z, rx, ry, rz] · กลุ่ม = root/legL/legR/armL/armR
   function parts(o) {
-    const f = o.female, sh = o.staff ? '#1d5fc0' : shirts[o.s % shirts.length], pa = o.staff ? '#1f2732' : (f ? skirts : pants)[o.p % (f ? skirts : pants).length];
-    const sk = skins[o.k % skins.length], hr = hairs[o.k % hairs.length], legC = f && o.skirt ? sk : pa, shoe = f ? '#2b2b2f' : '#151617';
+    const f = o.female, k = o.k, sk = pick(skins, k * 3 + 1), hr = pick(hairs, k);
+    let jacket, shirt, lower, tie = null, sleeve;
+    if (o.staff) { jacket = '#8cc3ea'; shirt = '#8cc3ea'; lower = '#1f2732'; sleeve = jacket; }
+    else if (o.style === 'casual') { jacket = pick(casual, k); shirt = jacket; lower = pick(['#2c3440', '#3b4655', '#6b6458', '#1f2732'], k); sleeve = jacket; }
+    else if (f) { jacket = o.dress ? pick(['#2b3a55', '#7a2f3e', '#3d4a5c', '#1c2433', '#5b6b7c'], k) : pick(o.jacket ? suits : blouses, k + 2); shirt = pick(blouses, k); lower = o.dress ? jacket : pick(['#1c2433', '#2b3a55', '#3a3f48', '#14181f', '#6a5a4a'], k); sleeve = jacket; }
+    else { jacket = pick(suits, k); shirt = pick(shirtsW, k); lower = jacket; sleeve = jacket; tie = pick(['#1d4f9e', '#7a2f3e', '#2b3a55', '#3a5a40', '#1c2433'], k + 1); if (o.shirtOnly) { jacket = shirt; sleeve = shirt; tie = null; } }
+    const legSkin = f && (o.skirt || o.dress), legC = legSkin ? sk : lower, shoe = f ? pick(['#1b1b1f', '#3a2a22', '#1b1b1f'], k) : '#121316';
     const P = [];
-    for (const [g, x] of [['legL', -0.09], ['legR', 0.09]]) { P.push([g, f && o.skirt ? G.legF : G.leg, legC, 0, -0.42, 0]); P.push([g, G.shoe, shoe, 0, -0.84, 0.045]); }
-    if (f && o.skirt) P.push(['root', G.skirt, pa, 0, 0.74, 0]); else P.push(['root', G.hip, pa, 0, 0.9, 0]);
-    P.push(['root', G.torso, sh, 0, 1.2, 0], ['root', G.neck, sk, 0, 1.47, 0], ['root', G.head, sk, 0, 1.585, 0.005], ['root', G.hairS, hr, 0, 1.6, -0.008]);
-    if (f && o.longHair) P.push(['root', G.hairL, hr, 0, 1.47, -0.075]);
-    if (o.badge !== false) { P.push(['root', G.badge, o.staff ? '#ffd24a' : '#ffffff', 0, 1.2, 0.125]); P.push(['root', G.strap, o.staff ? '#ffd24a' : '#1d5fc0', 0, 1.31, 0.07, Math.PI * 0.62, 0, Math.PI]); }
-    for (const g of ['armL', 'armR']) { P.push([g, G.arm, sh, 0, -0.27, 0]); P.push([g, G.hand, sk, 0, -0.56, 0.01]); }
+    for (const g of ['legL', 'legR']) {
+      P.push([g, legSkin ? G.thighF : G.thigh, legC, 0, -0.23, 0], [g, legSkin ? G.kneeF : G.knee, legC, 0, -0.46, 0.004], [g, legSkin ? G.shinF : G.shin, legC, 0, -0.67, 0], [g, G.shoe, shoe, 0, -0.92, 0.035]);
+      if (f) P.push([g, G.heel, shoe, 0, -0.89, -0.05]);
+    }
+    P.push(['root', G.pelvis, lower, 0, 0.95, 0]);
+    P.push(['root', G.torso, jacket, 0, 0.99, 0]);
+    if (o.dress) P.push(['root', G.dress, jacket, 0, 0.38, 0]); else if (legSkin) P.push(['root', G.skirt, lower, 0, 0.52, 0]);
+    if (!o.staff && jacket !== shirt) { P.push(['root', G.vee, shirt, 0, 1.38, 0.116, -0.12]); if (tie) P.push(['root', G.tie, tie, 0, 1.3, 0.119, -0.1]); P.push(['root', G.jacketHem, jacket, 0, 0.9, 0]); }
+    if (o.staff) P.push(['root', G.collar, '#8cc3ea', 0, 1.47, 0]);
+    P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.087, 1.63, 0], ['root', G.ear, sk, 0.087, 1.63, 0]);
+    P.push(['root', G.hairS, hr, 0, 1.655, -0.012]);
+    if (f && o.longHair) P.push(['root', G.hairL, hr, 0, 1.43, -0.04]); else if (f) P.push(['root', G.bun, hr, 0, 1.66, -0.1]);
+    for (const x of [-0.198, 0.198]) P.push(['root', G.shoulder, sleeve, x, 1.41, 0]);
+    if (o.badge !== false) { P.push(['root', G.badge, '#f4f6f8', 0, 1.22, 0.122]); P.push(['root', G.strap, '#1d5fc0', 0, 1.33, 0.06, Math.PI * 0.6, 0, Math.PI]); }
+    for (const g of ['armL', 'armR']) P.push([g, G.upper, sleeve, 0, -0.16, 0], [g, G.fore, o.staff ? sk : sleeve, 0, -0.44, 0.012], [g, G.handG, sk, 0, -0.62, 0.02]);
+    if (o.doc) P.push(['armR', G.doc, '#ffffff', 0, -0.62, 0.06, 0.2]);
     return P;
   }
-  const PIV = { legL: [-0.09, 0.88, 0], legR: [0.09, 0.88, 0], armL: [-0.235, 1.42, 0], armR: [0.235, 1.42, 0] };
+  const PIV = { legL: [-0.092, 0.92, 0], legR: [0.092, 0.92, 0], armL: [-0.215, 1.42, 0], armR: [0.215, 1.42, 0] };
   const tmpM = new THREE.Matrix4(), tmpE = new THREE.Euler(), tmpQ = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
   function merged(o, pose) {               // รวมเป็น geometry เดียว · pose = มุมขา/แขน (นั่ง/ยืน)
     const geos = [];
@@ -1086,27 +1220,30 @@ function makePeople(parent, booths, seats, routeAt, L) {
     return { g, body, legPivotL: piv.legL, legPivotR: piv.legR, aL: piv.armL, aR: piv.armR, ...o };
   }
   let k = 0;
-  const who = extra => { const female = rnd() < 0.45; return Object.assign({ s: k, p: k, k: k++, female, skirt: female && rnd() < 0.6, longHair: female && rnd() < 0.7, scale: (female ? 0.93 : 0.99) + rnd() * 0.07 }, extra); };
-  // คนเดินตามเส้นทาง
-  for (let i = 0; i < 30; i++) list.push(Object.assign(rigged(who()), { mode: 'walk', s0: i * (L / 30), v: 0.9 + rnd() * 0.35, off: (rnd() - 0.5) * 1.6, ph: rnd() * 6 }));
-  // คนยืนหน้าบูธ (แขนลงข้างตัว / ถือเอกสาร)
+  const who = extra => { const female = rnd() < 0.42, r = rnd(); return Object.assign({ k: k++, female, skirt: female && rnd() < 0.55, dress: female && rnd() < 0.2, jacket: female && rnd() < 0.45, longHair: female && rnd() < 0.6, shirtOnly: !female && rnd() < 0.18, style: r < 0.12 ? 'casual' : 'formal', scale: (female ? 0.94 : 1.0) + rnd() * 0.06 }, extra); };
+  // คนเดินตามเส้นทาง (บางคนถือเอกสาร)
+  for (let i = 0; i < 16; i++) list.push(Object.assign(rigged(who({ doc: rnd() < 0.25 })), { mode: 'walk', s0: i * (L / 16) + rnd() * 3, v: 0.95 + rnd() * 0.3, off: (rnd() - 0.5) * 1.4, ph: rnd() * 6 }));
+  // ผู้เยี่ยมชมหน้าบูธ 0–2 คน · เจ้าหน้าที่ประจำบูธ 1–2 คน
   booths.forEach(b => {
-    const n = b.tbc ? (rnd() < 0.4 ? 1 : 0) : ((b.w || 2) > 2 ? 2 : 1) + Math.floor(rnd() * 3);
-    const fv = FACEV[b.face];
+    const big = (b.w || 2) > 2, fv = FACEV[b.face];
+    const n = b.tbc ? 0 : big ? 1 + (rnd() < 0.5 ? 1 : 0) : (rnd() < 0.55 ? 1 : 0);
     for (let j = 0; j < n; j++) {
-      const big = (b.w || 2) > 2, side = (j - (n - 1) / 2) * (big ? 1.1 : 0.72) + (rnd() - 0.5) * 0.2, dist = (big ? 1.45 : 1.15) + rnd() * 0.5;
+      const side = (j - (n - 1) / 2) * (big ? 1.2 : 0.8) + (rnd() - 0.5) * 0.3, dist = (big ? 1.6 : 1.25) + rnd() * 0.4;
       const px = b.x + fv[0] * dist + (fv[1] !== 0 ? side : 0), pz = b.z + fv[1] * dist + (fv[0] !== 0 ? side : 0);
-      const p = merged(who(), { armR: rnd() < 0.5 ? -0.7 : -0.1, armL: -0.05 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.6; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
+      const p = merged(who(), { armR: rnd() < 0.4 ? -0.5 : -0.05, armL: -0.04 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.5; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
-    if (!b.tbc) { const p = merged(who({ staff: true }), { armL: -0.55, armR: -0.55 }); const lx = b.kind === 'cc' ? -0.55 : b.kind === 'wari' ? -1.15 : b.kind ? 0.35 : 0.42, lz = b.kind === 'cc' ? 0.55 : b.kind === 'twq' ? -0.55 : b.kind === 'wari' ? 0.2 : -0.15, c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
-      p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face]; p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); }
+    if (b.tbc) return;
+    const spots = b.kind === 'cc' ? [[0.25, 0.85], [2.3, 0.6]] : b.kind === 'twq' ? [[0.1, 0.45], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.25, 0.9]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
+    spots.forEach(([lx, lz], si) => { if (si && rnd() < 0.35) return;
+      const p = merged(who({ staff: b.own === 'mwa' }), { armL: -0.12, armR: si ? -0.12 : -0.45 }); const c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
+      p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face] + (si ? 0.4 : 0); p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); });
   });
-  // คนพักดื่มกาแฟ (ยกแก้ว)
+  // พักดื่มกาแฟ
   [[X(880), Z(275)], [X(940), Z(275)], [X(880), Z(320)], [X(940), Z(320)]].forEach(([x, z], ti) => {
-    for (let j = 0; j < 2 + (ti % 2); j++) { const a = j * 2.2 + ti; const p = merged(who(), { armR: -1.2 }); p.g.position.set(x + Math.cos(a) * 0.78, 0, z + Math.sin(a) * 0.78); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
+    for (let j = 0; j < 2; j++) { const a = j * 2.6 + ti; const p = merged(who(), { armR: -1.15 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
   });
   // ผู้นั่งใน Auditorium
-  for (let i = 0; i < 90; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.38, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
+  for (let i = 0; i < 90; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.4, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
   return list;
 }
 
@@ -1115,9 +1252,9 @@ function tourSteps(W) {
   const b = c => W.booths.find(q => q.code === c);
   const P = (px, py, h) => [X(px), h, Z(py)];
   const st = [
-    { t: 'ภาพรวมชั้น 5', d: 'ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. → ห้องแสดงบริษัทพันธมิตร → ห้องประชุม Auditorium มีเส้นน้ำบนพื้นนำทางตลอดเส้นทาง', focus: null, cam: [-6, 61, 57], tgt: [4, 0, 4], j: -1 },
-    { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เดินตรงมาที่ผนังฉาก “เส้นทางน้ำ” โต๊ะลงทะเบียนยาวชิดผนัง มีป้ายแยกช่องลงทะเบียนล่วงหน้า หน้างาน และประชาสัมพันธ์ รับ Water Passport แล้วเลี้ยวขวาตามเส้นน้ำ', focus: 'lobby', cam: P(840, 860, 5.2), tgt: P(772, 735, 1.4), j: 0 },
-    { t: 'ผนังฉาก “เส้นทางน้ำ”', d: 'ผนังฉากกว้าง 6 ม. สูง 3 ม. ด้านหลังโต๊ะลงทะเบียน เป็นจุดถ่ายรูปแรกของงาน', focus: 'lobby', cam: P(780, 805, 2.4), tgt: P(766, 720, 1.7), j: 0 },
+    { t: 'ภาพรวมชั้น 5', d: 'ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. → ห้องแสดงบริษัทพันธมิตร → ห้องประชุม Auditorium มีเส้นนำทางบนพื้นตลอดเส้นทาง', focus: null, cam: [-6, 61, 57], tgt: [4, 0, 4], j: -1 },
+    { t: 'ออกจากลิฟต์ · ลงทะเบียน', d: 'ออกจากลิฟต์เดินมาที่ผนังต้อนรับกลางทางเดิน โต๊ะลงทะเบียนยาวด้านหน้า ป้ายแยกช่องลงทะเบียนล่วงหน้า หน้างาน และประชาสัมพันธ์ แล้วเลี้ยวขวาตามเส้นนำทาง', focus: 'lobby', cam: P(790, 880, 5.0), tgt: P(842, 700, 1.4), j: 0 },
+    { t: 'ผนังต้อนรับ · Stakeholder Day', d: 'ผนังฉากกว้าง 6 ม. สูง 3 ม. ด้านหลังโต๊ะลงทะเบียน ตรา กปน. และข้อความต้อนรับ เป็นจุดถ่ายรูปแรกของงาน', focus: 'lobby', cam: P(842, 800, 2.3), tgt: P(842, 676, 1.7), j: 0 },
     { t: 'ทางเดินนวัตกรรม กปน.', d: 'วารีกุญชร หุ่นยนต์สำรวจคลองส่งน้ำดิบ (เหรียญเงิน iENA 2022 เยอรมนี) บนแท่นจัดแสดง ตามด้วยบูธ กปน. 06 · 07 ทางเดินเหลือกว้างราว 5 ม.', focus: 'mwa', cam: P(955, 740, 4.6), tgt: P(893, 575, 1.4), j: 1 },
     { t: 'นิทรรศการ กปน.', d: 'ชิดผนังทางเดินเหนือ เรียงแบบงานจริง: Chlorine Care · เส้นทางน้ำประปาดื่มได้ (WSP) · คลินิกน้ำสะอาด · TWQ Online', focus: 'north', cam: P(1150, 470, 7.0), tgt: P(1210, 352, 1.2), j: 2 },
     { t: 'Chlorine Care · ระบบเติมคลอรีนอัตโนมัติ', d: 'ชุดถังจำลองพร้อมท่อ ตู้ควบคุม PLC และแท็บเล็ต โต๊ะปั๊มจ่ายสารพร้อมถังเคมี หน้าผ้าตึงไดอะแกรมระบบ', focus: 'north', booth: 'M02', cam: P(1145, 418, 2.9), tgt: P(1140, 352, 1.25), j: 2 },
@@ -1269,7 +1406,39 @@ function play(opt = {}) {
   }
 
   // ── ปุ่ม
-  function setAuto(on) { st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.textContent = on ? '❚❚ หยุดนำชม' : '▶ นำชม'; }
+  // ── นำชมแบบเดินตามทาง: กล้องระดับสายตาคน เดินจากลิฟต์ตามเส้นนำทาง ชะลอและหันมองเมื่อผ่านบูธ
+  const WALK = { v: 1.55, slow: 0.6, eye: 1.62 };
+  const jOf = s => { const bs = W.booths; const first = z => { const q = bs.filter(b => b.zone === z); return q.length ? Math.min(...q.map(b => b.along)) : 1e9; }, last = z => { const q = bs.filter(b => b.zone === z); return q.length ? Math.max(...q.map(b => b.along)) : -1e9; };
+    if (s < first('mwa') - 4) return 0; if (s < first('north') - 4) return 1; if (s < first('hall') - 3) return 2; if (s < last('hall') + 3) return 3; if (s < W.L - 4) return 4; return 5; };
+  function setWalkCard(j) {
+    if (st.walkJ === j) return; st.walkJ = j;
+    const si = STEPS.findIndex(q => q.j === j); const s = STEPS[si] || STEPS[0];
+    root.querySelector('#f5n').textContent = 'เดินชม'; root.querySelector('#f5t').textContent = JOURNEY[j]; root.querySelector('#f5d').textContent = s.d;
+    stepsEl.querySelectorAll('.stp').forEach((b, k) => { b.classList.toggle('done', k < j); b.classList.toggle('cur', k === j); });
+    stepsEl.querySelector('.fill').style.width = `calc(${j / (JOURNEY.length - 1) * 100}% - ${j / (JOURNEY.length - 1) * 28}px)`;
+  }
+  function walkStep(dt) {
+    const w = st.walk; let near = null, nd = 1e9;
+    const p = W.routeAt(Math.min(w.s, W.L));
+    for (const b of W.booths) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < nd && Math.abs(b.along - w.s) < 4.5) { nd = d; near = b; } }
+    const slow = near && nd < 4.6 && !near.tbc;
+    w.v = lerp(w.v, slow ? WALK.slow : WALK.v, Math.min(1, dt * 1.6));
+    w.s += w.v * dt;
+    const q = W.routeAt(Math.min(w.s, W.L)), ahead = W.routeAt(Math.min(w.s + 5.5, W.L)), tail = Math.max(0, w.s - W.L);
+    const pos = new THREE.Vector3(q.x + q.tx * tail, WALK.eye + Math.sin(w.s * 3.6) * 0.018, q.z + q.tz * tail);
+    let look = new THREE.Vector3(ahead.x + q.tx * tail * 2, 1.45, ahead.z + q.tz * tail * 2);
+    if (tail > 0) look.y = 1.8;
+    if (slow) { const k = Math.min(1, (4.6 - nd) / 2.4) * 0.65; look.lerp(new THREE.Vector3(near.x, 1.35, near.z), k); }
+    if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * 2.2));
+    camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
+    setWalkCard(jOf(w.s));
+    if (w.s > W.L + 7) { setAuto(false); goStep(STEPS.length - 1); }
+  }
+  function setAuto(on) {
+    st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.textContent = on ? '❚❚ หยุดเดินชม' : '▶ เดินชม';
+    if (on) { st.walk = { s: 1.3, v: 0.4, look: null }; st.walkJ = -1; st.tween = null; st.spin = false; controls.autoRotate = false; controls.enabled = false; setFocus(null); selectBooth(null); camera.fov = 66; camera.updateProjectionMatrix(); }
+    else if (st.walk) { st.walk = null; controls.enabled = true; camera.fov = 45; camera.updateProjectionMatrix(); }
+  }
   function act(k) {
     if (k === 'next') { setAuto(false); goStep(st.step + 1); }
     else if (k === 'prev') { setAuto(false); goStep(st.step - 1); }
@@ -1311,43 +1480,51 @@ function play(opt = {}) {
     ctx.sun.position.set(-38, 70, 30).multiplyScalar(big ? 2 : 1); sc.updateProjectionMatrix();
   }
   const eOut = x => 1 - Math.pow(1 - x, 3);
+  const HOLO = new THREE.Color(0.35, 2.0, 4.2), EDGE0 = new THREE.Color('#7fd0ff');
   function applyIntro(t) {
-    // 0–1.8 ภาพอาคารจากฝั่งคลอง · 1.2–3.0 วงสแกนแสงไล่ขึ้นถึงชั้น 5 · 2.6–5.4 ชั้น 6–12 แยกลอยขึ้นทีละชั้น (ขอบเรืองแสง) แล้วจาง
-    // 3.0–4.8 ชั้นล่างเหลือแค่โครงเส้น · 4.0–5.0 ผนังกระจกชั้น 5 สลาย · 4.6–7.6 ผนังห้อง/บูธ/เส้นทาง/ผู้คน · กล้องเครนขึ้นถึงภาพรวม
+    // 0–1.0 ภาพอาคาร · 1.0–2.6 วงสแกนแสงไล่จากยอดตึกลงมาถึงชั้น 5 (ชั้นที่ผ่านกลายเป็นโฮโลแกรมเส้นเรือง)
+    // 2.6–5.0 ชั้น 6–12 ลอยแยกขึ้นทีละชั้นจากบนสุดแล้วสลาย · 3.0–4.6 ชั้นล่างกลายเป็นโครงเส้น · 3.6–4.8 ผนังกระจกชั้น 5 เรืองแล้วสลาย
+    // 4.6–7.8 ผนังห้อง บูธ เส้นนำทาง ผู้คน · กล้องเครนขึ้นมุมสูงแล้วลงสู่ภาพรวมชั้น 5
     if (!st.bigShadow !== !(t < INTRO_END - 0.6)) { st.bigShadow = t < INTRO_END - 0.6; shadowBox(st.bigShadow); }
-    const lowF = ss(3.0, 4.8, t), shell = ss(4.0, 5.0, t);
-    // วงสแกน
-    { const sp = ss(1.2, 3.0, t), on = t > 1.1 && t < 5.4, S = W.scan; S.visible = on;
-      if (on) { S.position.y = lerp(W.gy, 0.05, eOut(sp)); const a = Math.min(ss(1.1, 1.5, t), 1 - ss(4.4, 5.4, t)); S.userData.cm.opacity = a; S.userData.lm.opacity = a; } }
-    for (const F of W.floors) { if (!F) continue; const above = F.f > F5;
-      if (above) {
-        const k = F.f - F5, t0 = 2.6 + (NF - 1 - F.f) * 0.16, u = eOut(ss(t0, t0 + 1.8, t));             // ชั้นบนสุดออกก่อน
-        F.g.position.y = F.f * FH + u * (10 + k * 7.5);
-        F.g.position.x = u * (k % 2 ? 1 : -1) * 1.2; F.g.rotation.y = u * (k % 2 ? 1 : -1) * 0.035;
-        const a = 1 - ss(t0 + 1.0, t0 + 2.4, t);
-        setOp(F, a, a, a > 0.98); F.g.visible = a > 0.01; F.edgeM.opacity = Math.min(1, ss(t0 - 0.1, t0 + 0.3, t) * 1.2) * a;
+    const intro = t < INTRO_END - 0.05; if (ctx.bloom) ctx.bloom.enabled = intro && t > 0.9 && t < 6.2;
+    const topY = (NF - F5) * FH + 8.5, scanY = lerp(topY, 0.05, eOut(ss(1.0, 2.6, t)));
+    { const S = W.scan, on = t > 0.95 && t < 5.6; S.visible = on;
+      if (on) { S.position.y = scanY; const a = Math.min(ss(0.95, 1.25, t), 1 - ss(4.6, 5.6, t)); S.userData.cm.opacity = a * (t < 2.7 ? 1 : 0.35); S.userData.lm.opacity = a; } }
+    const lowF = ss(3.0, 4.6, t), shell = ss(4.2, 5.0, t);
+    for (const F of W.floors) { if (!F) continue;
+      F.edgeM.color.copy(intro ? HOLO : EDGE0);
+      if (F.f > F5) {
+        const k = F.f - F5, y0 = k * FH, holo = clamp((y0 + FH - scanY) / FH);
+        const t0 = 2.6 + (NF - 1 - F.f) * 0.14, u = eOut(ss(t0, t0 + 1.7, t)), fade = 1 - ss(t0 + 1.0, t0 + 2.1, t);
+        F.g.position.y = F.f * FH + u * (9 + k * 7.5); F.g.position.x = u * (k % 2 ? 1 : -1) * 1.6; F.g.rotation.y = u * (k % 2 ? 1 : -1) * 0.05;
+        const so = lerp(1, 0.08, holo) * fade, go = lerp(1, 0.04, holo) * fade;
+        for (const m of F.mats) { m.opacity = m.userData.glass ? go : so; m.depthWrite = holo < 0.05; }
+        F.g.visible = fade > 0.01; F.edgeM.opacity = holo * fade;
       } else {
-        const so = lerp(1, 0.22, lowF), go = lerp(1, 0.05, lowF);
+        const so = lerp(1, 0.18, lowF), go = lerp(1, 0.04, lowF);
         for (const m of F.mats) { m.opacity = m.userData.glass ? go : so; m.depthWrite = m.userData.glass ? lowF < 0.02 : lowF < 0.5; }
-        F.edgeM.opacity = 0.7 * lowF; F.g.position.y = F.f * FH - eOut(lowF) * (F5 - F.f) * 1.6;
+        F.edgeM.opacity = 0.75 * lowF; F.g.position.y = F.f * FH - eOut(lowF) * (F5 - F.f) * 1.8;
       } }
     { const o = ss(2.6, 3.8, t); for (const m of W.oldBldg.mats) { m.opacity = lerp(1, 0.14, o); m.depthWrite = o < 0.3; } }
-    setOp(W.f5shell, 1 - shell, 1 - shell, shell < 0.02); W.f5shell.g.visible = shell < 0.99; W.f5shell.edgeM.opacity = Math.min(ss(2.9, 3.3, t), 1 - ss(5.0, 6.0, t));
-    { const k = ss(5.6, INTRO_END, t); ctx.scene.fog.near = lerp(420, 170, k); ctx.scene.fog.far = lerp(1500, 430, k); }   // ตอนเห็นทั้งโรงงาน มองได้ไกล
+    const flash = ss(3.4, 4.0, t) * (1 - ss(4.3, 5.0, t));
+    for (const m of W.f5shell.mats) { m.opacity = 1 - shell; m.depthWrite = shell < 0.02; if (m.emissive) { m.emissive.setRGB(0.25, 0.85, 1.0); m.emissiveIntensity = intro ? flash * 0.7 : 0; } }
+    W.f5shell.g.visible = shell < 0.99; W.f5shell.edgeM.color.copy(intro ? HOLO : EDGE0); W.f5shell.edgeM.opacity = Math.min(ss(2.5, 2.9, t), 1 - ss(5.0, 6.0, t));
+    { const k = ss(5.6, INTRO_END, t); ctx.scene.fog.near = lerp(420, 170, k); ctx.scene.fog.far = lerp(1500, 430, k); }
     st.wallIntro = Math.max(0.001, eOut(ss(4.6, 6.0, t)));
     W.booths.forEach((b, i) => { const k = Math.max(0.001, eOut(ss(5.4 + i * 0.06, 6.2 + i * 0.06, t))); b.group.scale.setScalar(k); });
     W.routeU.uProg.value = ss(6.0, 7.8, t);
     W.people.forEach(p => { p.g.visible = t > 6.6; });
-    const ttl = root.querySelector('#f5ttl'); ttl.style.opacity = Math.min(ss(0.1, 0.7, t), 1 - ss(2.0, 2.7, t));
-    // กล้อง: หน้าอาคารฝั่งคลอง → เครนขึ้นโค้งผ่านด้านใต้ → ภาพรวมชั้น 5 มุมสูง
-    const c = easeIO(ss(0.8, INTRO_END - 0.1, t)), s0 = STEPS[0];
+    const ttl = root.querySelector('#f5ttl'); ttl.style.opacity = Math.min(ss(0.1, 0.7, t), 1 - ss(1.4, 2.0, t));
+    // กล้อง: ดันเข้าเล็กน้อย → เครนขึ้นวนโค้งให้เห็นชั้นที่ลอยแยก → ลงสู่ภาพรวมชั้น 5
+    const c = easeIO(ss(0.6, INTRO_END - 0.1, t)), s0 = STEPS[0];
     const p1 = new THREE.Vector3(...s0.cam), t1 = new THREE.Vector3(...s0.tgt);
     const a0 = Math.atan2(introCam.p0.z, introCam.p0.x); let a1 = Math.atan2(p1.z, p1.x);
     while (a1 - a0 > Math.PI) a1 -= Math.PI * 2; while (a1 - a0 < -Math.PI) a1 += Math.PI * 2;
-    const r0 = Math.hypot(introCam.p0.x, introCam.p0.z), r1 = Math.hypot(p1.x, p1.z);
-    const a = lerp(a0, a1, c), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * c) * 30;
+    const r0 = Math.hypot(introCam.p0.x, introCam.p0.z) * (1 - 0.12 * ss(0, 1.2, t)), r1 = Math.hypot(p1.x, p1.z);
+    const a = lerp(a0, a1, c), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * Math.min(1, c * 1.15)) * 46;
     camera.position.set(Math.cos(a) * r, lerp(introCam.p0.y, p1.y, c) + lift, Math.sin(a) * r);
-    controls.target.lerpVectors(introCam.t0, t1, easeIO(ss(1.6, INTRO_END - 0.1, t)));
+    const tgtUp = Math.sin(Math.PI * ss(1.6, 6.5, t)) * 18;
+    controls.target.lerpVectors(introCam.t0, t1, easeIO(ss(1.6, INTRO_END - 0.1, t))); controls.target.y += tgtUp;
   }
 
   // ── จำลองคนเดิน
@@ -1358,7 +1535,7 @@ function play(opt = {}) {
         let s = (p.s0 + st.simT * p.v) % (W.L + 6); const atEnd = s > W.L;
         const r = W.routeAt(Math.min(s, W.L)); const nx = -r.tz, nz = r.tx;
         p.g.position.set(r.x + nx * p.off, 0, r.z + nz * p.off); p.g.rotation.y = Math.atan2(r.tx, r.tz);
-        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6;
+        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 1.8);
         const w = Math.sin((st.simT * p.v) * 7 + p.ph) * 0.45;
         p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w; p.aL.rotation.x = -w * 0.7; p.aR.rotation.x = w * 0.7; p.body.position.y = Math.abs(Math.cos((st.simT * p.v) * 7 + p.ph)) * 0.03;
       } else if (p.mode === 'stand') { p.body.rotation.y = Math.sin(now / 1700 + p.ph) * 0.12; }
@@ -1372,9 +1549,9 @@ function play(opt = {}) {
   function frame(now) {
     if (!st.running) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (st.introOn) { st.intro += dt; applyIntro(st.intro); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
+    if (st.introOn) { st.intro += dt; applyIntro(st.intro); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; applyIntro(INTRO_END + 1); if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
+    else if (st.walk) walkStep(dt);
     else { tweenStep(dt); controls.update(); }
-    if (st.auto && !st.tween) { st.autoT += dt; if (st.autoT > 7.5) goStep(st.step + 1); }
     updateZones(dt);
     W.routeU.uTime.value = now / 1000;
     simPeople(dt, now);
@@ -1389,7 +1566,7 @@ function play(opt = {}) {
   requestAnimationFrame(() => root.classList.add('on'));
   st.raf = requestAnimationFrame(frame);
   st.goStep = goStep; st.selectBooth = selectBooth; st.act = act;
-  window.__f5 = st; st.camera = camera; st.controls = controls;
+  window.__f5 = st; st.camera = camera; st.controls = controls; st.THREE = THREE;
   return true;
 }
 
