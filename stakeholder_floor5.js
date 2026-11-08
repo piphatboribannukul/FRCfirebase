@@ -25,7 +25,7 @@ const FH = 4.2, NF = 12, F5 = 4;                           // ความสู
 const WALL_H = 3.0, AUD_H = 4.4, WT = 0.22;
 
 // ลิฟต์ → ลงทะเบียน → ทางเดิน กปน. → นิทรรศการ กปน. (ทางเดินเหนือ) → ห้องแสดงบริษัทพันธมิตร (ครึ่งห้องฝั่งตะวันออก) เข้าประตูตะวันออก ออกประตูตะวันตก → Auditorium
-const ROUTE_PX = [[829, 884], [806, 884], [806, 778], [932, 778], [932, 392], [1355, 392], [1355, 269], [1131, 269], [1131, 418], [1310, 418], [1310, 470]];
+const ROUTE_PX = [[829, 884], [806, 884], [806, 742], [932, 742], [932, 392], [1355, 392], [1355, 269], [1131, 269], [1131, 418], [1310, 418], [1310, 470]];
 
 const MWA_BOOTHS = [
   { name: 'TWQ Online', sub: 'ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', prop: 'cabinet' },
@@ -36,6 +36,8 @@ const MWA_BOOTHS = [
   { name: 'บูธ กปน. 06', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
   { name: 'บูธ กปน. 07', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
   { name: 'บูธ กปน. 08', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
+  { name: 'บูธ กปน. 09', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
+  { name: 'บูธ กปน. 10', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
 ];
 const PARTNERS = [
   { name: 'Yokogawa', sub: 'เครื่องมือวัดและระบบควบคุม', prop: 'analyzer', col: '#2463b8' },
@@ -51,14 +53,16 @@ const PARTNERS = [
   { name: 'พันธมิตร 11', sub: 'รอยืนยัน', prop: 'box', col: '#5d6b7a', tbc: true },
   { name: 'พันธมิตร 12', sub: 'รอยืนยัน', prop: 'box', col: '#5d6b7a', tbc: true },
 ];
-const MWA_COL = ['#1d5fc0', '#0f8fb8', '#14a39a', '#2a6fdb', '#3653c4', '#1d5fc0', '#1d5fc0', '#1d5fc0'];
+const MWA_COL = ['#1d5fc0', '#0f8fb8', '#14a39a', '#2a6fdb', '#3653c4', '#1d5fc0', '#1d5fc0', '#1d5fc0', '#1d5fc0', '#1d5fc0'];
 
 // ตำแหน่งบูธ (ม.) · face = ทิศหน้าบูธ e/w/n/s · kind = แบบบูธ กปน. ตามภาพงานจริง (กว้าง 3 ม.)
 function boothSlots() {
   const S = [];
   const xW = X(885) + WT / 2;                              // ผนังตะวันตกของทางเดิน กปน. (ผนังกระจก)
   // ทางเดิน กปน.: วารีกุญชร · บูธ 06 · บูธ 08 (กลาง) · บูธ 07
-  [[645, 4, 'wari'], [585, 5, 'generic'], [530, 7, 'generic'], [475, 6, 'generic']].forEach(([py, i, kind]) => S.push({ own: 'mwa', i, x: xW + (kind === 'wari' ? 0.95 : 0.65), z: Z(py), face: 'e', zone: 'mwa', kind, w: 3, d: kind === 'wari' ? 1.9 : 1.3 }));
+  [[645, 4, 'wari'], [585, 5, 'generic'], [530, 7, 'generic'], [475, 6, 'generic']].forEach(([py, i, kind]) => S.push({ own: 'mwa', i, x: xW + (kind === 'wari' ? 1.3 : 0.7), z: Z(py), face: 'e', zone: 'mwa', kind, w: 3, d: kind === 'wari' ? 1.9 : 1.3 }));
+  // บูธ กปน. 09 · 10 ชิดผนังทางเดินเหนือ (ช่วงหน้าพื้นที่ปิด)
+  [[1003, 8], [1075, 9]].forEach(([px, i]) => S.push({ own: 'mwa', i, x: X(px), z: Z(350) + WT / 2 + 0.7, face: 's', zone: 'north', kind: 'generic', w: 3, d: 1.3 }));
   // นิทรรศการ กปน. ชิดผนังทางเดินเหนือ (ระหว่างประตูออก–เข้า ห้องแสดง) เรียงแบบภาพงานจริง: Chlorine Care · WSP · คลินิกน้ำสะอาด · TWQ Online
   const zc = Z(350) + WT / 2 + 0.65, xa = X(1152) + 0.1;
   S.push({ own: 'mwa', i: 1, x: xa + 2.5, z: zc, face: 's', zone: 'north', kind: 'cc', w: 5.0, d: 1.3 });
@@ -76,24 +80,21 @@ const FACEV = { s: [0, 1], n: [0, -1], e: [1, 0], w: [-1, 0] };
 
 // ห้อง (พิกเซลภาพร่าง) · gaps = ประตู [จาก, ถึง] บนผนัง n/s/e/w
 const ROOMS = [
-  { id: 'dining', zone: 'dining', r: [855, 188, 970, 350], floor: 'wood', gaps: { s: [[895, 935]] } },
+  { id: 'dining', zone: 'dining', r: [855, 188, 970, 350], floor: 'wood', gaps: { s: [[895, 935]], n: [[855, 970]], w: [[188, 350]] } },   // ผนังเหนือ/ตะวันตก = กระจกอาคาร (มองเห็นคลองประปา)
   { id: 'hall', zone: 'hall', r: [1108, 188, 1390, 350], floor: 'carpet', gaps: { s: [[1112, 1150], [1335, 1375]] } },
   { id: 'elec', zone: 'other', r: [1397, 188, 1565, 350], floor: 'plain', gaps: { s: [[1460, 1500]] } },
   { id: 'aud', zone: 'aud', r: [1155, 435, 1520, 755], floor: 'aud', gaps: { n: [[1290, 1330]] }, h: AUD_H },
-  { id: 'mr1', zone: 'other', r: [603, 463, 675, 522], floor: 'plain', gaps: { e: [[480, 505]] } },
-  { id: 'mr2', zone: 'other', r: [603, 557, 675, 615], floor: 'plain', gaps: { e: [[575, 600]] } },
-  { id: 'mr3', zone: 'other', r: [603, 648, 675, 707], floor: 'plain', gaps: { e: [[665, 690]] } },
   { id: 'mr4', zone: 'other', r: [623, 768, 725, 897], floor: 'plain', gaps: { e: [[790, 820]] } },
   { id: 'wc', zone: 'other', r: [977, 823, 1078, 908], floor: 'plain', gaps: { w: [[882, 906]] } },
 ];
 const CLOSED = [                                           // พื้นที่ไม่ใช้จัดงาน (ทึบ)
-  { r: [600, 185, 853, 452], t: 'พื้นที่สำนักงาน' }, { r: [958, 432, 1153, 761], t: 'พื้นที่สำนักงาน' }, { r: [972, 188, 1106, 350], t: 'ปิด (ไม่ใช้)' },
+  { r: [958, 432, 1153, 761], t: 'พื้นที่สำนักงาน' }, { r: [972, 188, 1106, 350], t: 'ปิด (ไม่ใช้)' },
   { r: [1080, 762, 1565, 910], t: 'พื้นที่สำนักงาน' }, { r: [1522, 352, 1565, 760], t: '' },
-  { r: [727, 453, 885, 676], t: 'ส่วนบริการ', core: true, glassE: true }, { r: [727, 765, 768, 910], t: '' },
-  { r: [600, 708, 676, 766], t: '' }, { r: [832, 765, 940, 786], t: '' }, { r: [600, 523, 602, 556], t: '' },
+  { r: [727, 765, 768, 910], t: '' },
+  { r: [600, 708, 676, 766], t: '' }, { r: [832, 765, 940, 786], t: '' },
 ];
-const GLASS_WALLS = [[885, 352, 885, 453]];                 // ผนังกระจก (ฝั่งซ้ายทางเดิน กปน.)
-const EXTRA_WALLS = [[940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], [676, 522, 676, 557], [676, 615, 676, 648]];
+const GLASS_WALLS = [];
+const EXTRA_WALLS = [[940, 787, 940, 882], [940, 882, 977, 882], [915, 908, 977, 908], ];
 
 const ZONES = {
   lobby: { name: 'โถงลิฟต์ · ลงทะเบียน', c: [X(806), Z(830)] },
@@ -551,12 +552,12 @@ function build(opt) {
   <div class="brand"><div class="logo">M</div><div><b>MWA · Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
   <div class="search"><span style="color:#8a97a6">⌕</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
   <div class="sp"></div>
-  <div class="chip"><div class="dot">F5</div><div><b>ชั้น 5 · 20 บูธ</b><br>กปน. ผ้าตึง 3 ม. · เอกชน 2 × 1 ม.</div></div>
+  <div class="chip"><div class="dot">F5</div><div><b>ชั้น 5 · 22 บูธ</b><br>กปน. ผ้าตึง 3 ม. · เอกชน 2 × 1 ม.</div></div>
   <div class="clock"><i></i><span id="f5clk">08:30</span><span id="f5spd" style="font-weight:500;opacity:.8">×1</span></div>
   ${opt.onDone ? '<button class="btn" data-k="back" title="ย้อนกลับ (Esc)">⟵ กลับ</button>' : ''}
 </div>
 <div class="ui kpis hide-intro">
-  <div class="kpi card"><div class="ic">▦</div><div><span>บูธทั้งหมด</span><strong>20<em>บูธ</em></strong><small>กปน. 8 · เอกชน 12</small></div></div>
+  <div class="kpi card"><div class="ic">▦</div><div><span>บูธทั้งหมด</span><strong>22<em>บูธ</em></strong><small>กปน. 10 · เอกชน 12</small></div></div>
   <div class="kpi card"><div class="ic">↝</div><div><span>เส้นทาง ลิฟต์ → ห้องประชุม</span><strong id="f5len">–<em>ม.</em></strong><small>ทางเดินกว้าง 5–7 ม.</small></div></div>
   <div class="kpi card"><div class="ic">◫</div><div><span>ที่นั่ง Auditorium (โดยประมาณ)</span><strong id="f5seat">–<em>ที่</em></strong><small>ที่นั่งขั้นบันได</small></div></div>
   <div class="kpi card"><div class="ic">◷</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
@@ -568,7 +569,7 @@ function build(opt) {
 </div>
 <div class="ui detail card" id="f5det"></div>
 <div class="ui list card hide-intro min">
-  <div class="tabs"><button data-tab="mwa" class="on">บูธ กปน.<sup>8</sup></button><button data-tab="p">เอกชน<sup>12</sup></button><button data-tab="zone">โซน<sup>7</sup></button><span class="r">เรียงตามเส้นทาง</span><button class="mn" data-k="lmin" title="ย่อ/ขยายรายการ">▾</button></div>
+  <div class="tabs"><button data-tab="mwa" class="on">บูธ กปน.<sup>10</sup></button><button data-tab="p">เอกชน<sup>12</sup></button><button data-tab="zone">โซน<sup>7</sup></button><span class="r">เรียงตามเส้นทาง</span><button class="mn" data-k="lmin" title="ย่อ/ขยายรายการ">▾</button></div>
   <div class="items" id="f5items"></div>
 </div>
 <div class="ui journey card hide-intro">
@@ -690,7 +691,13 @@ function buildWorld(ctx) {
   // ── พื้นฐานชั้น + พื้นทางเดิน (หินขัด)
   const stoneT = floorCanvas('stone'); stoneT.repeat.set(FW / TILE.stone, FD / TILE.stone);
   const slabTop = new THREE.MeshStandardMaterial({ map: stoneT, roughness: 0.38, metalness: 0.0 });
-  add('base', box(FW, 0.6, FD), [M.white, M.white, slabTop, M.white, M.white, M.white], (FX0 + FX1) / 2, -0.3, (FZ0 + FZ1) / 2, { cast: false });
+  // พื้นชั้นตามแนวกระจกอาคาร: ฝั่งตะวันตกของทางเดิน กปน. เป็นภายนอก (ไม่มีพื้น)
+  const OUTLINE = [[FX0, Z(676)], [X(885), Z(676)], [X(885), Z(350)], [X(855), Z(350)], [X(855), FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1]];
+  { const sh = new THREE.Shape(OUTLINE.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const sg = new THREE.ExtrudeGeometry(sh, { depth: 0.6, bevelEnabled: false }); sg.rotateX(-Math.PI / 2); sg.translate(0, -0.6, 0);
+    const st2 = floorCanvas('stone'); st2.repeat.set(1 / TILE.stone, 1 / TILE.stone);
+    const top = new THREE.MeshStandardMaterial({ map: st2, roughness: 0.38 });
+    add('base', sg, [top, M.white], 0, 0, 0, { cast: false }); }
   // ── พื้นห้อง
   const floorMats = {};
   for (const r of ROOMS) {
@@ -742,7 +749,7 @@ function buildWorld(ctx) {
   }
   // ── กระจกรอบชั้น + เสากระจก
   const GH = 3.4;
-  [[FX0, FZ0, FX1, FZ0], [FX0, FZ1, FX1, FZ1], [FX0, FZ0, FX0, FZ1], [FX1, FZ0, FX1, FZ1]].forEach(([ax, az, bx, bz]) => {
+  OUTLINE.map((p, i) => [...p, ...OUTLINE[(i + 1) % OUTLINE.length]]).forEach(([ax, az, bx, bz]) => {
     const len = Math.hypot(bx - ax, bz - az);
     const g = add('shell', box(len, GH, 0.04), M.glassLite, (ax + bx) / 2, GH / 2, (az + bz) / 2, { cast: false }); g.rotation.y = -Math.atan2(bz - az, bx - ax); g.renderOrder = 2;
     const n = Math.round(len / 1.5);
@@ -1060,7 +1067,7 @@ function buildWorld(ctx) {
     add('hall', new THREE.CylinderGeometry(0.26, 0.26, 0.02, 20), M.alu, x, 0.01, z, { cast: false });
   });
   // ── ต้นไม้กระถาง
-  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(985), Z(372)], [X(1060), Z(372)], [X(770), Z(700)]].forEach(([x, z]) => {
+  [[X(905), Z(440)], [X(1440), Z(392)], [X(1500), Z(392)], [X(1112), Z(372)], [X(940), Z(420)], [X(770), Z(712)]].forEach(([x, z]) => {
     add('other', new THREE.CylinderGeometry(0.28, 0.22, 0.5, 20), M.pot, x, 0.25, z);
     add('other', new THREE.IcosahedronGeometry(0.5, 2), M.plant, x, 1.05, z);
   });
@@ -1486,13 +1493,16 @@ function play(opt = {}) {
     const p = W.routeAt(Math.min(w.s, W.L));
     for (const b of W.booths) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < nd && Math.abs(b.along - w.s) < 4.5) { nd = d; near = b; } }
     const slow = near && nd < 4.2 && !near.tbc;
-    w.v = lerp(w.v, slow ? WALK.slow : WALK.v, Math.min(1, dt * 2.2));
+    w.seen = w.seen || {};
+    if (near && near.kind && /wari|cc|twq/.test(near.kind) && !w.seen[near.code] && w.s >= near.along - 0.4) { w.seen[near.code] = true; w.hold = 2.2; }   // แวะดูบูธเด่นสักครู่
+    if (w.hold > 0) { w.hold -= dt; w.v = lerp(w.v, 0, Math.min(1, dt * 5)); }
+    else w.v = lerp(w.v, slow ? WALK.slow : WALK.v, Math.min(1, dt * 2.2));
     w.s += w.v * dt;
     const q = W.routeAt(Math.min(w.s, W.L)), ahead = W.routeAt(Math.min(w.s + 5.5, W.L)), tail = Math.max(0, w.s - W.L);
     const pos = new THREE.Vector3(q.x + q.tx * tail, WALK.eye + Math.sin(w.s * 3.6) * 0.018, q.z + q.tz * tail);
     let look = new THREE.Vector3(ahead.x + q.tx * tail * 2, 1.45, ahead.z + q.tz * tail * 2);
     if (tail > 0) look.y = 1.8;
-    if (slow) { const k = Math.min(1, (4.2 - nd) / 2.2) * 0.6; look.lerp(new THREE.Vector3(near.x, 1.35, near.z), k); }
+    if (slow) { const k = w.hold > 0 ? 0.9 : Math.min(1, (4.2 - nd) / 2.2) * 0.6; look.lerp(new THREE.Vector3(near.x, 1.25, near.z), k); }
     if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * 2.2));
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
     setWalkCard(jOf(w.s));
