@@ -74,7 +74,7 @@
     lat: 13.88052289121317, lon: 100.55175371285173,
     // อาคารสุทธิอุทกากร: ขนาดกรอบจากรอยอาคาร OSM/Overture · ตำแหน่งฐานตึกเลื่อนลงใต้ 15 ม. ตามภาพดาวเทียม (รอยเดิมเป็นหลังคาที่เอียงตามมุมกล้อง)
     // 50.7 (ตอ.–ตต.) × 70.8 (เหนือ–ใต้) ม. · แกนยาวเอียง 12.7° ไปทางตะวันออกของทิศเหนือ
-    hq: { cx: -1.31, cz: 5.75, W: 50.7, D: 70.8, rot: -0.2215, bearing: 68, zoom: 18.2 },
+    hq: { cx: -1.31, cz: 5.75, W: 50.7, D: 70.8, rot: -0.2215, bearing: 68, zoom: 19.0 },
     // ซ่อนรอยอาคาร OSM ที่โมเดลแทนที่แล้ว (หอ/ฐาน/อาคารโค้ง/ใต้สะพาน/อาคารเดิม) และรอยที่ตรวจจับผิด (เงาตึกริมคลอง)
     bld: { '-997': { hide: true }, '-998': { hide: true }, '-1000': { hide: true }, '-1001': { hide: true }, '-1002': { hide: true }, '-989': { hide: true }, '-990': { hide: true }, '-991': { hide: true }, '-992': { hide: true }, 152042395: { hide: true }, '-1006': { hide: true }, '-1007': { hide: true } },   // 152042395 = หลังคาถังเก็บน้ำใส (จำลองเองแล้ว)
     // โรงงานผลิตน้ำบางเขน/สนามกีฬา/คลองประปา จำลองเองแล้ว → ซ่อนรอยอาคาร Overture และต้นไม้สุ่มในพื้นที่นั้น
@@ -91,7 +91,8 @@
   document.getElementById('goMap').onclick = goMap;
   document.getElementById('goF5').onclick = goF5;
   const q = new URLSearchParams(location.search);
-  if (q.has('floor5')) goF5(); else if (q.has('go')) goMap();
+  const pre = () => { try { window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} };   // เตรียมฉากชั้น 5 ล่วงหน้า → บินเข้าต่อเนื่องไม่สะดุด
+  if (q.has('floor5')) goF5(); else if (q.has('go')) { pre(); goMap(); } else setTimeout(pre, 300);
   window.F5READY = true;
 </script>
 </body>
