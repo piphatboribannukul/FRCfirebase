@@ -16,7 +16,7 @@
   const NC = -5.9;                                          // กลางกรอบอาคาร ตามแนว n ของผังโรงงาน (ม.) — ตำแหน่งฐานตึกจากภาพดาวเทียม
 
   // ── พื้นผิว (วาดบน canvas) ─────────────────────────────────────────────
-  const TILE = { tWin: 3.0, lobby: 3.0, prism: 6.0, pWin: 6.0, crown: 6.0, gnd: 3.0, old: 6.0 };
+  const TILE = { tWin: 3.0, lobby: 3.0, prism: 6.0, pWin: 6.0, crown: 6.0, gnd: 3.0, old: 6.0, tFin: 3.0, pGlass: 6.0, crown2: 12.0, core: 5.0 };
   function cv(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
   function rnd(seed) { let s = seed >>> 0 || 1; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
   const PAINT = {
@@ -64,6 +64,38 @@
       const gr = g.createLinearGradient(0, 0, 0, 358); gr.addColorStop(0, '#dfe3e7'); gr.addColorStop(1, '#b9c0c7'); g.fillStyle = gr; g.fillRect(0, 0, 512, 358);
       g.fillStyle = 'rgba(110,120,132,.35)'; for (let y = 0; y < 358; y += 60) g.fillRect(0, y, 512, 2); for (let x = 0; x < 512; x += 128) g.fillRect(x, 0, 2, 358);
       for (let x = 20; x < 512; x += 128) { const gg = g.createLinearGradient(0, 196, 0, 250); gg.addColorStop(0, '#7fb1e2'); gg.addColorStop(1, '#2f629f'); g.fillStyle = gg; g.fillRect(x, 196, 88, 54); }
+      return c;
+    },
+    tFin() {                                   // หอสูง (ตามภาพอ้างอิง): กระจกฟ้าเทาอ่อน + ครีบ/เสาแนวตั้งถี่ต่อเนื่อง (3 ม. × 4.2 ม.)
+      const [c, g] = cv(256, 358);
+      const gr = g.createLinearGradient(0, 0, 0, 358); gr.addColorStop(0, '#d4e4f3'); gr.addColorStop(0.5, '#9dbddf'); gr.addColorStop(1, '#6f97c6'); g.fillStyle = gr; g.fillRect(0, 0, 256, 358);
+      const rf = g.createLinearGradient(0, 0, 256, 358); rf.addColorStop(0.2, 'rgba(255,255,255,0)'); rf.addColorStop(0.45, 'rgba(255,255,255,.28)'); rf.addColorStop(0.6, 'rgba(255,255,255,0)'); g.fillStyle = rf; g.fillRect(0, 0, 256, 358);
+      g.fillStyle = 'rgba(90,120,160,.35)'; g.fillRect(0, 318, 256, 40);                      // แผงปิดแนวพื้น
+      for (let x = 0; x < 256; x += 64) { g.fillStyle = '#f2f6fa'; g.fillRect(x, 0, 9, 358); g.fillStyle = 'rgba(40,70,110,.35)'; g.fillRect(x + 9, 0, 4, 358); }
+      return c;
+    },
+    pGlass() {                                 // อาคารฐานชั้นล่าง: ผนังกระจกสูง + เสาแนวตั้ง (6 ม. × 4.2 ม.)
+      const [c, g] = cv(512, 358);
+      const gr = g.createLinearGradient(0, 0, 0, 358); gr.addColorStop(0, '#a9c8e8'); gr.addColorStop(0.55, '#6d98cc'); gr.addColorStop(1, '#3f6ea8'); g.fillStyle = gr; g.fillRect(0, 0, 512, 358);
+      const rf = g.createLinearGradient(0, 0, 512, 358); rf.addColorStop(0.15, 'rgba(255,255,255,0)'); rf.addColorStop(0.38, 'rgba(235,245,255,.32)'); rf.addColorStop(0.55, 'rgba(255,255,255,0)'); g.fillStyle = rf; g.fillRect(0, 0, 512, 358);
+      g.fillStyle = 'rgba(200,214,228,.85)'; g.fillRect(0, 0, 512, 22);
+      for (let x = 0; x < 512; x += 128) { g.fillStyle = '#eef3f8'; g.fillRect(x, 0, 12, 358); g.fillStyle = 'rgba(30,60,100,.3)'; g.fillRect(x + 12, 0, 5, 358); }
+      g.fillStyle = 'rgba(238,243,248,.8)'; for (let x = 64; x < 512; x += 128) g.fillRect(x, 0, 4, 358);
+      return c;
+    },
+    crown2() {                                 // อาคารฐานชั้นบน (ตามภาพอ้างอิง): แผงทึบเทาอ่อน + ขีดสีน้ำเงินสลับ (12 ม. × 4.2 ม.)
+      const [c, g] = cv(1024, 358), r = rnd(19);
+      const gr = g.createLinearGradient(0, 0, 0, 358); gr.addColorStop(0, '#e6ebf0'); gr.addColorStop(1, '#cdd5dd'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 358);
+      g.fillStyle = 'rgba(120,135,150,.28)'; for (let x = 0; x < 1024; x += 85) g.fillRect(x, 0, 2, 358); g.fillRect(0, 178, 1024, 2);
+      for (let row = 0; row < 3; row++) for (let k = 0; k < 4; k++) { const w = 70 + r() * 130, x = (k * 256 + r() * 120 + row * 70) % 1024, y = 50 + row * 112 + r() * 20;
+        g.fillStyle = r() < 0.55 ? '#2f63ad' : '#5d8fcf'; g.fillRect(x, y, w, 15); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x, y, w, 3); }
+      return c;
+    },
+    core() {                                   // แกนผนังขาว (บันได/ลิฟต์) ข้างหอสูง · ร่องแนวตั้งกลาง
+      const [c, g] = cv(256, 358);
+      g.fillStyle = '#eef1f4'; g.fillRect(0, 0, 256, 358);
+      g.fillStyle = 'rgba(150,160,172,.25)'; g.fillRect(0, 0, 256, 2); g.fillRect(0, 179, 256, 2);
+      g.fillStyle = 'rgba(120,132,145,.18)'; g.fillRect(0, 0, 3, 358);
       return c;
     },
     gnd() {                                    // ชั้นล่างร่นเข้า (กระจกเข้ม)
@@ -132,9 +164,9 @@
       white: { color: 0xf3f5f7, roughness: 0.62 }, slab: { color: 0xe6e9ec, roughness: 0.6 },
       grey: { color: 0xc9cfd5, roughness: 0.5, metalness: env ? 0.35 : 0 }, dark: { color: 0x37414c, roughness: 0.55 },
       roof: { color: 0xb3b9bf, roughness: 0.8 }, roofT: { color: 0xdfe3e6, roughness: 0.8 }, col: { color: 0xeceff2, roughness: 0.55 },
-      gplain: { color: 0x5b93d2, roughness: 0.15, metalness: env ? 0.4 : 0 }, frame: { color: 0xf6f7f8, roughness: 0.5 },
+      gplain: { color: 0x5b93d2, roughness: 0.15, metalness: env ? 0.4 : 0 }, frame: { color: 0xf6f7f8, roughness: 0.5 }, ring: { color: 0x1aa0e6, roughness: 0.35, side: 2 },
     };
-    const GLASSY = { tWin: 1, lobby: 1, prism: 1, gnd: 1, gplain: 1 };
+    const GLASSY = { tWin: 1, lobby: 1, prism: 1, gnd: 1, gplain: 1, tFin: 1, pGlass: 1 };
     const levels = []; for (let f = 0; f < NL; f++) levels.push({ f, mats: [], glassMats: [], cache: {}, edgeM: null, g: new T.Group() });
     const extras = { mats: [], glassMats: [], cache: {}, g: new T.Group() };
     const shared = { mats: [], glassMats: [], cache: {} };
@@ -145,7 +177,7 @@
       let m;
       if (PAINT[key]) {
         const glass = !!GLASSY[key];
-        m = new T.MeshStandardMaterial({ map: tex(key, ru || 1, rv || 1), color: 0xffffff, roughness: glass ? 0.18 : 0.55, metalness: glass && env ? 0.3 : (key === 'crown' || key === 'pWin') && env ? 0.2 : 0 });
+        m = new T.MeshStandardMaterial({ map: tex(key, ru || 1, rv || 1), color: 0xffffff, roughness: glass ? 0.18 : 0.55, metalness: glass && env ? 0.3 : (key === 'crown' || key === 'crown2' || key === 'pWin') && env ? 0.2 : 0 });
         if (key === 'prism' && env) { m.roughness = 0.07; m.metalness = 0.5; m.envMapIntensity = 1.5; }
       } else m = new T.MeshStandardMaterial(Object.assign({}, SOLID[key]));
       if (fade) m.transparent = true;
@@ -188,6 +220,13 @@
       disposeList.push(g);
       return m;
     }
+    function boxesGeo(list) {                                   // รวมกล่องหลายใบเป็น geometry เดียว (ลด draw call) · [w,h,d,x,y,z]
+      const P = [], N = [], U = [], I = []; let off = 0;
+      for (const [w, h, d, x, y, z] of list) { const b = new T.BoxGeometry(w, h, d); b.translate(x, y, z);
+        P.push(...b.attributes.position.array); N.push(...b.attributes.normal.array); U.push(...b.attributes.uv.array); for (const i of b.index.array) I.push(i + off); off += b.attributes.position.count; b.dispose(); }
+      const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(N, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(U, 2)); g.setIndex(I);
+      disposeList.push(g); return g;
+    }
     function sbox(L, w, h, d, key, x, y, z, parent) { const g = new T.BoxGeometry(w, h, d); disposeList.push(g); return mesh(L, g, mat(L, key), x, y, z, parent); }
 
     // ── ผัง (เมตรจริง → X/Z) ──
@@ -214,12 +253,12 @@
           if (sides.S) for (let x = x0 + 0.6; x <= x1 - 0.3; x += 6) cols.push([x, z1 - 0.4]);
           cols.forEach(([cx, cz]) => sbox(L, 0.75, FH, 0.75, 'col', cx, FH / 2, cz));
         } else if (f < CROWN0) {                                         // ชั้น 2–5: แถบพื้น + ผนังหน้าต่าง
-          fbox(L, x0 - 0.18, x1 + 0.18, z0 - (sides.N ? 0.18 : 0), z1 + (sides.S ? 0.18 : 0), 0, 0.5, 'slab', 'slab');
-          fbox(L, x0, x1, z0, z1, 0.5, FH - 0.5, 'pWin', 'slab', { edge: true });
+          fbox(L, x0 - 0.12, x1 + 0.12, z0 - (sides.N ? 0.12 : 0), z1 + (sides.S ? 0.12 : 0), 0, 0.28, 'slab', 'slab');
+          fbox(L, x0, x1, z0, z1, 0.28, FH - 0.28, 'pGlass', 'slab', { edge: true });
         } else {                                                          // ชั้น 6–7: เอียงยื่นออก
           const k0 = f === CROWN0 ? 0 : LEAN * (FH - 0.9), y0 = f === CROWN0 ? 0.9 : 0, k1 = k0 + LEAN * (FH - y0);
           if (f === CROWN0) fbox(L, x0 + (sides.W ? 0.5 : 0), x1 - (sides.E ? 0.5 : 0), z0 + (sides.N ? 0.5 : 0), z1 - (sides.S ? 0.5 : 0), 0, 0.9, 'dark', 'dark');
-          fbox(L, x0, x1, z0, z1, y0, FH - y0, 'crown', 'roof', { lean: [k0, k1], leanSides: sides, edge: true });
+          fbox(L, x0, x1, z0, z1, y0, FH - y0, 'crown2', 'roof', { lean: [k0, k1], leanSides: sides, edge: true });
           // แผงบังแดดเป็นแถว (ตามภาพถ่าย)
           const yy = y0 + (FH - y0) * 0.62, off = k0 + LEAN * (yy - y0) + 0.35;
           const fins = [];
@@ -227,7 +266,7 @@
           if (sides.E) for (let z = z0 + 3; z < z1 - 2; z += 5.2) fins.push([x1 + off, z, 0.9, 2.4]);
           if (sides.N) for (let x = x0 + 3; x < x1 - 2; x += 5.2) fins.push([x, z0 - off, 2.4, 0.9]);
           if (sides.S) for (let x = x0 + 3; x < x1 - 2; x += 5.2) fins.push([x, z1 + off, 2.4, 0.9]);
-          fins.forEach(([fx, fz, w, d]) => sbox(L, w, 0.32, d, 'dark', fx, yy, fz));
+          void fins;   // (ตามภาพอ้างอิง: ไม่มีแผงบังแดดเป็นแถว)
           if (f === BASE_TOP - 1) {                                      // หลังคาอาคารฐาน
             fbox(L, x0 - (sides.W ? k1 : 0), x1 + (sides.E ? k1 : 0), z0 - (sides.N ? k1 : 0), z1 + (sides.S ? k1 : 0), FH, 0.55, 'roof', 'roof');
             if (k === 'B1') [[X(-12), Z(-22), 9, 2.4, 7], [X(10), Z(-14), 7, 2.0, 5], [X(16), Z(-28), 5, 2.8, 5]].forEach(([x, z, w, h, d]) => sbox(L, w, h, d, 'roofT', x, FH + 0.55 + h / 2, z));
@@ -237,22 +276,33 @@
       // หอสูง — ส่วนผนังแถบขาว
       if (f <= 1) fbox(L, tX0, tX1, tZ0, bandZ1, 0, FH, 'lobby', 'slab', { edge: true });
       else {
-        fbox(L, tX0 - 0.22, tX1 + 0.22, tZ0 - 0.22, bandZ1, 0, 1.45, 'white', 'white');
-        fbox(L, tX0, tX1, tZ0, bandZ1, 1.45, FH - 1.45, 'tWin', 'slab', { edge: true });
+        fbox(L, tX0, tX1, tZ0, bandZ1, 0, FH, 'tFin', 'slab', { edge: true });
+        const fl = [];                                                    // ครีบแนวตั้ง (ทุก 1.5 ม.) รอบหอส่วนที่โผล่พ้นอาคารฐาน
+        for (let z = tZ0 + 0.75; z < bandZ1 - 0.3; z += 1.5) { fl.push([0.5, FH, 0.12, tX0 - 0.25, FH / 2, z]); if (f >= BASE_TOP) fl.push([0.5, FH, 0.12, tX1 + 0.25, FH / 2, z]); }
+        if (f >= BASE_TOP) for (let x = tX0 + 0.75; x < tX1 - 0.3; x += 1.5) fl.push([0.12, FH, 0.5, x, FH / 2, tZ0 - 0.25]);
+        mesh(L, boxesGeo(fl), mat(L, 'frame'), 0, 0, 0);
       }
       fbox(L, tX0 + 0.5, tX1 - 0.5, bandZ1, slotZ1, 0, FH, 'dark', 'dark');            // ร่องรอยต่อ
       // กล่องกระจกสีน้ำเงิน
-      fbox(L, pX0, tX1 + 0.3, slotZ1, tZ1 + 0.3, 0, FH, 'prism', 'slab', { edge: true });
+      const cX1 = pX0 + 9.5;                                              // แกนผนังขาว (ตามภาพอ้างอิง) กว้าง ~9.5 ม. ฝั่งตะวันตก · ที่เหลือเป็นกระจกครีบเหมือนหอ
+      fbox(L, pX0, cX1, slotZ1, tZ1 + 0.3, 0, FH, 'core', 'slab', { edge: true });
+      fbox(L, cX1, tX1 + 0.3, slotZ1, tZ1 + 0.3, 0, FH, f <= 1 ? 'lobby' : 'tFin', 'slab', { edge: true });
+      if (f >= 2) { const fl = []; for (let x = cX1 + 0.75; x < tX1; x += 1.5) fl.push([0.12, FH, 0.5, x, FH / 2, tZ1 + 0.55]); for (let z = slotZ1 + 0.75; z < tZ1; z += 1.5) fl.push([0.5, FH, 0.12, tX1 + 0.55, FH / 2, z]); mesh(L, boxesGeo(fl), mat(L, 'frame'), 0, 0, 0); }
       if (f === NL - 1) {
         const top = FH;
         fbox(L, tX0 - 0.22, tX1 + 0.22, tZ0 - 0.22, bandZ1, top, 1.3, 'white', 'roofT');          // ขอบหลังคาหอ
         [[X(-16), Z(12), 7, 2.6, 6], [X(-6), Z(17), 5, 3.2, 5], [X(-19), Z(20), 3, 4.5, 3]].forEach(([x, z, w, h, d]) => sbox(L, w, h, d, 'roofT', x, top + 1.3 + h / 2, z));
-        fbox(L, pX0, tX1 + 0.3, slotZ1, tZ1 + 0.3, top, 8.2, 'prism', 'roofT', { wedge: 4.0, rv: 2, edge: true });   // ยอดกระจกเฉียง
+        fbox(L, pX0, cX1, slotZ1, tZ1 + 0.3, top, 8.2, 'core', 'roofT', { rv: 2, edge: true });   // แกนขาวสูงพ้นหลังคา
+        fbox(L, cX1 - 0.1, tX1 + 0.5, slotZ1, tZ1 + 0.5, top, 1.3, 'white', 'roofT');
         // ตรา กปน. ฝั่งถนน
         const lt = liveTex(T, logoCanvas, srgb, disposeList);
         const lm = new T.MeshBasicMaterial({ map: lt, transparent: true }); L.mats.push(lm); disposeList.push(lm); if (!per) shared.mats.push(lm);
-        const disc = new T.Mesh(new T.CircleGeometry(2.7, 64), lm); disc.rotation.y = -Math.PI / 2; disc.position.set(pX0 - 0.06, top + 3.4, (slotZ1 + tZ1) / 2 + 0.6); L.g.add(disc);
+        const disc = new T.Mesh(new T.CircleGeometry(2.7, 64), lm); disc.rotation.y = -Math.PI / 2; disc.position.set(pX0 - 0.08, top + 3.6, (slotZ1 + tZ1) / 2); L.g.add(disc);
         L.logo = disc;
+        const ringM = mat(L, 'ring'); const ringG = new T.RingGeometry(2.75, 3.35, 64); disposeList.push(ringG);           // วงแหวนสีฟ้ารอบตรา
+        const ring = new T.Mesh(ringG, ringM); ring.rotation.y = -Math.PI / 2; ring.position.set(pX0 - 0.07, top + 3.6, (slotZ1 + tZ1) / 2); L.g.add(ring);
+        const d2 = new T.Mesh(new T.CircleGeometry(2.7, 64), lm); d2.position.set((pX0 + cX1) / 2, top + 4.6, tZ1 + 0.38); L.g.add(d2);
+        const r2 = new T.Mesh(ringG, ringM); r2.position.set((pX0 + cX1) / 2, top + 4.6, tZ1 + 0.37); L.g.add(r2);
       }
       // อาคารโค้งด้านตะวันออก (3 ชั้น)
       if (f < 3) {
@@ -270,6 +320,11 @@
         fbox(L, bx - bw / 2 - 0.15, bx + bw / 2 + 0.15, z0, z1, y0, 0.4, 'frame', 'frame');
         fbox(L, bx - bw / 2 - 0.15, bx + bw / 2 + 0.15, z0, z1, y0 + h - 0.35, 0.45, 'frame', 'frame');
         sbox(L, 1.0, 3 * FH + y0, 1.0, 'col', bx, -(3 * FH) / 2 + y0 / 2, (z0 + z1) / 2);
+      }
+      if (f === 0) {                                                     // หลังคากันสาดทางเข้า ระหว่างอาคารฐานกับหอสูง (ด้านตะวันตก)
+        fbox(L, xW - 6.2, xW, tZ0 - 5, tZ0 + 5, 4.0, 0.35, 'frame', 'frame');
+        fbox(L, xW - 6.2, xW, tZ0 - 5, tZ0 + 5, 3.96, 0.04, 'dark', 'dark');
+        for (const dz of [-4.4, 4.4]) sbox(L, 0.3, 4.0, 0.3, 'col', xW - 5.7, 2.0, tZ0 + dz);
       }
       L.g.userData.level = f;
     }
@@ -307,6 +362,24 @@
         const sm2 = new T.MeshStandardMaterial({ map: t, roughness: 0.4 }); if (fade) sm2.transparent = true; E.mats.push(sm2); disposeList.push(sm2);
         flat(14, 34, -127, -104, OH * 4 + 1.03, sm2); flat(6, 32, -205, -170, OH * 3 + 1.03, sm2); }
       ob(8, 30, -219, -215, 3.4, 0.35, 'white', 'white');
+      // ── ลานหน้าอาคารสุทธิอุทกากร (ตามภาพอ้างอิง): กระบะต้นไม้ 2 ขั้น · พุ่มไม้ · ต้นไม้ · ทางเข้าปูหิน ──
+      {
+        const xz = (e, n) => SL(e, n), bush = [pm('#5b8f45'), pm('#78a95a'), pm('#4c7d3d')], trunkM = pm('#7a5a3c'), leafM = [pm('#4f8a45'), pm('#679f53')];
+        const sph = new T.SphereGeometry(1, 12, 9), ico = new T.IcosahedronGeometry(1, 1), trk = new T.CylinderGeometry(0.14, 0.2, 1, 8); disposeList.push(sph, ico, trk);
+        const beds = [[-49, -34, 6, 16], [-49, -34, 18, 27], [-49, -36, -30, -21], [-46, -33, -40, -32], [-54, -48, -12, 2]];
+        beds.forEach(([e0, e1, n0, n1], i) => {
+          ob(e0, e1, n0, n1, 0, 0.45, '#d3d6d2', '#6f9a52'); ob(e0 + 1.3, e1 - 1.3, n0 + 1.3, n1 - 1.3, 0.45, 0.45, '#d3d6d2', '#6f9a52');
+          for (let k = 0; k < 7; k++) { const e = e0 + 0.8 + ((k * 37 + i * 11) % 100) / 100 * (e1 - e0 - 1.6), n = n0 + 0.8 + ((k * 61 + i * 7) % 100) / 100 * (n1 - n0 - 1.6), [x, z] = xz(e, n), r = 0.55 + (k % 3) * 0.2;
+            const b = new T.Mesh(sph, bush[(k + i) % 3]); b.scale.set(r * 1.3, r * 0.75, r * 1.2); b.position.set(x, 0.9 + r * 0.4, z); if (shadows) b.castShadow = b.receiveShadow = true; E.g.add(b); }
+        });
+        [[-41, 11], [-45, 23], [-37.5, 24], [-43, -25], [-40, -36], [-51, -5], [-30, -38], [-30, 27]].forEach(([e, n], i) => {
+          const [x, z] = xz(e, n), h = 3.2 + (i % 3) * 0.6, y0 = 0.9;
+          const t = new T.Mesh(trk, trunkM); t.scale.set(1, h, 1); t.position.set(x, y0 + h / 2, z); E.g.add(t);
+          for (let k = 0; k < 3; k++) { const c = new T.Mesh(ico, leafM[(i + k) % 2]); const r = 1.5 - k * 0.25; c.scale.set(r, r * 0.85, r); c.position.set(x + (k - 1) * 0.6, y0 + h + 0.4 + k * 0.5, z + ((k * 7) % 3 - 1) * 0.5); if (shadows) c.castShadow = true; E.g.add(c); }
+        });
+        flat(-56, -25.4, -17.5, -6.8, 0.07, pm('#dcd8d0'));                                    // ทางเข้าปูหิน
+        for (let k = 0; k < 6; k++) flat(-56 + k * 5.2, -54 + k * 5.2, -17.5, -6.8, 0.075, pm('#c8c3b9'));
+      }
       // ── ลานพระบรมราชานุสาวรีย์ (สนามหญ้า ทางเดินเหลือง ลานแดง) ──
       const grass = pm('#78a656'), grass2 = pm('#6d9c4c'), path = pm('#e2c14f'), pave = pm('#cfccc4'), red = pm('#c25a4b');
       flat(-60, -36, -262, -100, 0.06, grass); flat(-36, -18, -200, -100, 0.06, grass2); flat(-18, -8, -200, -100, 0.06, grass); flat(-36, -3, -262, -200, 0.06, grass);
