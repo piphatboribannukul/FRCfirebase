@@ -137,6 +137,10 @@ const F_HEAD = '"Bai Jamjuree","Noto Sans Thai",sans-serif', F_BODY = '"IBM Plex
 function shade(hex, k) { const c = new THREE.Color(hex); if (k < 0) c.multiplyScalar(1 + k); else c.lerp(new THREE.Color('#fff'), k); return '#' + c.getHexString(); }
 function fitText(g, txt, weight, size, family, maxW) { let s = size; g.font = `${weight} ${s}px ${family}`; while (g.measureText(txt).width > maxW && s > 12) { s -= 2; g.font = `${weight} ${s}px ${family}`; } return s; }
 function canvasTex(c, aniso) { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso || 8; return t; }
+// ไฟล์ภาพจริงข้างหน้าเว็บ (ป้ายบูธ/โลโก้) · ระหว่างโหลดใช้ภาพวาดสำรอง แล้วสลับเป็นภาพจริงเมื่อโหลดเสร็จ
+const ASSET_BASE = (window.SUTHI_LOGO || '').replace(/[^/]*$/, '');
+function realImg(tex, file) { const i = new Image(); i.onload = () => { tex.dispose(); tex.image = i; tex.needsUpdate = true; };   /* dispose: สร้างพื้นผิวใหม่ตามขนาดภาพจริง */ i.src = ASSET_BASE + file; return tex; }
+const REAL_BACKDROP = { twq: ['stakeholder_twq_backdrop.jpg', 1900 / 1733], cc: ['stakeholder_cc_backdrop.jpg', 2576 / 2349] };
 
 // ───────────────────────────── พื้นผิว ─────────────────────────────
 function floorCanvas(kind) {
@@ -974,11 +978,12 @@ function buildWorld(ctx) {
     booths.push(b);
   });
   function mwaBooth(kind, b, A, zone, inner) {
-    const W3 = 3.0, BZ = kind === 'wari' ? -1.05 : -0.55, BX = kind === 'cc' ? 1.0 : kind === 'twq' ? 0.45 : 0, BH = kind === 'cc' ? 2.3 : 2.4;
+    const BH = kind === 'cc' ? 2.3 : 2.4, W3 = REAL_BACKDROP[kind] ? BH * REAL_BACKDROP[kind][1] : 3.0, BZ = kind === 'wari' ? -1.05 : -0.55, BX = kind === 'cc' ? 1.0 : kind === 'twq' ? 0.45 : 0;
     A(box(kind === 'cc' ? 5.0 : kind === 'twq' ? 3.9 : 3.2, 0.02, kind === 'wari' ? 2.3 : kind === 'snap' ? 2.2 : 1.3), carpetMWA, 0, 0.01, kind === 'snap' ? 0.45 : 0, { cast: false });
     // ผ้าตึง: โครง + ผืนพิมพ์ + ฐานขาตั้ง
     A(new RoundedBoxGeometry(W3, BH, 0.07, 3, 0.03), fabricFrame, BX, BH / 2 + 0.05, BZ);
-    const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic(kind, b), roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
+    const gtex = mwaBoothGraphic(kind, b); if (REAL_BACKDROP[kind]) realImg(gtex, REAL_BACKDROP[kind][0]);   // ป้ายจริงของ TWQ Online / Chlorine Care
+    const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: gtex, roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
     const gp = new THREE.Mesh(new THREE.PlaneGeometry(W3 - 0.04, BH - 0.04), gm); gp.position.set(BX, BH / 2 + 0.05, BZ + 0.037); inner.add(gp);
     for (const fx of [-1.1, 1.1]) A(box(0.06, 0.03, 0.55), greyM, BX + fx, 0.015, BZ, { cast: false });
     const top = pMat['#1d5fc0'] || (pMat['#1d5fc0'] = new THREE.MeshStandardMaterial({ color: '#1d5fc0', roughness: 0.35 }));
@@ -992,6 +997,8 @@ function buildWorld(ctx) {
       const tx = -2.05;
       for (const [dx, dz] of [[-0.4, -0.22], [0.4, -0.22], [-0.4, 0.3], [0.4, 0.3]]) caster(tx + dx, 0.05 + dz);
       A(box(0.92, 0.55, 0.62), greyM, tx, 0.34, 0.05);
+      { const lt = realImg(mkTex(8, 4, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 8, 4); }), 'stakeholder_cc_logo.jpg'); const lm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: lt, roughness: 0.5 }));   // โลโก้ Chlorine Care หน้าฐานชุดถังจำลอง
+        const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 0.74 * 350 / 839), lm); lp.position.set(tx, 0.36, 0.362); inner.add(lp); }
       A(box(0.8, 0.36, 0.5), acrylic, tx + 0.02, 0.8, 0.12, { cast: false }); A(box(0.76, 0.2, 0.46), waterM, tx + 0.02, 0.72, 0.12, { cast: false });
       for (const [dx, dz] of [[-0.4, -0.13], [0.42, -0.13], [-0.4, 0.37], [0.42, 0.37]]) A(box(0.012, 0.36, 0.012), acrylicEdge, tx + dx, 0.8, dz, { cast: false });
       const bm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: demoBoardTex, roughness: 0.6 }));
@@ -1016,6 +1023,8 @@ function buildWorld(ctx) {
       const tb = A(box(0.3, 0.2, 0.015), M.screen, cx, 1.02, 0.17); tb.rotation.x = -1.18; const tbs = A(box(0.27, 0.17, 0.004), tabletScreen, cx, 1.03, 0.175, { cast: false }); tbs.rotation.x = -1.18;
       A(box(0.74, 0.04, 0.5), cabBlue, cx, 1.14, -0.02);
       A(box(0.74, 0.8, 0.46), cabBlue, cx, 1.56, -0.05); A(box(0.76, 0.06, 0.48), cabBlue, cx, 1.99, -0.05);
+      { const lt = realImg(mkTex(8, 4, (g) => { g.fillStyle = '#00c0f0'; g.fillRect(0, 0, 8, 4); }), 'stakeholder_cc_logo_blue.jpg'); const lm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: lt, roughness: 0.45 }));   // ป้ายโลโก้ Chlorine Care บนตู้ควบคุม
+        A(box(0.74, 0.31, 0.02), cabBlue, cx, 2.18, 0.02); const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.72 * 366 / 904), lm); lp.position.set(cx, 2.18, 0.031); inner.add(lp); }
       const pm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cabPanel, roughness: 0.5 })); const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.66), pm); pp.position.set(cx - 0.05, 1.56, 0.182); inner.add(pp);
       for (const dx of [-0.11, 0.0]) A(new THREE.CylinderGeometry(0.022, 0.022, 0.02, 14), lampM, cx - 0.05 + dx, 1.84, 0.19, { cast: false }).rotation.x = Math.PI / 2;
       // 3) โต๊ะเทา: ปั๊มจ่ายสาร ขวดสาร ป้าย QR · ถังสาร 60 ลิตรใต้โต๊ะ · สายยางขาวโยงไปตู้
