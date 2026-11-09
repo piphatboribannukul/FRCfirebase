@@ -120,7 +120,7 @@
   const land = document.getElementById('land');
   const show = on => land.classList.toggle('off', !on);
   let watch = null;
-  function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); } }, 800); }
+  function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); if (MOBILE) prepP = null; } }, 800); }
   let busy = false;
   const LITE = new URLSearchParams(location.search).has('lite');
   const frame2 = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -152,6 +152,9 @@
   }
   bMap.onclick = goMap; bF5.onclick = goF5;
   const q = new URLSearchParams(location.search);
+  // มือถือ: เข้าชั้น 5 แล้วปิดแผนที่ที่อยู่ด้านหลัง (คืนหน่วยความจำ ~ไม่ให้ iOS ปิดหน้าเว็บ) · กดกลับจากชั้น 5 → หน้าแรก
+  if (MOBILE) setInterval(() => { const f5 = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(), mp = window.SD3D && window.SD3D.isOpen();
+    if (f5 && mp) { window.__f5since = window.__f5since || performance.now(); if (performance.now() - window.__f5since > 1500) { try { window.SD3D.release(); } catch (e) {} } } else window.__f5since = 0; }, 500);
   if (MOBILE) { prepEl.style.visibility = 'hidden'; f5mod.then(() => { try { window.SD3D.preload(HQ.cityFile); } catch (e) {} }); }
   if (q.has('floor5')) goF5(); else if (q.has('go')) { goMap(); } else if (!MOBILE) setTimeout(() => window.requestIdleCallback ? requestIdleCallback(prepNow, { timeout: 1200 }) : prepNow(), 250);
   f5mod.then(() => fonts).then(() => { window.F5READY = true; });
