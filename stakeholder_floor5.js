@@ -42,9 +42,9 @@ const MWA_BOOTHS = [
   { name: 'คลินิกน้ำสะอาด', sub: 'การประปานครหลวง', prop: 'bottles' },
   { name: 'Water Safety Plan', sub: 'แผนน้ำประปาปลอดภัย', prop: 'screen' },
   { name: 'วารีกุญชร', sub: 'หุ่นยนต์สำรวจคลองส่งน้ำดิบ · Wari Kunchorn', prop: 'screen' },
-  { name: 'Snap On', sub: 'อุปกรณ์ช่วยขยายแหวนยางยีโบลท์ 300 มม. · สำนักงานประปาสาขาสุวรรณภูมิ', prop: 'screen' },
+  { name: 'Snap On', sub: 'อุปกรณ์ช่วยขยายแหวนยางยีโบลท์ ขนาด 300 มม.', prop: 'screen' },
   { name: 'บูธ กปน. 07', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
-  { name: 'C.I.A.', sub: 'กล้องอัจฉริยะควบคุมงานวางท่อ · AI ตรวจจับการปิด-เปิดฝาท่อ (WSP)', prop: 'screen' },
+  { name: 'C.I.A.', sub: 'Camera Intelligence Alert · กล้องอัจฉริยะควบคุมงานวางท่อประปา', prop: 'screen' },
   { name: 'บูธ กปน. 09', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
   { name: 'บูธ กปน. 10', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
 ];
@@ -355,9 +355,10 @@ function mwaBoothCanvas(kind, b) {
     // ป้าย C.I.A. (ตามภาพงานจริง): พื้นน้ำเงิน · หัวข้อ C.I.A. · ธงไทย-ไต้หวัน + เหรียญเงิน Taiwan Innotech Expo 2022 · ตึกไทเป 101 · ไอคอนระบบ · CIA Machine / CIA System
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1543a8'); gr.addColorStop(0.6, '#0d2f7c'); gr.addColorStop(1, '#081d52'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.strokeStyle = 'rgba(120,190,255,.16)'; g.lineWidth = 3; for (let i = 0; i < 14; i++) { const y = 80 + i * 78; g.beginPath(); g.moveTo(0, y); g.lineTo(220 + (i * 137) % 400, y); g.lineTo(260 + (i * 137) % 400, y + 40); g.lineTo(W, y + 40); g.stroke(); g.fillStyle = 'rgba(120,190,255,.3)'; g.beginPath(); g.arc(260 + (i * 137) % 400, y + 40, 6, 0, 7); g.fill(); }
-    g.fillStyle = '#ffffff'; g.font = `900 210px ${F_HEAD}`; g.fillText('C.I.A.', 60, 230);
-    g.fillStyle = '#7fd6ff'; fitText(g, 'ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 700, 56, F_HEAD, 820); g.fillText('ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 66, 310);
-    g.fillStyle = '#ffffff'; g.font = `500 32px ${F_BODY}`; ['AI (Deep Learning · CNN) ตรวจจับการปิด–เปิดฝาท่อ', 'ตามหลักน้ำประปาปลอดภัย (WSP) · แจ้งเตือนทันทีเมื่อไม่ได้มาตรฐาน'].forEach((t, i) => g.fillText(t, 66, 370 + i * 44));
+    g.fillStyle = '#ffffff'; g.font = `900 190px ${F_HEAD}`; g.fillText('C.I.A.', 60, 200);
+    g.fillStyle = '#ffd23a'; g.font = `700 50px ${F_HEAD}`; g.fillText('(CAMERA INTELLIGENCE ALERT)', 66, 262);
+    g.fillStyle = '#7fd6ff'; fitText(g, 'ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 700, 46, F_HEAD, 820); g.fillText('ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 66, 325);
+    g.fillStyle = '#ffffff'; g.font = `500 28px ${F_BODY}`; ['AI (Deep Learning · CNN) ตรวจจับการปิด–เปิดฝาท่อ ตามหลักน้ำประปาปลอดภัย (WSP)', 'แจ้งเตือนทันทีเมื่อพบงานวางท่อไม่ได้มาตรฐาน'].forEach((t, i) => g.fillText(t, 66, 378 + i * 38));
     // ธงไทย + ธงไต้หวัน + เหรียญเงิน
     const flag = (x, y, th) => { g.fillStyle = '#9aa4ae'; g.fillRect(x - 6, y - 10, 5, 140); if (th) { [['#d6252b', 0, 1], ['#ffffff', 1, 1], ['#2b3a8c', 2, 2], ['#ffffff', 4, 1], ['#d6252b', 5, 1]].forEach(([c2, a, n]) => { g.fillStyle = c2; g.fillRect(x, y + a * 13, 120, n * 13); }); }
       else { g.fillStyle = '#d6252b'; g.fillRect(x, y, 120, 80); g.fillStyle = '#1e3d9e'; g.fillRect(x, y, 60, 40); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + 30, y + 20, 11, 0, 7); g.fill(); } };
