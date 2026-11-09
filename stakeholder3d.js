@@ -2566,6 +2566,11 @@
     _cur.wrap.remove(); _cur = null;
     document.removeEventListener('keydown', onKey);
   }
+  function release() {                               // มือถือ: เข้าชั้น 5 แล้วคืนหน่วยความจำของแผนที่ (ไม่หยุดฉากชั้น 5)
+    if (!_cur) return; const c = _cur; _cur = null;
+    try { c.map && c.map.remove(); } catch (e) {}
+    c.wrap.remove(); document.removeEventListener('keydown', onKey);
+  }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   // ── ทัวร์สถานี: เปิดทีละสถานี → บินเข้าหน้าตู้ → ค้างไว้ → สถานีถัดไป (ใช้กับปุ่ม "3D สถานี" และเล่นเองตอนไม่มีคนใช้) ──
@@ -2690,6 +2695,6 @@
       try { fetch(CFG.styleUrl).catch(() => {}); } catch (e) {}
       if (cityFile) try { fetch(CFG.cityBase + cityFile).catch(() => {}); } catch (e) {}
     },
-    open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a),
+    open, close, release, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a),
     tour, stopTour: () => stopTour(), isOpen: () => !!_cur, touring: () => !!_tour };
 })();

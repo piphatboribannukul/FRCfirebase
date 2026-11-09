@@ -143,7 +143,22 @@ function fitText(g, txt, weight, size, family, maxW) { let s = size; g.font = `$
 function canvasTex(c, aniso) { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso || 8; return t; }
 // ไฟล์ภาพจริงข้างหน้าเว็บ (ป้ายบูธ/โลโก้) · ระหว่างโหลดใช้ภาพวาดสำรอง แล้วสลับเป็นภาพจริงเมื่อโหลดเสร็จ
 const ASSET_BASE = (window.SUTHI_LOGO || '').replace(/[^/]*$/, '');
-function realImg(tex, file) { const i = new Image(); i.onload = () => { tex.dispose(); tex.image = i; tex.needsUpdate = true; };   /* dispose: สร้างพื้นผิวใหม่ตามขนาดภาพจริง */ i.src = ASSET_BASE + file; return tex; }
+// มือถือ: หน่วยความจำภาพ (canvas) รวมเกิน ~250 MB ทำให้ iOS ปิดหน้าเว็บ (เด้งออก) → ย่อภาพไม่เกิน 1024 px แล้วคืนหน่วยความจำหลังส่งขึ้น GPU
+const TEX_MAX = 900;
+function smallCanvas(src, maxD) { const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height, k = Math.min(1, maxD / Math.max(w, h)), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c; }
+function freeAfterUpload(t) { t.onUpdate = () => { const c = t.image; if (c && c.tagName === 'CANVAS' && c.width > 1) { c.width = 1; c.height = 1; } }; }
+function textureDiet(scene) {
+  const seen = new Set(); let b0 = 0, b1 = 0, n = 0;
+  scene.traverse(o => [].concat(o.material || []).forEach(m => { for (const key in m) { const t = m[key];
+    if (!t || !t.isTexture || seen.has(t) || t.isRenderTargetTexture || t.isDataTexture) continue; seen.add(t);
+    const i = t.image; if (!i || !(i.tagName === 'CANVAS' || i.tagName === 'IMG')) continue;
+    if (i.tagName === 'IMG' && !(i.complete && i.naturalWidth)) { freeAfterUpload(t); continue; }
+    const w = i.naturalWidth || i.width, h = i.naturalHeight || i.height; if (w * h <= 256 * 256) continue;
+    const c = smallCanvas(i, TEX_MAX); b0 += w * h * 4; b1 += c.width * c.height * 4; n++; t.image = c; t.needsUpdate = true; freeAfterUpload(t); } }));
+  console.info('[F5] textureDiet', n, 'tex', (b0 / 1048576).toFixed(0), '→', (b1 / 1048576).toFixed(0), 'MB (คืนหลังอัปโหลด)');
+}
+function realImg(tex, file) { const i = new Image(); i.onload = () => { tex.dispose(); tex.image = MOBILE ? smallCanvas(i, TEX_MAX) : i; tex.needsUpdate = true; };   /* dispose: สร้างพื้นผิวใหม่ตามขนาดภาพจริง */ i.src = ASSET_BASE + file; return tex; }
 const REAL_BACKDROP = { twq: ['stakeholder_twq_backdrop.jpg', 1900 / 1733], cc: ['stakeholder_cc_backdrop.jpg', 2576 / 2349] };
 
 // ───────────────────────────── พื้นผิว ─────────────────────────────
@@ -638,7 +653,7 @@ function css() {
 #f5 .tour{flex-wrap:wrap;gap:6px 10px;padding-top:8px}#f5 .tour .tx{flex:1 1 calc(100% - 60px)}
 #f5 .tour h4{font-size:15px}#f5 .tour p{font-size:12.5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 #f5 .tour .ctl{width:100%}#f5 .tour .ctl .btn{flex:1;justify-content:center;height:40px;font-size:14px}
-#f5 .detail{top:calc(62px + env(safe-area-inset-top));bottom:auto;left:8px;right:58px;width:auto;max-height:44vh;overflow:auto;padding:12px 14px}
+#f5 .detail{top:calc(62px + env(safe-area-inset-top));bottom:auto;left:8px;right:58px;width:auto;max-height:44vh;overflow:auto;padding:12px 14px}#f5 .detail .row{display:none}#f5 .detail .pill{margin:8px 0 2px}
 #f5 .list.show{top:calc(62px + env(safe-area-inset-top));right:58px;left:8px}
 #f5 .zl{font-size:11px;padding:3px 8px 3px 4px;gap:5px}#f5 .zl i{width:16px;height:16px;font-size:9.5px}#f5 .bl{font-size:10.5px;padding:3px 7px}
 #f5 .credit{display:none}#f5 .skip{bottom:calc(14px + env(safe-area-inset-bottom));height:40px}#f5 .ttl{width:92vw}#f5 .ttl p{font-size:14px}
@@ -1579,6 +1594,8 @@ function buildWorld(ctx) {
 
   // ── รวม mesh นิ่งที่ใช้วัสดุเดียวกันเป็นก้อนเดียว (ลด draw call หลายพัน → ไม่กี่ร้อย) · ส่วนที่ขยับ/ซ่อนได้แยกเป็นกลุ่มของตัวเอง
   if (!window.F5_NOBATCH) { console.info('[F5] compactGroups', compactGroups(world).join(' → ')); staticBatch([world, ...booths.map(b => b.group), ...SB.levels.map(Lv => Lv.g), SB.extras.g, scan]); }
+
+  if (MOBILE || window.F5_DIET) textureDiet(ctx.scene);
 
   // ── ผู้เข้าร่วม
   const people = makePeople(interior, booths, seats, routeAt, L);
