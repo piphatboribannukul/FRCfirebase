@@ -42,9 +42,9 @@ const MWA_BOOTHS = [
   { name: 'คลินิกน้ำสะอาด', sub: 'การประปานครหลวง', prop: 'bottles' },
   { name: 'Water Safety Plan', sub: 'แผนน้ำประปาปลอดภัย', prop: 'screen' },
   { name: 'วารีกุญชร', sub: 'หุ่นยนต์สำรวจคลองส่งน้ำดิบ · Wari Kunchorn', prop: 'screen' },
-  { name: 'บูธ กปน. 06', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
+  { name: 'Snap On', sub: 'อุปกรณ์ช่วยขยายแหวนยางยีโบลท์ 300 มม. · สำนักงานประปาสาขาสุวรรณภูมิ', prop: 'screen' },
   { name: 'บูธ กปน. 07', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
-  { name: 'บูธ กปน. 08', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
+  { name: 'C.I.A.', sub: 'กล้องอัจฉริยะควบคุมงานวางท่อ · AI ตรวจจับการปิด-เปิดฝาท่อ (WSP)', prop: 'screen' },
   { name: 'บูธ กปน. 09', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
   { name: 'บูธ กปน. 10', sub: 'รอกำหนดหัวข้อ', prop: 'screen', tbc: true },
 ];
@@ -69,7 +69,7 @@ function boothSlots() {
   const S = [];
   const xW = X(885) + WT / 2;                              // ผนังตะวันตกของทางเดิน กปน. (ผนังกระจก)
   // ทางเดิน กปน.: วารีกุญชร · บูธ 06 · บูธ 08 (กลาง) · บูธ 07
-  [[645, 4, 'wari'], [585, 5, 'generic'], [530, 7, 'generic'], [475, 6, 'generic']].forEach(([py, i, kind]) => S.push({ own: 'mwa', i, x: xW + (kind === 'wari' ? 1.3 : 0.7), z: Z(py), face: 'e', zone: 'mwa', kind, w: 3, d: kind === 'wari' ? 1.9 : 1.3 }));
+  [[645, 4, 'wari'], [585, 5, 'snap'], [530, 7, 'cia'], [475, 6, 'generic']].forEach(([py, i, kind]) => S.push({ own: 'mwa', i, x: xW + (kind === 'wari' ? 1.3 : 0.7), z: Z(py), face: 'e', zone: 'mwa', kind, w: 3, d: kind === 'wari' ? 1.9 : kind === 'snap' ? 2.0 : kind === 'cia' ? 1.6 : 1.3 }));
   // บูธ กปน. 09 · 10 ชิดผนังทางเดินเหนือ (ช่วงหน้าพื้นที่ปิด)
   [[1003, 8], [1075, 9]].forEach(([px, i]) => S.push({ own: 'mwa', i, x: X(px), z: Z(350) + WT / 2 + 0.7, face: 's', zone: 'north', kind: 'generic', w: 3, d: 1.3 }));
   // นิทรรศการ กปน. ชิดผนังทางเดินเหนือ (ระหว่างประตูออก–เข้า ห้องแสดง) เรียงแบบภาพงานจริง: Chlorine Care · WSP · คลินิกน้ำสะอาด · TWQ Online
@@ -351,6 +351,65 @@ function mwaBoothCanvas(kind, b) {
     // คอลัมน์ขวา + แถบล่าง
     g.fillStyle = '#0d2a4f'; g.font = `700 26px ${F_HEAD}`; ['ACCURATE & EFFICIENT SURVEY', 'IoT TECHNOLOGY', 'USER-FRIENDLY SYSTEM', 'COST-EFFECTIVE'].forEach((t, i) => { g.fillText('▸ ' + t, 1180, 720 + i * 62); });
     g.fillStyle = '#0d2a4f'; g.fillRect(0, 1040, W, 160); g.fillStyle = '#ffffff'; g.font = `700 44px ${F_HEAD}`; g.fillText('INTERNATIONAL RECOGNITION', 70, 1130); g.font = `500 30px ${F_BODY}`; g.fillText('การประปานครหลวง · Metropolitan Waterworks Authority', 760, 1128);
+  } else if (kind === 'cia') {
+    // ป้าย C.I.A. (ตามภาพงานจริง): พื้นน้ำเงิน · หัวข้อ C.I.A. · ธงไทย-ไต้หวัน + เหรียญเงิน Taiwan Innotech Expo 2022 · ตึกไทเป 101 · ไอคอนระบบ · CIA Machine / CIA System
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1543a8'); gr.addColorStop(0.6, '#0d2f7c'); gr.addColorStop(1, '#081d52'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(120,190,255,.16)'; g.lineWidth = 3; for (let i = 0; i < 14; i++) { const y = 80 + i * 78; g.beginPath(); g.moveTo(0, y); g.lineTo(220 + (i * 137) % 400, y); g.lineTo(260 + (i * 137) % 400, y + 40); g.lineTo(W, y + 40); g.stroke(); g.fillStyle = 'rgba(120,190,255,.3)'; g.beginPath(); g.arc(260 + (i * 137) % 400, y + 40, 6, 0, 7); g.fill(); }
+    g.fillStyle = '#ffffff'; g.font = `900 210px ${F_HEAD}`; g.fillText('C.I.A.', 60, 230);
+    g.fillStyle = '#7fd6ff'; fitText(g, 'ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 700, 56, F_HEAD, 820); g.fillText('ระบบกล้องอัจฉริยะควบคุมงานวางท่อประปา', 66, 310);
+    g.fillStyle = '#ffffff'; g.font = `500 32px ${F_BODY}`; ['AI (Deep Learning · CNN) ตรวจจับการปิด–เปิดฝาท่อ', 'ตามหลักน้ำประปาปลอดภัย (WSP) · แจ้งเตือนทันทีเมื่อไม่ได้มาตรฐาน'].forEach((t, i) => g.fillText(t, 66, 370 + i * 44));
+    // ธงไทย + ธงไต้หวัน + เหรียญเงิน
+    const flag = (x, y, th) => { g.fillStyle = '#9aa4ae'; g.fillRect(x - 6, y - 10, 5, 140); if (th) { [['#d6252b', 0, 1], ['#ffffff', 1, 1], ['#2b3a8c', 2, 2], ['#ffffff', 4, 1], ['#d6252b', 5, 1]].forEach(([c2, a, n]) => { g.fillStyle = c2; g.fillRect(x, y + a * 13, 120, n * 13); }); }
+      else { g.fillStyle = '#d6252b'; g.fillRect(x, y, 120, 80); g.fillStyle = '#1e3d9e'; g.fillRect(x, y, 60, 40); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + 30, y + 20, 11, 0, 7); g.fill(); } };
+    flag(1000, 70, true); flag(1160, 70, false);
+    g.fillStyle = '#d9dee4'; g.beginPath(); g.arc(1340, 120, 88, 0, 7); g.fill(); g.strokeStyle = '#9aa4ae'; g.lineWidth = 8; g.stroke(); g.fillStyle = '#5c6670'; g.textAlign = 'center'; g.font = `800 34px ${F_HEAD}`; g.fillText('SILVER', 1340, 115); g.fillText('MEDAL', 1340, 150); g.textAlign = 'left';
+    g.fillStyle = '#ffffff'; g.font = `700 38px ${F_HEAD}`; g.fillText('Taiwan Innotech Expo 2022', 1000, 260); g.font = `500 28px ${F_BODY}`; g.fillStyle = '#bfe3ff'; g.fillText('(TIE 2022) · TAIPEI, TAIWAN', 1000, 300);
+    g.fillStyle = 'rgba(160,210,255,.35)'; g.beginPath(); g.moveTo(1380, 640); for (let k = 0; k < 8; k++) { g.lineTo(1352 + k * 3, 640 - k * 34); g.lineTo(1408 - k * 3, 640 - k * 34); } g.lineTo(1380, 330); g.lineTo(1408, 640); g.fill();   // ไทเป 101
+    // ไอคอนระบบ 7 ช่อง
+    [['4G', '#1d9be0'], ['AI', '#111827'], ['◉', '#10b0a8'], ['▣', '#2a6fdb'], ['APP', '#2a6fdb'], ['🔔', '#f2a81b'], ['☰', '#6b7a8c']].forEach(([t, c2], i) => { const x = 80 + i * 120, y = 480;
+      g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(x, y, 96, 96, 20); g.fill(); g.fillStyle = c2; g.font = `800 ${t.length > 2 ? 30 : 46}px ${F_HEAD}`; g.textAlign = 'center'; g.fillText(t, x + 48, y + 64); g.textAlign = 'left'; });
+    // CIA Machine (ภาพ) · CIA System (แดชบอร์ด + มือถือ)
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.roundRect(60, 620, 1380, 380, 30); g.fill();
+    g.fillStyle = '#9aa4ae'; g.fillRect(205, 660, 10, 230); g.fillStyle = '#d6252b'; g.fillRect(196, 640, 28, 26); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(230, 700, 24, 0, 7); g.fill(); g.fillStyle = '#1b1f26'; g.beginPath(); g.arc(230, 712, 14, 0, 7); g.fill();
+    g.fillStyle = '#1f7fe0'; g.beginPath(); g.roundRect(130, 880, 190, 80, 30); g.fill(); g.fillStyle = '#26364a'; g.fillRect(170, 870, 90, 16); g.fillStyle = '#ffffff'; g.font = `700 34px ${F_HEAD}`; g.fillText('CIA Machine', 110, 990);
+    g.fillStyle = '#1b1f26'; g.beginPath(); g.roundRect(520, 650, 560, 320, 18); g.fill(); g.fillStyle = '#eef3f8'; g.fillRect(540, 668, 520, 270);
+    g.fillStyle = '#c9e3c0'; g.fillRect(620, 700, 280, 230); g.fillStyle = '#7fb6e6'; g.beginPath(); g.moveTo(620, 880); g.quadraticCurveTo(760, 860, 900, 930); g.lineTo(620, 930); g.fill();
+    for (let k = 0; k < 9; k++) { g.fillStyle = k % 3 ? '#22b07a' : '#f2a81b'; g.beginPath(); g.arc(700 + (k * 37) % 150, 760 + (k * 29) % 110, 9, 0, 7); g.fill(); }
+    g.fillStyle = '#d6252b'; g.fillRect(915, 690, 40, 30); g.fillStyle = '#2a6fdb'; g.fillRect(960, 690, 40, 30); g.fillStyle = '#22b07a'; g.fillRect(1005, 690, 40, 30);
+    g.fillStyle = '#f27aa6'; g.beginPath(); g.arc(980, 790, 42, 0, 7); g.fill(); g.fillStyle = '#2a6fdb'; for (let k = 0; k < 8; k++) g.fillRect(915 + k * 17, 900 - (k * 23) % 60, 12, 30 + (k * 23) % 60);
+    g.fillStyle = '#1b1f26'; g.beginPath(); g.roundRect(1160, 650, 170, 320, 22); g.fill(); g.fillStyle = '#f4f7fb'; g.fillRect(1172, 672, 146, 276); emblem(g, 1245, 740, 44); g.fillStyle = '#2a6fdb'; g.fillRect(1190, 880, 110, 26);
+    g.fillStyle = '#ffffff'; g.font = `700 34px ${F_HEAD}`; g.fillText('CIA System · Private Cloud', 600, 1000 - 2);
+    g.fillStyle = '#081d52'; g.fillRect(0, 1040, W, 160); emblem(g, 110, 1120, 58); g.fillStyle = '#ffffff'; g.font = `700 40px ${F_HEAD}`; g.fillText('ควบคุมงานวางท่อได้ทั่วถึงและมีมาตรฐาน · จ่ายน้ำสะอาดบริการประชาชน', 195, 1112);
+    g.font = `500 26px ${F_BODY}`; g.fillStyle = '#9fd0ff'; g.fillText('การประปานครหลวง · MWA change for better', 195, 1155);
+  } else if (kind === 'snap') {
+    // ป้าย "นวัตกรรม SNAP ON" (ตามภาพงานจริง): พื้นน้ำเงินเข้มลายเมือง · หัวข้อขาวตัวใหญ่ · ตรานวัตกรรมเพื่อความปลอดภัย · ภาพอุปกรณ์ + สว่านแดง · ประโยชน์ 4 ข้อ
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#f4f7fb'); gr.addColorStop(0.42, '#e3ecf6'); gr.addColorStop(0.43, '#0c2a5c'); gr.addColorStop(1, '#071a3d'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(29,95,192,.10)'; for (let i = 0; i < 26; i++) { const h = 90 + (i * 53) % 260, x = 640 + i * 34; g.fillRect(x, 500 - h, 26, h); }          // เส้นขอบฟ้าเมือง
+    g.fillStyle = 'rgba(120,170,230,.22)'; for (let i = 0; i < 40; i++) g.fillRect((i * 97) % W, 560 + (i * 61) % 600, 3, 3);
+    g.fillStyle = '#4a5a6c'; g.font = `600 44px ${F_HEAD}`; g.fillText('นวัตกรรม', 70, 100);
+    g.fillStyle = '#0d1f3c'; g.font = `900 170px ${F_HEAD}`; g.fillText('SNAP ON', 60, 260);
+    g.fillStyle = '#d6252b'; for (let i = 0; i < 5; i++) g.fillRect(780 + i * 22, 205 + i * 9, 120 - i * 18, 7);                      // ขีดความเร็ว
+    g.fillStyle = '#0d1f3c'; g.fillRect(60, 300, 900, 64); g.fillStyle = '#ffffff'; fitText(g, 'อุปกรณ์ช่วยขยายแหวนยางยีโบลท์ ขนาด 300 มม.', 600, 40, F_HEAD, 860); g.fillText('อุปกรณ์ช่วยขยายแหวนยางยีโบลท์ ขนาด 300 มม.', 80, 345);
+    g.fillStyle = '#26364a'; g.font = `500 28px ${F_BODY}`; ['“ ถ่างแหวนยางสำหรับใส่ยีโบลท์ ให้งานซ่อมท่อรวดเร็ว', 'เพิ่มประสิทธิภาพ ลดภาระการทำงาน ปลอดภัยในพื้นที่จำกัดหน้างาน ”'].forEach((t, i) => g.fillText(t, 70, 420 + i * 38));
+    // ตรา "นวัตกรรมเพื่อความปลอดภัย"
+    g.fillStyle = '#0d1f3c'; g.beginPath(); g.arc(W - 130, 130, 92, 0, 7); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.beginPath(); g.arc(W - 130, 130, 80, 0, 7); g.stroke();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(W - 130, 82); g.lineTo(W - 92, 98); g.quadraticCurveTo(W - 92, 160, W - 130, 182); g.quadraticCurveTo(W - 168, 160, W - 168, 98); g.closePath(); g.fill();
+    g.fillStyle = '#0d1f3c'; g.font = `800 40px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('✓', W - 130, 145); g.fillStyle = '#0d1f3c'; g.font = `600 24px ${F_BODY}`; g.fillText('นวัตกรรมเพื่อความปลอดภัย', W - 130, 262); g.textAlign = 'left';
+    // ภาพอุปกรณ์ (วงแหวน + ซี่) + สว่านไร้สายสีแดง
+    const dx = 1130, dy = 430; g.strokeStyle = '#1b1b1f'; g.lineWidth = 22; g.beginPath(); g.ellipse(dx, dy, 110, 150, 0, 0, 7); g.stroke();
+    g.strokeStyle = '#c8d0d8'; g.lineWidth = 12; g.beginPath(); g.ellipse(dx, dy, 86, 120, 0, 0, 7); g.stroke();
+    g.lineWidth = 9; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + Math.cos(a) * 80, dy + Math.sin(a) * 112); g.stroke(); }
+    g.fillStyle = '#c9a85a'; g.beginPath(); g.arc(dx, dy, 18, 0, 7); g.fill();
+    g.strokeStyle = '#c8d0d8'; g.lineWidth = 7; for (const s2 of [-1, 1]) { g.beginPath(); g.moveTo(dx, dy + s2 * 110); g.lineTo(dx + 200, dy + s2 * 40); g.stroke(); }
+    g.fillStyle = '#d6252b'; g.beginPath(); g.roundRect(dx + 190, dy - 40, 150, 70, 18); g.fill(); g.fillStyle = '#1b1b1f'; g.fillRect(dx + 250, dy + 25, 46, 120); g.fillStyle = '#d6252b'; g.beginPath(); g.roundRect(dx + 225, dy + 140, 100, 56, 10); g.fill();
+    // ประโยชน์ 4 ข้อ (การ์ดโปร่ง)
+    const ben = [['⚡', 'คืนสภาวะจ่ายน้ำได้เร็วขึ้น'], ['⏱', 'ลดเวลาปฏิบัติงาน 1 ชม./งาน'], ['💧', 'อุดรอยรั่วสมบูรณ์ ลดน้ำสูญเสีย'], ['🛡', 'ป้องกันอุบัติเหตุจากการทำงาน']];
+    ben.forEach(([ic, t], i) => { const x = 60 + i * 345, y = 640; g.fillStyle = 'rgba(255,255,255,.93)'; g.beginPath(); g.roundRect(x, y, 320, 300, 22); g.fill();
+      g.fillStyle = '#1d5fc0'; g.beginPath(); g.arc(x + 160, y + 85, 54, 0, 7); g.fill(); g.fillStyle = '#ffd23a'; g.font = `700 58px ${F_HEAD}`; g.textAlign = 'center'; g.fillText(ic, x + 160, y + 106);
+      g.fillStyle = '#0d1f3c'; g.font = `700 30px ${F_HEAD}`; const [a1, a2] = t.length > 16 ? [t.slice(0, t.lastIndexOf(' ') > 0 ? t.lastIndexOf(' ') : 14), t.slice(t.lastIndexOf(' ') > 0 ? t.lastIndexOf(' ') + 1 : 14)] : [t, ''];
+      g.fillText(a1, x + 160, y + 200); g.fillText(a2, x + 160, y + 242); g.textAlign = 'left'; });
+    g.fillStyle = '#0d1f3c'; g.fillRect(0, 1010, W, 190); emblem(g, 110, 1105, 62);
+    g.fillStyle = '#ffffff'; g.font = `700 44px ${F_HEAD}`; g.fillText('สำนักงานประปาสาขาสุวรรณภูมิ (สสสภ.)', 200, 1095); g.font = `500 28px ${F_BODY}`; g.fillStyle = '#9fd0ff'; g.fillText('การประปานครหลวง · รองรับทุกขนาดท่อในอนาคต', 200, 1140);
   } else {
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#0a2f66'); gr.addColorStop(1, b.col); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     waves(g, W, H, 900, 0.35);
@@ -915,7 +974,7 @@ function buildWorld(ctx) {
   });
   function mwaBooth(kind, b, A, zone, inner) {
     const W3 = 3.0, BZ = kind === 'wari' ? -1.05 : -0.55, BX = kind === 'cc' ? 1.0 : kind === 'twq' ? 0.45 : 0, BH = kind === 'cc' ? 2.3 : 2.4;
-    A(box(kind === 'cc' ? 5.0 : kind === 'twq' ? 3.9 : 3.2, 0.02, kind === 'wari' ? 2.3 : 1.3), carpetMWA, 0, 0.01, 0, { cast: false });
+    A(box(kind === 'cc' ? 5.0 : kind === 'twq' ? 3.9 : 3.2, 0.02, kind === 'wari' ? 2.3 : kind === 'snap' ? 2.2 : 1.3), carpetMWA, 0, 0.01, kind === 'snap' ? 0.45 : 0, { cast: false });
     // ผ้าตึง: โครง + ผืนพิมพ์ + ฐานขาตั้ง
     A(new RoundedBoxGeometry(W3, BH, 0.07, 3, 0.03), fabricFrame, BX, BH / 2 + 0.05, BZ);
     const gm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: mwaBoothGraphic(kind, b), roughness: 0.62, emissive: '#ffffff', emissiveIntensity: 0.1 })); gm.emissiveMap = gm.map;
@@ -1009,6 +1068,102 @@ function buildWorld(ctx) {
       R(new THREE.BoxGeometry(0.86, 0.025, 0.78), sol, 0, 0.84, 0.0, -0.08);
       R(new THREE.BoxGeometry(0.9, 0.02, 0.82), M.alu, 0, 0.825, 0.0, -0.08);
       R(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), M.dark, 0.18, 1.0, -0.25);
+    } else if (kind === 'snap') {
+      // ── ตามภาพงานจริง: โต๊ะผ้าจับจีบฟ้าขอบลูกไม้ · อุปกรณ์ Snap On 2 ชุด + สว่านไร้สาย + เครื่องมือโครงฟ้า + การ์ดการ์ตูน + โน้ตบุ๊ก
+      //    หน้าบูธ: ท่อ PVC สีฟ้า "SNAP ON" บนขาหยั่งไม้ ติดแหวนยางดำ + อุปกรณ์ที่ปลายท่อ · ขาตั้งภาพการ์ตูนด้านขวา
+      const rubber = new THREE.MeshStandardMaterial({ color: '#17181b', roughness: 0.85 }), alu = new THREE.MeshStandardMaterial({ color: '#d5dbe1', metalness: 0.8, roughness: 0.28 });
+      const brass = new THREE.MeshStandardMaterial({ color: '#c9a85a', metalness: 0.7, roughness: 0.35 }), drillR = new THREE.MeshStandardMaterial({ color: '#d6252b', roughness: 0.45 }), drillK = new THREE.MeshStandardMaterial({ color: '#1e2024', roughness: 0.6 });
+      const pvc = new THREE.MeshStandardMaterial({ color: '#5cc3e6', roughness: 0.35 }), woodM = new THREE.MeshStandardMaterial({ color: '#d7b68a', roughness: 0.75 }), toolBlue = new THREE.MeshStandardMaterial({ color: '#3f8fe0', metalness: 0.3, roughness: 0.4 });
+      const grp = (x, y, z, ry = 0, s = 1) => { const q = new THREE.Group(); q.position.set(x, y, z); q.rotation.y = ry; q.scale.setScalar(s); inner.add(q); const f = (geo, mat, a, b2, c, o = {}) => A(geo, mat, a, b2, c, Object.assign({ parent: q }, o)); f.g = q; return f; };
+      const rod = (D, p, q2, r, mat) => { const a = new THREE.Vector3(...p), b2 = new THREE.Vector3(...q2), d = b2.clone().sub(a); const m = D(new THREE.CylinderGeometry(r, r, d.length(), 8), mat, (a.x + b2.x) / 2, (a.y + b2.y) / 2, (a.z + b2.z) / 2); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m; };
+      // อุปกรณ์ขยายแหวนยาง: แกนวงแหวนตามแกน z ของกลุ่ม (วงแหวนหน้า z=0 → โครงด้านหลัง → สว่าน)
+      const device = (D, drill = true) => {
+        D(new THREE.TorusGeometry(0.165, 0.017, 10, 48), rubber, 0, 0, 0);
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, m = D(box(0.11, 0.012, 0.075), alu, Math.cos(a) * 0.147, Math.sin(a) * 0.147, 0.01); m.rotation.z = a + Math.PI / 2;
+          const sp = D(box(0.13, 0.016, 0.012), alu, Math.cos(a) * 0.075, Math.sin(a) * 0.075, 0.05); sp.rotation.z = a; }
+        D(new THREE.CylinderGeometry(0.026, 0.026, 0.09, 16), brass, 0, 0, 0.05).rotation.x = Math.PI / 2;
+        D(new THREE.TorusGeometry(0.152, 0.02, 8, 40), alu, 0, 0, 0.13);
+        for (let k = 0; k < 4; k++) { const a = Math.PI / 4 + k * Math.PI / 2; rod(D, [Math.cos(a) * 0.15, Math.sin(a) * 0.15, 0.13], [Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0.42], 0.009, alu); }
+        D(box(0.27, 0.27, 0.008), alu, 0, 0, 0.42);
+        rod(D, [0, 0, 0.0], [0, 0, 0.52], 0.008, alu);
+        if (drill) { D(new THREE.CylinderGeometry(0.036, 0.04, 0.17, 16), drillK, 0, 0, 0.56).rotation.x = Math.PI / 2; D(new THREE.CylinderGeometry(0.041, 0.041, 0.06, 16), drillR, 0, 0, 0.62).rotation.x = Math.PI / 2;
+          D(box(0.045, 0.15, 0.05), drillK, 0, -0.1, 0.62); D(new RoundedBoxGeometry(0.075, 0.06, 0.11, 2, 0.012), drillR, 0, -0.2, 0.63); D(box(0.06, 0.012, 0.012), drillR, 0, -0.04, 0.585); }
+      };
+      // โต๊ะผ้าจับจีบ
+      const TX = -0.15, TW = 2.1, TD = 0.75, TH = 0.76, TZ = -0.05;
+      A(box(TW, 0.03, TD), skirtTop, TX, TH, TZ);
+      const sk = (w, x, z, ry) => { const m = A(box(w, TH - 0.02, 0.012), skirtM(w), x, (TH - 0.02) / 2 + 0.01, z); m.rotation.y = ry; };
+      sk(TW + 0.04, TX, TZ + TD / 2 + 0.01, 0); sk(TD + 0.02, TX - TW / 2 - 0.01, TZ, Math.PI / 2); sk(TD + 0.02, TX + TW / 2 + 0.01, TZ, Math.PI / 2);
+      A(box(TW + 0.05, 0.05, TD + 0.05), skirtTop, TX, TH - 0.02, TZ, { cast: false });
+      device(grp(TX - 0.65, TH + 0.2, TZ + 0.05, -0.55));                                  // ชุดที่ 1 (วงแหวนยางดำ + สว่าน)
+      { const D = grp(TX + 0.05, TH + 0.19, TZ - 0.05, 0.25); D(new THREE.TorusGeometry(0.16, 0.02, 8, 40), alu, 0, 0, 0); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5, sp = D(box(0.15, 0.022, 0.014), alu, Math.cos(a) * 0.08, Math.sin(a) * 0.08, 0); sp.rotation.z = a; }
+        D(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 14), alu, 0, 0, 0.02).rotation.x = Math.PI / 2; D(box(0.05, 0.2, 0.05), alu, 0, -0.1, 0.06); }
+      { const D = grp(TX + 0.55, TH + 0.015, TZ + 0.0, 0.4); rod(D, [-0.12, 0, 0], [0.12, 0, 0], 0.012, toolBlue); rod(D, [-0.12, 0, 0], [0, 0.3, 0], 0.012, toolBlue); rod(D, [0.12, 0, 0], [0, 0.3, 0], 0.012, toolBlue); rod(D, [0, 0.3, 0], [0, 0.3, 0.25], 0.012, alu); D(box(0.3, 0.012, 0.06), toolBlue, 0, 0.005, 0.05); }
+      // การ์ดการ์ตูน "Snap On" + โน้ตบุ๊ก
+      const card = mkTex(240, 340, (g, w, h) => { const gg = g.createLinearGradient(0, 0, 0, h); gg.addColorStop(0, '#f39a3c'); gg.addColorStop(1, '#7a3b16'); g.fillStyle = gg; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#1f6fd6'; g.beginPath(); g.arc(120, 170, 46, Math.PI, 0); g.fill(); g.fillStyle = '#f2c9a0'; g.beginPath(); g.arc(120, 192, 34, 0, 7); g.fill(); g.fillStyle = '#d8f23a'; g.fillRect(78, 228, 84, 80); g.strokeStyle = '#1f6fd6'; g.lineWidth = 10; g.beginPath(); g.arc(120, 290, 40, 0, 7); g.stroke();
+        g.fillStyle = '#ffffff'; g.font = `900 46px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('Snap On', 120, 70); g.fillStyle = '#ffd23a'; g.font = `700 22px ${F_BODY}`; g.fillText('กปน. · สสสภ.', 120, 104); });
+      const cardM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: card, roughness: 0.6 }));
+      for (const [x, ry] of [[TX - 0.25, 0.15], [TX + 0.85, -0.2]]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.24), cardM); c.position.set(x, TH + 0.14, TZ + 0.28); c.rotation.set(-0.15, ry, 0); inner.add(c); A(box(0.18, 0.012, 0.06), M.dark, x, TH + 0.022, TZ + 0.25, { cast: false }); }
+      A(box(0.34, 0.015, 0.24), M.dark, TX + 0.85, TH + 0.023, TZ - 0.12); const lid = A(box(0.34, 0.23, 0.012), M.dark, TX + 0.85, TH + 0.13, TZ - 0.24); lid.rotation.x = -0.2;
+      const lsc = A(box(0.31, 0.2, 0.003), propMat.screenOn, TX + 0.85, TH + 0.13, TZ - 0.232, { cast: false }); lsc.rotation.x = -0.2;
+      // ท่อ PVC สีฟ้าบนขาหยั่งไม้ (หน้าบูธ)
+      const PZ = 0.95, PR = 0.17, PL = 1.75, PY = 0.52 + 0.025 + PR;
+      A(box(1.15, 0.05, 0.09), woodM, 0, 0.52, PZ);
+      for (const sx of [-0.52, 0.52]) for (const sz of [-1, 1]) rod(A, [sx, 0.5, PZ + sz * 0.03], [sx + Math.sign(sx) * 0.06, 0.0, PZ + sz * 0.26], 0.022, woodM);
+      for (const sx of [-0.52, 0.52]) A(box(0.04, 0.04, 0.42), woodM, sx + Math.sign(sx) * 0.04, 0.18, PZ);
+      A(box(1.1, 0.035, 0.035), woodM, 0, 0.18, PZ);
+      const pipe = A(new THREE.CylinderGeometry(PR, PR, PL, 40), pvc, -0.1, PY, PZ); pipe.rotation.z = Math.PI / 2;
+      const pin = A(new THREE.CylinderGeometry(PR - 0.012, PR - 0.012, PL + 0.002, 40, 1, true), new THREE.MeshStandardMaterial({ color: '#2f86b0', roughness: 0.5, side: THREE.BackSide }), -0.1, PY, PZ, { cast: false }); pin.rotation.z = Math.PI / 2;
+      const ptx = mkTex(256, 1024, (g, w, h) => { g.clearRect(0, 0, w, h); g.save(); g.translate(w / 2, h / 2); g.rotate(Math.PI / 2); g.textAlign = 'center'; g.fillStyle = '#ffffff';
+        g.font = `900 150px ${F_HEAD}`; g.fillText('SNAP ON', 0, 10); g.font = `600 46px ${F_BODY}`; g.fillText('สำนักงานประปาสาขาสุวรรณภูมิ', 0, 80); g.restore(); });
+      const pd = A(new THREE.CylinderGeometry(PR + 0.002, PR + 0.002, PL * 0.75, 30, 1, true, -0.85, 1.7), new THREE.MeshStandardMaterial({ map: ptx, transparent: true, roughness: 0.4 }), -0.1, PY, PZ, { cast: false }); pd.rotation.z = Math.PI / 2;
+      A(new THREE.TorusGeometry(PR - 0.004, 0.022, 10, 44), rubber, -0.1 + PL / 2 - 0.02, PY, PZ).rotation.y = Math.PI / 2;      // แหวนยางยีโบลท์ที่ปากท่อ
+      device(grp(-0.1 + PL / 2 + 0.03, PY, PZ, Math.PI / 2, 0.92), true);                   // อุปกรณ์ Snap On สวมที่ปลายท่อ
+      // ขาตั้งภาพการ์ตูน (ขวา)
+      { const ex = 1.38, ez = 0.15; const D = grp(ex, 0, ez, -0.35);
+        rod(D, [0, 1.75, -0.02], [-0.32, 0, 0.12], 0.016, drillK); rod(D, [0, 1.75, -0.02], [0.32, 0, 0.12], 0.016, drillK); rod(D, [0, 1.6, -0.04], [0, 0, -0.45], 0.016, drillK); D(box(0.7, 0.03, 0.08), drillK, 0, 0.82, 0.08);
+        const art = mkTex(480, 600, (g, w, h) => { const gg = g.createRadialGradient(240, 260, 40, 240, 300, 380); gg.addColorStop(0, '#ffcf73'); gg.addColorStop(0.6, '#c8692a'); gg.addColorStop(1, '#5a2a12'); g.fillStyle = gg; g.fillRect(0, 0, w, h);
+          g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.arc(240, 230, 150, 0, 7); g.fill();
+          g.fillStyle = '#1f6fd6'; g.beginPath(); g.arc(200, 210, 62, Math.PI, 0); g.fill(); g.fillRect(132, 205, 140, 14); g.fillStyle = '#f2c9a0'; g.beginPath(); g.arc(200, 245, 46, 0, 7); g.fill();
+          g.fillStyle = '#2a2a2a'; g.beginPath(); g.arc(184, 240, 6, 0, 7); g.arc(214, 240, 6, 0, 7); g.fill(); g.strokeStyle = '#7a3b16'; g.lineWidth = 4; g.beginPath(); g.arc(200, 258, 14, 0.2, Math.PI - 0.2); g.stroke();
+          g.fillStyle = '#d8f23a'; g.beginPath(); g.roundRect(140, 292, 120, 150, 18); g.fill(); g.fillStyle = '#cfd6dc'; g.fillRect(140, 340, 120, 10); g.fillRect(140, 390, 120, 10);
+          g.strokeStyle = '#2f86c0'; g.lineWidth = 26; g.beginPath(); g.ellipse(330, 420, 80, 105, 0.2, 0, 7); g.stroke(); g.fillStyle = '#5cc3e6'; g.fillRect(0, 470, w, 130); g.fillStyle = '#ffffff'; g.font = `900 64px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('SNAP ON', 240, 555); });
+        D(box(0.62, 0.78, 0.035), new THREE.MeshStandardMaterial({ color: '#efe6d6', roughness: 0.6 }), 0, 1.25, 0.1);
+        const am = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: art, roughness: 0.55 })); const ap = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.7), am); ap.position.set(0, 1.25, 0.119); D.g.add(ap); }
+    } else if (kind === 'cia') {
+      // ── CIA Machine (ตามภาพจริง): ฐานพลาสติกสีฟ้ามีล้อ · แผงโซลาร์ด้านบน · ฝากล่องเทาเปิด · เสาสูงพร้อมกล้อง PTZ โดม · ไฟไซเรนแดง · เสาอากาศ 4G
+      //    + มาสคอตหยดน้ำบนกล่องตั้ง "MWA Water Excellence Center" · เคาน์เตอร์โน้ตบุ๊ก CIA System
+      const blueP = new THREE.MeshStandardMaterial({ color: '#1f73d6', roughness: 0.45 }), greyP = new THREE.MeshStandardMaterial({ color: '#6f7780', roughness: 0.6 }), mast = new THREE.MeshStandardMaterial({ color: '#c9ced4', metalness: 0.7, roughness: 0.35 });
+      const whiteP = new THREE.MeshStandardMaterial({ color: '#f2f4f6', roughness: 0.35 }), redL = new THREE.MeshStandardMaterial({ color: '#ff3b2f', emissive: '#ff2a1a', emissiveIntensity: 0.8, roughness: 0.3 }), blk = new THREE.MeshStandardMaterial({ color: '#16181c', roughness: 0.4 });
+      const sol = new THREE.MeshStandardMaterial({ map: mkTex(256, 256, (g, w, h) => { g.fillStyle = '#1d2f4f'; g.fillRect(0, 0, w, h); g.fillStyle = '#8aa0bd'; for (let i = 0; i <= 256; i += 32) { g.fillRect(i, 0, 2, 256); g.fillRect(0, i, 256, 2); } }), roughness: 0.25, metalness: 0.3 });
+      const mx = -1.02, mz = 0.38;                                     // ตำแหน่งเครื่อง (หน้าซ้ายของบูธ)
+      const body = new THREE.Shape([[-0.45, 0], [0.45, 0], [0.48, 0.12], [0.42, 0.42], [0.2, 0.5], [-0.38, 0.5], [-0.47, 0.3]].map(([x, y]) => new THREE.Vector2(x, y)));
+      const bg = new THREE.ExtrudeGeometry(body, { depth: 0.56, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 }); bg.translate(0, 0, -0.28); bg.rotateY(Math.PI / 2);
+      A(bg, blueP, mx, 0.07, mz);
+      for (const sz of [-0.33, 0.33]) { A(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 18), blk, mx + sz, 0.08, mz - 0.3).rotation.z = Math.PI / 2; }
+      A(box(0.4, 0.03, 0.34), greyP, mx, 0.6, mz + 0.05); A(box(0.36, 0.012, 0.3), sol, mx, 0.618, mz + 0.05, { cast: false });
+      const lid = A(box(0.44, 0.03, 0.4), greyP, mx, 0.72, mz + 0.42); lid.rotation.x = -1.1;
+      A(box(0.05, 2.0, 0.05), mast, mx, 1.55, mz - 0.25); A(box(0.06, 0.04, 0.24), mast, mx, 2.35, mz - 0.15);
+      A(new THREE.SphereGeometry(0.11, 18, 14), whiteP, mx, 2.25, mz - 0.04); A(new THREE.SphereGeometry(0.085, 18, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blk, mx, 2.2, mz - 0.04);
+      A(new THREE.CylinderGeometry(0.07, 0.07, 0.07, 16), whiteP, mx, 2.37, mz - 0.04);
+      A(new THREE.CylinderGeometry(0.055, 0.06, 0.04, 16), whiteP, mx, 2.6, mz - 0.25); A(new THREE.CylinderGeometry(0.05, 0.05, 0.11, 16), redL, mx, 2.68, mz - 0.25);
+      for (const [ax, az] of [[-0.07, -0.05], [0.07, -0.05], [-0.05, 0.06], [0.05, 0.06]]) { const an = A(new THREE.CylinderGeometry(0.008, 0.012, 0.3, 6), blk, mx + ax, 2.5, mz - 0.25 + az); an.rotation.set(az * 6, 0, -ax * 6); }
+      // มาสคอตบนกล่องตั้ง
+      const cube = mkTex(512, 512, (g, w, h) => { g.fillStyle = '#2a4fd0'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = `800 56px ${F_HEAD}`; ['MWA', 'WATER', 'EXCELLENCE', 'CENTER'].forEach((t, i) => g.fillText(t, 256, 170 + i * 72)); });
+      const cubeM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cube, roughness: 0.5 }));
+      A(box(0.5, 0.5, 0.5), cubeM, 1.15, 0.25, 0.3);
+      const masc = mkTex(400, 560, (g, w, h) => { g.clearRect(0, 0, w, h); drop(g, 200, 250, 1.35); g.fillStyle = '#5ea8f0'; g.beginPath(); g.roundRect(120, 380, 160, 150, 40); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(305, 420, 32, 0, 7); g.fill(); });
+      const mm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: masc, transparent: true, alphaTest: 0.4, roughness: 0.6, side: THREE.DoubleSide }));
+      const mp = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), mm); mp.position.set(1.15, 0.99, 0.3); mp.rotation.y = -0.3; mp.castShadow = true; inner.add(mp);
+      // เคาน์เตอร์ + โน้ตบุ๊ก CIA System + มือถือแอป
+      A(new RoundedBoxGeometry(0.9, 0.9, 0.45, 3, 0.04), M.white, 0.35, 0.45, 0.55); A(new RoundedBoxGeometry(0.94, 0.04, 0.5, 2, 0.015), top, 0.35, 0.92, 0.55);
+      const dash = mkTex(320, 200, (g, w, h) => { g.fillStyle = '#eef3f8'; g.fillRect(0, 0, w, h); g.fillStyle = '#26364a'; g.fillRect(0, 0, 46, h); g.fillStyle = '#c9e3c0'; g.fillRect(56, 30, 150, 160); for (let k = 0; k < 7; k++) { g.fillStyle = k % 3 ? '#22b07a' : '#f2a81b'; g.beginPath(); g.arc(90 + (k * 31) % 100, 70 + (k * 23) % 90, 5, 0, 7); g.fill(); }
+        g.fillStyle = '#d6252b'; g.fillRect(214, 30, 30, 22); g.fillStyle = '#2a6fdb'; g.fillRect(250, 30, 30, 22); g.fillStyle = '#22b07a'; g.fillRect(286, 30, 30, 22); g.fillStyle = '#2a6fdb'; for (let k = 0; k < 6; k++) g.fillRect(216 + k * 16, 180 - (k * 17) % 50 - 30, 10, 30 + (k * 17) % 50); });
+      const dm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: dash, emissive: '#ffffff', emissiveIntensity: 0.55, roughness: 0.3 })); dm.emissiveMap = dm.map;
+      A(box(0.36, 0.015, 0.25), M.dark, 0.3, 0.95, 0.52); const ld = A(box(0.36, 0.24, 0.012), M.dark, 0.3, 1.07, 0.4); ld.rotation.x = -0.2;
+      const ls = new THREE.Mesh(new THREE.PlaneGeometry(0.33, 0.21), dm); ls.position.set(0.3, 1.07, 0.408); ls.rotation.x = -0.2; inner.add(ls);
+      A(box(0.08, 0.15, 0.012), M.dark, 0.66, 1.0, 0.55).rotation.x = -0.35;
     } else if (kind === 'generic') {
       const cm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: counterPrintName(b), roughness: 0.5 }));
       A(new RoundedBoxGeometry(1.3, 0.98, 0.5, 3, 0.05), M.white, 0.55, 0.49, 0.2); const cp = new THREE.Mesh(new THREE.PlaneGeometry(1.26, 0.9), cm); cp.position.set(0.55, 0.49, 0.452); inner.add(cp);
@@ -1376,16 +1531,19 @@ function makePeople(parent, booths, seats, routeAt, L) {
     hairS: new THREE.SphereGeometry(0.106, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hairL: lathe([[0.1, 0.24], [0.11, 0.15], [0.105, 0.05], [0.085, 0]], 18),
     bun: new THREE.SphereGeometry(0.05, 12, 10), badge: new THREE.BoxGeometry(0.07, 0.095, 0.01), strap: new THREE.TorusGeometry(0.12, 0.007, 4, 20, Math.PI),
     doc: new THREE.BoxGeometry(0.22, 0.3, 0.012),
+    vest: lathe([[0.143, 0], [0.163, 0.18], [0.186, 0.3], [0.19, 0.38], [0.168, 0.44]], 22), vestBand: new THREE.CylinderGeometry(0.157, 0.157, 0.035, 22, 1, true), vestBand2: new THREE.CylinderGeometry(0.179, 0.179, 0.035, 22, 1, true),
+    helmet: new THREE.SphereGeometry(0.118, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), brim: new THREE.CylinderGeometry(0.13, 0.13, 0.012, 22),
   };
   G.torso.scale(1.13, 1, 0.64); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3); G.head.scale(0.86, 1.08, 0.96); G.hairS.scale(0.88, 1.06, 1.0); G.hairL.scale(0.95, 1, 0.8);
-  G.skirt.scale(1.05, 1, 0.75); G.dress.scale(1.05, 1, 0.75); G.handG.scale(0.8, 1.5, 0.6); G.vee.rotateZ(-Math.PI / 2); G.vee.scale(0.75, 1.5, 1); G.shoe.rotateX(0);
+  G.vest.scale(1.13, 1, 0.68); G.vestBand.scale(1.13, 1, 0.68); G.vestBand2.scale(1.13, 1, 0.68); G.helmet.scale(0.92, 0.85, 1.02); G.brim.scale(0.92, 1, 1.05); G.skirt.scale(1.05, 1, 0.75); G.dress.scale(1.05, 1, 0.75); G.handG.scale(0.8, 1.5, 0.6); G.vee.rotateZ(-Math.PI / 2); G.vee.scale(0.75, 1.5, 1); G.shoe.rotateX(0);
   const list = [];
   const pick = (arr, k) => arr[((k % arr.length) + arr.length) % arr.length];
   // ชิ้นส่วนของคนหนึ่งคน: [กลุ่ม, geometry, สี, x, y, z, rx, ry, rz] · กลุ่ม = root/legL/legR/armL/armR
   function parts(o) {
     const f = o.female, k = o.k, sk = pick(skins, k * 3 + 1), hr = pick(hairs, k);
     let jacket, shirt, lower, tie = null, sleeve;
-    if (o.staff) { jacket = '#8cc3ea'; shirt = '#8cc3ea'; lower = '#1f2732'; sleeve = jacket; }
+    if (o.snap) { jacket = '#1b1f26'; shirt = jacket; lower = '#1f2732'; sleeve = jacket; }
+    else if (o.staff) { jacket = '#8cc3ea'; shirt = '#8cc3ea'; lower = '#1f2732'; sleeve = jacket; }
     else if (o.style === 'casual') { jacket = pick(casual, k); shirt = jacket; lower = pick(['#2c3440', '#3b4655', '#6b6458', '#1f2732'], k); sleeve = jacket; }
     else if (f) { jacket = o.dress ? pick(['#2b3a55', '#7a2f3e', '#3d4a5c', '#1c2433', '#5b6b7c'], k) : pick(o.jacket ? suits : blouses, k + 2); shirt = pick(blouses, k); lower = o.dress ? jacket : pick(['#1c2433', '#2b3a55', '#3a3f48', '#14181f', '#6a5a4a'], k); sleeve = jacket; }
     else { jacket = pick(suits, k); shirt = pick(shirtsW, k); lower = jacket; sleeve = jacket; tie = pick(['#1d4f9e', '#7a2f3e', '#2b3a55', '#3a5a40', '#1c2433'], k + 1); if (o.shirtOnly) { jacket = shirt; sleeve = shirt; tie = null; } }
@@ -1405,7 +1563,12 @@ function makePeople(parent, booths, seats, routeAt, L) {
     P.push(['root', G.torso, jacket, 0, 0.99, 0]);
     if (o.dress) P.push(['root', G.dress, jacket, 0, 0.38, 0]); else if (legSkin) P.push(['root', G.skirt, lower, 0, 0.52, 0]);
     if (!o.staff && jacket !== shirt) { P.push(['root', G.vee, shirt, 0, 1.38, 0.116, -0.12]); if (tie) P.push(['root', G.tie, tie, 0, 1.3, 0.119, -0.1]); P.push(['root', G.jacketHem, jacket, 0, 0.9, 0]); }
-    if (o.staff) P.push(['root', G.collar, '#8cc3ea', 0, 1.47, 0]);
+    if (o.staff) P.push(['root', G.collar, o.snap ? '#1b1f26' : '#8cc3ea', 0, 1.47, 0]);
+    if (o.snap) {                                          // เสื้อกั๊กสะท้อนแสง + หมวกนิรภัยสีฟ้า (ทีม Snap On)
+      P.push(['root', G.vest, '#d4ee2c', 0, 1.0, 0]);
+      P.push(['root', G.vestBand, '#c6ced6', 0, 1.08, 0], ['root', G.vestBand2, '#c6ced6', 0, 1.24, 0]);
+      P.push(['root', G.helmet, '#1f6fd6', 0, 1.69, 0.004], ['root', G.brim, '#1f6fd6', 0, 1.705, 0.03]);
+    }
     P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.087, 1.63, 0], ['root', G.ear, sk, 0.087, 1.63, 0]);
     P.push(['root', G.hairS, hr, 0, 1.655, -0.012]);
     if (f && o.longHair) P.push(['root', G.hairL, hr, 0, 1.43, -0.04]); else if (f) P.push(['root', G.bun, hr, 0, 1.66, -0.1]);
@@ -1453,9 +1616,9 @@ function makePeople(parent, booths, seats, routeAt, L) {
       const p = merged(who(), { armR: rnd() < 0.4 ? -0.5 : -0.05, armL: -0.04 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.5; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
     if (b.tbc) return;
-    const spots = b.kind === 'cc' ? [[0.25, 0.75], [2.3, 0.6]] : b.kind === 'twq' ? [[0.1, 0.45], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.25, 0.9]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
-    spots.slice(0, 1).forEach(([lx, lz], si) => {
-      const p = merged(who({ staff: b.own === 'mwa' }), { armL: -0.12, armR: si ? -0.12 : -0.45 }); const c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
+    const spots = b.kind === 'cc' ? [[0.25, 0.75], [2.3, 0.6]] : b.kind === 'twq' ? [[0.1, 0.45], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.25, 0.9]] : b.kind === 'snap' ? [[-1.45, 0.45], [1.05, 1.32]] : b.kind === 'cia' ? [[-0.25, 0.85]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
+    spots.slice(0, b.kind === 'snap' ? 2 : 1).forEach(([lx, lz], si) => {
+      const p = merged(who({ staff: b.own === 'mwa', snap: b.kind === 'snap' }), { armL: -0.12, armR: si ? -0.12 : -0.45 }); const c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
       p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face] + (si ? 0.4 : 0); p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); });
   });
   // พักดื่มกาแฟ
