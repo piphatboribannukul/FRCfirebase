@@ -21,6 +21,8 @@
     cityStyle: 'clean',                    // 'clean' = ผนังขาวเทา + หน้าต่างกระจกใสสีเดียว (ค่าเริ่มต้น) · 'soft' = ผนังหลายสี + หลังคากระเบื้อง · 'minimal' = ขาวเรียบไม่มีหน้าต่าง           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
   }, window.SD3D_CONFIG || {});
 
+  const MOBILE = (() => { try { return (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 1100) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); } catch (e) { return false; } })();
+
   // ── เกณฑ์สี FRC (ชุดเดียวกับ contour) ─────────────────────────────────────
   function frcHex(v) {
     if (v == null || !isFinite(v)) return '#9aa0a6';
@@ -2315,6 +2317,7 @@
       container: wrap.querySelector('#frc3d-map'), style: CFG.styleUrl,
       center: [st.lon, st.lat], zoom: INTRO_Z, pitch: 48, bearing: -30, maxPitch: 82, maxZoom: 23.6,
       antialias: true, attributionControl: false,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, MOBILE ? 1.6 : 2),   // มือถือจอ 3x: ลดความละเอียดเรนเดอร์ → ลื่นขึ้นมาก
     });
     state.map = map;
     map.addControl(new ml.NavigationControl({ visualizePitch: true }), 'bottom-left');
@@ -2678,6 +2681,14 @@
       showcase: on => _cur && _cur.layer && _cur.layer.setShowcase(on),
       camLocal: () => _cur && _cur.layer && _cur.layer.camLocal(), phase: () => _cur && _cur.phase,
       night: on => { const st = _cur; if (!!st.night !== !!on) { const b = st.wrap.querySelector('[data-a="night"]'); b && b.click(); } },
+    },
+    preload: function (cityFile) {                                                     // ดาวน์โหลดไลบรารี/ข้อมูลไว้ล่วงหน้าระหว่างอยู่หน้าแรก (ยังไม่รัน) → กดเริ่มแล้วแผนที่ขึ้นทันที
+      if (this._pre) return; this._pre = true;
+      const hint = (href, as, cors) => { const l = document.createElement('link'); l.rel = 'preload'; l.as = as; l.href = href; if (cors) l.crossOrigin = 'anonymous'; document.head.appendChild(l); };
+      if (!window.maplibregl) { hint(CFG.mlJs, 'script'); hint(CFG.mlCss, 'style'); }
+      if (!window.THREE) hint(CFG.threeJs, 'script');
+      try { fetch(CFG.styleUrl).catch(() => {}); } catch (e) {}
+      if (cityFile) try { fetch(CFG.cityBase + cityFile).catch(() => {}); } catch (e) {}
     },
     open, close, frcHex, map: () => _cur && _cur.map, act: a => _cur && act(a),
     tour, stopTour: () => stopTour(), isOpen: () => !!_cur, touring: () => !!_tour };

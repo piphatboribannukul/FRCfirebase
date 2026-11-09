@@ -5,15 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stakeholder Day · ชั้น 5 กปน.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Sarabun:wght@400;600;700&display=swap">
 <script>
-  // three.js r160 (ES module) สำหรับฉากชั้น 5 · ?local = ใช้ไฟล์ในเครื่อง (ทดสอบแบบออฟไลน์)
+  // three.js r160 (ES module, ฉบับย่อ) สำหรับฉากชั้น 5 · ?local = ใช้ไฟล์ในเครื่อง (ทดสอบแบบออฟไลน์)
+  // modulepreload: ดึงไฟล์ทั้งหมดพร้อมกันตั้งแต่ต้น แทนการรอทีละชั้น (ชั้น 5 → addons → shader)
   (function () {
     var L = /[?&]local\b/.test(location.search);
-    var map = { imports: {
-      three: L ? './node_modules/three/build/three.module.js' : 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
-      'three/addons/': L ? './node_modules/three/examples/jsm/' : 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/' } };
-    document.write('<script type="importmap">' + JSON.stringify(map) + '<\/script>');
+    var B = L ? './node_modules/three/' : 'https://cdn.jsdelivr.net/npm/three@0.160.0/', J = B + 'examples/jsm/';
+    var map = { imports: { three: B + 'build/three.module.min.js', 'three/addons/': J } };
+    var pre = [B + 'build/three.module.min.js', './stakeholder_floor5.js'].concat(['controls/OrbitControls', 'environments/RoomEnvironment', 'postprocessing/EffectComposer', 'postprocessing/RenderPass',
+      'postprocessing/GTAOPass', 'postprocessing/OutputPass', 'postprocessing/ShaderPass', 'postprocessing/MaskPass', 'postprocessing/Pass', 'geometries/RoundedBoxGeometry', 'utils/BufferGeometryUtils',
+      'shaders/CopyShader', 'shaders/OutputShader', 'shaders/GTAOShader', 'shaders/PoissonDenoiseShader', 'math/SimplexNoise'].map(function (f) { return J + f + '.js'; }));
+    document.write('<script type="importmap">' + JSON.stringify(map) + '<\/script>' +
+      pre.map(function (u) { return '<link rel="modulepreload" href="' + u + '">'; }).join(''));
   })();
   window.SD3D_CONFIG = { cityBase: 'data/city/', autoInside: true };
 </script>
@@ -38,6 +46,31 @@
   .keys { margin-top:22px; font-size:12.5px; color:#7b8898; }
   kbd { font:600 11.5px ui-monospace,monospace; background:#fff; border:1px solid #d5dde6; border-bottom-width:2px; border-radius:5px; padding:1px 6px; }
   #err { margin-top:14px; color:#b42318; font-size:13px; min-height:1em; }
+  #prep { margin-top:16px; font-size:12.5px; color:#7b8898; min-height:1.2em; transition:color .3s; }
+  #prep i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; background:#c3ccd6; vertical-align:1px; animation:pp 1s ease-in-out infinite alternate; }
+  #prep.ok { color:#1f7a4d; } #prep.ok i { background:#2fb36b; animation:none; }
+  @keyframes pp { to { opacity:.35; } }
+  .acts button .spin { display:inline-block; width:15px; height:15px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; margin-right:10px; vertical-align:-2px; animation:sp .8s linear infinite; }
+  .acts button .spin.dk { border-color:#d5dde6; border-top-color:var(--blue); }
+  .acts button:disabled { cursor:progress; opacity:.92; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  #land { overflow:auto; padding:max(24px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom)); }
+  .keys .tc { display:none; }
+  @media (pointer:coarse) { .keys .kb { display:none; } .keys .tc { display:inline; } }
+  @media (max-width:640px) {
+    .eyebrow { font-size:12px; letter-spacing:.1em; }
+    h1 { font-size:clamp(34px,11vw,48px); }
+    .sub { font-size:14.5px; line-height:1.55; }
+    .line { width:160px; margin:16px auto 20px; }
+    .acts { flex-direction:column; align-items:stretch; gap:10px; max-width:360px; margin:0 auto; }
+    .acts button { padding:15px 18px; font-size:16.5px; }
+    .steps { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:22px; max-width:360px; margin-left:auto; margin-right:auto; }
+    .steps div { padding:9px 11px; font-size:12px; }
+  }
+  @media (max-height:520px) and (orientation:landscape) {
+    #land { place-items:start center; }
+    h1 { font-size:34px; margin:6px 0 2px; } .line { margin:10px auto 14px; } .steps { margin-top:14px; } .keys { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -57,24 +90,27 @@
       <div><b>3 · ชั้น 5</b>บูธ 22 บูธ · ทางเดิน 4–7 ม.</div>
       <div><b>4 · นำชม</b>ทีละส่วน 12 ขั้น</div>
     </div>
-    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ทีละขั้น · <kbd>Space</kbd> นำชมอัตโนมัติ · <kbd>Esc</kbd> ย้อนกลับ · คลิกบูธเพื่อดูรายละเอียด</div>
+    <div id="prep"><i></i>กำลังเตรียมฉาก 3 มิติ… กดเริ่มได้เลย</div>
+    <div class="keys"><span class="kb"><kbd>←</kbd> <kbd>→</kbd> ทีละขั้น · <kbd>Space</kbd> นำชมอัตโนมัติ · <kbd>Esc</kbd> ย้อนกลับ · คลิกบูธเพื่อดูรายละเอียด</span><span class="tc">ลากนิ้วเพื่อหมุน · ถ่างสองนิ้วเพื่อซูม · แตะบูธเพื่อดูรายละเอียด</span></div>
     <div id="err"></div>
   </div>
 </div>
 
-<script src="stakeholder_building.js"></script>
-<script src="stakeholder3d.js"></script>
+<script src="stakeholder_building.js" defer></script>
+<script src="stakeholder3d.js" defer></script>
 <script type="module">
-  const err = document.getElementById('err');
-  try { await import('./stakeholder_floor5.js'); } catch (e) { err.textContent = 'โหลดฉากชั้น 5 ไม่สำเร็จ: ' + e.message; }
-  try { await Promise.all(['700 40px "Bai Jamjuree"', '600 40px "Bai Jamjuree"', '500 40px "Bai Jamjuree"', '500 40px "IBM Plex Sans Thai"', '600 40px "IBM Plex Sans Thai"'].map(f => document.fonts.load(f, 'กขค Ab'))); } catch (e) {}
+  const err = document.getElementById('err'), prepEl = document.getElementById('prep');
+  // โหลดฉากชั้น 5 กับฟอนต์คู่กันเบื้องหลัง — ปุ่มกดได้ทันทีไม่ต้องรอ
+  const f5mod = import('./stakeholder_floor5.js').catch(e => { err.textContent = 'โหลดฉากชั้น 5 ไม่สำเร็จ: ' + e.message; });
+  const fonts = Promise.all(['700 40px "Bai Jamjuree"', '600 40px "Bai Jamjuree"', '500 40px "Bai Jamjuree"', '500 40px "IBM Plex Sans Thai"', '600 40px "IBM Plex Sans Thai"'].map(f => document.fonts.load(f, 'กขค Ab'))).catch(() => {});
+  const fontsMax = Promise.race([fonts, new Promise(r => setTimeout(r, 2500))]);   // เน็ตช้า: ไม่รอฟอนต์เกิน 2.5 วิ
 
   const HQ = {
     name: 'การประปานครหลวง สำนักงานใหญ่',
     lat: 13.88052289121317, lon: 100.55175371285173,
     // อาคารสุทธิอุทกากร: ขนาดกรอบจากรอยอาคาร OSM/Overture · ตำแหน่งฐานตึกเลื่อนลงใต้ 15 ม. ตามภาพดาวเทียม (รอยเดิมเป็นหลังคาที่เอียงตามมุมกล้อง)
     // 50.7 (ตอ.–ตต.) × 70.8 (เหนือ–ใต้) ม. · แกนยาวเอียง 12.7° ไปทางตะวันออกของทิศเหนือ
-    hq: { cx: -1.31, cz: 5.75, W: 50.7, D: 70.8, rot: -0.2215, bearing: 68, zoom: 19.0 },
+    hq: { cx: -1.31, cz: 5.75, W: 50.7, D: 70.8, rot: -0.2215, bearing: 68, zoom: (innerHeight > innerWidth * 1.15 ? 18.3 : 19.0) },
     // ซ่อนรอยอาคาร OSM ที่โมเดลแทนที่แล้ว (หอ/ฐาน/อาคารโค้ง/ใต้สะพาน/อาคารเดิม) และรอยที่ตรวจจับผิด (เงาตึกริมคลอง)
     bld: { '-997': { hide: true }, '-998': { hide: true }, '-1000': { hide: true }, '-1001': { hide: true }, '-1002': { hide: true }, '-989': { hide: true }, '-990': { hide: true }, '-991': { hide: true }, '-992': { hide: true }, 152042395: { hide: true }, '-1006': { hide: true }, '-1007': { hide: true }, '-993': { hide: true } },   // 152042395 = หลังคาถังเก็บน้ำใส (จำลองเองแล้ว)
     // โรงงานผลิตน้ำบางเขน/สนามกีฬา/คลองประปา จำลองเองแล้ว → ซ่อนรอยอาคาร Overture และต้นไม้สุ่มในพื้นที่นั้น
@@ -85,15 +121,40 @@
   const show = on => land.classList.toggle('off', !on);
   let watch = null;
   function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); } }, 800); }
-  function goMap() { show(false); window.SD3D.open(HQ); watchBack(); }
+  let busy = false;
   const LITE = new URLSearchParams(location.search).has('lite');
-  function goF5() { show(false); window.MWA_FLOOR5.play({ onDone: () => {}, ao: !LITE, dpr: LITE ? 1 : 2 }); watchBack(); }
-  document.getElementById('goMap').onclick = goMap;
-  document.getElementById('goF5').onclick = goF5;
+  const frame2 = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const MOBILE = (() => { try { return (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 1100) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); } catch (e) { return false; } })();
+  const bMap = document.getElementById('goMap'), bF5 = document.getElementById('goF5'), bMapHTML = bMap.innerHTML;
+  function setStatus(txt, ok) { prepEl.style.visibility = ''; prepEl.classList.toggle('ok', !!ok); prepEl.innerHTML = '<i></i>' + txt; }
+
+  // เตรียมฉากชั้น 5 ล่วงหน้า (สร้างโมเดล + คอมไพล์ shader แบบไม่บล็อกหน้าเว็บ) → บินเข้าต่อเนื่องไม่สะดุด
+  let prepP = null;
+  function prepNow() {
+    if (prepP) return prepP;
+    prepP = Promise.all([f5mod, fontsMax]).then(frame2).then(() => { try { return window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} })
+      .then(() => { setStatus('พร้อมนำเสนอ', true); try { window.SD3D.preload(HQ.cityFile); } catch (e) {} });
+    return prepP;
+  }
+  async function goMap() {
+    if (busy) return; busy = true;
+    if (MOBILE && !prepP) {   // มือถือ: เตรียมฉากก่อนเข้าแผนที่ (มีวงหมุนบอกสถานะ) → ระหว่างบินและเข้าชั้น 5 ไม่สะดุด
+      bMap.innerHTML = '<span class="spin"></span>กำลังเตรียมฉาก 3 มิติ…'; bMap.disabled = bF5.disabled = true; setStatus('ครั้งแรกใช้เวลาสักครู่');
+      await prepNow(); bMap.innerHTML = bMapHTML; bMap.disabled = bF5.disabled = false;
+    }
+    await fontsMax; show(false); window.SD3D.open(HQ); watchBack(); busy = false; prepNow();
+  }
+  async function goF5() {
+    if (busy) return; busy = true; setStatus('กำลังเปิดชั้น 5…'); bF5.innerHTML = '<span class="spin dk"></span>กำลังเปิดชั้น 5…';
+    await Promise.all([f5mod, fontsMax]); await frame2();
+    if (window.MWA_FLOOR5) window.MWA_FLOOR5.play(Object.assign({ onDone: () => {} }, LITE ? { ao: false, dpr: 1 } : {}));
+    show(false); watchBack(); busy = false; bF5.innerHTML = 'ไปชั้น 5 ทันที'; setStatus('พร้อมนำเสนอ', true);
+  }
+  bMap.onclick = goMap; bF5.onclick = goF5;
   const q = new URLSearchParams(location.search);
-  const pre = () => { try { window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} };   // เตรียมฉากชั้น 5 ล่วงหน้า → บินเข้าต่อเนื่องไม่สะดุด
-  if (q.has('floor5')) goF5(); else if (q.has('go')) { pre(); goMap(); } else setTimeout(pre, 300);
-  window.F5READY = true;
+  if (MOBILE) { prepEl.style.visibility = 'hidden'; f5mod.then(() => { try { window.SD3D.preload(HQ.cityFile); } catch (e) {} }); }
+  if (q.has('floor5')) goF5(); else if (q.has('go')) { goMap(); } else if (!MOBILE) setTimeout(() => window.requestIdleCallback ? requestIdleCallback(prepNow, { timeout: 1200 }) : prepNow(), 250);
+  f5mod.then(() => fonts).then(() => { window.F5READY = true; });
 </script>
 </body>
 </html>

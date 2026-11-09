@@ -132,6 +132,10 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 let _seed = 7; const rnd = () => (_seed = (_seed * 16807) % 2147483647) / 2147483647;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// มือถือ/แท็บเล็ต: ลดความละเอียด ปิด AO เงาเล็กลงและอัปเดตห่างขึ้น → ลื่นไม่กระตุก
+const MOBILE = (() => { try { return (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 1100) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); } catch (e) { return false; } })();
+const Q_AO = opt => opt.ao != null ? opt.ao !== false : !MOBILE;
+const Q_DPR = opt => opt.dpr || (MOBILE ? 1.5 : 2);
 const F_HEAD = '"Bai Jamjuree","Noto Sans Thai",sans-serif', F_BODY = '"IBM Plex Sans Thai","Noto Sans Thai",sans-serif';
 
 function shade(hex, k) { const c = new THREE.Color(hex); if (k < 0) c.multiplyScalar(1 + k); else c.lerp(new THREE.Color('#fff'), k); return '#' + c.getHexString(); }
@@ -523,7 +527,7 @@ function css() {
 #f5.on{opacity:1}#f5:not(.on){pointer-events:none}
 #f5 canvas.gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
 #f5 .card{background:rgba(255,255,255,.93);border:1px solid rgba(214,222,231,.9);border-radius:12px;box-shadow:0 8px 28px rgba(16,34,56,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-#f5 .ui{position:absolute;transition:opacity .5s ease}
+#f5 .ui{position:absolute;transition:opacity .5s ease;z-index:2}#f5 #f5lbl{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 #f5.intro .ui.hide-intro{opacity:0;pointer-events:none}
 #f5 .top{left:14px;right:14px;top:12px;height:52px;display:flex;align-items:center;gap:14px;padding:0 10px 0 14px}
 #f5 .brand{display:flex;align-items:center;gap:10px;min-width:0}
@@ -621,6 +625,34 @@ function css() {
 #f5 .credit{position:absolute;right:16px;bottom:4px;font-size:10.5px;color:#9aa7b5;pointer-events:none}
 @media (max-width:1100px){#f5 .kpis .kpi:nth-child(n+3){display:none}#f5 .search{display:none}}
 @media (max-width:900px){#f5 .list{display:none}#f5 .journey{width:calc(100vw - 28px)}#f5 .detail{width:calc(100vw - 28px);top:auto;bottom:250px}#f5 .chip,.clock{display:none!important}#f5 .kpis{display:none}}
+#f5 .tools .ls{display:none}
+@media (max-width:900px){#f5 .tools .ls{display:grid}#f5 .list.show{display:block;left:10px;right:10px;width:auto;top:64px;bottom:auto;z-index:6}#f5 .list.show .items{display:block;max-height:52vh}#f5 .list .mn{display:none}}
+@media (max-width:640px){
+#f5 .top{left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));height:46px;gap:8px;padding:0 6px 0 10px}
+#f5 .brand b{font-size:14px}#f5 .brand small{font-size:10.5px}#f5 .logo{width:26px;height:26px;font-size:13px}#f5 .top .btn{height:34px;padding:0 10px}
+#f5 .tools{left:auto;right:8px;top:calc(62px + env(safe-area-inset-top));transform:none;padding:3px}
+#f5 .tools button{width:40px;height:40px;font-size:16px}#f5 .tools [data-k=zin],#f5 .tools [data-k=zout],#f5 .tools [data-k=fs],#f5 .tools hr:first-of-type{display:none}
+#f5 .journey{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));width:auto;padding:10px 12px}
+#f5 .jh{font-size:13px}#f5 .jh small{display:none}
+#f5 .steps{margin:8px 0 8px}#f5 .stp i{width:22px;height:22px;font-size:10px}#f5 .steps:before,#f5 .steps .fill{top:11px}#f5 .stp span{display:none}
+#f5 .tour{flex-wrap:wrap;gap:6px 10px;padding-top:8px}#f5 .tour .tx{flex:1 1 calc(100% - 60px)}
+#f5 .tour h4{font-size:15px}#f5 .tour p{font-size:12.5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#f5 .tour .ctl{width:100%}#f5 .tour .ctl .btn{flex:1;justify-content:center;height:40px;font-size:14px}
+#f5 .detail{top:calc(62px + env(safe-area-inset-top));bottom:auto;left:8px;right:58px;width:auto;max-height:44vh;overflow:auto;padding:12px 14px}
+#f5 .list.show{top:calc(62px + env(safe-area-inset-top));right:58px;left:8px}
+#f5 .zl{font-size:11px;padding:3px 8px 3px 4px;gap:5px}#f5 .zl i{width:16px;height:16px;font-size:9.5px}#f5 .bl{font-size:10.5px;padding:3px 7px}
+#f5 .credit{display:none}#f5 .skip{bottom:calc(14px + env(safe-area-inset-bottom));height:40px}#f5 .ttl{width:92vw}#f5 .ttl p{font-size:14px}
+}
+@media (max-height:500px) and (orientation:landscape){
+#f5 .top{height:40px;top:6px;left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right))}#f5 .brand small{display:none}
+#f5 .tools{left:auto;right:calc(8px + env(safe-area-inset-right));top:54px;transform:none;flex-direction:row;padding:3px}#f5 .tools hr{display:none}#f5 .tools button{width:36px;height:36px}
+#f5 .tools [data-k=zin],#f5 .tools [data-k=zout],#f5 .tools [data-k=fs]{display:none}
+#f5 .journey{left:calc(8px + env(safe-area-inset-left));right:auto;bottom:6px;width:min(560px,calc(100vw - 120px));padding:8px 12px}
+#f5 .jh,#f5 .steps{display:none}#f5 .tour{border-top:0;padding-top:0;flex-wrap:nowrap}#f5 .tour p{-webkit-line-clamp:2}#f5 .tour .ctl{width:auto}
+#f5 .detail{top:98px;left:auto;right:calc(8px + env(safe-area-inset-right));width:320px;max-height:calc(100vh - 106px);overflow:auto;bottom:auto;padding:10px 14px}
+#f5 .list.show{top:96px;left:auto;right:calc(8px + env(safe-area-inset-right));width:340px}#f5 .list.show .items{max-height:calc(100vh - 160px)}
+#f5 .credit{display:none}
+}
 @media (prefers-reduced-motion:reduce){#f5,#f5 .ui,#f5 .lbl{transition:none}}
 `;
   document.head.appendChild(st);
@@ -646,7 +678,7 @@ function build(opt) {
   <div class="kpi card"><div class="ic">◷</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
 </div>
 <div class="ui tools card hide-intro">
-  <button data-k="zin" title="ซูมเข้า">＋</button><button data-k="zout" title="ซูมออก">－</button><hr>
+  <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">☰</button><button data-k="zin" title="ซูมเข้า">＋</button><button data-k="zout" title="ซูมออก">－</button><hr>
   <button data-k="home" title="ภาพรวม">⌂</button><button data-k="top" title="มุมบน (ผัง)">▦</button><button data-k="spin" title="หมุนรอบ">⟳</button><hr>
   <button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">⧉</button><button data-k="fs" title="เต็มจอ">⛶</button>
 </div>
@@ -672,11 +704,12 @@ function build(opt) {
 function makeScene(root, opt) {
   const canvas = root.querySelector('canvas.gl');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!opt.capture });
-  const DPR = Math.min(window.devicePixelRatio || 1, opt.dpr || 2);
+  const DPR = Math.min(window.devicePixelRatio || 1, Q_DPR(opt));
   renderer.setPixelRatio(DPR);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.9;
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  if (MOBILE) renderer.shadowMap.autoUpdate = false;   /* อัปเดตเงาเป็นช่วง ๆ ใน frame() */
   const scene = new THREE.Scene();
   { const c = document.createElement('canvas'); c.width = 4; c.height = 512; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 512);
     gr.addColorStop(0, '#b9d1e6'); gr.addColorStop(0.55, '#d6e2ec'); gr.addColorStop(1, '#e3e9ee'); g.fillStyle = gr; g.fillRect(0, 0, 4, 512);
@@ -686,11 +719,16 @@ function makeScene(root, opt) {
   scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
   scene.environmentIntensity = 0.42;
   const camera = new THREE.PerspectiveCamera(45, 1, 0.3, 1400);
+  // จอแนวตั้ง (มือถือ): ขยายมุมมองให้เห็นกว้างพอ ๆ กับจอแนวนอน · ค่า fov ที่ตั้งในโค้ดยังเป็นค่าเดิม (ปรับเฉพาะตอนสร้าง projection)
+  camera.userData.wide = 1;
+  { const upm = camera.updateProjectionMatrix.bind(camera);
+    camera.updateProjectionMatrix = function () { const f = this.fov, kf = this.aspect < 1.25 ? Math.min(1.25 / this.aspect, 2.1) : 1, k = 1 + (kf - 1) * this.userData.wide;
+      if (k > 1.001) { this.fov = Math.min(Math.max(f, 92), 2 * Math.atan(Math.tan(f * Math.PI / 360) * k) * 180 / Math.PI); upm(); this.fov = f; } else upm(); }; }
 
   const hemi = new THREE.HemisphereLight('#f4f8ff', '#a9a49a', 0.55); scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff6ea', 2.0);
   sun.position.set(-38, 70, 30); sun.castShadow = true;
-  sun.shadow.mapSize.set(4096, 4096);
+  sun.shadow.mapSize.set(MOBILE ? 2048 : 4096, MOBILE ? 2048 : 4096);
   Object.assign(sun.shadow.camera, { left: -52, right: 52, top: 44, bottom: -44, near: 10, far: 220 });
   sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.03; sun.shadow.radius = 3;
   scene.add(sun); scene.add(sun.target);
@@ -701,7 +739,7 @@ function makeScene(root, opt) {
 
   // หลังประมวลผล
   let composer = null, gtao = null, bloom = null;
-  const useAO = opt.ao !== false;
+  const useAO = Q_AO(opt);
   function setupComposer(w, h) {
     const rt = new THREE.WebGLRenderTarget(w * DPR, h * DPR, { type: THREE.HalfFloatType, samples: 4 });
     composer = new EffectComposer(renderer, rt);
@@ -735,6 +773,57 @@ function zoneMats() {
     set(zone, a) { for (const m of byZone[zone] || []) { if (m.userData.noFade) continue; const tr = a < 0.995 || m.userData.op < 1 || !!m.userData.tr; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; } m.opacity = m.userData.op * a; m.depthWrite = a > 0.6 && m.userData.op >= 1 && !m.userData.tr; } },
     zones: () => Object.keys(byZone),
   };
+}
+
+// mesh หลายวัสดุ (เช่น ผนังกล่อง 6 หน้า) → รวมหน้าที่ใช้วัสดุเดียวกันให้ติดกัน: 6 draw call เหลือ 1–2
+function compactGroups(root) {
+  let n0 = 0, n1 = 0;
+  root.traverse(o => {
+    if (!o.isMesh || !Array.isArray(o.material) || !o.geometry.index || !o.geometry.groups.length) return;
+    const g = o.geometry, mats = o.material, idx = g.index.array, uniq = [], gi = new Map();
+    for (const gr of g.groups) { const m = mats[gr.materialIndex]; if (!m) continue; if (!gi.has(m)) { gi.set(m, uniq.length); uniq.push(m); } }
+    n0 += g.groups.length; if (uniq.length >= g.groups.length) { n1 += g.groups.length; return; }
+    const out = new (idx.constructor)(idx.length); let p = 0; const groups = [];
+    uniq.forEach((m, mi) => { const st = p; for (const gr of g.groups) if (mats[gr.materialIndex] === m) { out.set(idx.subarray(gr.start, gr.start + gr.count), p); p += gr.count; } groups.push({ start: st, count: p - st, materialIndex: mi }); });
+    const g2 = g.clone(); g2.setIndex(new THREE.BufferAttribute(out.subarray(0, p), 1)); g2.clearGroups();
+    if (uniq.length === 1) { o.material = uniq[0]; } else { groups.forEach(q => g2.addGroup(q.start, q.count, q.materialIndex)); o.material = uniq; }
+    o.geometry = g2; n1 += groups.length;
+  });
+  return [n0, n1];
+}
+
+function staticBatch(roots) {
+  const t0 = performance.now(), rootSet = new Set(roots), noRB = THREE.Object3D.prototype.onBeforeRender, inv = new THREE.Matrix4(), mtx = new THREE.Matrix4(), v = new THREE.Vector3();
+  roots[0].updateMatrixWorld(true); let before = 0, after = 0;
+  for (const R of roots) {
+    inv.copy(R.matrixWorld).invert(); const groups = new Map();
+    const walk = o => {
+      for (const c of o.children) {
+        if (rootSet.has(c) || !c.visible || c.userData.wall || c.userData.noBatch) continue;
+        if (c.isMesh && !c.isInstancedMesh && !c.isSkinnedMesh && !Array.isArray(c.material) && c.material.visible !== false && !c.material.isShaderMaterial
+          && !c.userData.booth && c.onBeforeRender === noRB && !Object.keys(c.geometry.morphAttributes).length && c.matrixWorld.determinant() > 0) {
+          const g = c.geometry, at = Object.keys(g.attributes).sort().map(k => k + g.attributes[k].itemSize + (g.attributes[k].normalized ? 'n' : '') + g.attributes[k].array.constructor.name).join(',');
+          if (!g.boundingSphere) g.computeBoundingSphere(); v.copy(g.boundingSphere.center).applyMatrix4(c.matrixWorld);
+          const key = [c.material.uuid, c.castShadow, c.receiveShadow, c.renderOrder, c.frustumCulled, !!c.userData.noAO, at, !!g.index, Math.floor(v.x / 30), Math.floor(v.z / 30)].join('|');
+          let L = groups.get(key); if (!L) groups.set(key, L = []); L.push(c);
+        }
+        walk(c);
+      }
+    };
+    walk(R);
+    for (const L of groups.values()) {
+      before += L.length; if (L.length < 2) { after += L.length; continue; }
+      try {
+        const geos = L.map(c => { const g = c.geometry.clone(); g.applyMatrix4(mtx.multiplyMatrices(inv, c.matrixWorld)); return g; });
+        const mg = mergeGeometries(geos, false); if (!mg) { after += L.length; continue; }
+        const c0 = L[0], m = new THREE.Mesh(mg, c0.material);
+        m.castShadow = c0.castShadow; m.receiveShadow = c0.receiveShadow; m.renderOrder = c0.renderOrder; m.frustumCulled = c0.frustumCulled; if (c0.userData.noAO) m.userData.noAO = true;
+        for (const c of L) c.parent.remove(c);
+        R.add(m); after += 1; geos.forEach(g => g.dispose());
+      } catch (e) { after += L.length; }
+    }
+  }
+  console.info('[F5] staticBatch', before, '→', after, 'mesh ·', Math.round(performance.now() - t0), 'ms');
 }
 
 function buildWorld(ctx) {
@@ -1488,6 +1577,9 @@ function buildWorld(ctx) {
     cr.castShadow = true; world.add(cr, tr);
   }
 
+  // ── รวม mesh นิ่งที่ใช้วัสดุเดียวกันเป็นก้อนเดียว (ลด draw call หลายพัน → ไม่กี่ร้อย) · ส่วนที่ขยับ/ซ่อนได้แยกเป็นกลุ่มของตัวเอง
+  if (!window.F5_NOBATCH) { console.info('[F5] compactGroups', compactGroups(world).join(' → ')); staticBatch([world, ...booths.map(b => b.group), ...SB.levels.map(Lv => Lv.g), SB.extras.g, scan]); }
+
   // ── ผู้เข้าร่วม
   const people = makePeople(interior, booths, seats, routeAt, L);
   const routes = [{ at: routeAt, L }, { at: RE.at, L: RE.L }];
@@ -1606,7 +1698,12 @@ function makePeople(parent, booths, seats, routeAt, L) {
   function rigged(o) {                     // แยกชิ้น (คนเดิน)
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
     const piv = {}; for (const k of Object.keys(PIV)) { piv[k] = new THREE.Group(); piv[k].position.set(...PIV[k]); body.add(piv[k]); }
-    for (const [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) { const m = new THREE.Mesh(geo, mm(col)); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; (grp === 'root' ? body : piv[grp]).add(m); }
+    const byG = {};   // รวมชิ้นส่วนในข้อต่อเดียวกันเป็น mesh เดียว (สีตามจุดยอด) → ~5 draw call ต่อคน แทน ~25
+    for (const [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) {
+      const g2 = geo.index ? geo.toNonIndexed() : geo.clone(); g2.deleteAttribute('uv'); g2.applyMatrix4(tmpM.compose(new THREE.Vector3(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz)), one));
+      const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+      g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); (byG[grp] = byG[grp] || []).push(g2); }
+    for (const [grp, geos] of Object.entries(byG)) { const m = new THREE.Mesh(mergeGeometries(geos, false), vmat); geos.forEach(q => q.dispose()); m.castShadow = true; (grp === 'root' ? body : piv[grp]).add(m); }
     g.scale.setScalar(o.scale || 1); parent.add(g);
     return { g, body, legPivotL: piv.legL, legPivotR: piv.legR, aL: piv.armL, aR: piv.armR, ...o };
   }
@@ -1637,6 +1734,11 @@ function makePeople(parent, booths, seats, routeAt, L) {
   });
   // ผู้นั่งใน Auditorium
   for (let i = 0; i < 120; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false, sit: true }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.36, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
+  { // ผู้นั่งนิ่ง → รวมทั้งห้องเป็น mesh เดียว
+    const sit = list.filter(p => p.mode === 'sit'), sitG = new THREE.Group(), geos = [];
+    for (const p of sit) { p.g.updateMatrix(); const m = p.g.children[0]; geos.push(m.geometry.clone().applyMatrix4(p.g.matrix)); m.geometry.dispose(); parent.remove(p.g); p.g = sitG; p.body = sitG; }
+    if (geos.length) { const m = new THREE.Mesh(mergeGeometries(geos, false), vmat); m.castShadow = true; geos.forEach(q => q.dispose()); sitG.add(m); parent.add(sitG); }
+  }
   return list;
 }
 
@@ -1666,20 +1768,30 @@ const JOURNEY = ['ลิฟต์ · ลงทะเบียน', 'ทางเ
 // ───────────────────────────── เล่น ─────────────────────────────
 // เตรียมฉากล่วงหน้า (สร้างโมเดล + คอมไพล์ shader) ระหว่างที่ผู้ชมยังอยู่หน้าแรก/แผนที่ → ตอนเข้าชั้น 5 ไม่สะดุด
 let PRE = null;
-const preKey = opt => (opt.ao !== false) + '|' + (opt.dpr || 2);
+const preKey = opt => Q_AO(opt) + '|' + Q_DPR(opt);
+// คอมไพล์ shader (~70 ชุด) แบบขนานด้วย compileAsync → หน้าเว็บไม่ค้างระหว่างรอ · คืน Promise ที่เสร็จเมื่อพร้อม
+let PREP = null;
 function prepare(opt = {}) {
-  if (S || PRE) return;
+  if (PREP) return PREP;
+  if (S) return (PREP = Promise.resolve(true));
   const o = Object.assign({ onDone: () => {} }, opt), root = build(o), ctx = makeScene(root, o), W = buildWorld(ctx);
   PRE = { root, ctx, W, key: preKey(o) };
-  try { const w = innerWidth, h = innerHeight; ctx.renderer.setSize(w, h, false); ctx.camera.aspect = w / h; ctx.camera.position.set(-74, 24, -158); ctx.camera.lookAt(0, 0, 0); ctx.camera.updateProjectionMatrix();
-    ctx.setupComposer(w, h); ctx.renderer.compile(ctx.scene, ctx.camera); ctx.composer.render(); } catch (e) { console.warn('[F5] prepare', e); }
+  PREP = (async () => {
+    try { const w = innerWidth, h = innerHeight; ctx.renderer.setSize(w, h, false); ctx.camera.aspect = w / h; ctx.camera.position.set(-74, 24, -158); ctx.camera.lookAt(0, 0, 0); ctx.camera.updateProjectionMatrix();
+      ctx.setupComposer(w, h);
+      if (ctx.renderer.compileAsync) await ctx.renderer.compileAsync(ctx.scene, ctx.camera); else ctx.renderer.compile(ctx.scene, ctx.camera);
+      if (PRE && PRE.ctx === ctx && !S) { ctx.renderer.shadowMap.needsUpdate = true; ctx.composer.render(); }   /* อัปโหลด texture/geometry + shader ของ AO/เงา */
+    } catch (e) { console.warn('[F5] prepare', e); }
+    return true;
+  })();
+  return PREP;
 }
 function play(opt = {}) {
   if (S) stop(true);
   let root, ctx, W;
   if (PRE && PRE.key === preKey(opt) && !!opt.onDone) ({ root, ctx, W } = PRE);
   else { if (PRE) { try { PRE.ctx.renderer.dispose(); PRE.root.remove(); } catch (e) {} } root = build(opt); ctx = makeScene(root, opt); W = buildWorld(ctx); }
-  PRE = null;
+  PRE = null; PREP = null;
   const st = { wallIntro: 1, root, ctx, W, opt, t0: performance.now(), intro: 0, introOn: true, step: 0, auto: false, autoT: 0, speed: 1, simT: 0, sel: null, focus: null, zoneA: {}, spin: false, tween: null, running: true };
   S = st;
   const { renderer, camera, controls, scene } = ctx;
@@ -1738,7 +1850,7 @@ function play(opt = {}) {
   }
   root.querySelectorAll('.tabs [data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; root.querySelectorAll('.tabs [data-tab]').forEach(x => x.classList.toggle('on', x === b)); renderList(); }));
   root.querySelector('#f5q').addEventListener('input', renderList);
-  items.addEventListener('click', e => { const it = e.target.closest('.it'); if (!it) return; if (it.dataset.b) selectBooth(W.booths.find(b => b.code === it.dataset.b), true); else if (it.dataset.zone) { const si = STEPS.findIndex(s => s.focus === it.dataset.zone); if (si >= 0) goStep(si); } });
+  items.addEventListener('click', e => { const it = e.target.closest('.it'); if (!it) return; root.querySelector('.list').classList.remove('show'); if (it.dataset.b) selectBooth(W.booths.find(b => b.code === it.dataset.b), true); else if (it.dataset.zone) { const si = STEPS.findIndex(s => s.focus === it.dataset.zone); if (si >= 0) goStep(si); } });
   renderList();
 
   // ── รายละเอียดบูธ
@@ -1861,6 +1973,7 @@ function play(opt = {}) {
     else if (k === 'fs') { try { document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen(); } catch (e) {} }
     else if (k === 'back') stop();
     else if (k === 'desel') { selectBooth(null); }
+    else if (k === 'list') { const L = root.querySelector('.list'); L.classList.remove('min'); L.classList.toggle('show'); if (L.classList.contains('show')) selectBooth(null); }
     else if (k === 'lmin') { root.querySelector('.list').classList.toggle('min'); }
     else if (k === 'bnext' || k === 'bprev') { const i = st.sel ? st.sel.order - 1 : -1, n = W.booths[(i + (k === 'bnext' ? 1 : -1) + W.booths.length) % W.booths.length]; selectBooth(n, true); }
   }
@@ -1885,7 +1998,7 @@ function play(opt = {}) {
     introCam.t0.y = Math.max(introCam.t0.y, W.gy + 2);
   }
   const INTRO_END = 9.2;
-  camera.position.copy(introCam.p0); controls.target.copy(introCam.t0); camera.fov = introCam.fov0; camera.updateProjectionMatrix(); controls.update();
+  camera.position.copy(introCam.p0); controls.target.copy(introCam.t0); camera.fov = introCam.fov0; camera.userData.wide = opt.fromCam ? 0 : 1; camera.updateProjectionMatrix(); controls.update();
   const setOp = (F, solid, glass, dw) => { for (const m of F.mats) { m.opacity = m.userData.glass ? glass : solid; m.depthWrite = dw; } };
   function shadowBox(big) {                             // ตอนเห็นทั้งอาคาร ขยายกรอบเงา · ตอนอยู่ในชั้น 5 ใช้กรอบแคบให้เงาคม
     const sc = ctx.sun.shadow.camera;
@@ -1930,7 +2043,8 @@ function play(opt = {}) {
     const ttl = root.querySelector('#f5ttl'); ttl.style.opacity = Math.min(ss(0.1, 0.7, t), 1 - ss(1.4, 2.0, t));
     // กล้อง: ดันเข้าเล็กน้อย → เครนขึ้นวนโค้งให้เห็นชั้นที่ลอยแยก → ลงสู่ภาพรวมชั้น 5
     const c = easeIO(ss(opt.fromCam ? 0 : 0.6, INTRO_END - 0.1, t)), s0 = STEPS[0];
-    if (introCam.fov0 !== 45) { const f = lerp(introCam.fov0, 45, ss(0, 3, t)); if (Math.abs(camera.fov - f) > 1e-3) { camera.fov = f; camera.updateProjectionMatrix(); } }
+    if (introCam.fov0 !== 45) { const f = lerp(introCam.fov0, 45, ss(0, 3, t)); if (Math.abs(camera.fov - f) > 1e-3) { camera.fov = f; camera.userData.wide = opt.fromCam ? ss(0, 3, t) : 1; camera.updateProjectionMatrix(); } }
+    else if (opt.fromCam && camera.userData.wide < 1) { camera.userData.wide = ss(0, 3, t); camera.updateProjectionMatrix(); }
     const p1 = new THREE.Vector3(...s0.cam), t1 = new THREE.Vector3(...s0.tgt);
     const a0 = Math.atan2(introCam.p0.z, introCam.p0.x); let a1 = Math.atan2(p1.z, p1.x);
     while (a1 - a0 > Math.PI) a1 -= Math.PI * 2; while (a1 - a0 < -Math.PI) a1 += Math.PI * 2;
@@ -1949,7 +2063,7 @@ function play(opt = {}) {
         const R = W.routes[p.br || 0], s = (p.s0 + st.simT * p.v) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
         const r = R.at(Math.min(s, R.L)); const nx = -r.tz, nz = r.tx, px = r.x + nx * p.off, pz = r.z + nz * p.off;
         p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx, r.tz);
-        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 1.3);
+        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 2.0);
         const w = Math.sin((st.simT * p.v) * 7 + p.ph) * 0.45;
         p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w; p.aL.rotation.x = -w * 0.7; p.aR.rotation.x = w * 0.7; p.body.position.y = Math.abs(Math.cos((st.simT * p.v) * 7 + p.ph)) * 0.03;
       } else if (p.mode === 'stand') { p.body.rotation.y = Math.sin(now / 1700 + p.ph) * 0.12; }
@@ -1971,7 +2085,8 @@ function play(opt = {}) {
     simPeople(dt, now);
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
-      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 45 && ctx.gtao) { st.aoOff = true; ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
+      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 40 && (ctx.gtao || renderer.getPixelRatio() > 1)) { st.aoOff = true; if (ctx.gtao) ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
+    if (MOBILE) { st.shN = (st.shN || 0) + 1; if (st.shN % (st.introOn ? 2 : 5) === 1) renderer.shadowMap.needsUpdate = true; }
     if (ctx.composer) ctx.composer.render(); else renderer.render(scene, camera);
     placeLabels();
     st.raf = requestAnimationFrame(frame);
@@ -1993,5 +2108,5 @@ function stop(silent) {
   if (st.opt.onDone && !silent) try { st.opt.onDone({}); } catch (e) {}
 }
 
-window.MWA_FLOOR5 = { play, stop, prepare, isOn: () => !!S };
+window.MWA_FLOOR5 = { play, stop, prepare, isOn: () => !!S, mobile: MOBILE };
 window.dispatchEvent(new Event('mwa-floor5-ready'));
