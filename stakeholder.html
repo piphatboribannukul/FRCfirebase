@@ -64,7 +64,7 @@
   #prep.ok i { background:var(--ok); animation:none; }
   @keyframes pp { to { opacity:.35; } }
   .stage { width:100%; max-width:1180px; margin:56px auto 0; flex:1; display:flex; align-items:flex-end; }
-  .stage img { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; border-radius:28px 28px 0 0; }
+  .stage video { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; border-radius:28px 28px 0 0; background:#e9edf1; }
 
   #err { margin:12px auto 0; color:#dc2626; font-size:13px; } #err:empty { display:none; }
   #prep { display:none !important; }
@@ -79,7 +79,7 @@
     .acts button { min-width:0; flex:0 1 auto; height:44px; padding:0 20px; font-size:16px; }
     .stage { width:calc(100% + 40px); margin:40px -20px 0; }
     .stage { align-items:stretch; min-height:300px; }
-    .stage img { border-radius:0; aspect-ratio:auto; height:auto; object-position:45% 50%; }
+    .stage video { border-radius:0; aspect-ratio:auto; height:auto; object-position:45% 50%; }
   }
   @media (prefers-reduced-motion:reduce) { .hero > * { animation:none; } }
 </style>
@@ -95,7 +95,7 @@
       <button id="goF5">ไปชั้น 5</button>
     </div>
     <div id="prep" hidden></div><div id="err"></div>
-    <div class="stage"><img src="stakeholder_hero.jpg" srcset="stakeholder_hero_s.jpg 900w, stakeholder_hero.jpg 1800w" sizes="(max-width:1180px) 100vw, 1180px" alt="ภาพมุมสูงชั้น 5 จากโมเดล 3 มิติ: บูธ ทางเดิน และห้อง Auditorium" width="1800" height="1200" fetchpriority="high"></div>
+    <div class="stage"><video id="heroVid" muted playsinline loop preload="auto" poster="stakeholder_hero.jpg" aria-label="ภาพมุมสูงชั้น 5 จากโมเดล 3 มิติ: บูธ ทางเดิน และห้อง Auditorium"></video></div>
   </section>
 </div>
 
@@ -121,7 +121,10 @@
     hideR: 30, fixed: true, yaw: 0, note: 'Stakeholder Day', cityFile: 'SP01.json',
   };
   const land = document.getElementById('land');
-  const show = on => land.classList.toggle('off', !on);
+  // ภาพหน้าแรกเคลื่อนไหวช้า ๆ (วิดีโอวนลูปจากโมเดลจริง) · จอเล็กใช้ไฟล์เล็ก · ปิดเมื่อผู้ใช้ตั้งค่าลดการเคลื่อนไหว หรือเมื่อเข้าฉากแล้ว
+  const vid = document.getElementById('heroVid'), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  { const small = innerWidth < 760; vid.poster = small ? 'stakeholder_hero_s.jpg' : 'stakeholder_hero.jpg'; if (!still) { vid.autoplay = true; vid.src = small ? 'stakeholder_hero_s.mp4' : 'stakeholder_hero.mp4'; vid.play().catch(() => {}); } }
+  const show = on => { land.classList.toggle('off', !on); if (!still && vid.src) { if (on) vid.play().catch(() => {}); else vid.pause(); } };
   let watch = null;
   function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); if (MOBILE) prepP = null; } }, 800); }
   let busy = false;
