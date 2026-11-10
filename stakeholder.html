@@ -29,8 +29,7 @@
   /* โทนแบบหน้าสินค้า: พื้นเทาอ่อน + ส่วนดำ, ตัวอักษรระบบ, ปุ่มแคปซูล · สีเด่นเดียว = น้ำเงินน้ำประปา · จุดเฉพาะ = เส้นทางผู้เข้าร่วม */
   :root {
     --bg:#f5f5f7; --ink:#1d1d1f; --sec:#6e6e73; --line:rgba(0,0,0,.08);
-    --blue:#0a6fd8; --blue-d:#085fb9; --route:#2bb3c9; --route-d:#0e7490; --ok:#16a34a;
-    --dk:#ffffff; --dk-ink:#1d1d1f; --dk-sec:#6e6e73;
+    --blue:#0a6fd8; --blue-d:#085fb9;
     --ease:cubic-bezier(.22,1,.36,1);
     --sys:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","IBM Plex Sans Thai","Noto Sans Thai","Helvetica Neue",sans-serif;
   }
@@ -39,7 +38,7 @@
   #land.off { opacity:0; pointer-events:none; }
 
   /* ── ส่วนบน (สว่าง) */
-  .hero { text-align:center; padding:max(72px,calc(env(safe-area-inset-top) + 48px)) 24px 0; }
+  .hero { min-height:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; text-align:center; padding:max(72px,calc(env(safe-area-inset-top) + 48px)) 24px 0; }
   .hero > * { animation:rise .5s var(--ease) both; } .hero > .stage { animation-delay:.08s; }
   @keyframes rise { from { opacity:0; transform:translateY(8px); } }
   .org { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:500; color:var(--sec); }
@@ -64,51 +63,23 @@
   #prep i { width:7px; height:7px; border-radius:50%; background:#c7c7cc; animation:pp 1s ease-in-out infinite alternate; }
   #prep.ok i { background:var(--ok); animation:none; }
   @keyframes pp { to { opacity:.35; } }
-  .stage { max-width:1180px; margin:56px auto 0; padding-bottom:88px; }
-  .stage img { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; border-radius:28px; }
+  .stage { width:100%; max-width:1180px; margin:56px auto 0; flex:1; display:flex; align-items:flex-end; }
+  .stage img { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; border-radius:28px 28px 0 0; }
 
-  /* ── ส่วนล่าง (ขาว): เส้นทางผู้เข้าร่วม */
-  .dark { background:var(--dk); color:var(--dk-ink); text-align:center; border-top:1px solid var(--line); padding:88px 24px max(56px,calc(env(safe-area-inset-bottom) + 40px)); }
-  .dark h2 { margin:0; font:600 56px/1.07 var(--sys); letter-spacing:-.01em; }
-  .dark .tag { margin:8px 0 0; font-size:28px; line-height:1.3; color:var(--route-d); }
-  .route { list-style:none; margin:64px auto 0; padding:0; max-width:1000px; display:grid; grid-template-columns:repeat(4,1fr); gap:24px; position:relative; counter-reset:r; text-align:left; }
-  .route::before { content:""; position:absolute; top:15px; left:16px; right:calc(25% - 8px); height:2px;
-    background:repeating-linear-gradient(to right, var(--route-d) 0 8px, transparent 8px 16px); opacity:.45; }
-  .route li { position:relative; counter-increment:r; }
-  .route li::before { content:counter(r); display:block; width:32px; height:32px; box-sizing:border-box; border-radius:50%; background:var(--dk); border:1.5px solid var(--route-d);
-    color:var(--route-d); font:600 14px/29px var(--sys); text-align:center; font-variant-numeric:tabular-nums; position:relative; }
-  .route b { display:block; margin-top:16px; font-size:21px; font-weight:600; color:var(--dk-ink); }
-  .route span { display:block; margin-top:4px; font-size:15px; line-height:1.5; color:var(--dk-sec); }
-  .keys { margin:64px auto 0; max-width:1000px; font-size:13px; color:var(--sec); }
-  .keys .kb { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px 16px; }
-  .keys .kb > span { display:inline-flex; align-items:center; gap:4px; }
-  kbd { min-width:20px; height:20px; box-sizing:border-box; display:inline-grid; place-items:center; padding:0 6px; font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
-    color:var(--ink); background:var(--bg); border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; }
-  .keys .tc { display:none; }
-  @media (pointer:coarse) { .keys .kb { display:none; } .keys .tc { display:block; } }
-  #err { margin:16px auto 0; color:#dc2626; font-size:13px; min-height:1em; }
+  #err { margin:12px auto 0; color:#dc2626; font-size:13px; } #err:empty { display:none; }
+  #prep { display:none !important; }
 
   @media (max-width:900px) {
     h1 { font-size:56px; } .sub { font-size:22px; }
-    .dark h2 { font-size:40px; } .dark .tag { font-size:21px; }
-    .route { grid-template-columns:1fr 1fr; row-gap:40px; max-width:520px; }
-    .route::before { display:none; }
   }
   @media (max-width:640px) {
     .hero { padding-top:max(56px,calc(env(safe-area-inset-top) + 32px)); padding-left:20px; padding-right:20px; }
-    h1 { font-size:44px; } .sub { font-size:19px; }
+    h1 { font-size:min(44px,10.4vw); } .sub { font-size:19px; }
     .acts { gap:12px; margin-top:24px; }
     .acts button { min-width:0; flex:0 1 auto; height:44px; padding:0 20px; font-size:16px; }
-    .stage { margin:40px -20px 0; padding-bottom:0; }
-    .stage img { border-radius:0; aspect-ratio:4/3; }
-    .dark { padding:64px 20px max(48px,calc(env(safe-area-inset-bottom) + 32px)); }
-    .dark h2 { font-size:34px; } .dark .tag { font-size:19px; }
-    .route { grid-template-columns:1fr; row-gap:28px; margin-top:44px; max-width:340px; }
-    .route::before { display:block; top:16px; bottom:16px; left:15px; right:auto; width:2px; height:auto;
-      background:repeating-linear-gradient(to bottom, var(--route-d) 0 6px, transparent 6px 12px); }
-    .route li { display:grid; grid-template-columns:32px 1fr; column-gap:16px; }
-    .route b { margin-top:4px; font-size:19px; } .route span { grid-column:2; }
-    .keys { margin-top:48px; }
+    .stage { width:calc(100% + 40px); margin:40px -20px 0; }
+    .stage { align-items:stretch; min-height:300px; }
+    .stage img { border-radius:0; aspect-ratio:auto; height:auto; object-position:45% 50%; }
   }
   @media (prefers-reduced-motion:reduce) { .hero > * { animation:none; } }
 </style>
@@ -123,20 +94,8 @@
       <button class="pri" id="goMap">เริ่มนำเสนอ</button>
       <button id="goF5">ไปชั้น 5</button>
     </div>
-    <div id="prep"><i></i>กำลังเตรียมฉาก 3 มิติ กดเริ่มได้เลย</div>
+    <div id="prep" hidden></div><div id="err"></div>
     <div class="stage"><img src="stakeholder_hero.jpg" srcset="stakeholder_hero_s.jpg 900w, stakeholder_hero.jpg 1800w" sizes="(max-width:1180px) 100vw, 1180px" alt="ภาพมุมสูงชั้น 5 จากโมเดล 3 มิติ: บูธ ทางเดิน และห้อง Auditorium" width="1800" height="1200" fetchpriority="high"></div>
-  </section>
-  <section class="dark">
-    <h2>จากลิฟต์สู่ห้องประชุม</h2>
-    <p class="tag">เส้นทางผู้เข้าร่วม 4 ช่วง</p>
-    <ol class="route">
-      <li><b>แผนที่</b><span>บินเข้าหาอาคาร กปน.</span></li>
-      <li><b>แยกชั้น</b><span>อาคารสุทธิอุทกากร 12 ชั้น เปิดออกถึงชั้น 5</span></li>
-      <li><b>ชั้น 5</b><span>22 บูธ ทางเดินกว้าง 4–7 ม.</span></li>
-      <li><b>นำชม</b><span>ทีละส่วน 12 ขั้น</span></li>
-    </ol>
-    <div class="keys"><span class="kb"><span><kbd>←</kbd><kbd>→</kbd> ทีละขั้น</span><span><kbd>Space</kbd> นำชมอัตโนมัติ</span><span><kbd>Esc</kbd> ย้อนกลับ</span><span>คลิกบูธเพื่อดูรายละเอียด</span></span><span class="tc">ลากนิ้วเพื่อหมุน ถ่างสองนิ้วเพื่อซูม แตะบูธเพื่อดูรายละเอียด</span></div>
-    <div id="err"></div>
   </section>
 </div>
 

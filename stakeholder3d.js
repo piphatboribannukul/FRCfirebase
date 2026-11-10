@@ -2487,7 +2487,9 @@
     if (state.st.hq) {                                   // บินเข้าหาอาคาร (ไม่ใช่ตู้)
       const h = state.st.hq, kxm = 111320 * Math.cos(state.st.lat * Math.PI / 180), c = [state.st.lon + h.cx / kxm, state.st.lat - h.cz / 110540];
       state.cabLL = c; let b0 = m.getBearing(); while (b0 - h.bearing > 180) b0 -= 360; while (h.bearing - b0 > 180) b0 += 360; if (Math.abs(h.bearing - b0) < 90) m.setBearing(h.bearing - 140);
-      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 62, bearing: h.bearing, duration: 7000, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
+      const D = 6000;
+      m.flyTo({ center: c, zoom: h.zoom || 17.7, pitch: 62, bearing: h.bearing, duration: D, curve: 1.5, essential: true, easing: t => 1 - Math.pow(1 - t, 3) * (1 - t * 0.35) });
+      if (CFG.autoInside !== false) setTimeout(() => { if (_cur === state && state.phase === 'fly' && window.MWA_FLOOR5) m.stop(); }, D * 0.68);   // ช่วงท้ายของการบินช้ามาก → ส่งต่อเข้าชั้น 5 ระหว่างกล้องยังเคลื่อนอยู่ ไม่ค้างหน้าอาคาร
       m.once('moveend', () => { if (_cur !== state || state.phase !== 'fly') return; state.phase = 'idle'; state.swayAmp = 10; if (state.onArrive) state.onArrive(); else autoInside(state); if (state.orbit) setTimeout(() => sway(state, h.bearing, 1), 600); });
       return;
     }
