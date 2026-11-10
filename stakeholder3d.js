@@ -21,6 +21,7 @@
     cityStyle: 'clean',                    // 'clean' = ผนังขาวเทา + หน้าต่างกระจกใสสีเดียว (ค่าเริ่มต้น) · 'soft' = ผนังหลายสี + หลังคากระเบื้อง · 'minimal' = ขาวเรียบไม่มีหน้าต่าง           // ภาพหน้าตู้จริง (แบบตู้ 66×165 ซม.) — ถ้าโหลดไม่ได้ใช้ลายวาดแทน
   }, window.SD3D_CONFIG || {});
 
+  const ui = n => (window.SUI ? window.SUI.i(n) : '');
   const MOBILE = (() => { try { return (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 1100) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); } catch (e) { return false; } })();
 
   // ── เกณฑ์สี FRC (ชุดเดียวกับ contour) ─────────────────────────────────────
@@ -2290,14 +2291,14 @@
     wrap.innerHTML =
       '<div id="frc3d-map"></div>' +
       '<div id="frc3d-bar">' +
-        '<div class="frc3d-title">🏙 ' + esc(st.name || 'สถานี') + '<span class="rm">' + (st.hq ? 'Stakeholder Day · ภาพจำลองการจัดงานชั้น 5' : 'ภาพจำลองจุดติดตั้งสถานีตรวจวัดคุณภาพน้ำประปาออนไลน์') + '</span><small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.note ? ' · ' + esc(st.note) : st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
+        '<div class="frc3d-title">' + esc(st.name || 'สถานี') + '<span class="rm">' + (st.hq ? 'Stakeholder Day · ภาพจำลองการจัดงานชั้น 5' : 'ภาพจำลองจุดติดตั้งสถานีตรวจวัดคุณภาพน้ำประปาออนไลน์') + '</span><small>มุมมอง 3 มิติ · ' + st.lat.toFixed(5) + ', ' + st.lon.toFixed(5) + (st.note ? ' · ' + esc(st.note) : st.sample ? ' · ค่าตัวอย่าง' : '') + '</small></div>' +
         '<div class="frc3d-sp"></div>' +
-        '<button class="frc3d-btn" data-a="replay" title="บินใหม่">▶<span class="tx"> บินใหม่</span></button>' +
-        '<button class="frc3d-btn" data-a="orbit" title="หมุนรอบ">🔄<span class="tx"> หมุนรอบ</span></button>' +
-        '<button class="frc3d-btn" data-a="night" title="กลางคืน">🌙<span class="tx"> กลางคืน</span></button>' +
-        '<button class="frc3d-btn" data-a="near" title="ดูอาคาร">🔍<span class="tx"> ดูอาคาร</span></button>' +
-        '<button class="frc3d-btn frc3d-f5" data-a="inside" title="ชั้น 5 · ผังการจัดงาน">🏢<span class="tx"> ชั้น 5 ▸</span></button>' +
-        '<button class="frc3d-btn frc3d-close" data-a="close" title="ปิด">✕<span class="tx"> ปิด</span></button>' +
+        '<button class="frc3d-btn" data-a="replay" title="บินใหม่">' + ui('play') + '<span class="tx">บินใหม่</span></button>' +
+        '<button class="frc3d-btn" data-a="orbit" title="หมุนรอบ">' + ui('orbit') + '<span class="tx">หมุนรอบ</span></button>' +
+        '<button class="frc3d-btn" data-a="night" title="กลางคืน">' + ui('moon') + '<span class="tx">กลางคืน</span></button>' +
+        '<button class="frc3d-btn" data-a="near" title="ดูอาคาร">' + ui('search') + '<span class="tx">ดูอาคาร</span></button>' +
+        '<button class="frc3d-btn frc3d-f5" data-a="inside" title="ชั้น 5 · ผังการจัดงาน">' + ui('layers') + '<span class="tx">ชั้น 5</span></button>' +
+        '<button class="frc3d-btn frc3d-close" data-a="close" title="ปิด" aria-label="ปิด">' + ui('x') + '<span class="tx">ปิด</span></button>' +
       '</div>' +
       '<div id="frc3d-msg">กำลังโหลดแผนที่ 3 มิติ…</div><div id="frc3d-chip"></div>' +
       '<div id="frc3d-attr">© <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>';
@@ -2554,7 +2555,7 @@
     else if (a === 'near') { s.spin = false; s.phase = 'idle'; s.map.stop(); { const c = s.cabLL || [s.st.lon, s.st.lat], ff = frontBearing(s) - (s.st.camOff || 0), br = ff * Math.PI / 180, kxm = 111320 * Math.cos(c[1] * Math.PI / 180);
       s.layer && s.layer.setShowcase(true); s.map.easeTo({ center: [c[0] + Math.sin(br) * 6.8 / kxm, c[1] + Math.cos(br) * 6.8 / 110540], zoom: 22.35, pitch: 76, bearing: ff, duration: 3000, easing: easeIO }); } }   // ดูตู้ใกล้ๆ: เต็มจอ เห็นสติกเกอร์ชัด
     else if (a === 'night') {
-      s.night = !s.night; btn.classList.toggle('on', s.night); btn.innerHTML = s.night ? '☀<span class="tx"> กลางวัน</span>' : '🌙<span class="tx"> กลางคืน</span>';
+      s.night = !s.night; btn.classList.toggle('on', s.night); btn.innerHTML = s.night ? '☀<span class="tx"> กลางวัน</span>' : '🌙<span class="tx">กลางคืน</span>';
       s.wrap.classList.toggle('frc3d-night', s.night);
       applyNight(s.map, s.night, s.saved); if (s.layer) s.layer.setNight(s.night);
     }

@@ -145,6 +145,7 @@ function canvasTex(c, aniso) { const t = new THREE.CanvasTexture(c); t.colorSpac
 const ASSET_BASE = (window.SUTHI_LOGO || '').replace(/[^/]*$/, '');
 // มือถือ: หน่วยความจำภาพ (canvas) รวมเกิน ~250 MB ทำให้ iOS ปิดหน้าเว็บ (เด้งออก) → ย่อภาพไม่เกิน 1024 px แล้วคืนหน่วยความจำหลังส่งขึ้น GPU
 const TEX_MAX = 900;
+const ui = n => (window.SUI ? window.SUI.i(n) : '');
 function smallCanvas(src, maxD) { const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height, k = Math.min(1, maxD / Math.max(w, h)), c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c; }
 function freeAfterUpload(t) { t.onUpdate = () => { const c = t.image; if (c && c.tagName === 'CANVAS' && c.width > 1) { c.width = 1; c.height = 1; } }; }
@@ -679,23 +680,23 @@ function build(opt) {
   root.innerHTML = `
 <canvas class="gl" tabindex="0"></canvas>
 <div class="ui top card hide-intro">
-  <div class="brand"><div class="logo">M</div><div><b>MWA · Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
-  <div class="search"><span style="color:#8a97a6">⌕</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
+  <div class="brand"><div class="logo"><img src="${ASSET_BASE}mwa_logo.png" alt=""></div><div><b>Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
+  <div class="search"><span style="color:#8a97a6;display:grid">${ui('search')}</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
   <div class="sp"></div>
   <div class="chip"><div class="dot">F5</div><div><b>ชั้น 5 · 22 บูธ</b><br>กปน. ผ้าตึง 3 ม. · เอกชน 2 × 1 ม.</div></div>
   <div class="clock"><i></i><span id="f5clk">08:30</span><span id="f5spd" style="font-weight:500;opacity:.8">×1</span></div>
-  ${opt.onDone ? '<button class="btn" data-k="back" title="ย้อนกลับ (Esc)">⟵ กลับ</button>' : ''}
+  ${opt.onDone ? '<button class="btn" data-k="back" title="ย้อนกลับ (Esc)">' + ui('back') + 'กลับ</button>' : ''}
 </div>
 <div class="ui kpis hide-intro">
-  <div class="kpi card"><div class="ic">▦</div><div><span>บูธทั้งหมด</span><strong>22<em>บูธ</em></strong><small>กปน. 10 · เอกชน 12</small></div></div>
-  <div class="kpi card"><div class="ic">↝</div><div><span>เส้นทาง ลิฟต์ → ห้องประชุม</span><strong id="f5len">–<em>ม.</em></strong><small>ทางเดินกว้าง 5–7 ม.</small></div></div>
-  <div class="kpi card"><div class="ic">◫</div><div><span>ที่นั่ง Auditorium (โดยประมาณ)</span><strong id="f5seat">–<em>ที่</em></strong><small>ที่นั่งขั้นบันได</small></div></div>
-  <div class="kpi card"><div class="ic">◷</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
+  <div class="kpi card"><div class="ic">${ui('grid')}</div><div><span>บูธทั้งหมด</span><strong>22<em>บูธ</em></strong><small>กปน. 10 · เอกชน 12</small></div></div>
+  <div class="kpi card"><div class="ic">${ui('route')}</div><div><span>เส้นทาง ลิฟต์ → ห้องประชุม</span><strong id="f5len">–<em>ม.</em></strong><small>ทางเดินกว้าง 5–7 ม.</small></div></div>
+  <div class="kpi card"><div class="ic">${ui('seat')}</div><div><span>ที่นั่ง Auditorium (โดยประมาณ)</span><strong id="f5seat">–<em>ที่</em></strong><small>ที่นั่งขั้นบันได</small></div></div>
+  <div class="kpi card"><div class="ic">${ui('clock')}</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
 </div>
 <div class="ui tools card hide-intro">
-  <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">☰</button><button data-k="zin" title="ซูมเข้า">＋</button><button data-k="zout" title="ซูมออก">－</button><hr>
-  <button data-k="home" title="ภาพรวม">⌂</button><button data-k="top" title="มุมบน (ผัง)">▦</button><button data-k="spin" title="หมุนรอบ">⟳</button><hr>
-  <button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">⧉</button><button data-k="fs" title="เต็มจอ">⛶</button>
+  <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">${ui('list')}</button><button data-k="zin" title="ซูมเข้า">${ui('plus')}</button><button data-k="zout" title="ซูมออก">${ui('minus')}</button><hr>
+  <button data-k="home" title="ภาพรวม">${ui('home')}</button><button data-k="top" title="มุมบน (ผัง)">${ui('plan')}</button><button data-k="spin" title="หมุนรอบ">${ui('spin')}</button><hr>
+  <button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
 </div>
 <div class="ui detail card" id="f5det"></div>
 <div class="ui list card hide-intro min">
@@ -703,13 +704,13 @@ function build(opt) {
   <div class="items" id="f5items"></div>
 </div>
 <div class="ui journey card hide-intro">
-  <div class="jh">↝ เส้นทางผู้เข้าร่วม<small>ลิฟต์ → Auditorium</small></div>
+  <div class="jh">${ui('route')}เส้นทางผู้เข้าร่วม<small>ลิฟต์ → Auditorium</small></div>
   <div class="steps" id="f5steps"><div class="fill"></div></div>
   <div class="tour"><div class="n" id="f5n">1 / 10</div><div class="tx"><h4 id="f5t"></h4><p id="f5d"></p></div>
-    <div class="ctl"><button class="btn" data-k="prev" title="ก่อนหน้า (←)">◀</button><button class="btn" data-k="next" title="ถัดไป (→)">▶</button><button class="btn" data-k="auto" id="f5auto" title="เดินชมตามเส้นทาง จากลิฟต์ถึงห้องประชุม (Space)">▶ เดินชม</button></div></div>
+    <div class="ctl"><button class="btn" data-k="prev" title="ก่อนหน้า (←)" aria-label="ก่อนหน้า">${ui('prev')}</button><button class="btn" data-k="next" title="ถัดไป (→)" aria-label="ถัดไป">${ui('next')}</button><button class="btn" data-k="auto" id="f5auto" title="เดินชมตามเส้นทาง จากลิฟต์ถึงห้องประชุม (Space)">${ui('walk')}เดินชม</button></div></div>
 </div>
-<div class="ttl" id="f5ttl"><h1>Stakeholder Day</h1><p>การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่</p><div class="ln"></div></div>
-<button class="ui btn skip" data-k="skip">ข้าม ▸</button>
+<div class="ttl" id="f5ttl"><h1>Stakeholder Day</h1><p>การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่</p></div>
+<button class="ui btn skip" data-k="skip">ข้าม${ui('next')}</button>
 <div id="f5lbl"></div>
 <div class="credit">ภาพจำลองแนวคิด · ขนาดโดยประมาณจากผังร่าง</div>`;
   document.body.appendChild(root);
@@ -1882,7 +1883,7 @@ function play(opt = {}) {
       <div class="row"><span>ขนาดบูธ</span><b>กว้าง ${b.w || 2} ม. × ลึก ${b.d || 1} ม.</b></div>
       <div class="row"><span>การวาง</span><b>${b.kind ? 'ผ้าตึงโค้ง + เคาน์เตอร์ ชิดผนัง' : 'ชิดผนัง'} ${{ e: 'ฝั่งตะวันตก', w: 'ฝั่งตะวันออก', n: 'ฝั่งใต้', s: 'ฝั่งเหนือ' }[b.face]}</b></div>
       <div class="row"><span>ลำดับบนเส้นทาง</span><b>${b.order} จาก ${W.booths.length} · ${Math.round(b.along)} ม. จากลิฟต์</b></div>
-      <div class="nav"><button class="btn" data-k="bprev">◀ บูธก่อนหน้า</button><button class="btn pri" data-k="bnext">บูธถัดไป ▶</button></div>`;
+      <div class="nav"><button class="btn" data-k="bprev">${ui('prev')}บูธก่อนหน้า</button><button class="btn pri" data-k="bnext">บูธถัดไป${ui('next')}</button></div>`;
     det.classList.add('on');
     if (fly) { const fv = FACEV[b.face], k = (b.w || 2) > 2 ? 1.35 : 1; flyTo([b.x + fv[0] * 5.2 * k + fv[1] * 1.6, 3.4, b.z + fv[1] * 5.2 * k - fv[0] * 1.6], [b.x, 1.2, b.z], 1.5); setFocus(b.zone); }
   }
@@ -1973,7 +1974,7 @@ function play(opt = {}) {
     if (w.s >= W.L - 0.02) { w.endT = (w.endT || 0) + dt; if (w.endT > 2.6) { setAuto(false); goStep(STEPS.length - 1); } }
   }
   function setAuto(on) {
-    st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.textContent = on ? '❚❚ หยุดเดินชม' : '▶ เดินชม';
+    st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.innerHTML = on ? ui('pause') + 'หยุดเดินชม' : ui('walk') + 'เดินชม';
     if (on) { st.walk = { s: 1.3, v: 0.4, look: null }; st.walkJ = -1; st.tween = null; st.spin = false; controls.autoRotate = false; controls.enabled = false; setFocus(null); selectBooth(null); camera.fov = 66; camera.updateProjectionMatrix(); }
     else if (st.walk) { st.walk = null; W.people.forEach(pp => { if (pp.mode === 'stand') pp.g.visible = true; }); controls.enabled = true; camera.fov = 45; camera.updateProjectionMatrix(); }
   }
