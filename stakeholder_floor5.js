@@ -152,7 +152,7 @@ function freeAfterUpload(t) { t.onUpdate = () => { const c = t.image; if (c && c
 function textureDiet(scene) {
   const seen = new Set(); let b0 = 0, b1 = 0, n = 0;
   scene.traverse(o => [].concat(o.material || []).forEach(m => { for (const key in m) { const t = m[key];
-    if (!t || !t.isTexture || seen.has(t) || t.isRenderTargetTexture || t.isDataTexture) continue; seen.add(t);
+    if (!t || !t.isTexture || seen.has(t) || t.isRenderTargetTexture || t.isDataTexture || (t.userData && t.userData.live)) continue; seen.add(t);
     const i = t.image; if (!i || !(i.tagName === 'CANVAS' || i.tagName === 'IMG')) continue;
     if (i.tagName === 'IMG' && !(i.complete && i.naturalWidth)) { freeAfterUpload(t); continue; }
     const w = i.naturalWidth || i.width, h = i.naturalHeight || i.height; if (w * h <= 256 * 256) continue;
@@ -845,6 +845,7 @@ function staticBatch(roots) {
 function buildWorld(ctx) {
   const { scene } = ctx;
   const ZM = zoneMats();
+  const live = [];                                               // ลูกเล่นที่ขยับได้: f(dt, t, cam) เรียกทุกเฟรม (ต้องเบา)
   const world = new THREE.Group(); scene.add(world);
   const interior = new THREE.Group(); world.add(interior);       // ชั้น 5 (พื้นอยู่ที่ y = 0)
   const zoneGroups = {}; const zg = z => zoneGroups[z] || (zoneGroups[z] = (() => { const g = new THREE.Group(); g.name = z; interior.add(g); return g; })());
@@ -1022,15 +1023,43 @@ function buildWorld(ctx) {
     g.fillStyle = '#ffffff'; g.fillRect(0, 236, 512, 6); for (let x = 0; x < 512; x += 10) { g.beginPath(); g.arc(x + 5, 244, 5, 0, Math.PI); g.fill(); } g.fillRect(0, 36, 512, 4);
     const t = canvasTex(c, 8); t.wrapS = THREE.RepeatWrapping; t.repeat.set(Math.max(1, Math.round(w / 0.9)), 1); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }); })());
   const mkTex = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); return canvasTex(c, 8); };
+  // ── ลำแสงไฟส่อง: กรวยโปร่งแสงแบบบวกแสง สว่างที่โคมแล้วจางลงสู่พื้น · วัสดุเดียวกันทั้งชั้น → รวม draw call ได้
+  const beamTex = mkTex(4, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const beamMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, map: beamTex, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const BEAM_W = beamMat('#fff1d6', 0.13), BEAM_B = beamMat('#5aa9ff', 0.16), STAGE_W = beamMat('#fff4dc', 0.3), STAGE_B = beamMat('#3d8bff', 0.38);
+  const _up = new THREE.Vector3(0, 1, 0), _bv = new THREE.Vector3();
+  function beam(parent, from, to, r0, r1, mat) {                 // from = โคม (บน), to = จุดที่ส่อง
+    _bv.set(from[0] - to[0], from[1] - to[1], from[2] - to[2]); const len = _bv.length(); _bv.normalize();
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, len, 20, 1, true), mat); m.position.set((from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2);
+    m.quaternion.setFromUnitVectors(_up, _bv); m.userData.noAO = true; m.renderOrder = 3; parent.add(m); return m;
+  }
   const demoBoardTex = mkTex(256, 840, (g, w, h) => { g.fillStyle = '#eef3f7'; g.fillRect(0, 0, w, h); g.fillStyle = '#c9dbea'; for (let i = 0; i < 9; i++) g.fillRect(10 + i * 26, 520 - (i % 4) * 60, 22, 260 + (i % 4) * 60);
     g.fillStyle = '#4f8fd0'; g.fillRect(70, 160, 120, 380); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(130, 240, 44, 0, 7); g.fill(); g.fillStyle = '#9fc6ea'; g.beginPath(); g.arc(130, 240, 34, 0, 7); g.fill();
     g.fillStyle = '#7fb6e6'; g.fillRect(0, 780, w, 60); g.fillStyle = '#5a9bd8'; g.fillRect(0, 760, w, 22); });
   const tabletScreen = new THREE.MeshStandardMaterial({ map: mkTex(256, 160, (g, w, h) => { g.fillStyle = '#f4f8fc'; g.fillRect(0, 0, w, h); g.fillStyle = '#2b7fe0'; g.fillRect(0, 0, w, 18); g.strokeStyle = '#2b7fe0'; g.lineWidth = 4; g.strokeRect(40, 50, 60, 70); g.strokeRect(150, 60, 60, 50); g.beginPath(); g.moveTo(100, 85); g.lineTo(150, 85); g.stroke(); }), emissive: '#ffffff', emissiveIntensity: 0.5 });
   tabletScreen.emissiveMap = tabletScreen.map;
   const qrTex = mkTex(128, 96, (g) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 96); g.fillStyle = '#2b7fe0'; g.fillRect(0, 0, 128, 14); g.fillStyle = '#111'; for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) if ((i * 7 + j * 13 + i * j) % 3 === 0 || i % 9 === 0 || j % 9 === 0) g.fillRect(64 + i * 5, 26 + j * 6, 5, 6); });
-  const twqScreen = mkTex(640, 360, (g, w, h) => { g.fillStyle = '#eaf2fa'; g.fillRect(0, 0, w, h); g.fillStyle = '#2b86dc'; g.fillRect(0, 0, w, 34); g.fillStyle = '#fff'; g.font = `600 20px ${F_BODY}`; g.fillText('twqonline.mwa.co.th · ระบบตรวจสอบคุณภาพน้ำประปาออนไลน์', 14, 23);
-    g.fillStyle = '#b7d6f0'; g.beginPath(); g.moveTo(80, 70); g.lineTo(420, 60); g.lineTo(560, 140); g.lineTo(520, 320); g.lineTo(200, 340); g.lineTo(60, 230); g.closePath(); g.fill();
-    let sd = 3; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let i = 0; i < 40; i++) { g.fillStyle = R() < 0.92 ? '#4fae5a' : '#e05a5a'; g.beginPath(); g.arc(110 + R() * 400, 90 + R() * 220, 7, 0, 7); g.fill(); } });
+  // ── จอ TWQ Online แบบสด: ค่าคุณภาพน้ำขยับ กราฟเลื่อน จุดสถานีกะพริบ (วาดใหม่ ~3 ครั้ง/วินาที เฉพาะตอนกล้องอยู่ใกล้)
+  const twqC = document.createElement('canvas'); twqC.width = 640; twqC.height = 360; const twqG = twqC.getContext('2d');
+  const twqScreen = canvasTex(twqC, 8); twqScreen.userData.live = true;
+  const twqSt = (() => { let sd = 3; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647; return Array.from({ length: 40 }, () => [100 + R() * 330, 92 + R() * 210, R() < 0.92]); })();
+  const twqHist = Array.from({ length: 48 }, (_, i) => 0.82 + Math.sin(i * 0.5) * 0.05);
+  function drawTWQ(t) {
+    const g = twqG, w = 640, h = 360; g.fillStyle = '#eef4fa'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#1d6fd1'; g.fillRect(0, 0, w, 36); g.fillStyle = '#fff'; g.font = `600 19px ${F_BODY}`; g.textBaseline = 'middle'; g.fillText('TWQ Online · คุณภาพน้ำประปาออนไลน์', 14, 18);
+    const blink = Math.sin(t * 4) > -0.2; g.fillStyle = blink ? '#ff4d4d' : 'rgba(255,77,77,.35)'; g.beginPath(); g.arc(560, 18, 6, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `600 15px ${F_BODY}`; g.fillText('LIVE', 572, 19);
+    g.fillStyle = '#cfe2f4'; g.beginPath(); g.moveTo(70, 70); g.lineTo(380, 58); g.lineTo(450, 140); g.lineTo(420, 320); g.lineTo(170, 334); g.lineTo(50, 230); g.closePath(); g.fill();
+    twqSt.forEach(([x, y, ok], i) => { const p = 0.5 + 0.5 * Math.sin(t * 2 + i); g.fillStyle = ok ? '#2fa35a' : '#e05a5a'; g.beginPath(); g.arc(x, y, 5.5, 0, 7); g.fill();
+      if (i % 7 === (Math.floor(t * 1.5) % 7)) { g.strokeStyle = `rgba(47,163,90,${1 - p})`; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6 + p * 14, 0, 7); g.stroke(); } });
+    const v = [0.82 + Math.sin(t * 0.7) * 0.03, 0.21 + Math.sin(t * 0.9 + 1) * 0.02, 7.6 + Math.sin(t * 0.5 + 2) * 0.05], lab = [['FRC', 'mg/L', 2], ['ความขุ่น', 'NTU', 2], ['pH', '', 2]];
+    lab.forEach(([n, u, d], k) => { const y0 = 52 + k * 64; g.fillStyle = '#fff'; g.beginPath(); g.roundRect(470, y0, 156, 54, 8); g.fill(); g.fillStyle = '#5b6b7c'; g.font = `500 13px ${F_BODY}`; g.fillText(n, 482, y0 + 15);
+      g.fillStyle = '#10243a'; g.font = `600 24px ${F_BODY}`; g.fillText(v[k].toFixed(d), 482, y0 + 38); g.fillStyle = '#5b6b7c'; g.font = `500 12px ${F_BODY}`; g.fillText(u, 548, y0 + 40); });
+    twqHist.push(v[0] + (Math.sin(t * 3.1) + Math.sin(t * 1.7)) * 0.01); if (twqHist.length > 48) twqHist.shift();
+    g.fillStyle = '#fff'; g.beginPath(); g.roundRect(470, 248, 156, 98, 8); g.fill(); g.strokeStyle = '#1d6fd1'; g.lineWidth = 2.5; g.beginPath();
+    twqHist.forEach((q, i) => { const x = 478 + i * 3.0, y = 336 - (q - 0.7) * 380; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+    g.fillStyle = '#5b6b7c'; g.font = `500 12px ${F_BODY}`; g.fillText('FRC 24 ชม.', 482, 262);
+  }
+  drawTWQ(0);
   function panelTex(make) { const c = document.createElement('canvas'); c.width = 512; c.height = 512; make(c.getContext('2d')); return canvasTex(c, 8); }
   const cabPanel = panelTex(g => { g.fillStyle = '#6fb6e6'; g.fillRect(0, 0, 512, 512); g.fillStyle = '#d5dbe0'; g.fillRect(90, 60, 332, 300); g.strokeStyle = '#7d8790'; g.lineWidth = 8; g.strokeRect(90, 60, 332, 300);
     g.fillStyle = '#1b232c'; g.fillRect(130, 90, 110, 46); g.fillRect(272, 90, 110, 46); const cs = ['#e04848', '#36b24a', '#f2b632', '#2d6ab8'];
@@ -1056,7 +1085,7 @@ function buildWorld(ctx) {
     if (sl.kind) mwaBooth(sl.kind, b, A, zone, inner);
     else {
     // พรมบูธ
-    const carpet = new THREE.MeshStandardMaterial({ color: sl.own === 'mwa' ? '#1b4f9c' : '#4d5a67', roughness: 0.95 });
+    const carpet = new THREE.MeshStandardMaterial({ color: sl.own === 'mwa' ? '#1b4f9c' : shade(b.col, -0.6), roughness: 0.95 });
     A(box(2.0, 0.025, 1.0), carpet, 0, 0.0125, 0, { cast: false });
     // ผนังหลัง (กล่องไฟพิมพ์ลาย)
     A(new RoundedBoxGeometry(2.0, 2.45, 0.1, 2, 0.03), M.white, 0, 1.225, -0.45);
@@ -1076,6 +1105,29 @@ function buildWorld(ctx) {
     // ไฟส่องป้าย 2 ดวง + ไฟเส้นบนผนัง + ชั้นวางโบรชัวร์บนเคาน์เตอร์
     for (const sx of [-0.55, 0.55]) { A(box(0.025, 0.025, 0.32), propMat.steel, sx, 2.48, -0.27, { cast: false }); const lh = A(new THREE.CylinderGeometry(0.045, 0.06, 0.13, 14), M.dark, sx, 2.44, -0.1, { cast: false }); lh.rotation.x = 0.9; }
     A(box(1.96, 0.035, 0.035), lightStrip, 0, 2.43, -0.38, { cast: false });
+    if (sl.own !== 'mwa') {                                                         // ── บูธพันธมิตรแบบงานแสดงสินค้าจริง
+      // ป้ายไฟหัวบูธ (กล่องไฟสีแบรนด์ + ชื่อบริษัท)
+      const fc = document.createElement('canvas'); fc.width = 512; fc.height = 88; const fg = fc.getContext('2d');
+      fg.fillStyle = b.col; fg.fillRect(0, 0, 512, 88); fg.fillStyle = 'rgba(255,255,255,.22)'; fg.fillRect(0, 0, 512, 3);
+      fg.fillStyle = '#ffffff'; fg.textAlign = 'center'; fg.textBaseline = 'middle'; fitText(fg, b.tbc ? 'บูธพันธมิตร' : b.name, 700, 50, F_HEAD, 460); fg.fillText(b.tbc ? 'บูธพันธมิตร' : b.name, 256, 47);
+      const fm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: canvasTex(fc, 8), emissive: '#ffffff', emissiveIntensity: 0.6, roughness: 0.45 })); fm.emissiveMap = fm.map;
+      A(box(2.06, 0.38, 0.16), M.white, 0, 2.7, -0.42, { cast: false });
+      const fp = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.34), fm); fp.position.set(0, 2.7, -0.338); inner.add(fp);
+      // ผนังข้างสีแบรนด์ + ไฟเส้นแนวตั้ง
+      A(box(0.06, 2.62, 0.66), topMat, -1.0, 1.31, -0.12); A(box(0.022, 2.42, 0.022), lightStrip, -0.962, 1.25, 0.2, { cast: false });
+      // จอ LED บนผนังหลัง (ภาพเลื่อนวน — ขยับ offset ไม่ต้องอัปโหลดใหม่)
+      const lc = document.createElement('canvas'); lc.width = 512; lc.height = 144; const lg = lc.getContext('2d');
+      const dk = shade(b.col, -0.55), lt2 = shade(b.col, 0.25); lg.fillStyle = dk; lg.fillRect(0, 0, 512, 144);
+      for (let k = 0; k < 4; k++) { const gr = lg.createLinearGradient(k * 128, 0, k * 128 + 128, 144); gr.addColorStop(0, b.col); gr.addColorStop(1, dk); lg.fillStyle = gr; lg.beginPath(); lg.moveTo(k * 128 + 30, 144); lg.lineTo(k * 128 + 90, 0); lg.lineTo(k * 128 + 128, 0); lg.lineTo(k * 128 + 68, 144); lg.fill(); }
+      lg.fillStyle = lt2; for (let k = 0; k < 2; k++) { lg.globalAlpha = 0.9; lg.font = `700 34px ${F_HEAD}`; lg.textBaseline = 'middle'; lg.fillText(b.tbc ? 'PARTNER' : b.name, 20 + k * 256, 72); } lg.globalAlpha = 1;
+      const lt = canvasTex(lc, 4); lt.wrapS = THREE.RepeatWrapping; lt.repeat.set(0.5, 1); lt.userData.live = true;
+      const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: lt, emissive: '#ffffff', emissiveIntensity: 0.9, roughness: 0.3 })); sm.emissiveMap = lt;
+      A(box(0.8, 0.48, 0.04), M.dark, 0.5, 1.78, -0.37, { cast: false });
+      const sp = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.43), sm); sp.position.set(0.5, 1.78, -0.348); inner.add(sp);
+      const ph = idx * 0.37; live.push((dt, t) => { lt.offset.x = (t * 0.045 + ph) % 1; });
+      // ลำแสงจากไฟส่องสองดวงลงที่เคาน์เตอร์/สินค้า
+      beam(inner, [-0.55, 2.4, -0.04], [-0.45, 0.7, 0.42], 0.05, 0.42, BEAM_W); beam(inner, [0.55, 2.4, -0.04], [0.5, 1.0, 0.42], 0.05, 0.38, BEAM_W);
+    }
     A(box(0.24, 0.2, 0.07), propMat.white, 0.74, 1.12, 0.26, { cast: false }); A(box(0.2, 0.16, 0.012), topMat, 0.74, 1.15, 0.30, { cast: false });
     }
     const hit = new THREE.Mesh(box((sl.w || 2) + 0.1, 2.6, (sl.d || 1) + 0.3), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, 1.3, 0); hit.userData.booth = b; inner.add(hit);
@@ -1158,6 +1210,7 @@ function buildWorld(ctx) {
       for (const dx of [-0.42, 0.42]) { const l = A(box(0.03, 0.02, 0.26), M.dark, TX + dx, TH + 0.025, 0.02); l.rotation.y = dx < 0 ? 0.35 : -0.35; }
       A(box(1.24, 0.72, 0.05), M.dark, TX, TH + 0.43, -0.02); const scrM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: twqScreen, emissive: '#ffffff', emissiveIntensity: 0.55, roughness: 0.25 })); scrM.emissiveMap = scrM.map;
       const sc = new THREE.Mesh(new THREE.PlaneGeometry(1.19, 0.67), scrM); sc.position.set(TX, TH + 0.43, 0.006); inner.add(sc);
+      { let acc = 0; live.push((dt, t, cam) => { if (Math.hypot(cam.x - b.x, cam.z - b.z) > 30) return; acc += dt; if (acc < 0.34) return; acc = 0; drawTWQ(t); twqScreen.needsUpdate = true; }); }
       A(box(0.18, 0.02, 0.05), M.dark, TX - 0.3, TH + 0.025, 0.25, { cast: false });
       const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: standeeTex(), transparent: true, alphaTest: 0.5, roughness: 0.6 }));
       const sd = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.2), sm); sd.position.set(1.62, 0.6, 0.35); sd.rotation.y = -0.4; sd.castShadow = true; inner.add(sd);
@@ -1167,7 +1220,8 @@ function buildWorld(ctx) {
       const rz = 0.2, rx = 0.15;
       A(new THREE.CylinderGeometry(1.08, 1.1, 0.3, 56), M.white, rx, 0.15, rz); A(new THREE.TorusGeometry(1.09, 0.025, 8, 72), top, rx, 0.3, rz).rotation.x = Math.PI / 2;
       A(new THREE.CylinderGeometry(1.0, 1.0, 0.01, 56), platM, rx, 0.305, rz, { cast: false });
-      const robot = new THREE.Group(); robot.position.set(rx, 0.31, rz); robot.rotation.y = 0.75; robot.scale.setScalar(1.25); inner.add(robot);
+      const robot = new THREE.Group(); robot.position.set(rx, 0.31, rz); robot.rotation.y = 0.75; robot.scale.setScalar(1.25); robot.userData.noBatch = true; inner.add(robot);
+      live.push((dt, t) => { robot.position.y = 0.31 + Math.sin(t * 1.3) * 0.012; robot.rotation.y = 0.75 + Math.sin(t * 0.3) * 0.4; robot.rotation.z = Math.sin(t * 1.1) * 0.012; });   // ลอยน้ำ/หันช้า ๆ
       const R = (geo, mat, x, y, z, rxx = 0, ryy = 0, rzz = 0) => { const m = new THREE.Mesh(geo, ZM.m(zone, mat)); m.position.set(x, y, z); m.rotation.set(rxx, ryy, rzz); m.castShadow = true; m.receiveShadow = true; robot.add(m); return m; };
       for (const hx of [-0.36, 0.36]) {
         const hull = R(new THREE.CapsuleGeometry(0.15, 1.15, 6, 16), cream, hx, 0.16, 0, Math.PI / 2); hull.scale.set(1, 1, 0.82);
@@ -1260,10 +1314,15 @@ function buildWorld(ctx) {
       A(box(0.4, 0.03, 0.34), greyP, mx, 0.6, mz + 0.05); A(box(0.36, 0.012, 0.3), sol, mx, 0.618, mz + 0.05, { cast: false });
       const lid = A(box(0.44, 0.03, 0.4), greyP, mx, 0.72, mz + 0.42); lid.rotation.x = -1.1;
       A(box(0.05, 2.0, 0.05), mast, mx, 1.55, mz - 0.25); A(box(0.06, 0.04, 0.24), mast, mx, 2.35, mz - 0.15);
-      A(new THREE.SphereGeometry(0.11, 18, 14), whiteP, mx, 2.25, mz - 0.04); A(new THREE.SphereGeometry(0.085, 18, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blk, mx, 2.2, mz - 0.04);
+      const ptz = new THREE.Group(); ptz.position.set(mx, 2.25, mz - 0.04); ptz.userData.noBatch = true; inner.add(ptz);          // กล้อง PTZ หมุนกวาดพื้นที่ (ลูกเล่น)
+      A(new THREE.SphereGeometry(0.11, 18, 14), whiteP, 0, 0, 0, { parent: ptz }); A(new THREE.SphereGeometry(0.085, 18, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blk, 0, -0.05, 0, { parent: ptz });
+      A(new THREE.CylinderGeometry(0.03, 0.034, 0.09, 14), blk, 0, -0.06, 0.085, { parent: ptz, cast: false }).rotation.x = Math.PI / 2;
+      { const d = new THREE.Vector3(0, -0.62, 0.78).normalize(), o = new THREE.Vector3(0, -0.06, 0.13), e = o.clone().addScaledVector(d, 2.6);
+        beam(ptz, [o.x, o.y, o.z], [e.x, e.y, e.z], 0.02, 0.85, BEAM_B); }
       A(new THREE.CylinderGeometry(0.07, 0.07, 0.07, 16), whiteP, mx, 2.37, mz - 0.04);
       A(new THREE.CylinderGeometry(0.055, 0.06, 0.04, 16), whiteP, mx, 2.6, mz - 0.25); A(new THREE.CylinderGeometry(0.05, 0.05, 0.11, 16), redL, mx, 2.68, mz - 0.25);
       for (const [ax, az] of [[-0.07, -0.05], [0.07, -0.05], [-0.05, 0.06], [0.05, 0.06]]) { const an = A(new THREE.CylinderGeometry(0.008, 0.012, 0.3, 6), blk, mx + ax, 2.5, mz - 0.25 + az); an.rotation.set(az * 6, 0, -ax * 6); }
+      live.push((dt, t) => { ptz.rotation.y = 0.35 + Math.sin(t * 0.45) * 0.95; redL.emissiveIntensity = Math.sin(t * 5.5) > 0.2 ? 2.4 : 0.25; });
       // มาสคอตบนกล่องตั้ง
       const cube = mkTex(512, 512, (g, w, h) => { g.fillStyle = '#2a4fd0'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = `800 56px ${F_HEAD}`; ['MWA', 'WATER', 'EXCELLENCE', 'CENTER'].forEach((t, i) => g.fillText(t, 256, 170 + i * 72)); });
       const cubeM = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: cube, roughness: 0.5 }));
@@ -1478,6 +1537,17 @@ function buildWorld(ctx) {
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(10.4, 3.0), sm2); scr.position.set((ax0 + ax1) / 2, scY, az1 - 0.12); scr.rotation.y = Math.PI; zg('aud').add(scr);
     add('aud', box(10.8, 3.3, 0.1), M.dark, (ax0 + ax1) / 2, scY, az1 - 0.06);
     add('aud', new RoundedBoxGeometry(0.7, 1.15, 0.5, 2, 0.05), M.wood, (ax0 + ax1) / 2 + 6.5, sTop + 0.57, stageZ + 1.2);   // แท่นพูด
+    { // ไฟเวที: ลำแสงจากราวไฟเพดานลงเวที กวาดช้า ๆ (ขาว 2 ดวงกลาง · น้ำเงิน 4 ดวงข้าง)
+      const cx = (ax0 + ax1) / 2, tz = stageZ + 1.4, truss = new THREE.Group(); zg('aud').add(truss);
+      add('aud', box(14, 0.18, 0.18), M.dark, cx, AUD_H - 0.25, stageZ - 4.5, { cast: false });
+      [[-6, STAGE_B], [-3.2, STAGE_B], [-1, STAGE_W], [1, STAGE_W], [3.2, STAGE_B], [6, STAGE_B]].forEach(([dx, mt], k) => {
+        const pv = new THREE.Group(); pv.position.set(cx + dx, AUD_H - 0.32, stageZ - 4.5); pv.userData.noBatch = true; truss.add(pv);
+        add('aud', new THREE.CylinderGeometry(0.11, 0.15, 0.26, 14), M.dark, 0, -0.1, 0, { parent: pv, cast: false });
+        const tx = cx + dx * 0.55 - pv.position.x, ty = sTop + 0.05 - pv.position.y, tzz = tz - pv.position.z;
+        beam(pv, [0, -0.2, 0], [tx, ty, tzz], 0.08, 1.1, mt);
+        live.push((dt, t) => { pv.rotation.z = Math.sin(t * 0.35 + k * 1.1) * 0.12; pv.rotation.x = Math.sin(t * 0.27 + k) * 0.05; });
+      });
+    }
     // ม่านข้างเวที (สีน้ำเงิน กปน.)
     const curM = new THREE.MeshStandardMaterial({ color: '#1d4f9a', roughness: 0.8 });
     for (const sgn of [-1, 1]) for (let k = 0; k < 6; k++) add('aud', new THREE.CylinderGeometry(0.16, 0.16, AUD_H - sTop, 10), curM, (ax0 + ax1) / 2 + sgn * (6.0 + k * 0.28), (AUD_H + sTop) / 2, az1 - 0.35 - (k % 2) * 0.12, { cast: false });
@@ -1602,7 +1672,7 @@ function buildWorld(ctx) {
   const people = makePeople(interior, booths, seats, routeAt, L);
   const routes = [{ at: routeAt, L }, { at: RE.at, L: RE.L }];
 
-  return { world, interior, ZM, zoneGroups, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM };
+  return { world, interior, ZM, zoneGroups, live, beamTex, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM };
 }
 
 function roundedPath(pts, r) {
@@ -1650,7 +1720,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
     neck: taper(0.045, 0.05, 0.1), head: new THREE.SphereGeometry(0.1, 22, 18), ear: new THREE.SphereGeometry(0.022, 8, 6),
     hairS: new THREE.SphereGeometry(0.106, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hairL: lathe([[0.1, 0.24], [0.11, 0.15], [0.105, 0.05], [0.085, 0]], 18),
     bun: new THREE.SphereGeometry(0.05, 12, 10), badge: new THREE.BoxGeometry(0.07, 0.095, 0.01), strap: new THREE.TorusGeometry(0.12, 0.007, 4, 20, Math.PI),
-    doc: new THREE.BoxGeometry(0.22, 0.3, 0.012),
+    doc: new THREE.BoxGeometry(0.22, 0.3, 0.012), phone: new THREE.BoxGeometry(0.075, 0.15, 0.012), hbag: new RoundedBoxGeometry(0.26, 0.2, 0.09, 2, 0.03), mbag: new RoundedBoxGeometry(0.06, 0.28, 0.34, 2, 0.02), bstrap: new THREE.BoxGeometry(0.03, 0.62, 0.012),
     vest: lathe([[0.143, 0], [0.163, 0.18], [0.186, 0.3], [0.19, 0.38], [0.168, 0.44]], 22), vestBand: new THREE.CylinderGeometry(0.157, 0.157, 0.035, 22, 1, true), vestBand2: new THREE.CylinderGeometry(0.179, 0.179, 0.035, 22, 1, true),
     helmet: new THREE.SphereGeometry(0.118, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), brim: new THREE.CylinderGeometry(0.13, 0.13, 0.012, 22),
   };
@@ -1696,6 +1766,9 @@ function makePeople(parent, booths, seats, routeAt, L) {
     if (o.badge !== false) { P.push(['root', G.badge, '#f4f6f8', 0, 1.22, 0.122]); P.push(['root', G.strap, '#1d5fc0', 0, 1.33, 0.06, Math.PI * 0.6, 0, Math.PI]); }
     for (const g of ['armL', 'armR']) P.push([g, G.upper, sleeve, 0, -0.16, 0], [g, G.fore, o.staff ? sk : sleeve, 0, -0.44, 0.012], [g, G.handG, sk, 0, -0.62, 0.02]);
     if (o.doc) P.push(['armR', G.doc, '#ffffff', 0, -0.62, 0.06, 0.2]);
+    if (o.phone) P.push(['armR', G.phone, '#15171b', 0, -0.66, 0.05, -0.2]);
+    if (o.bag) { const bc = pick(['#3a2a22', '#1b1b1f', '#6b4a33', '#8a7a6a', '#2b3a55'], k + 5);
+      if (f) P.push(['armL', G.hbag, bc, 0, -0.6, 0.02]); else P.push(['root', G.mbag, bc, -0.2, 0.92, 0.02], ['root', G.bstrap, bc, 0.02, 1.22, 0.125, 0, 0, -0.62]); }
     return P;
   }
   const PIV = { legL: [-0.092, 0.92, 0], legR: [0.092, 0.92, 0], armL: [-0.215, 1.42, 0], armR: [0.215, 1.42, 0] };
@@ -1704,7 +1777,9 @@ function makePeople(parent, booths, seats, routeAt, L) {
     const geos = [];
     for (const [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) {
       const g2 = geo.index ? geo.toNonIndexed() : geo.clone(); g2.deleteAttribute('uv'); g2.applyMatrix4(tmpM.compose(new THREE.Vector3(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz)), one));
-      if (grp !== 'root') { const pv = PIV[grp], r = pose[grp] || 0; g2.applyMatrix4(tmpM.makeRotationX(r)); g2.translate(pv[0], pv[1], pv[2]); }
+      if (grp !== 'root') { const pv = PIV[grp], r = pose[grp] || 0, fk = (grp === 'armL' || grp === 'armR') && y < -0.34 ? pose['fore' + grp.slice(-1)] || 0 : 0;
+        if (fk) { g2.translate(0, 0.3, 0); g2.applyMatrix4(tmpM.makeRotationX(fk)); g2.translate(0, -0.3, 0); }   // งอศอก
+        g2.applyMatrix4(tmpM.makeRotationX(r)); g2.translate(pv[0], pv[1], pv[2]); }
       const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
       g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g2.index ? g2 : g2);
     }
@@ -1713,22 +1788,28 @@ function makePeople(parent, booths, seats, routeAt, L) {
     const dummy = () => new THREE.Group();
     return { g, body: g, legPivotL: dummy(), legPivotR: dummy(), aL: dummy(), aR: dummy(), ...o };
   }
-  function rigged(o) {                     // แยกชิ้น (คนเดิน)
+  function rigged(o) {                     // แยกชิ้น (คนเดิน) · ข้อต่อ สะโพก/เข่า/ไหล่/ศอก ให้ท่าเดินเป็นธรรมชาติ
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
     const piv = {}; for (const k of Object.keys(PIV)) { piv[k] = new THREE.Group(); piv[k].position.set(...PIV[k]); body.add(piv[k]); }
-    const byG = {};   // รวมชิ้นส่วนในข้อต่อเดียวกันเป็น mesh เดียว (สีตามจุดยอด) → ~5 draw call ต่อคน แทน ~25
-    for (const [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) {
+    const KNEE = -0.46, ELBOW = -0.3;
+    for (const sd of ['L', 'R']) { piv['shin' + sd] = new THREE.Group(); piv['shin' + sd].position.set(0, KNEE, 0); piv['leg' + sd].add(piv['shin' + sd]);
+      piv['fore' + sd] = new THREE.Group(); piv['fore' + sd].position.set(0, ELBOW, 0); piv['arm' + sd].add(piv['fore' + sd]); }
+    const byG = {};   // รวมชิ้นส่วนในข้อต่อเดียวกันเป็น mesh เดียว (สีตามจุดยอด) → ~9 draw call ต่อคน
+    for (let [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) {
+      if ((grp === 'legL' || grp === 'legR') && y < KNEE - 0.04) { grp = 'shin' + grp.slice(-1); y -= KNEE; }
+      else if ((grp === 'armL' || grp === 'armR') && y < ELBOW - 0.04) { grp = 'fore' + grp.slice(-1); y -= ELBOW; }
       const g2 = geo.index ? geo.toNonIndexed() : geo.clone(); g2.deleteAttribute('uv'); g2.applyMatrix4(tmpM.compose(new THREE.Vector3(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz)), one));
       const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
       g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); (byG[grp] = byG[grp] || []).push(g2); }
     for (const [grp, geos] of Object.entries(byG)) { const m = new THREE.Mesh(mergeGeometries(geos, false), vmat); geos.forEach(q => q.dispose()); m.castShadow = true; (grp === 'root' ? body : piv[grp]).add(m); }
     g.scale.setScalar(o.scale || 1); parent.add(g);
-    return { g, body, legPivotL: piv.legL, legPivotR: piv.legR, aL: piv.armL, aR: piv.armR, ...o };
+    return { g, body, legPivotL: piv.legL, legPivotR: piv.legR, aL: piv.armL, aR: piv.armR, kL: piv.shinL, kR: piv.shinR, eL: piv.foreL, eR: piv.foreR, ...o };
   }
   let k = 0;
   const who = extra => { const female = rnd() < 0.42, r = rnd(); return Object.assign({ k: k++, female, skirt: female && rnd() < 0.55, dress: female && rnd() < 0.2, jacket: female && rnd() < 0.45, longHair: female && rnd() < 0.6, shirtOnly: !female && rnd() < 0.18, style: r < 0.12 ? 'casual' : 'formal', scale: (female ? 0.94 : 1.0) + rnd() * 0.06 }, extra); };
   // คนเดินตามเส้นทาง (บางคนถือเอกสาร)
-  for (let i = 0; i < 14; i++) list.push(Object.assign(rigged(who({ doc: rnd() < 0.25 })), { mode: 'walk', br: i % 2, s0: i * (L / 14) + rnd() * 3, v: 0.95 + rnd() * 0.3, off: (i % 2 ? 1 : -1) * (0.3 + rnd() * 0.3), ph: rnd() * 6 }));
+  // เดินจังหวะเดียวกันโดยประมาณ เว้นระยะเท่า ๆ กัน → ไม่ไปกองรวมกันหน้าประตู · ความเร็วต่างกันเล็กน้อยแบบแกว่ง (ไม่สะสม)
+  for (let i = 0; i < 16; i++) list.push(Object.assign(rigged(who({ doc: rnd() < 0.2, bag: rnd() < 0.3 })), { mode: 'walk', br: i % 2, s0: (i >> 1) * ((L + 6) / 8) + (i % 2) * 2.2 + rnd() * 1.2, v: 1.05, vj: 0.04 + rnd() * 0.05, vp: rnd() * 6, off: (i % 2 ? 1 : -1) * (0.25 + rnd() * 0.25), ph: rnd() * 6, look: rnd() * 6 }));
   const routeD = (() => { const pts = []; for (let s = 0; s <= L; s += 0.4) pts.push(routeAt(s)); return (x, z) => { let d = 1e9; for (const p of pts) d = Math.min(d, Math.hypot(p.x - x, p.z - z)); return d; }; })();
   // ผู้เยี่ยมชมหน้าบูธ 0–2 คน · เจ้าหน้าที่ประจำบูธ 1–2 คน
   booths.forEach(b => {
@@ -1738,7 +1819,9 @@ function makePeople(parent, booths, seats, routeAt, L) {
       const side = (rnd() - 0.5) * (big ? 1.4 : 0.6), dist = (b.d || 1) / 2 + 0.55 + rnd() * 0.2;
       const px = b.x + fv[0] * dist + (fv[1] !== 0 ? side : 0), pz = b.z + fv[1] * dist + (fv[0] !== 0 ? side : 0);
       if (routeD(px, pz) < 1.25) continue;                                            // ไม่ยืนขวางเส้นทางเดิน
-      const p = merged(who(), { armR: rnd() < 0.4 ? -0.5 : -0.05, armL: -0.04 }); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.5; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
+      const r = rnd(), o2 = who({ phone: r < 0.22, bag: rnd() < 0.35 });
+      const pose = o2.phone ? { armR: -0.3, foreR: -1.25, armL: -0.04 } : r < 0.5 ? { armR: -0.25, foreR: -0.85, armL: -0.06 } : r < 0.7 ? { armR: -0.2, foreR: -0.6, armL: -0.2, foreL: -0.6 } : { armR: -0.06, armL: -0.04 };
+      const p = merged(o2, pose); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.5; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
     if (b.tbc) return;
     const spots = b.kind === 'cc' ? [[0.25, 0.75], [2.3, 0.6]] : b.kind === 'twq' ? [[0.1, 0.45], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.25, 0.9]] : b.kind === 'snap' ? [[-1.45, 0.45], [1.05, 1.32]] : b.kind === 'cia' ? [[-0.25, 0.85]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
@@ -1748,7 +1831,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
   });
   // พักดื่มกาแฟ
   [[X(880), Z(275)], [X(940), Z(275)], [X(880), Z(320)], [X(940), Z(320)]].forEach(([x, z], ti) => {
-    for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who(), { armR: -1.15 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
+    for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who({ bag: rnd() < 0.3 }), { armR: -0.35, foreR: -1.05, armL: j ? -0.15 : -0.06, foreL: j ? -0.7 : 0 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
   });
   // ผู้นั่งใน Auditorium
   for (let i = 0; i < 120; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false, sit: true }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.36, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
@@ -1789,6 +1872,14 @@ let PRE = null;
 const preKey = opt => Q_AO(opt) + '|' + Q_DPR(opt);
 // คอมไพล์ shader (~70 ชุด) แบบขนานด้วย compileAsync → หน้าเว็บไม่ค้างระหว่างรอ · คืน Promise ที่เสร็จเมื่อพร้อม
 let PREP = null;
+// ส่ง texture ทั้งหมดขึ้น GPU ล่วงหน้า (เป็นช่วง ๆ ไม่ค้าง) — เดิมภาพของบูธ/ผนังที่ยังไม่โผล่ จะอัปโหลดตอนปรากฏกลางฉาก → กระตุก
+async function warmTextures(ctx) {
+  const seen = new Set(), list = [];
+  ctx.scene.traverse(o => [].concat(o.material || []).forEach(m => { for (const k in m) { const t = m[k]; if (t && t.isTexture && !t.isRenderTargetTexture && !seen.has(t)) { seen.add(t); list.push(t); } } }));
+  if (!ctx.renderer.initTexture) return;
+  let t0 = performance.now();
+  for (const t of list) { try { ctx.renderer.initTexture(t); } catch (e) {} if (performance.now() - t0 > 24) { await new Promise(r => setTimeout(r, 0)); t0 = performance.now(); } }
+}
 function prepare(opt = {}) {
   if (PREP) return PREP;
   if (S) return (PREP = Promise.resolve(true));
@@ -1798,6 +1889,7 @@ function prepare(opt = {}) {
     try { const w = innerWidth, h = innerHeight; ctx.renderer.setSize(w, h, false); ctx.camera.aspect = w / h; ctx.camera.position.set(-74, 24, -158); ctx.camera.lookAt(0, 0, 0); ctx.camera.updateProjectionMatrix();
       ctx.setupComposer(w, h);
       if (ctx.renderer.compileAsync) await ctx.renderer.compileAsync(ctx.scene, ctx.camera); else ctx.renderer.compile(ctx.scene, ctx.camera);
+      await warmTextures(ctx);
       if (PRE && PRE.ctx === ctx && !S) { ctx.renderer.shadowMap.needsUpdate = true; ctx.composer.render(); }   /* อัปโหลด texture/geometry + shader ของ AO/เงา */
     } catch (e) { console.warn('[F5] prepare', e); }
     return true;
@@ -1808,7 +1900,7 @@ function play(opt = {}) {
   if (S) stop(true);
   let root, ctx, W;
   if (PRE && PRE.key === preKey(opt) && !!opt.onDone) ({ root, ctx, W } = PRE);
-  else { if (PRE) { try { PRE.ctx.renderer.dispose(); PRE.root.remove(); } catch (e) {} } root = build(opt); ctx = makeScene(root, opt); W = buildWorld(ctx); }
+  else { if (PRE) { try { PRE.ctx.renderer.dispose(); PRE.root.remove(); } catch (e) {} } root = build(opt); ctx = makeScene(root, opt); W = buildWorld(ctx); warmTextures(ctx); }
   PRE = null; PREP = null;
   const st = { wallIntro: 1, root, ctx, W, opt, t0: performance.now(), intro: 0, introOn: true, step: 0, auto: false, autoT: 0, speed: 1, simT: 0, sel: null, focus: null, zoneA: {}, spin: false, tween: null, running: true };
   S = st;
@@ -2017,8 +2109,8 @@ function play(opt = {}) {
     introCam.t0.y = Math.max(introCam.t0.y, W.gy + 2);
   }
   const INTRO_END = 9.2;
-  // ── โหมดทดลอง ?xray: แยกชั้นแบบภาพผ่าตัด (teardown) — ชั้นอื่นเป็นกระจก ชั้น 5 ทึบสีน้ำเงิน มีป้ายเลขชั้น และหยุดให้ลากแยกเองได้
-  const XRAY = /[?&]xray\b/.test(location.search), X_HOLD = 3.9, X_HOLD_LEN = 2.6;
+  // ── ค่าเริ่มต้น (?classic = แบบเดิม): แยกชั้นแบบภาพผ่าตัด (teardown) — ชั้นอื่นเป็นกระจก ชั้น 5 ทึบสีน้ำเงิน มีป้ายเลขชั้น และหยุดให้ลากแยกเองได้
+  const XRAY = !/[?&]classic\b/.test(location.search), X_HOLD = 3.9, X_HOLD_LEN = 2.6;
   const INK = new THREE.Color('#3b4756'), ACC = new THREE.Color('#0a6fd8');
   st.xE = 1; st.xDone = false; st.xHolding = false;
   const xl = root.querySelector('#f5xl'), xp = root.querySelector('#f5xp'), xBox = new THREE.Box3(), xV = new THREE.Vector3();
@@ -2027,7 +2119,7 @@ function play(opt = {}) {
     const mk = (txt, cls, g, f) => { const e = document.createElement('div'); e.className = 'xf ' + cls; e.innerHTML = '<b>' + txt + '</b>'; xl.appendChild(e);
       g.updateMatrixWorld(true); xBox.setFromObject(g); const p0 = g.position.clone(); xLabels.push({ e, g, f, lo: xBox.min.clone().sub(p0), hi: xBox.max.clone().sub(p0) }); };
     for (const F of W.floors) if (F && F.f > F5) mk('ชั้น ' + (F.f + 1), '', F.g, F.f);
-    mk('ชั้น 5 · Stakeholder Day', 'f5', W.f5shell.g, F5);
+    mk(innerWidth < 600 ? 'ชั้น 5 · งานนี้' : 'ชั้น 5 · Stakeholder Day', 'f5', W.f5shell.g, F5);
     xp.querySelector('input').addEventListener('input', e => { st.xE = 0.35 + (+e.target.value / 100) * 1.5; st.xUser = true; st.xLast = performance.now(); });
   }
   const xRelease = () => { st.xHolding = false; st.xDone = true; xp.classList.remove('on'); };
@@ -2039,7 +2131,8 @@ function play(opt = {}) {
       for (const [x, z] of [[T.lo.x, T.lo.z], [T.lo.x, T.hi.z], [T.hi.x, T.lo.z], [T.hi.x, T.hi.z]]) { xV.set(g.position.x + x, ym, g.position.z + z).project(camera);
         const sx = (xV.x * 0.5 + 0.5) * w, sy = (-xV.y * 0.5 + 0.5) * h; if (sx > bx) { bx = sx; by = sy; } }
       L.bx = bx; L.by = by; if (g.visible) col = Math.max(col, bx); }
-    col = Math.min(col + 28, w - 200);
+    if (!xLabels.bw) xLabels.bw = Math.max(...xLabels.map(L => L.e.querySelector('b').offsetWidth || 0));
+    col = Math.min(col + 28, w - 16 - (xLabels.bw || 180));
     for (const L of xLabels) { const vis = L.g.visible ? alpha : 0; L.e.style.opacity = vis;
       L.e.style.setProperty('--ll', Math.max(12, Math.round(col - L.bx)) + 'px'); L.e.style.transform = `translate(${Math.round(L.bx + 4)}px,${Math.round(L.by - 12)}px)`; }
   }
@@ -2126,15 +2219,39 @@ function play(opt = {}) {
     st.simT += dt * st.speed;
     for (const p of W.people) {
       if (p.mode === 'walk') {
-        const R = W.routes[p.br || 0], s = (p.s0 + st.simT * p.v) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
-        const r = R.at(Math.min(s, R.L)); const nx = -r.tz, nz = r.tx, px = r.x + nx * p.off, pz = r.z + nz * p.off;
+        const R = W.routes[p.br || 0], s = ((p.s0 + st.simT * p.v + Math.sin(st.simT * 0.25 + p.vp) * p.vj * 20) % (R.L + 6) + R.L + 6) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
+        const nar = 0.2 + 0.8 * ss(0.6, 3.2, Math.abs(s - W.sDoor));                     // ผ่านประตู Auditorium ทีละคน (เข้าแนวกลาง)
+        const r = R.at(Math.min(s, R.L)); const nx = -r.tz, nz = r.tx, px = r.x + nx * p.off * nar, pz = r.z + nz * p.off * nar;
         p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx, r.tz);
         p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 2.0);
-        const w = Math.sin((st.simT * p.v) * 7 + p.ph) * 0.45;
-        p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w; p.aL.rotation.x = -w * 0.7; p.aR.rotation.x = w * 0.7; p.body.position.y = Math.abs(Math.cos((st.simT * p.v) * 7 + p.ph)) * 0.03;
+        const ph = (st.simT * p.v) * 6.6 + p.ph, w = Math.sin(ph) * 0.42, c = Math.cos(ph);
+        p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w;                                  // สะโพก
+        p.kL.rotation.x = 0.08 + 0.75 * Math.max(0, c) ** 1.5; p.kR.rotation.x = 0.08 + 0.75 * Math.max(0, -c) ** 1.5;   // งอเข่าช่วงก้าวขาไปข้างหน้า
+        p.aL.rotation.x = -w * 0.6; p.aR.rotation.x = w * 0.6;                                     // แกว่งแขนสลับขา
+        p.eL.rotation.x = -0.28 - 0.22 * Math.max(0, -Math.sin(ph)); p.eR.rotation.x = -0.28 - 0.22 * Math.max(0, Math.sin(ph));   // งอศอกตอนแขนแกว่งไปหน้า
+        if (p.doc) p.eR.rotation.x = -0.9; if (p.bag && p.female) p.eL.rotation.x = -0.15;
+        p.body.position.y = Math.abs(c) * 0.028; p.body.rotation.y = Math.sin(ph) * 0.07; p.body.rotation.z = Math.sin(ph) * 0.02;
       } else if (p.mode === 'stand') { p.body.rotation.y = Math.sin(now / 1700 + p.ph) * 0.12; }
     }
   }
+
+  // ── ลูกเล่นตอนเลือกบูธ: วงแสงชีพจรบนพื้น + ลำแสงสปอตไลต์ส่องลงบูธ
+  const selFX = (() => {
+    const g = new THREE.Group(); g.visible = false; W.interior.add(g);
+    const ringM = new THREE.MeshBasicMaterial({ color: '#2d8cff', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const rings = [0, 1].map(() => { const r = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 64), ringM.clone()); r.rotation.x = -Math.PI / 2; r.position.y = 0.03; g.add(r); return r; });
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshBasicMaterial({ color: '#2d8cff', transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    disc.rotation.x = -Math.PI / 2; disc.position.y = 0.025; g.add(disc);
+    const bm = new THREE.MeshBasicMaterial({ color: '#fff3dc', map: W.beamTex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+    const bmesh = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.5, 5.0, 28, 1, true), bm); bmesh.position.y = 2.5; g.add(bmesh);
+    let t0 = 0, cur = null;
+    return { update(dt, t) {
+      const b = st.sel; if (b !== cur) { cur = b; t0 = t; if (b) { const fv = FACEV[b.face], k = (b.w || 2) > 2 ? 1.6 : 1.2; g.position.set(b.x + fv[0] * 0.4, 0, b.z + fv[1] * 0.4); g.scale.set(k * 1.3, 1, k * 1.3); } }
+      g.visible = !!b && !st.walk; if (!g.visible) return;
+      rings.forEach((r, i) => { const u = ((t - t0) * 0.55 + i * 0.5) % 1; r.scale.setScalar(0.6 + u * 1.1); r.material.opacity = 0.55 * (1 - u); });
+      bm.opacity = Math.min(1, (t - t0) * 2) * 0.16; disc.material.opacity = 0.08 + Math.sin(t * 3) * 0.03;
+    } };
+  })();
 
   // ── วนเรนเดอร์
   let last = performance.now();
@@ -2155,6 +2272,7 @@ function play(opt = {}) {
     updateZones(dt);
     W.routeU.uTime.value = now / 1000;
     simPeople(dt, now);
+    { const tS = now / 1000; for (const f of W.live) f(dt, tS, camera.position); selFX.update(dt, tS); }
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
       if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 40 && (ctx.gtao || renderer.getPixelRatio() > 1)) { st.aoOff = true; if (ctx.gtao) ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
@@ -2167,7 +2285,7 @@ function play(opt = {}) {
   requestAnimationFrame(() => root.classList.add('on'));
   st.raf = requestAnimationFrame(frame);
   st.goStep = goStep; st.selectBooth = selectBooth; st.act = act;
-  window.__f5 = st; st.camera = camera; st.controls = controls; st.THREE = THREE;
+  window.__f5 = st; st.camera = camera; st.controls = controls; st.THREE = THREE; st.select = (code, fly) => selectBooth(W.booths.find(q => q.code === code) || null, fly);
   return true;
 }
 

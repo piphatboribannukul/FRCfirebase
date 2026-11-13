@@ -127,7 +127,7 @@
   { const small = innerWidth < 760; vid.poster = small ? 'stakeholder_hero_s.jpg' : 'stakeholder_hero.jpg'; if (!still) { vid.autoplay = true; vid.src = small ? 'stakeholder_hero_s.mp4' : 'stakeholder_hero.mp4'; vid.play().catch(() => {}); } }
   const show = on => { land.classList.toggle('off', !on); if (!still && vid.src) { if (on) vid.play().catch(() => {}); else vid.pause(); } };
   let watch = null;
-  function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); if (MOBILE) prepP = null; } }, 800); }
+  function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); prepP = null; prepDone = false; if (!MOBILE) setTimeout(prepNow, 400); } }, 800); }
   let busy = false;
   const LITE = new URLSearchParams(location.search).has('lite');
   const frame2 = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -136,17 +136,17 @@
   function setStatus(txt, ok) { prepEl.style.visibility = ''; prepEl.classList.toggle('ok', !!ok); prepEl.innerHTML = '<i></i>' + txt; }
 
   // เตรียมฉากชั้น 5 ล่วงหน้า (สร้างโมเดล + คอมไพล์ shader แบบไม่บล็อกหน้าเว็บ) → บินเข้าต่อเนื่องไม่สะดุด
-  let prepP = null;
+  let prepP = null, prepDone = false;
   function prepNow() {
     if (prepP) return prepP;
     prepP = Promise.all([f5mod, fontsMax]).then(frame2).then(() => { try { return window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} })
-      .then(() => { setStatus('พร้อมนำเสนอ', true); try { window.SD3D.preload(HQ.cityFile); } catch (e) {} });
+      .then(() => { prepDone = true; setStatus('พร้อมนำเสนอ', true); try { window.SD3D.preload(HQ.cityFile); } catch (e) {} });
     return prepP;
   }
   async function goMap() {
     if (busy) return; busy = true;
-    if (MOBILE && !prepP) {   // มือถือ: เตรียมฉากก่อนเข้าแผนที่ (มีวงหมุนบอกสถานะ) → ระหว่างบินและเข้าชั้น 5 ไม่สะดุด
-      bMap.innerHTML = '<span class="spin"></span>กำลังเตรียม'; bMap.disabled = bF5.disabled = true; setStatus('ครั้งแรกใช้เวลาสักครู่');
+    if (!prepDone) {   // ยังเตรียมฉากชั้น 5 ไม่เสร็จ: รอให้เสร็จก่อน (วงหมุนบนปุ่ม) → ระหว่างบินและเข้าชั้น 5 ไม่สะดุด
+      bMap.innerHTML = '<span class="spin"></span>กำลังเตรียม'; bMap.disabled = bF5.disabled = true;
       await prepNow(); bMap.innerHTML = bMapHTML; bMap.disabled = bF5.disabled = false;
     }
     await fontsMax; show(false); window.SD3D.open(HQ); watchBack(); busy = false; prepNow();
