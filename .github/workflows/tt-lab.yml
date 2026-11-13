@@ -1,0 +1,43 @@
+name: Travel-Time Lab (คำนวณเวลาเดินทางน้ำ)
+
+# [v46 · 14 พ.ย. 2569] หาเวลาเดินทางน้ำจาก history_archive ด้วย cross-correlation ของ EC
+#   รันต่อจาก archive รายวัน + สำรองทุกวันจันทร์ + กดรันเองได้
+#   ผล: data/tt_auto.json → หน้า ttlab.html (ไม่เปลี่ยนค่าที่แผนที่ใช้ — ใช้ตรวจสอบ/เทียบเท่านั้น)
+#   ไม่ต้องใช้ secret: อ่านเฉพาะไฟล์ใน repo
+
+on:
+  workflow_run:
+    workflows: ["Archive Firebase history (daily, before prune)"]
+    types: [completed]
+  schedule:
+    - cron: '17 19 * * 0'   # จันทร์ 02:17 เวลาไทย
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tt-lab
+  cancel-in-progress: false
+
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Compute travel times
+        run: python3 tools/tt_lab.py .
+
+      - name: Commit result
+        run: |
+          git config user.name  "tt-lab-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/tt_auto.json
+          if git diff --cached --quiet; then echo "ไม่มีผลใหม่"; exit 0; fi
+          git commit -m "tt-lab $(date -u -d '+7 hours' +%Y-%m-%d)"
+          git pull --rebase
+          git push

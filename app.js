@@ -3234,7 +3234,8 @@ function buildMarkers() {
         +   biasCtl
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
-        + (srcNote ? '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+srcNote+'</div>' : '')
+        + '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+(srcNote ? srcNote + ' · ' : '')
+        +   '<a href="ttlab.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">ที่มาของเวลาเดินทาง ↗</a></div>'
         + '</div>';
     } catch (e) { console.warn('[EC known card]', e.message); return null; }
   };
