@@ -543,7 +543,7 @@ function css() {
 #f5.on{opacity:1}#f5:not(.on){pointer-events:none}
 #f5 canvas.gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
 #f5 .card{background:rgba(255,255,255,.93);border:1px solid rgba(214,222,231,.9);border-radius:12px;box-shadow:0 8px 28px rgba(16,34,56,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-#f5 .ui{position:absolute;transition:opacity .5s ease;z-index:2}#f5 #f5lbl{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+#f5 .ui{position:absolute;transition:opacity .5s ease;z-index:2}#f5 #f5xl{position:absolute;inset:0;pointer-events:none;z-index:1}#f5 .xf{position:absolute;left:0;top:0;display:flex;align-items:center;gap:8px;white-space:nowrap;font:500 13px -apple-system,BlinkMacSystemFont,'SF Pro Text','IBM Plex Sans Thai',sans-serif;color:#1d1d1f;will-change:transform,opacity}#f5 .xf:before{content:'';width:var(--ll,28px);height:1px;background:rgba(29,29,31,.45)}#f5 .xf b{font-weight:500;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:3px 10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}#f5 .xf.f5 b{background:#0a6fd8;border-color:#0a6fd8;color:#fff;font-weight:600}#f5 .xf.f5:before{background:#0a6fd8;height:2px}#f5 .xp{position:absolute;left:calc(24px + env(safe-area-inset-left));bottom:calc(24px + env(safe-area-inset-bottom));transform:translateY(8px);z-index:4;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:24px;padding:8px 8px 8px 20px;box-shadow:0 6px 20px rgba(0,0,0,.12);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;font:500 14px -apple-system,BlinkMacSystemFont,'SF Pro Text','IBM Plex Sans Thai',sans-serif;color:#1d1d1f}#f5 .xp.on{opacity:1;transform:none;pointer-events:auto}#f5 .xp input{width:min(220px,40vw);accent-color:#0a6fd8}#f5 .xp .btn{height:36px;border-radius:18px;padding:0 14px}#f5 #f5lbl{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 #f5.intro .ui.hide-intro{opacity:0;pointer-events:none}
 #f5 .top{left:14px;right:14px;top:12px;height:52px;display:flex;align-items:center;gap:14px;padding:0 10px 0 14px}
 #f5 .brand{display:flex;align-items:center;gap:10px;min-width:0}
@@ -711,7 +711,7 @@ function build(opt) {
 </div>
 <div class="ttl" id="f5ttl"><h1>Stakeholder Day</h1><p>การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่</p></div>
 <button class="ui btn skip" data-k="skip">ข้าม${ui('next')}</button>
-<div id="f5lbl"></div>
+<div id="f5lbl"></div><div id="f5xl"></div><div class="xp" id="f5xp"><span>แยกชั้น</span><input type="range" min="0" max="100" value="43" aria-label="ระยะแยกชั้น"><button class="btn pri" data-k="xgo">เข้าชั้น 5${ui('next')}</button></div>
 <div class="credit">ภาพจำลองแนวคิด · ขนาดโดยประมาณจากผังร่าง</div>`;
   document.body.appendChild(root);
   return root;
@@ -1986,8 +1986,9 @@ function play(opt = {}) {
     else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([4, 112, 12], [4, 0, 3], 1.6); }
     else if (k === 'spin') { st.spin = !st.spin; controls.autoRotate = st.spin; controls.autoRotateSpeed = 0.7; st.tween = null; }
     else if (k === 'zin' || k === 'zout') { const d = controls.target.clone().sub(camera.position); camera.position.addScaledVector(d, k === 'zin' ? 0.28 : -0.4); }
-    else if (k === 'explode') { st.intro = 0.8; st.introOn = true; root.classList.add('intro'); setFocus(null); selectBooth(null); }
-    else if (k === 'skip') { st.intro = INTRO_END + 0.4; }
+    else if (k === 'xgo') xRelease();
+    else if (k === 'explode') { st.xDone = false; st.xE = 1; const r = xp.querySelector('input'); if (r) r.value = 43; st.intro = 0.8; st.introOn = true; root.classList.add('intro'); setFocus(null); selectBooth(null); }
+    else if (k === 'skip') { xRelease(); st.intro = INTRO_END + 0.4; }
     else if (k === 'fs') { try { document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen(); } catch (e) {} }
     else if (k === 'back') stop();
     else if (k === 'desel') { selectBooth(null); }
@@ -2016,6 +2017,51 @@ function play(opt = {}) {
     introCam.t0.y = Math.max(introCam.t0.y, W.gy + 2);
   }
   const INTRO_END = 9.2;
+  // ── โหมดทดลอง ?xray: แยกชั้นแบบภาพผ่าตัด (teardown) — ชั้นอื่นเป็นกระจก ชั้น 5 ทึบสีน้ำเงิน มีป้ายเลขชั้น และหยุดให้ลากแยกเองได้
+  const XRAY = /[?&]xray\b/.test(location.search), X_HOLD = 3.9, X_HOLD_LEN = 2.6;
+  const INK = new THREE.Color('#3b4756'), ACC = new THREE.Color('#0a6fd8');
+  st.xE = 1; st.xDone = false; st.xHolding = false;
+  const xl = root.querySelector('#f5xl'), xp = root.querySelector('#f5xp'), xBox = new THREE.Box3(), xV = new THREE.Vector3();
+  const xLabels = [];
+  if (XRAY) {
+    const mk = (txt, cls, g, f) => { const e = document.createElement('div'); e.className = 'xf ' + cls; e.innerHTML = '<b>' + txt + '</b>'; xl.appendChild(e);
+      g.updateMatrixWorld(true); xBox.setFromObject(g); const p0 = g.position.clone(); xLabels.push({ e, g, f, lo: xBox.min.clone().sub(p0), hi: xBox.max.clone().sub(p0) }); };
+    for (const F of W.floors) if (F && F.f > F5) mk('ชั้น ' + (F.f + 1), '', F.g, F.f);
+    mk('ชั้น 5 · Stakeholder Day', 'f5', W.f5shell.g, F5);
+    xp.querySelector('input').addEventListener('input', e => { st.xE = 0.35 + (+e.target.value / 100) * 1.5; st.xUser = true; st.xLast = performance.now(); });
+  }
+  const xRelease = () => { st.xHolding = false; st.xDone = true; xp.classList.remove('on'); };
+  function xrayLabels(alpha) {
+    xl.style.display = alpha > 0.01 ? '' : 'none'; if (alpha <= 0.01) return;
+    const w = innerWidth, h = innerHeight; let col = -1e9;   // ป้ายเรียงคอลัมน์เดียว เส้นชี้ยาวจากขอบชั้นถึงคอลัมน์
+    const T = xLabels.reduce((a, L) => (L.f > a.f ? L : a), xLabels[0]);   // ใช้มุมของตัวหอ (ชั้นบนสุด) เป็นจุดยึดทุกป้าย → เส้นชี้เรียงแนวเดียวกัน
+    for (const L of xLabels) { const g = L.g, ym = g.position.y + (L.lo.y + L.hi.y) / 2; let bx = -1e9, by = 0;
+      for (const [x, z] of [[T.lo.x, T.lo.z], [T.lo.x, T.hi.z], [T.hi.x, T.lo.z], [T.hi.x, T.hi.z]]) { xV.set(g.position.x + x, ym, g.position.z + z).project(camera);
+        const sx = (xV.x * 0.5 + 0.5) * w, sy = (-xV.y * 0.5 + 0.5) * h; if (sx > bx) { bx = sx; by = sy; } }
+      L.bx = bx; L.by = by; if (g.visible) col = Math.max(col, bx); }
+    col = Math.min(col + 28, w - 200);
+    for (const L of xLabels) { const vis = L.g.visible ? alpha : 0; L.e.style.opacity = vis;
+      L.e.style.setProperty('--ll', Math.max(12, Math.round(col - L.bx)) + 'px'); L.e.style.transform = `translate(${Math.round(L.bx + 4)}px,${Math.round(L.by - 12)}px)`; }
+  }
+  function xrayFloors(t) {
+    const E = st.xE, u = eOut(ss(1.0, 2.6, t)), out = ss(X_HOLD + 0.05, 5.0, t), out2 = eOut(ss(X_HOLD + 0.05, 4.9, t));
+    for (const F of W.floors) { if (!F) continue;
+      if (F.f > F5) { const k = F.f - F5, live = 1 - out;
+        F.g.position.y = F.f * FH + u * k * 3.6 * E + eOut(out) * (8 + k * 5); F.g.position.x = 0; F.g.rotation.y = 0;
+        for (const m of F.mats) { m.opacity = (m.userData.glass ? lerp(1, 0.05, u) : lerp(1, 0.16, u)) * live; m.depthWrite = u < 0.05; }
+        F.edgeM.color.copy(INK); F.edgeM.opacity = 0.55 * u * live; F.g.visible = live > 0.01;
+      } else { const d = F5 - F.f;
+        F.g.position.y = F.f * FH - d * lerp(1.4 * E * u, 1.8, out2);
+        for (const m of F.mats) { m.opacity = m.userData.glass ? lerp(1, 0.04, u) : lerp(1, 0.18, u); m.depthWrite = u < 0.05; }
+        F.edgeM.color.copy(INK).lerp(EDGE0, out2); F.edgeM.opacity = lerp(0.55 * u, 0.75, out2);
+      } }
+    { const o = ss(1.2, 2.4, t); for (const m of W.oldBldg.mats) { m.opacity = lerp(1, 0.14, o); m.depthWrite = o < 0.3; } }
+    const shell = ss(X_HOLD + 0.4, 5.2, t), hl = ss(1.4, 2.2, t) * (1 - shell);
+    for (const m of W.f5shell.mats) { m.opacity = 1 - shell; m.depthWrite = shell < 0.02; if (m.emissive) { m.emissive.copy(ACC); m.emissiveIntensity = hl * 0.35; } }
+    W.f5shell.g.visible = shell < 0.99; W.f5shell.edgeM.color.copy(ACC).lerp(EDGE0, ss(5.0, 6.0, t)); W.f5shell.edgeM.opacity = Math.max(ss(1.0, 1.8, t) * (1 - ss(5.0, 6.0, t)), 0);
+    W.scan.visible = false;
+    xrayLabels(ss(2.0, 2.6, t) * (1 - ss(X_HOLD + 0.1, X_HOLD + 0.6, t)));
+  }
   camera.position.copy(introCam.p0); controls.target.copy(introCam.t0); camera.fov = introCam.fov0; camera.userData.wide = opt.fromCam ? 0 : 1; camera.updateProjectionMatrix(); controls.update();
   const setOp = (F, solid, glass, dw) => { for (const m of F.mats) { m.opacity = m.userData.glass ? glass : solid; m.depthWrite = dw; } };
   function shadowBox(big) {                             // ตอนเห็นทั้งอาคาร ขยายกรอบเงา · ตอนอยู่ในชั้น 5 ใช้กรอบแคบให้เงาคม
@@ -2032,6 +2078,7 @@ function play(opt = {}) {
     if (!st.bigShadow !== !(t < INTRO_END - 0.6)) { st.bigShadow = t < INTRO_END - 0.6; shadowBox(st.bigShadow); }
     const intro = t < INTRO_END - 0.05; if (ctx.gtao && !st.aoOff) ctx.gtao.enabled = !(t > 0.9 && t < 6.4);   // ไม่คิด AO ช่วงแยกชั้น (วัตถุโปร่งใสทำให้เกิดแผ่นดำ)
     const topY = (NF - F5) * FH + 8.5, scanY = lerp(topY, 0.05, eOut(ss(1.0, 2.6, t)));
+    if (XRAY) xrayFloors(t); else {
     { const S = W.scan, on = t > 0.95 && t < 5.6; S.visible = on;
       if (on) { S.position.y = scanY; const a = Math.min(ss(0.95, 1.25, t), 1 - ss(4.6, 5.6, t)); S.userData.cm.opacity = a * (t < 2.7 ? 1 : 0.35); S.userData.lm.opacity = a; } }
     const lowF = ss(3.0, 4.6, t), shell = ss(4.2, 5.0, t);
@@ -2053,6 +2100,7 @@ function play(opt = {}) {
     const flash = ss(3.4, 4.0, t) * (1 - ss(4.3, 5.0, t));
     for (const m of W.f5shell.mats) { m.opacity = 1 - shell; m.depthWrite = shell < 0.02; if (m.emissive) { m.emissive.setRGB(0.25, 0.85, 1.0); m.emissiveIntensity = intro ? flash * 0.7 : 0; } }
     W.f5shell.g.visible = shell < 0.99; W.f5shell.edgeM.color.copy(intro ? HOLO : EDGE0); W.f5shell.edgeM.opacity = Math.min(ss(2.5, 2.9, t), 1 - ss(5.0, 6.0, t));
+    }
     { const k = ss(5.6, INTRO_END, t); ctx.scene.fog.near = lerp(420, 170, k); ctx.scene.fog.far = lerp(1500, 430, k); }
     st.wallIntro = Math.max(0.001, eOut(ss(4.6, 6.0, t)));
     W.booths.forEach((b, i) => { const k = Math.max(0.001, eOut(ss(5.4 + i * 0.06, 6.2 + i * 0.06, t))); b.group.scale.setScalar(k); });
@@ -2067,7 +2115,7 @@ function play(opt = {}) {
     const a0 = Math.atan2(introCam.p0.z, introCam.p0.x); let a1 = Math.atan2(p1.z, p1.x);
     while (a1 - a0 > Math.PI) a1 -= Math.PI * 2; while (a1 - a0 < -Math.PI) a1 += Math.PI * 2;
     const r0 = Math.hypot(introCam.p0.x, introCam.p0.z) * (1 - (opt.fromCam ? 0.25 : 0.12) * ss(0, opt.fromCam ? 2.2 : 1.2, t)), r1 = Math.hypot(p1.x, p1.z);
-    const a = lerp(a0, a1, c), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * Math.min(1, c * 1.15)) * 46;
+    const a = lerp(a0, a1, c) + (XRAY && st.xHolding ? 0.16 * Math.sin(Math.PI * Math.min(1, st.xHoldT / X_HOLD_LEN)) : 0), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * Math.min(1, c * 1.15)) * 46;
     camera.position.set(Math.cos(a) * r, lerp(introCam.p0.y, p1.y, c) + lift, Math.sin(a) * r);
     const tgtUp = Math.sin(Math.PI * ss(1.6, 6.5, t)) * 18;
     controls.target.lerpVectors(introCam.t0, t1, easeIO(ss(1.6, INTRO_END - 0.1, t))); controls.target.y += tgtUp;
@@ -2095,7 +2143,13 @@ function play(opt = {}) {
   function frame(now) {
     if (!st.running) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (st.introOn) { st.intro += dt; applyIntro(st.intro); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; applyIntro(INTRO_END + 1); if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
+    if (st.introOn) {
+      if (XRAY && !st.xDone) {
+        if (!st.xHolding && st.intro + dt >= X_HOLD) { st.intro = X_HOLD; st.xHolding = true; st.xHoldT = 0; st.xUser = false; xp.classList.add('on'); }
+        if (st.xHolding) { st.xHoldT += dt; if ((!st.xUser && st.xHoldT > X_HOLD_LEN) || (st.xUser && now - st.xLast > 9000)) xRelease(); }
+        else st.intro += dt;
+      } else st.intro += dt;
+      applyIntro(st.intro); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; applyIntro(INTRO_END + 1); if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
     else if (st.walk) walkStep(dt);
     else { tweenStep(dt); controls.update(); }
     updateZones(dt);
