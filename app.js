@@ -2921,6 +2921,49 @@ function buildMarkers() {
   const EC_KNOWN_MDIS = ['โรงเรียนราชวินิต นนทบุรี','โรงเรียนตั้งพิรุฬห์ธรรม','โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
     'สำนักงานประปาสาขาบางบัวทอง','สถานีตำรวจภูธรไทรน้อย','สถานีสูบจ่ายน้ำมหาสวัสดิ์'];
   const EC_WATCH = 500, EC_OVER = 1200;   // ตาม ecStatus(): >500 เฝ้าระวัง, >1200 สูงกว่ามาตรฐาน
+  // ── [v46] ต้นทางฝั่งตะวันตก = น้ำคลองประปา (แทนเขื่อนแม่กลองที่ไม่มีข้อมูลตั้งแต่ 24 ต.ค. 69) ──
+  //   เวลาเดินทางถึงสูบส่ง/สูบจ่ายมหาสวัสดิ์ จากการเทียบรูปคลื่น EC 5–12 พ.ย. 69
+  //   (บางเลน→MTR r=0.69 · กม.54→MTR r=0.67 · กม.54→บางเลน ≈13 ชม. สอดคล้องกัน)
+  const EC_WEST_LAG = { S12: 51, S13: 64 };
+  const EC_WEST_OFF = { S12: 29, S13: 38 };   // ส่วนต่างระดับ น้ำคลอง → น้ำออกโรงงาน (ใช้เมื่อคำนวณจากข้อมูลไม่ได้)
+  const EC_WEST_NAME = { S12: 'บางเลน กม.35', S13: 'กม.54' };
+  const RAW_EC_MIN = 150, RAW_FLAT_N = 12, RAW_STALE_H = 6;
+  // ทำความสะอาดอนุกรมน้ำดิบ: ตัดค่า < 150 และค่าค้างเท่าเดิม ≥ 12 จุดติดกัน + บอกสถานะเซ็นเซอร์
+  window._ecRawSeries = function (key) {
+    const src = key === 'S1' ? ((window._rawWaterHistory || {}).S1 || []) : ((window._mkRawWaterHistory || {})[key] || []);
+    const seen = new Set(), all = [];
+    src.forEach(p => { if (p && p.ts && p.ec != null && !seen.has(p.ts)) { seen.add(p.ts); all.push({ ts: p.ts, v: +p.ec }); } });
+    all.sort((a, b) => a.ts - b.ts);
+    const flat = new Set(); let run = [];
+    const flush = () => { if (run.length >= RAW_FLAT_N) run.forEach(j => flat.add(j)); };
+    all.forEach((p, i) => { if (run.length && p.v === all[run[0]].v) run.push(i); else { flush(); run = [i]; } });
+    flush();
+    const bad = i => all[i].v < RAW_EC_MIN || flat.has(i);
+    const pts = all.filter((p, i) => !bad(i));
+    const n = all.length, last = all[n - 1];
+    let health = 'ok', since = null;
+    if (!last) health = 'nodata';
+    else if (bad(n - 1)) { health = 'fault'; let i = n - 1; while (i > 0 && bad(i - 1)) i--; since = all[i].ts; }
+    else if (Date.now() - last.ts > RAW_STALE_H * 3600000) { health = 'stale'; since = last.ts; }
+    return { key, pts, health, since, last: last ? last.v : null, lastTs: last ? last.ts : null };
+  };
+  // ต้นทางคลองฝั่งตะวันตกที่ใช้ได้ตอนนี้: บางเลน → (สำรอง) กม.54 → null
+  window._ecWestCanal = function () {
+    for (const k of ['S12', 'S13']) {
+      const r = window._ecRawSeries(k);
+      if (r.health === 'ok' && r.pts.length >= 24) return Object.assign(r, { lag: EC_WEST_LAG[k], off: EC_WEST_OFF[k], name: EC_WEST_NAME[k] });
+    }
+    return null;
+  };
+  // ปรับระดับอัตโนมัติ (ชดเชยส่วนต่างระหว่างต้นทางกับสถานี) — เปิดเป็นค่าเริ่มต้น, ปิดเพื่อเปรียบเทียบได้
+  const EC_BIAS_KEY = 'ec_bias_on_v46';
+  window._ecBiasOn = function () { try { return localStorage.getItem(EC_BIAS_KEY) !== '0'; } catch (e) { return true; } };
+  window._ecKnownArgs = window._ecKnownArgs || {};
+  window._ecBiasSet = function (on, sid) {
+    try { localStorage.setItem(EC_BIAS_KEY, on ? '1' : '0'); } catch (e) {}
+    const a = window._ecKnownArgs[sid], el = document.getElementById('ecky-wrap-' + sid);
+    if (a && el) { const h = window._buildEcKnownCard(a[0], a[1]); if (h) el.outerHTML = h; }
+  };
   const EC_KNOWN_Y_KEY = 'ec_known_yaxis';
   function _ecKnownY() {
     try { const o = JSON.parse(localStorage.getItem(EC_KNOWN_Y_KEY) || 'null');
@@ -3014,7 +3057,7 @@ function buildMarkers() {
       ? [[_ecFmt(at), tx, 700], ['ค่าที่ผ่านมา ' + (m ? Math.round(m.v) : '—') + ' µS/cm', '#1f6fd1', 700],
          ['คาดการณ์ไว้ ' + (f ? Math.round(f.v) : '—') + (m && f ? ' (ต่าง ' + Math.abs(m.v - f.v).toFixed(0) + ')' : ''), '#11875f', 600]]
       : [[_ecFmt(at), tx, 700], ['คาดการณ์ ' + (f ? Math.round(f.v) : '—') + ' µS/cm', '#11875f', 700],
-         ['วัดจริงที่' + d.src + ' ' + _ecFmt(at - d.TT * 3600000), sub, 500]];
+         ['วัดจริงที่' + (d.srcAt ? d.srcAt(t).name.replace(/ \(.*\)/, '') + ' ' + _ecFmt(d.srcAt(t).ts) : d.src + ' ' + _ecFmt(at - d.TT * 3600000)), sub, 500]];
     const bw = 158, bh = 12 + L.length * 13, top = PT + EC_SVG.STRIP + EC_SVG.GAP + 2;
     const bx = Math.min(W - PR - bw, Math.max(PL, x > W / 2 ? x - bw - 8 : x + 8));
     tip.innerHTML += '<rect x="'+bx.toFixed(1)+'" y="'+top+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+(dk?'#1d1d2b':'#fff')+'" stroke="'+(t < 0 ? '#1f6fd1' : '#11875f')+'" stroke-width="1" opacity=".97"/>'
@@ -3025,7 +3068,7 @@ function buildMarkers() {
     if (!d || !el || !d.cells[i]) return;
     const c = d.cells[i], arr = d.now + c.h * 3600000;
     el.innerHTML = c.v != null
-      ? '<span style="color:#11875f;">คาดการณ์ '+_ecFmt(arr)+' น. · '+Math.round(c.v)+' µS/cm</span> <span style="font-weight:500;">(วัดที่'+d.src+' '+_ecFmt(arr - d.TT * 3600000)+')</span>'
+      ? '<span style="color:#11875f;">คาดการณ์ '+_ecFmt(arr)+' น. · '+Math.round(c.v)+' µS/cm</span> <span style="font-weight:500;">(วัดที่'+(d.srcAt ? d.srcAt(c.h).name+' '+_ecFmt(d.srcAt(c.h).ts) : d.src+' '+_ecFmt(arr - d.TT * 3600000))+')</span>'
       : _ecFmt(arr)+' น. · ไม่มีข้อมูลจากต้นทาง';
   };
   window._ecKnownSetY = function (sid) {
@@ -3043,33 +3086,68 @@ function buildMarkers() {
       const dk = document.body.classList.contains('dark');
       const C = { tx: dk?'#f0f0f8':'#111', sub: dk?'#d0d0e0':'#333', card: dk?'rgba(255,255,255,.06)':'#f3f5f8',
                   line: dk?'rgba(255,255,255,.4)':'#555' };
-      let srcName, srcPts, tol, TT, east = false, srcNote = '';
+      let srcName, TT, east = false, srcNote = '', plantName = '';
+      let SM = null, SP = null;                       // SM = ต้นทางหลัก, SP = ช่วงต้นจากค่าที่โรงงาน (ฝั่งตะวันตก)
       if (info.root === 'RAW_SAMLE') {
-        east = true; TT = info.ttRoot; tol = 90 * 60000; srcName = 'สำแล';
-        srcPts = ((window._rawWaterHistory || {})['S1'] || []).filter(p => p.ec > 0).map(p => ({ ts: p.ts, v: p.ec }));
+        east = true; TT = info.ttRoot; srcName = 'สำแล';
+        SM = { pts: window._ecRawSeries('S1').pts, tol: 90 * 60000, TT, key: 'S1' };
       } else if (info.root === 'RAW_MAEKLONG') {
-        const sid = EC_KNOWN_MDIS.includes(nm) ? 'SP12' : 'SP11';
-        TT = info.ttRoot - 100; tol = 40 * 60000;
-        srcName = sid === 'SP12' ? 'มหาสวัสดิ์ (MDIS)' : 'มหาสวัสดิ์ (MTR)';
-        srcNote = 'ใช้ต้นทางที่สถานีมหาสวัสดิ์ เพราะน้ำดิบเขื่อนแม่กลองไม่มีข้อมูล';
-        srcPts = ((loadHistory() || {})[sid] || []).filter(p => p.ec > 1).map(p => ({ ts: p.ts, v: p.ec }));
-        if (TT <= 0.01) {
+        const psid = EC_KNOWN_MDIS.includes(nm) ? 'SP12' : 'SP11';
+        const plantTT = Math.max(0, info.ttRoot - 100);
+        plantName = psid === 'SP12' ? 'มหาสวัสดิ์ (MDIS)' : 'มหาสวัสดิ์ (MTR)';
+        const pp = ((loadHistory() || {})[psid] || []).filter(p => p.ec > 1).map(p => ({ ts: p.ts, v: p.ec })).sort((a, b) => a.ts - b.ts);
+        if (plantTT > 0.01) SP = { pts: pp, tol: 40 * 60000, TT: plantTT, key: psid };
+        const canal = window._ecWestCanal();
+        if (canal) {
+          SM = { pts: canal.pts, tol: 90 * 60000, TT: plantTT + canal.lag, key: canal.key, off: canal.off };
+          srcName = canal.name; TT = SM.TT;
+          if (SP) srcNote = 'ช่วง ' + (+plantTT.toFixed(1)) + ' ชม. แรกใช้ค่าที่วัดได้ที่' + plantName + ' · หลังจากนั้นคำนวณจากน้ำคลองที่' + canal.name;
+          if (canal.key === 'S13') srcNote = (srcNote ? srcNote + ' · ' : '') + 'บางเลนขัดข้อง จึงใช้ กม.54 แทน';
+        } else if (SP) {
+          SM = SP; SP = null; srcName = plantName; TT = plantTT;
+          srcNote = 'น้ำคลองบางเลน/กม.54 ขัดข้อง จึงใช้ค่าที่' + plantName + ' (รู้ล่วงหน้าสั้นลง)';
+        } else {
           return '<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:'+C.card+';font-size:12px;font-weight:600;color:'+C.tx+';">'
-            + 'สถานีนี้คือต้นทางฝั่งตะวันตก จึงไม่มีน้ำที่ "กำลังเดินทางมา" ให้แสดง<br><span style="font-weight:500;color:'+C.sub+';">'+srcNote+'</span></div>';
+            + 'สถานีนี้คือต้นทางฝั่งตะวันตก และเซ็นเซอร์น้ำคลองบางเลน/กม.54 ขัดข้องอยู่ จึงยังคาดการณ์ไม่ได้</div>';
         }
       } else return null;
-      srcPts.sort((a, b) => a.ts - b.ts);
       const now = Date.now();
-      const valAt = ts => {                          // ค่าจริงที่ใกล้ ts ที่สุดภายใน tol
-        let lo = 0, hi = srcPts.length - 1, best = null;
+      const mkVal = S => ts => {                      // ค่าจริงที่ใกล้ ts ที่สุดภายใน tol
+        const a = S.pts; let lo = 0, hi = a.length - 1, best = null;
         if (hi < 0) return null;
-        while (hi - lo > 1) { const m = (lo + hi) >> 1; if (srcPts[m].ts <= ts) lo = m; else hi = m; }
-        for (const p of [srcPts[lo], srcPts[hi]]) if (p && Math.abs(p.ts - ts) <= tol && (!best || Math.abs(p.ts - ts) < Math.abs(best.ts - ts))) best = p;
+        while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m].ts <= ts) lo = m; else hi = m; }
+        for (const p of [a[lo], a[hi]]) if (p && Math.abs(p.ts - ts) <= S.tol && (!best || Math.abs(p.ts - ts) < Math.abs(best.ts - ts))) best = p;
         return best ? best.v : null;
       };
+      const vM = mkVal(SM), vP = SP ? mkVal(SP) : null;
+      // ── ปรับระดับ: ค่ามัธยฐานของ (ค่าจริงที่สถานี − ต้นทางที่เลื่อนเวลาแล้ว) ──
+      const hist0 = ((loadHistory() || {})[String(s.id)] || []).filter(p => p.ec > 1);
+      const biasOf = (S, v, fromH, toH) => {
+        if (!S || !v) return null;
+        const d = [];
+        for (const p of hist0) {
+          if (p.ts < now - fromH * 3600000 || p.ts > now - toH * 3600000) continue;
+          const f = v(p.ts - S.TT * 3600000); if (f != null) d.push(p.ec - f);
+        }
+        if (d.length < 12) return null;
+        d.sort((a, b) => a - b);
+        return Math.max(-80, Math.min(80, d[d.length >> 1]));
+      };
+      const BON = window._ecBiasOn();
+      const bP = biasOf(SP, vP, 72, 0), bPpast = biasOf(SP, vP, 96, 24);
+      const defM = SM.off != null ? SM.off + (bP || 0) : 0;
+      const bM = biasOf(SM, vM, 72, 0), bMpast = biasOf(SM, vM, 96, 24);
+      const BM = BON ? (bM != null ? bM : defM) : 0, BMp = BON ? (bMpast != null ? bMpast : BM) : 0;
+      const BP = BON ? (bP || 0) : 0, BPp = BON ? (bPpast != null ? bPpast : BP) : 0;
+      const fcT = (t, pastMode) => {                  // ค่าคาดการณ์ ณ t ชม. จากตอนนี้
+        if (vP && t <= SP.TT) { const x = vP(now + (t - SP.TT) * 3600000); return x == null ? null : x + (pastMode ? BPp : BP); }
+        const x = vM(now + (t - SM.TT) * 3600000); return x == null ? null : x + (pastMode ? BMp : BM);
+      };
+      const srcAt = t => (vP && t <= SP.TT) ? { name: plantName, ts: now + (t - SP.TT) * 3600000 } : { name: srcName, ts: now + (t - SM.TT) * 3600000 };
+      const valAt = ts => fcT((ts - now) / 3600000 + TT, false);
       const nCell = Math.max(1, Math.ceil(TT));
       const cells = [];
-      for (let h = 0; h < nCell; h++) cells.push({ h, v: valAt(now + (h - TT) * 3600000) });
+      for (let h = 0; h < nCell; h++) cells.push({ h, v: fcT(h, false) });
       const known = cells.filter(c => c.v != null);
       const tLabel = h => { const d = new Date(now + h * 3600000), td = new Date(now);
         const dd = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(td.getFullYear(), td.getMonth(), td.getDate())) / 864e5);
@@ -3101,11 +3179,13 @@ function buildMarkers() {
       // ── เส้นทางน้ำ ──
       const segs = []; let rem = TT;
       if (east) { segs.push({ h: 13, to: 'บางเขน' }); segs.push({ h: 4, to: 'ออกโรงงาน' }); rem = TT - 17; }
+      else if (SM.key === 'S12' || SM.key === 'S13') { segs.push({ h: SM.TT - (SP ? SP.TT : 0), to: 'มหาสวัสดิ์' }); rem = SP ? SP.TT : 0; }
       const tti = TRAVEL_TIME[s.name] || TRAVEL_TIME[nm];
       const last = tti ? parseFloat(tti.tt_from) : NaN, hop = tti ? tti.tt_label.replace(/^จาก\s*/, '') : '';
       const hopIsTrunk = /^(TR\d|Dis\d|MTR|MH|MDIS)/.test(hop);
-      if (isFinite(last) && last > 0 && rem - last >= 0.5 && hop && !hopIsTrunk) { segs.push({ h: rem - last, to: hop }); segs.push({ h: last, to: 'ที่นี่' }); }
-      else { if (hopIsTrunk && segs.length) segs[segs.length-1].to = hop; segs.push({ h: Math.max(rem, 0.5), to: 'ที่นี่' }); }
+      if (rem <= 0.01 && segs.length) segs[segs.length - 1].to = 'ที่นี่';
+      else if (isFinite(last) && last > 0 && rem - last >= 0.5 && hop && !hopIsTrunk) { segs.push({ h: rem - last, to: hop }); segs.push({ h: last, to: 'ที่นี่' }); }
+      else { if (hopIsTrunk && segs.length) segs[segs.length-1].to = east ? hop : 'มหาสวัสดิ์'; segs.push({ h: Math.max(rem, 0.5), to: 'ที่นี่' }); }
       const dot = c => '<div style="width:9px;height:9px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
       let route = '<div style="text-align:center;white-space:nowrap;">'+dot('#1f6fd1')+srcName.replace(/ \(.*\)/,'')+'</div>';
       segs.forEach((g, i) => {
@@ -3119,7 +3199,7 @@ function buildMarkers() {
       const fut = known.map(c => ({ t: c.h, v: c.v }));
       const sid = String(s.id).replace(/[^\w-]/g, '_');
       // [v45] คาดการณ์ย้อนหลัง 24 ชม. + แถบรายชั่วโมงบนแกนเวลาเดียวกับกราฟ + ความแม่นย้อนหลัง
-      const fcAt = t => valAt(now + (t - TT) * 3600000);
+      const fcAt = t => fcT(t, true);
       const pastFc = [];
       for (let h = -24; h <= 0; h++) { const v = fcAt(h); if (v != null) pastFc.push({ t: h, v }); }
       const strip = [];
@@ -3130,11 +3210,16 @@ function buildMarkers() {
       cells.forEach(c => strip.push({ h: c.h, k: 1, v: c.v }));
       const errs = past.filter(p => p.t < 0).map(p => { const f = fcAt(p.t); return f == null ? null : Math.abs(p.v - f); }).filter(e => e != null);
       const acc = errs.length >= 6 ? { mae: errs.reduce((a, b) => a + b, 0) / errs.length, max: Math.max(...errs), n: errs.length } : null;
-      window._ecKnownData[sid] = { past, fut, pastFc, strip, TT, now, src: srcName, cells };
+      window._ecKnownData[sid] = { past, fut, pastFc, strip, TT, now, src: srcName, cells, srcAt };
+      window._ecKnownArgs[sid] = [s, ecNow];
       const yr = _ecKnownY();
       const inp = (id, v) => '<input id="'+id+'" type="number" value="'+v+'" step="10" onchange="window._ecKnownSetY(\''+sid+'\')" style="width:58px;font-size:12px;font-weight:600;padding:1px 4px;color:'+C.tx+';background:transparent;border:1px solid '+C.line+';border-radius:4px;">';
       const lg = (c, t) => '<span><span style="display:inline-block;width:14px;border-top:2.5px solid '+c+';vertical-align:middle;"></span> '+t+'</span>';
-      return '<div style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.12)':'#d0d8e0')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
+      const bShow = BON ? (bM != null ? bM : (SM.off != null ? defM : null)) : null;
+      const biasCtl = '<label title="ชดเชยส่วนต่างระดับระหว่างต้นทางกับสถานีนี้ จากค่ามัธยฐาน 72 ชม. ล่าสุด · ปิดเพื่อดูค่าที่ยังไม่ปรับ" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">'
+        + '<input type="checkbox" '+(BON?'checked':'')+' onchange="window._ecBiasSet(this.checked,\''+sid+'\')" style="margin:0;">ปรับระดับ'
+        + (bShow != null ? ' <span style="font-weight:700;">'+(bShow >= 0 ? '+' : '')+Math.round(bShow)+'</span>' : '') + '</label>';
+      return '<div id="ecky-wrap-'+sid+'" style="margin-top:8px;border-top:1px solid '+(dk?'rgba(255,255,255,.12)':'#d0d8e0')+';padding-top:8px;max-width:100%;overflow:hidden;color:'+C.tx+';">'
         + '<div style="padding:7px 10px;border-radius:8px;background:'+vBg+';color:'+vFg+';margin-bottom:8px;">'+vHtml+'</div>'
         + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">เส้นทางน้ำ · รู้ล่วงหน้า '+TTs+' ชม.</div>'
         + '<div style="display:flex;align-items:center;font-size:11px;font-weight:600;color:'+C.tx+';margin-bottom:4px;">'+route+'</div>'
@@ -3146,6 +3231,7 @@ function buildMarkers() {
         + '</div>'
         + '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;font-weight:600;color:'+C.tx+';">'
         +   ((typeof _maintPopupHtml === 'function') ? _maintPopupHtml(s, 'inline') : '')
+        +   biasCtl
         +   '<span style="margin-left:auto;">แกน '+inp('ecky-lo-'+sid, yr.lo)+' – '+inp('ecky-hi-'+sid, yr.hi)+'</span>'
         + '</div>'
         + (srcNote ? '<div style="font-size:11px;font-weight:500;color:'+C.sub+';margin-top:4px;">'+srcNote+'</div>' : '')
@@ -3423,8 +3509,8 @@ function buildMarkers() {
       +(()=>{
         const mkData = window._mkRawWaterData;
         const mkIds = ['SP11','SP12','11','12'];
-        if (!mkData || !mkData['S11'] || !mkData['S11'].ec || !mkIds.includes(String(sensorId))) return '';
-        const mkEc = mkData['S11'].ec;
+        if (!mkData || !mkData['S11V'] || !mkData['S11V'].ec || !mkIds.includes(String(sensorId))) return '';
+        const mkEc = mkData['S11V'].ec;
         const mkTT = 48;
         const _dk = document.body.classList.contains('dark');
         const yMk = pyClamp(mkEc);
@@ -3461,7 +3547,7 @@ function buildMarkers() {
       +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
       +'<span><span style="color:#1565c0">— จริง</span>&nbsp;&nbsp;<span style="color:#4060c0">- - คาดการณ์</span>&nbsp;&nbsp;<span style="color:#43a047">▓ Confidence band ±'+Math.round(BAND*100)+'%</span>'
       +(window._rawWaterEc && opts && opts.rootKey === 'RAW_SAMLE' ? '&nbsp;&nbsp;<span style="color:#cc0055">- - น้ำดิบสำแล</span>' : '')
-      +(window._mkRawWaterData && window._mkRawWaterData['S11'] && opts && opts.rootKey === 'RAW_MAEKLONG' ? '&nbsp;&nbsp;<span style="color:#0a6050">- - เขื่อนแม่กลอง</span>' : '')
+      +(window._mkRawWaterData && window._mkRawWaterData['S11V'] && opts && opts.rootKey === 'RAW_MAEKLONG' ? '&nbsp;&nbsp;<span style="color:#0a6050">- - น้ำคลองประปา (เทียบเวลา)</span>' : '')
       +'</span>'
       +'<span style="color:'+endColor+';font-weight:700">'+endStatus+' ที่ '+toHHMM(nowHr+ttHours)+'</span>'
       +'</div></div>';
@@ -4106,8 +4192,8 @@ function buildMarkers() {
             saveEcForecast(s.id, foreTs, rwEc, rwEc*(1+EC_FORECAST_BAND), rwEc*(1-EC_FORECAST_BAND));
           }
         // rev20: RAW_MAEKLONG → ดึง EC จาก API น้ำดิบคลองตะวันตก (S11)
-        } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11'] && window._mkRawWaterData['S11'].ec > 0) {
-          const mkEc = window._mkRawWaterData['S11'].ec;
+        } else if (ecRootKey === 'RAW_MAEKLONG' && window._mkRawWaterData && window._mkRawWaterData['S11V'] && window._mkRawWaterData['S11V'].ec > 0) {
+          const mkEc = window._mkRawWaterData['S11V'].ec;
           if (ecTT > 0) {
             // rev28: short label สำหรับ header, full detail สำหรับ sub-label
             const ttInfo = TRAVEL_TIME[s.name] || TRAVEL_TIME[s.name?.replace(/\s+/g,' ').trim()];
@@ -4151,7 +4237,7 @@ function buildMarkers() {
                 + (isMdis && ttLocal ? ' → สจ.มหาสวัสดิ์ → ' + destName + ' ' + ttLocal + 'ชม.' : '')
                 + (!isMkRoot && !isMdis && ttLocal ? ' → ' + destName + ' ' + ttLocal + 'ชม.' : '');
             }
-            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11', rootKey: 'RAW_MAEKLONG', detail: mkDetail });
+            decayChart = buildEcForecastChart(mkEc, mkLabel, ecTT, s.id, ecNow, null, { rwHistKey: 'S11V', rootKey: 'RAW_MAEKLONG', detail: mkDetail });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, mkEc, mkEc*(1+EC_FORECAST_BAND), mkEc*(1-EC_FORECAST_BAND));
           }
@@ -4190,7 +4276,7 @@ function buildMarkers() {
               + (pumpHop ? ' → ' + ecPumpDestName + ' ' + pumpHop.tt + 'ชม.' : ecTT > 100 ? ' → ' + ecPumpDestName + ' ' + (ecTT - 100) + 'ชม.' : '');
           }
           if (ecTT > 0) {
-            decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId, { rwHistKey: ecRootKey==='RAW_SAMLE'?'S1':ecRootKey==='RAW_MAEKLONG'?'S11':null, rootKey: ecRootKey, detail: ecDetail });
+            decayChart = buildEcForecastChart(ecSrcVal, ecLabel, ecTT, s.id, ecNow, ecSrcId, { rwHistKey: ecRootKey==='RAW_SAMLE'?'S1':ecRootKey==='RAW_MAEKLONG'?'S11V':null, rootKey: ecRootKey, detail: ecDetail });
             const foreTs = Date.now() + ecTT * 3600000;
             saveEcForecast(s.id, foreTs, ecSrcVal, ecSrcVal*1.15, ecSrcVal*0.85);
           }
@@ -4218,7 +4304,7 @@ function buildMarkers() {
         const useTT      = rootSensor ? rootTT : ttHours;
         const useLabel   = (rootSensor ? rootLabel : tt.tt_label).replace(/^จาก\s*/, '');
         if (useSensor) {
-          decayChart = buildEcForecastChart(getParamVal(useSensor), useLabel, useTT, s.id, ecNow, useSensor.id, { rwHistKey: (rootLabel==='RAW_SAMLE'||rootLabel.includes('สำแล'))?'S1':(rootLabel==='RAW_MAEKLONG'||rootLabel.includes('แม่กลอง'))?'S11':null, rootKey: (rootLabel==='RAW_SAMLE'||rootLabel.includes('สำแล'))?'RAW_SAMLE':'RAW_MAEKLONG' });
+          decayChart = buildEcForecastChart(getParamVal(useSensor), useLabel, useTT, s.id, ecNow, useSensor.id, { rwHistKey: (rootLabel==='RAW_SAMLE'||rootLabel.includes('สำแล'))?'S1':(rootLabel==='RAW_MAEKLONG'||rootLabel.includes('แม่กลอง'))?'S11V':null, rootKey: (rootLabel==='RAW_SAMLE'||rootLabel.includes('สำแล'))?'RAW_SAMLE':'RAW_MAEKLONG' });
         }
       }
     }
@@ -8196,7 +8282,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
         var _rwK3=null;
         var _ecRI3=typeof EC_ROOT_SOURCE_MAP!=='undefined'?(EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]):null;
         if(_ecRI3&&_ecRI3.root==='RAW_SAMLE')_rwK3='S1';
-        else if(_ecRI3&&_ecRI3.root==='RAW_MAEKLONG')_rwK3='S11';
+        else if(_ecRI3&&_ecRI3.root==='RAW_MAEKLONG')_rwK3='S11V';
         if(_rwK3){
           var _rwH3=_rwK3==='S1'?(window._rawWaterHistory||{}):(window._mkRawWaterHistory||{});
           var _rwHist3=(_rwH3[_rwK3]||[]).filter(function(p){return p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
@@ -8214,7 +8300,7 @@ function rpTrendDraw(sensor, param, allData, _ids) {
       var _rwKey2=null;
       var _ecRI2=typeof EC_ROOT_SOURCE_MAP!=='undefined'?(EC_ROOT_SOURCE_MAP[sName]||EC_ROOT_SOURCE_MAP[sName.replace(/\s+/g,' ')]):null;
       if(_ecRI2&&_ecRI2.root==='RAW_SAMLE')_rwKey2='S1';
-      else if(_ecRI2&&_ecRI2.root==='RAW_MAEKLONG')_rwKey2='S11';
+      else if(_ecRI2&&_ecRI2.root==='RAW_MAEKLONG')_rwKey2='S11V';
       var _rwH2=_rwKey2==='S1'?(window._rawWaterHistory||{}):(window._mkRawWaterHistory||{});
       var _rwHist2=(_rwH2[_rwKey2]||[]).filter(function(p){return p.ec>0;}).sort(function(a,b){return a.ts-b.ts;});
       function _getRwEc2(ts){
@@ -12005,8 +12091,10 @@ function submitFeedback(){
   const RAW_SOURCE_ROUTE = {
     S1:  { plant: 'รง.บางเขน', legs: [{ h: 13, to: 'บางเขน' }, { h: 4, to: 'ออกโรงงาน' }],
            arrive: [['ถึง รง.บางเขน', 13], ['ออกจากโรงงาน', 17]], root: 'RAW_SAMLE' },
-    S12: { plant: 'รง.มหาสวัสดิ์', est: true, legs: [{ h: 35, to: 'รง.มหาสวัสดิ์' }],
-           arrive: [['ถึง รง.มหาสวัสดิ์', 35]], note: 'เวลาเดินทางเป็นค่าประมาณ รอยืนยันด้วยข้อมูลจริง' },
+    // [v46] วัดจริงจากการเทียบรูปคลื่น EC 5–12 พ.ย. 69 (บางเลน → สูบส่งมหาสวัสดิ์ 51 ชม., r = 0.69)
+    S12: { plant: 'สูบส่งมหาสวัสดิ์', legs: [{ h: 51, to: 'สูบส่งมหาสวัสดิ์' }],
+           arrive: [['ถึงสูบส่ง/สูบจ่ายมหาสวัสดิ์', 51]], root: 'RAW_MAEKLONG', rootBase: 100, rootLag: 51,
+           note: 'วัดจากการเทียบรูปคลื่น EC 8 วัน' },
   };
   window._RAW_SOURCE_ROUTE = RAW_SOURCE_ROUTE;
   // [v45.6] กราฟน้ำดิบแบบเดียวกับกราฟสถานี (แกนเข้ม · ชี้/แตะแล้วมีกล่องค่า) — ย้อนหลัง 48 ชม.
@@ -12020,7 +12108,7 @@ function submitFeedback(){
   };
   window._rawChartSvg = function (sid, hist) {
     const now = Date.now(), t0 = now - 48 * 3600000;
-    const pts = (hist || []).filter(p => p && p.ec > 0 && p.ts >= t0).sort((a, b) => a.ts - b.ts);
+    const pts = (hist || []).filter(p => p && p.ec >= 100 && p.ts >= t0).sort((a, b) => a.ts - b.ts);   // [v46] ตัดค่าผิดปกติ (เช่น ค้าง 50)
     if (pts.length < 2) return '<div style="font-size:11.5px;color:#666;padding:6px 0;">ยังมีข้อมูลย้อนหลังไม่พอวาดกราฟ ('+pts.length+' จุด)</div>';
     const vs = pts.map(p => p.ec), mn = Math.min(...vs), mx = Math.max(...vs);
     const step = (mx - mn) <= 40 ? 10 : (mx - mn) <= 120 ? 25 : 50;
@@ -12078,9 +12166,17 @@ function submitFeedback(){
     const dk = document.body.classList.contains('dark');
     const C = { tx: dk?'#f0f0f8':'#111', sub: dk?'#c4c8d6':'#4a5260', line: dk?'rgba(255,255,255,.14)':'#e0e6ee',
                 blue: dk?'#80c0ff':'#1a5090', card: dk?'rgba(255,255,255,.06)':'#f3f5f8' };
-    const d = o.d || {}, ec = d.ec != null && d.ec > 0 ? Math.round(d.ec * 10) / 10 : null;
-    const tMs = d.time ? new Date(d.time).getTime() : NaN;
     const fmt = ms => new Date(ms).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    // [v46] สถานะเซ็นเซอร์ (ค่าต่ำผิดปกติ / ค่าค้าง / ขาดข้อมูล) จากประวัติ
+    const hk = o.sid === 'S1' || (o.west && ['S12', 'S13'].includes(o.sid)) ? o.sid : null;
+    const hl = hk && typeof window._ecRawSeries === 'function' ? window._ecRawSeries(hk) : null;
+    const fault = hl && hl.health === 'fault', stale = hl && hl.health === 'stale';
+    const d = o.d || {}, ec = !fault && d.ec != null && d.ec >= 100 ? Math.round(d.ec * 10) / 10 : null;
+    const tMs = d.time ? new Date(d.time).getTime() : NaN;
+    const healthBox = fault
+      ? '<div style="margin:8px 0;padding:7px 10px;border-radius:8px;background:'+(dk?'rgba(220,60,40,.22)':'#fde3e0')+';color:'+(dk?'#ffb0a5':'#7a1414')+';font-size:12px;font-weight:600;">⚠ เซ็นเซอร์ขัดข้อง · ค่าผิดปกติ '+Math.round(hl.last)+' µS/cm ตั้งแต่ '+fmt(hl.since)
+        + (o.sid === 'S12' ? '<br><span style="font-weight:500;">ระบบคาดการณ์ใช้ กม.54 (64 ชม.) แทนอัตโนมัติ</span>' : '<br><span style="font-weight:500;">ไม่นำค่านี้ไปคาดการณ์</span>') + '</div>'
+      : stale ? '<div style="margin:8px 0;padding:7px 10px;border-radius:8px;background:'+C.card+';font-size:12px;font-weight:600;">ไม่มีข้อมูลใหม่ตั้งแต่ '+fmt(hl.since)+'</div>' : '';
     const row = (k, v) => '<div style="color:'+C.sub+';">'+k+'</div><div style="text-align:right;font-weight:600;">'+v+'</div>';
     const num = (v, u) => v != null && v !== '' && +v > 0 ? v + (u ? ' ' + u : '') : '—';
     const status = ec == null ? '<span style="color:#999;">ไม่มีข้อมูล</span>'
@@ -12096,10 +12192,11 @@ function submitFeedback(){
     if (R && isFinite(tMs) && ec != null) {
       let maxTT = 0;
       if (R.root) Object.values(EC_ROOT_SOURCE_MAP).forEach(v => { if (v && v.root === R.root && v.ttRoot > maxTT) maxTT = v.ttRoot; });
+      if (maxTT && R.rootBase) maxTT = maxTT - R.rootBase + R.rootLag;   // [v46] ฐานเขื่อน 100 ชม. → บางเลน 51 ชม.
       const dot = c => '<div style="width:9px;height:9px;border-radius:50%;background:'+c+';margin:0 auto 2px;"></div>';
       let line = '<div style="text-align:center;white-space:nowrap;">'+dot('#1f6fd1')+o.name+'</div>';
       R.legs.forEach((g, i) => {
-        line += '<div style="flex:'+g.h+';border-top:2px '+(R.est?'dashed':'solid')+' '+C.sub+';margin:0 3px 14px;text-align:center;min-width:16px;"><span style="font-size:11px;font-weight:700;">'+(R.est?'~':'+')+g.h+'</span></div>'
+        line += '<div style="flex:'+g.h+';border-top:2px '+(R.est?'dashed':'solid')+' '+C.sub+';margin:0 3px 15px;text-align:center;min-width:18px;"><span style="font-size:13px;font-weight:700;">'+(R.est?'~':'+')+g.h+'</span></div>'
           + '<div style="text-align:center;white-space:nowrap;">'+dot(i === R.legs.length - 1 ? C.tx : C.sub)+g.to+'</div>';
       });
       route = '<div style="padding:9px 11px;border-radius:8px;background:#1f6fd1;color:#fff;margin:10px 0 8px;">'
@@ -12113,8 +12210,9 @@ function submitFeedback(){
       + '<h4 style="font-size:15px;font-weight:700;color:'+C.tx+';border-bottom:1px solid '+C.line+';padding-bottom:7px;margin:0 0 8px;">'+o.name+'</h4>'
       + '<span style="display:inline-block;background:#2a7fd4;color:#fff;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;">💧 น้ำดิบ</span>'
       + '<div style="display:flex;align-items:baseline;gap:6px;margin:8px 0 6px;"><span style="font-size:28px;font-weight:700;color:'+C.blue+';">'+(ec != null ? ec : '—')+'</span><span style="font-size:13px;font-weight:600;color:'+C.sub+';">µS/cm</span></div>'
+      + healthBox
       + '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px;">'+rows+'</div>'
-      + route
+      + (fault ? '' : route)
       + (o.chart ? '<div style="border-top:1px solid '+C.line+';margin-top:10px;padding-top:6px;">'+o.chart+'</div>' : '')
       + (o.footer ? '<div style="font-size:10.5px;font-weight:500;color:'+C.sub+';margin-top:6px;">'+o.footer+'</div>' : '')
       + '</div>';
@@ -12882,7 +12980,9 @@ function submitFeedback(){
       const isMain = (sid === MK_MAIN);
       const sz  = isMain ? 16 : 5;
       const tap = isMain ? 44 : 24;
-      const color = isMain ? mkEcColor(ec) : '#0a8070';
+      // [v46] เซ็นเซอร์ขัดข้อง → จุดสีเทา (ไม่ระบายสีตามค่าผิดปกติ)
+      const _hf = isMain && typeof window._ecRawSeries === 'function' && window._ecRawSeries(sid).health === 'fault';
+      const color = _hf ? '#9aa3ad' : isMain ? mkEcColor(ec) : '#0a8070';
       const marker = L.marker([st.lat, st.lon], {
         icon: L.divIcon({
           html: `<div style="width:${tap}px;height:${tap}px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:${isMain?'2.5':'1.5'}px solid rgba(255,255,255,.${isMain?'95':'7'});box-shadow:0 ${isMain?'2':'1'}px ${isMain?'8':'3'}px ${color}${isMain?'88':'44'};"></div></div>`,
@@ -12908,7 +13008,7 @@ function submitFeedback(){
 
       // Label — ต้นทางแสดงรหัส+ชื่อ, อื่นๆ แสดงแค่รหัส เล็กลง
       if (isMain) {
-        marker.bindTooltip(`${sid} ${st.name}`, {
+        marker.bindTooltip(`${sid} ${st.name}${_hf ? " · ขัดข้อง" : ""}`, {
           permanent: true, direction: 'top', offset: [0, -14],
           className: 'mk-label',
         });
@@ -13013,7 +13113,7 @@ function submitFeedback(){
     _mkContour.addLayer(knoiMain);
 
     // === EC contour overlay (สีตาม EC interpolated) ===
-    const s11d = _mkData['S11'];
+    const s11d = _mkData['S11V'];
     if (s11d && s11d.ec != null) {
       for (let i = 0; i < MAE_KLONG_RIVER.length - 1; i++) {
         const t = i / Math.max(MAE_KLONG_RIVER.length - 1, 1);
@@ -13148,7 +13248,8 @@ function submitFeedback(){
 
     // EC overlay ตามสีน้ำดิบต้นทาง (S12 บางเลน กม.35)
     const s11d = _mkData[MK_MAIN];
-    if (s11d && s11d.ec != null) {
+    const _cf = typeof window._ecRawSeries === 'function' && window._ecRawSeries(MK_MAIN).health === 'fault';
+    if (s11d && s11d.ec != null && !_cf) {
       const ecColor = mkEcColor(s11d.ec);
       _canalWestLayer.addLayer(L.polyline(CANAL_WEST_WAYPOINTS, {
         color: ecColor, weight: 6, opacity: 0.4,
@@ -13382,6 +13483,7 @@ function submitFeedback(){
       // rev29.1: เฉพาะเมื่อได้ข้อมูลจริง (ไม่ใช่ fallback)
       if (_mkApiFetched) {
         Object.entries(_mkData).forEach(([sid, d]) => {
+          if (d && d.virtual) return;   // [v46] ไม่ใส่ค่าเสมือนลงประวัติ
           if (d && d.ec > 0 && d.time) {
             if (!_mkHistory[sid]) _mkHistory[sid] = [];
             const ts = new Date(d.time).getTime();
@@ -13397,6 +13499,7 @@ function submitFeedback(){
       if (window.BROWSER_WRITES_HISTORY && _mkApiFetched && window._fbReady && window._fb && window._fbSet && window._fbRef) {  // [v38.3] ปิด: collector บันทึกแทน
         const now = Date.now();
         Object.entries(_mkData).forEach(([sid, d]) => {
+          if (d && d.virtual) return;   // [v46] ห้ามเขียนค่าเสมือนลง Firebase
           if (d && d.ec > 0) {
             const ts = d.time ? new Date(d.time).getTime() : now;
             const fbKey = `history/rawmk_${sid.replace(/\//g,'-')}/${ts}`;
@@ -13411,6 +13514,7 @@ function submitFeedback(){
 
     // Update global refs (history เท่านั้น — _mkRawWaterData ใช้ getter แล้ว)
     window._mkRawWaterHistory = _mkHistory;
+    _mkBuildVirtualDam();
 
     // Rebuild markers
     if (layers['rawwater-mk']) {
@@ -13492,6 +13596,27 @@ function submitFeedback(){
   }, 4000);
 
   // ── 12. Expose data globally สำหรับ EC forecast / What-If ───────────
+  // ── [v46] "เขื่อนเสมือน" S11V สำหรับกราฟรุ่นเก่าที่ยังคิดเวลาจากเขื่อนแม่กลอง (ttRoot ≈ 100 ชม.) ──
+  //   เขื่อนไม่มีข้อมูลแล้ว จึงสร้างอนุกรมเทียบเท่าจากน้ำคลอง: V(ts) = บางเลน(ts + 49 ชม.) + 29
+  //   (หรือ กม.54(ts + 36 ชม.) + 38 ถ้าบางเลนขัดข้อง) → ค่าที่ (now − ttRoot) ตรงกับน้ำที่จะถึงสถานีจริง
+  function _mkBuildVirtualDam() {
+    try {
+      if (typeof window._ecRawSeries !== 'function') return;
+      const byHr = new Map();
+      [['S13', 36, 38], ['S12', 49, 29]].forEach(([k, sh, off]) => {
+        window._ecRawSeries(k).pts.forEach(p => {
+          const ts = p.ts - sh * 3600000;
+          byHr.set(Math.round(ts / 3600000), { ts, ec: Math.round((p.v + off) * 10) / 10 });
+        });
+      });
+      const arr = [...byHr.values()].sort((a, b) => a.ts - b.ts);
+      _mkHistory['S11V'] = arr;
+      if (arr.length) _mkData['S11V'] = { ec: arr[arr.length - 1].ec, time: new Date(arr[arr.length - 1].ts).toISOString(), virtual: true };
+      window._mkRawWaterHistory = _mkHistory;
+    } catch (e) { console.warn('[MaeKlong] virtual dam:', e.message); }
+  }
+  window._mkBuildVirtualDam = _mkBuildVirtualDam;
+
   // ใช้ getter เพื่อให้ window._mkRawWaterData ชี้ไปที่ _mkData ปัจจุบันเสมอ
   Object.defineProperty(window, '_mkRawWaterData', {
     get: () => _mkData,
