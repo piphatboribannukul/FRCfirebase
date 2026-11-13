@@ -1531,7 +1531,7 @@ function buildWorld(ctx) {
   mkRibbon(2.1, 0.03, FR_GLOW); mkRibbon(1.5, 0.03, FR_GLOW, RE.r);
   const FR_CHEV = FR_HEAD + 'void main(){ if(vUv.x>uProg*uLen) discard; vec3 c=grad(vUv.x); float v=abs(vUv.y-0.5);' +
     'float s=fract((vUv.x-uTime*1.3)/1.4); float d=s+v*0.9-0.42; float ch=smoothstep(0.0,0.05,d)*(1.0-smoothstep(0.22,0.27,d));' +
-    'float edge=smoothstep(0.5,0.42,v); vec3 col=mix(c*1.05,vec3(1.0),ch*0.85); float tip=1.0-smoothstep(uProg*uLen-1.5,uProg*uLen,vUv.x)*0.0;' +
+    'float edge=1.0-smoothstep(0.42,0.5,v); vec3 col=mix(c*1.05,vec3(1.0),ch*0.85); float tip=1.0-smoothstep(uProg*uLen-1.5,uProg*uLen,vUv.x)*0.0;' +
     'gl_FragColor=vec4(col,edge*0.95*uOp*tip); }';
   mkRibbon(0.62, 0.045, FR_CHEV); mkRibbon(0.62, 0.045, FR_CHEV, RE.r);
   const routeAt = R0.at;
