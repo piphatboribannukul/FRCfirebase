@@ -1025,8 +1025,8 @@ function buildWorld(ctx) {
   const mkTex = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); return canvasTex(c, 8); };
   // ── ลำแสงไฟส่อง: กรวยโปร่งแสงแบบบวกแสง สว่างที่โคมแล้วจางลงสู่พื้น · วัสดุเดียวกันทั้งชั้น → รวม draw call ได้
   const beamTex = mkTex(4, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-  const beamMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, map: beamTex, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
-  const BEAM_W = beamMat('#fff1d6', 0.13), BEAM_B = beamMat('#5aa9ff', 0.16), STAGE_W = beamMat('#fff4dc', 0.3), STAGE_B = beamMat('#3d8bff', 0.38);
+  const beamMat = (col, op, normal) => new THREE.MeshBasicMaterial({ color: col, map: beamTex, transparent: true, opacity: op, blending: normal ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const BEAM_W = beamMat('#fff1d6', 0.13), BEAM_B = beamMat('#5aa9ff', 0.16), STAGE_W = beamMat('#fff4dc', 0.3), STAGE_B = beamMat('#3d8bff', 0.38), SCAN_B = beamMat('#2f80ff', 0.24, true);   // บนพื้นสว่าง แสงแบบบวกมองไม่เห็น → ใช้สีโปร่งแสงปกติ
   const _up = new THREE.Vector3(0, 1, 0), _bv = new THREE.Vector3();
   function beam(parent, from, to, r0, r1, mat) {                 // from = โคม (บน), to = จุดที่ส่อง
     _bv.set(from[0] - to[0], from[1] - to[1], from[2] - to[2]); const len = _bv.length(); _bv.normalize();
@@ -1318,7 +1318,7 @@ function buildWorld(ctx) {
       A(new THREE.SphereGeometry(0.11, 18, 14), whiteP, 0, 0, 0, { parent: ptz }); A(new THREE.SphereGeometry(0.085, 18, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blk, 0, -0.05, 0, { parent: ptz });
       A(new THREE.CylinderGeometry(0.03, 0.034, 0.09, 14), blk, 0, -0.06, 0.085, { parent: ptz, cast: false }).rotation.x = Math.PI / 2;
       { const d = new THREE.Vector3(0, -0.62, 0.78).normalize(), o = new THREE.Vector3(0, -0.06, 0.13), e = o.clone().addScaledVector(d, 2.6);
-        beam(ptz, [o.x, o.y, o.z], [e.x, e.y, e.z], 0.02, 0.85, BEAM_B); }
+        beam(ptz, [o.x, o.y, o.z], [e.x, e.y, e.z], 0.02, 0.85, SCAN_B); }
       A(new THREE.CylinderGeometry(0.07, 0.07, 0.07, 16), whiteP, mx, 2.37, mz - 0.04);
       A(new THREE.CylinderGeometry(0.055, 0.06, 0.04, 16), whiteP, mx, 2.6, mz - 0.25); A(new THREE.CylinderGeometry(0.05, 0.05, 0.11, 16), redL, mx, 2.68, mz - 0.25);
       for (const [ax, az] of [[-0.07, -0.05], [0.07, -0.05], [-0.05, 0.06], [0.05, 0.06]]) { const an = A(new THREE.CylinderGeometry(0.008, 0.012, 0.3, 6), blk, mx + ax, 2.5, mz - 0.25 + az); an.rotation.set(az * 6, 0, -ax * 6); }
@@ -2238,18 +2238,18 @@ function play(opt = {}) {
   // ── ลูกเล่นตอนเลือกบูธ: วงแสงชีพจรบนพื้น + ลำแสงสปอตไลต์ส่องลงบูธ
   const selFX = (() => {
     const g = new THREE.Group(); g.visible = false; W.interior.add(g);
-    const ringM = new THREE.MeshBasicMaterial({ color: '#2d8cff', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const ringM = new THREE.MeshBasicMaterial({ color: '#0a6fd8', transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false });
     const rings = [0, 1].map(() => { const r = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 64), ringM.clone()); r.rotation.x = -Math.PI / 2; r.position.y = 0.03; g.add(r); return r; });
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshBasicMaterial({ color: '#2d8cff', transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshBasicMaterial({ color: '#0a6fd8', transparent: true, opacity: 0.1, depthWrite: false, toneMapped: false }));
     disc.rotation.x = -Math.PI / 2; disc.position.y = 0.025; g.add(disc);
-    const bm = new THREE.MeshBasicMaterial({ color: '#fff3dc', map: W.beamTex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+    const bm = new THREE.MeshBasicMaterial({ color: '#4f9bff', map: W.beamTex, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     const bmesh = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.5, 5.0, 28, 1, true), bm); bmesh.position.y = 2.5; g.add(bmesh);
     let t0 = 0, cur = null;
     return { update(dt, t) {
       const b = st.sel; if (b !== cur) { cur = b; t0 = t; if (b) { const fv = FACEV[b.face], k = (b.w || 2) > 2 ? 1.6 : 1.2; g.position.set(b.x + fv[0] * 0.4, 0, b.z + fv[1] * 0.4); g.scale.set(k * 1.3, 1, k * 1.3); } }
       g.visible = !!b && !st.walk; if (!g.visible) return;
-      rings.forEach((r, i) => { const u = ((t - t0) * 0.55 + i * 0.5) % 1; r.scale.setScalar(0.6 + u * 1.1); r.material.opacity = 0.55 * (1 - u); });
-      bm.opacity = Math.min(1, (t - t0) * 2) * 0.16; disc.material.opacity = 0.08 + Math.sin(t * 3) * 0.03;
+      rings.forEach((r, i) => { const u = ((t - t0) * 0.55 + i * 0.5) % 1; r.scale.setScalar(0.6 + u * 1.1); r.material.opacity = 0.75 * (1 - u); });
+      bm.opacity = Math.min(1, (t - t0) * 2) * 0.12; disc.material.opacity = 0.12 + Math.sin(t * 3) * 0.04;
     } };
   })();
 
