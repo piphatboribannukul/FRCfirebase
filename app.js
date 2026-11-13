@@ -13516,6 +13516,8 @@ function submitFeedback(){
     // Update global refs (history เท่านั้น — _mkRawWaterData ใช้ getter แล้ว)
     window._mkRawWaterHistory = _mkHistory;
     _mkBuildVirtualDam();
+    // [v46] สร้าง popup สถานีใหม่ในโหมด EC เพื่อให้การ์ดคาดการณ์ฝั่งตะวันตกใช้น้ำคลองที่เพิ่งโหลด (แบบเดียวกับฝั่งตะวันออก)
+    try { if (typeof PARAM_MODE !== 'undefined' && PARAM_MODE === 'ec' && typeof buildMarkers === 'function') buildMarkers(); } catch (eB) { console.warn('[MaeKlong] rebuild markers:', eB.message); }
 
     // Rebuild markers
     if (layers['rawwater-mk']) {
