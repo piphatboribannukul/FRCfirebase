@@ -2154,6 +2154,8 @@
     const mpu = merc.meterInMercatorCoordinateUnits();
     const color = frcHex(st.frc);
     let renderer, scene, camera, cab, cabRoot, propsRoot, beam, beamMat, ring, ringMat, city = null, night = false, lights = {};
+    const _mL = new T.Matrix4(), _mR = new T.Matrix4(), _mP = new T.Matrix4(), _vS = new T.Vector3(), _vP = new T.Vector3();   // [v46.3] ใช้ซ้ำทุกเฟรม (ไม่สร้างใหม่ → GC น้อยลง)
+    let _rpT = null;
     return {
       id: 'frc3d-cabinet', type: 'custom', renderingMode: '3d',
       onAdd(map, gl) {
@@ -2178,7 +2180,7 @@
         renderer.autoClear = false;
         this.map = map;
       },
-      setCity(c) { if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); propsRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); const sh = st.cabShift || [0, 0]; cabRoot.position.set(c.cabXZ[0] + sh[0], 0, c.cabXZ[1] - sh[1]); /* cabShift = เลื่อนตู้ [ตอ., เหนือ] ม. โดยฉากไม่เลื่อนตาม */ cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
+      setCity(c) { if (!scene) return; if (city) scene.remove(city.grp); city = c; if (c) { scene.add(c.grp); propsRoot.position.set(c.cabXZ[0], 0, c.cabXZ[1]); const sh = st.cabShift || [0, 0]; cabRoot.position.set(c.cabXZ[0] + sh[0], 0, c.cabXZ[1] - sh[1]); /* cabShift = เลื่อนตู้ [ตอ., เหนือ] ม. โดยฉากไม่เลื่อนตาม */ cabRoot.rotation.y = c.cabYaw; propsRoot.rotation.y = st.propYaw != null ? st.propYaw * Math.PI / 180 : c.cabYaw; this.setNight(night); } this.map && this.map.triggerRepaint(); },
       setShowcase(on) { if (!cab) return; this._show = on; cab.setShowcase(on || night, night); this.map && this.map.triggerRepaint(); },
       setNight(on) {
         if (!lights.hemi) return;
@@ -2189,6 +2191,7 @@
         cab.setShowcase(on || this._show, on);
       },
       render(gl, matrix) {
+        if (!scene) return;
         const z = this.map.getZoom();
         // ขยายขนาดตู้เมื่อซูมออก (ขนาดจริงเมื่อซูมใกล้ ≥ 18.5) — ไม่งั้นมองไม่เห็นในภาพเมือง
         const k = exag(z), a = beamAlpha(z);
@@ -2198,19 +2201,34 @@
         ring.scale.setScalar(1 + 0.25 * pulse);
         cabRoot.scale.setScalar(k);              // ขยายเฉพาะตู้ — เมืองคงขนาดจริง
         const s = mpu;
-        const l = new T.Matrix4()
-          .makeTranslation(merc.x, merc.y, merc.z)
-          .scale(new T.Vector3(s, -s, s))
-          .multiply(new T.Matrix4().makeRotationX(Math.PI / 2));
-        camera.projectionMatrix = new T.Matrix4().fromArray(matrix).multiply(l);
+        const l = _mL.makeTranslation(merc.x, merc.y, merc.z)
+          .scale(_vS.set(s, -s, s))
+          .multiply(_mR.makeRotationX(Math.PI / 2));
+        camera.projectionMatrix.copy(_mP.fromArray(matrix)).multiply(l);
         if (this.onFrame) {                                                          // ตำแหน่งจอจริงของตู้ (ใช้วางป้ายค่าให้ตรงตู้)
           cabRoot.updateMatrixWorld(true); const cv = this.map.getCanvas(), W = cv.clientWidth, H = cv.clientHeight, y0 = cab.grp.position.y;
-          const pj = (x, y, zz) => { const v = new T.Vector3(x, y0 + y, zz).applyMatrix4(cabRoot.matrixWorld).applyMatrix4(camera.projectionMatrix); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, ok: v.z < 1 }; };
+          const pj = (x, y, zz) => { const v = _vP.set(x, y0 + y, zz).applyMatrix4(cabRoot.matrixWorld).applyMatrix4(camera.projectionMatrix); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, ok: v.z < 1 }; };
           this.onFrame({ top: pj(0, 2.5, 0), side: pj(0.78, 1.25, 0.42), z });
         }
         renderer.resetState();
         renderer.render(scene, camera);
-        this.map.triggerRepaint();
+        // [v46.3] กล้องนิ่ง → วาดแค่ ~30 เฟรม/วิ (พอสำหรับวงแสงกะพริบ) · กล้องเคลื่อน → MapLibre วาดเต็มอัตราเอง
+        //   เดิมสั่งวาดใหม่ทุกเฟรมตลอดเวลา = GPU ทำงานเต็ม 100% ไม่หยุด → เปิดนานๆ เครื่องร้อน ลดความเร็วตัวเอง → กระตุก
+        const mp = this.map; clearTimeout(_rpT);
+        if (mp.isMoving()) mp.triggerRepaint();
+        else _rpT = setTimeout(() => { try { scene && mp.triggerRepaint(); } catch (e) {} }, 33);
+      },
+      onRemove() {                                                                   // [v46.3] คืนหน่วยความจำ GPU/JS ตอนปิด
+        clearTimeout(_rpT);
+        try {
+          scene && scene.traverse(o => {
+            if (o.geometry) o.geometry.dispose();
+            const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+            ms.forEach(m => { for (const k in m) { const v = m[k]; if (v && v.isTexture) v.dispose(); } m.dispose(); });
+          });
+          renderer && renderer.dispose();
+        } catch (e) {}
+        scene = city = cab = null;
       },
     };
   }
@@ -2272,6 +2290,7 @@
     const msg = wrap.querySelector('#frc3d-msg');
     const state = { wrap, map: null, orbit: true, spin: false, night: false, saved: {}, layer: null, st };
     _cur = state;
+    try { window.dispatchEvent(new Event('frc3d-open')); } catch (e) {}   // [v46.3] หน้าหลักพักแอนิเมชันที่ถูกบัง
     state.t0 = performance.now();
     state.osmP = getOSM(st); state.osmP.catch(() => {});      // เริ่มโหลดข้อมูลเมืองพร้อมกับแผนที่
     wrap.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (a) act(a.dataset.a, a); });
@@ -2515,9 +2534,11 @@
     if (window.FRC3D_INSIDE) window.FRC3D_INSIDE.stop();
     if (_tour && !_tour.switching) stopTour();
     if (!_cur) return;
+    try { _cur.layer && _cur.layer.onRemove && _cur.layer.onRemove(); } catch (e) {}   // [v46.3] คืนหน่วยความจำ (เผื่อ MapLibre ไม่เรียกเอง)
     try { _cur.map && _cur.map.remove(); } catch (e) {}
     _cur.wrap.remove(); _cur = null;
     document.removeEventListener('keydown', onKey);
+    try { window.dispatchEvent(new Event('frc3d-close')); } catch (e) {}
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 

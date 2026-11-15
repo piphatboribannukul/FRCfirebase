@@ -4661,7 +4661,8 @@ function toggleSbMenu(el) {
 }
 
 let activeTab='alert';
-function setTab(t) {
+// [v46.3] เดิมชื่อ setTab — ซ้ำกับ setTab ของแถบเมนูบน (บรรทัดหลัง) ทำให้กด "รายการสถานี" ไม่เปลี่ยนแท็บ
+function setSbTab(t) {
   activeTab=t;
   ['alert','list'].forEach(id=>{
     document.getElementById('tab-'+id).className='tab-btn '+(id===t?'active':'inactive');
@@ -9514,7 +9515,7 @@ const _zepInitTimer = setInterval(() => {
   fc.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;display:none;';
   wrap.appendChild(fc);
 
-  var _raf = null, _on = false, _parts = [];
+  var _raf = null, _on = false, _parts = [], _paused = false;   // [v46.3] _paused = พักชั่วคราว (เปิด 3D อยู่ — มองไม่เห็นแผนที่)
   var MAX = 2000, TRAIL = 16;
 
   // ── point-in-polygon ──
@@ -9699,7 +9700,7 @@ const _zepInitTimer = setInterval(() => {
   var _frameCount = 0;
 
   function doFrame() {
-    if (!_on) return;
+    if (!_on || _paused) { _raf = null; return; }
     var W = fc.width, H = fc.height;
     if (!W || !H) { doResize(); _raf = requestAnimationFrame(doFrame); return; }
 
@@ -9995,6 +9996,12 @@ const _zepInitTimer = setInterval(() => {
     doFrame();
   };
 
+  // [v46.3] พัก/เล่นต่อ โดยไม่ล้าง particle (ใช้ตอนเปิด 3D สถานี — แผนที่ถูกบังทั้งจอ ไม่ต้องวาด ~4 ms/เฟรม)
+  window.pauseFlowAnimation = function(p) {
+    _paused = !!p;
+    if (_paused) { if (_raf) { cancelAnimationFrame(_raf); _raf = null; } }
+    else if (_on && !_raf) _raf = requestAnimationFrame(doFrame);
+  };
   window.stopFlowAnimation = function() {
     _on = false;
     fc.style.display = 'none';
@@ -16489,6 +16496,10 @@ function open3DPicker() {
   document.head.appendChild(css);
   const b3 = document.getElementById('mtab-3dst'); if (b3) { b3.onclick = open3DPicker; b3.title = 'มุมมอง 3 มิติ ตู้วัด — เลือกสถานี หรือเล่นทั้งหมด'; }
 
+  // [v46.3] เปิด 3D อยู่ = แผนที่ด้านหลังถูกบัง → พักแอนิเมชันการไหล (คืน CPU/GPU ให้ 3D · ไม่ร้อนเครื่องเวลาเปิดนานๆ)
+  { let rt = null; const busy = () => window.FRC3D && (FRC3D.isOpen() || FRC3D.touring());
+    window.addEventListener('frc3d-open', () => { clearTimeout(rt); window.pauseFlowAnimation && pauseFlowAnimation(true); });
+    window.addEventListener('frc3d-close', () => { clearTimeout(rt); rt = setTimeout(() => { if (!busy()) window.pauseFlowAnimation && pauseFlowAnimation(false); }, 1200); }); }
   // เล่นเองเมื่อไม่มีการใช้งาน
   const q = new URLSearchParams(location.search), qa = q.get('autotour');
   if (qa === '0' || qa === 'off') return;
