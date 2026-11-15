@@ -1106,27 +1106,22 @@ function buildWorld(ctx) {
     for (const sx of [-0.55, 0.55]) { A(box(0.025, 0.025, 0.32), propMat.steel, sx, 2.48, -0.27, { cast: false }); const lh = A(new THREE.CylinderGeometry(0.045, 0.06, 0.13, 14), M.dark, sx, 2.44, -0.1, { cast: false }); lh.rotation.x = 0.9; }
     A(box(1.96, 0.035, 0.035), lightStrip, 0, 2.43, -0.38, { cast: false });
     if (sl.own !== 'mwa') {                                                         // ── บูธพันธมิตรแบบงานแสดงสินค้าจริง
-      // ป้ายไฟหัวบูธ (กล่องไฟสีแบรนด์ + ชื่อบริษัท)
-      const fc = document.createElement('canvas'); fc.width = 512; fc.height = 88; const fg = fc.getContext('2d');
-      fg.fillStyle = b.col; fg.fillRect(0, 0, 512, 88); fg.fillStyle = 'rgba(255,255,255,.22)'; fg.fillRect(0, 0, 512, 3);
-      fg.fillStyle = '#ffffff'; fg.textAlign = 'center'; fg.textBaseline = 'middle'; fitText(fg, b.tbc ? 'บูธพันธมิตร' : b.name, 700, 50, F_HEAD, 460); fg.fillText(b.tbc ? 'บูธพันธมิตร' : b.name, 256, 47);
-      const fm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: canvasTex(fc, 8), emissive: '#ffffff', emissiveIntensity: 0.6, roughness: 0.45 })); fm.emissiveMap = fm.map;
+      // ป้ายไฟหัวบูธ + จอ LED วาดลงภาพเดียว (วัสดุเดียว → รวมเป็น draw call เดียวกับชิ้นอื่นของบูธ)
+      const ac = document.createElement('canvas'); ac.width = 512; ac.height = 256; const ag = ac.getContext('2d'), nm = b.tbc ? 'บูธพันธมิตร' : b.name;
+      ag.fillStyle = b.col; ag.fillRect(0, 0, 512, 88); ag.fillStyle = 'rgba(255,255,255,.22)'; ag.fillRect(0, 0, 512, 3);
+      ag.fillStyle = '#ffffff'; ag.textAlign = 'center'; ag.textBaseline = 'middle'; fitText(ag, nm, 700, 50, F_HEAD, 460); ag.fillText(nm, 256, 47);
+      const dk = shade(b.col, -0.55), lt2 = shade(b.col, 0.25); ag.fillStyle = dk; ag.fillRect(0, 96, 512, 160);
+      for (let k = 0; k < 4; k++) { const gr = ag.createLinearGradient(k * 128, 96, k * 128 + 128, 256); gr.addColorStop(0, b.col); gr.addColorStop(1, dk); ag.fillStyle = gr; ag.beginPath(); ag.moveTo(k * 128 + 30, 256); ag.lineTo(k * 128 + 90, 96); ag.lineTo(k * 128 + 128, 96); ag.lineTo(k * 128 + 68, 256); ag.fill(); }
+      ag.fillStyle = lt2; ag.textAlign = 'left'; ag.font = `700 40px ${F_HEAD}`; ag.fillText(b.tbc ? 'PARTNER' : b.name, 28, 176);
+      const am = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: canvasTex(ac, 4), emissive: '#ffffff', emissiveIntensity: 0.7, roughness: 0.4 })); am.emissiveMap = am.map;
+      const uvPlane = (w, h, v0, v1) => { const q = new THREE.PlaneGeometry(w, h), uv = q.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) ? v1 : v0); return q; };
       A(box(2.06, 0.38, 0.16), M.white, 0, 2.7, -0.42, { cast: false });
-      const fp = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.34), fm); fp.position.set(0, 2.7, -0.338); inner.add(fp);
+      const fp = new THREE.Mesh(uvPlane(2.0, 0.34, 1 - 88 / 256, 1), am); fp.position.set(0, 2.7, -0.338); inner.add(fp);
       // ผนังข้างสีแบรนด์ + ไฟเส้นแนวตั้ง
       A(box(0.06, 2.62, 0.66), topMat, -1.0, 1.31, -0.12); A(box(0.022, 2.42, 0.022), lightStrip, -0.962, 1.25, 0.2, { cast: false });
-      // จอ LED บนผนังหลัง (ภาพเลื่อนวน — ขยับ offset ไม่ต้องอัปโหลดใหม่)
-      const lc = document.createElement('canvas'); lc.width = 512; lc.height = 144; const lg = lc.getContext('2d');
-      const dk = shade(b.col, -0.55), lt2 = shade(b.col, 0.25); lg.fillStyle = dk; lg.fillRect(0, 0, 512, 144);
-      for (let k = 0; k < 4; k++) { const gr = lg.createLinearGradient(k * 128, 0, k * 128 + 128, 144); gr.addColorStop(0, b.col); gr.addColorStop(1, dk); lg.fillStyle = gr; lg.beginPath(); lg.moveTo(k * 128 + 30, 144); lg.lineTo(k * 128 + 90, 0); lg.lineTo(k * 128 + 128, 0); lg.lineTo(k * 128 + 68, 144); lg.fill(); }
-      lg.fillStyle = lt2; for (let k = 0; k < 2; k++) { lg.globalAlpha = 0.9; lg.font = `700 34px ${F_HEAD}`; lg.textBaseline = 'middle'; lg.fillText(b.tbc ? 'PARTNER' : b.name, 20 + k * 256, 72); } lg.globalAlpha = 1;
-      const lt = canvasTex(lc, 4); lt.wrapS = THREE.RepeatWrapping; lt.repeat.set(0.5, 1); lt.userData.live = true;
-      const sm = ZM.reg(zone, new THREE.MeshStandardMaterial({ map: lt, emissive: '#ffffff', emissiveIntensity: 0.9, roughness: 0.3 })); sm.emissiveMap = lt;
+      // จอ LED บนผนังหลัง
       A(box(0.8, 0.48, 0.04), M.dark, 0.5, 1.78, -0.37, { cast: false });
-      const sp = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.43), sm); sp.position.set(0.5, 1.78, -0.348); inner.add(sp);
-      const ph = idx * 0.37; live.push((dt, t) => { lt.offset.x = (t * 0.045 + ph) % 1; });
-      // ลำแสงจากไฟส่องสองดวงลงที่เคาน์เตอร์/สินค้า
-      beam(inner, [-0.55, 2.4, -0.04], [-0.45, 0.7, 0.42], 0.05, 0.42, BEAM_W); beam(inner, [0.55, 2.4, -0.04], [0.5, 1.0, 0.42], 0.05, 0.38, BEAM_W);
+      const sp = new THREE.Mesh(uvPlane(0.75, 0.43, 0, 1 - 96 / 256), am); sp.position.set(0.5, 1.78, -0.348); inner.add(sp);
     }
     A(box(0.24, 0.2, 0.07), propMat.white, 0.74, 1.12, 0.26, { cast: false }); A(box(0.2, 0.16, 0.012), topMat, 0.74, 1.15, 0.30, { cast: false });
     }
@@ -1220,7 +1215,7 @@ function buildWorld(ctx) {
       const rz = 0.2, rx = 0.15;
       A(new THREE.CylinderGeometry(1.08, 1.1, 0.3, 56), M.white, rx, 0.15, rz); A(new THREE.TorusGeometry(1.09, 0.025, 8, 72), top, rx, 0.3, rz).rotation.x = Math.PI / 2;
       A(new THREE.CylinderGeometry(1.0, 1.0, 0.01, 56), platM, rx, 0.305, rz, { cast: false });
-      const robot = new THREE.Group(); robot.position.set(rx, 0.31, rz); robot.rotation.y = 0.75; robot.scale.setScalar(1.25); robot.userData.noBatch = true; inner.add(robot);
+      const robot = new THREE.Group(); robot.position.set(rx, 0.31, rz); robot.rotation.y = 0.75; robot.scale.setScalar(1.25); robot.userData.noBatch = true; robot.userData.batchRoot = true; inner.add(robot);
       live.push((dt, t) => { robot.position.y = 0.31 + Math.sin(t * 1.3) * 0.012; robot.rotation.y = 0.75 + Math.sin(t * 0.3) * 0.4; robot.rotation.z = Math.sin(t * 1.1) * 0.012; });   // ลอยน้ำ/หันช้า ๆ
       const R = (geo, mat, x, y, z, rxx = 0, ryy = 0, rzz = 0) => { const m = new THREE.Mesh(geo, ZM.m(zone, mat)); m.position.set(x, y, z); m.rotation.set(rxx, ryy, rzz); m.castShadow = true; m.receiveShadow = true; robot.add(m); return m; };
       for (const hx of [-0.36, 0.36]) {
@@ -1314,7 +1309,7 @@ function buildWorld(ctx) {
       A(box(0.4, 0.03, 0.34), greyP, mx, 0.6, mz + 0.05); A(box(0.36, 0.012, 0.3), sol, mx, 0.618, mz + 0.05, { cast: false });
       const lid = A(box(0.44, 0.03, 0.4), greyP, mx, 0.72, mz + 0.42); lid.rotation.x = -1.1;
       A(box(0.05, 2.0, 0.05), mast, mx, 1.55, mz - 0.25); A(box(0.06, 0.04, 0.24), mast, mx, 2.35, mz - 0.15);
-      const ptz = new THREE.Group(); ptz.position.set(mx, 2.25, mz - 0.04); ptz.userData.noBatch = true; inner.add(ptz);          // กล้อง PTZ หมุนกวาดพื้นที่ (ลูกเล่น)
+      const ptz = new THREE.Group(); ptz.position.set(mx, 2.25, mz - 0.04); ptz.userData.noBatch = true; ptz.userData.batchRoot = true; inner.add(ptz);          // กล้อง PTZ หมุนกวาดพื้นที่ (ลูกเล่น)
       A(new THREE.SphereGeometry(0.11, 18, 14), whiteP, 0, 0, 0, { parent: ptz }); A(new THREE.SphereGeometry(0.085, 18, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blk, 0, -0.05, 0, { parent: ptz });
       A(new THREE.CylinderGeometry(0.03, 0.034, 0.09, 14), blk, 0, -0.06, 0.085, { parent: ptz, cast: false }).rotation.x = Math.PI / 2;
       { const d = new THREE.Vector3(0, -0.62, 0.78).normalize(), o = new THREE.Vector3(0, -0.06, 0.13), e = o.clone().addScaledVector(d, 2.6);
@@ -1539,6 +1534,7 @@ function buildWorld(ctx) {
     add('aud', new RoundedBoxGeometry(0.7, 1.15, 0.5, 2, 0.05), M.wood, (ax0 + ax1) / 2 + 6.5, sTop + 0.57, stageZ + 1.2);   // แท่นพูด
     { // ไฟเวที: ลำแสงจากราวไฟเพดานลงเวที กวาดช้า ๆ (ขาว 2 ดวงกลาง · น้ำเงิน 4 ดวงข้าง)
       const cx = (ax0 + ax1) / 2, tz = stageZ + 1.4, truss = new THREE.Group(); zg('aud').add(truss);
+      live.push((dt, t, cam) => { truss.visible = Math.hypot(cam.x - cx, cam.z - stageZ) < 42; });   // วาดเฉพาะตอนกล้องอยู่ใกล้ห้อง
       add('aud', box(14, 0.18, 0.18), M.dark, cx, AUD_H - 0.25, stageZ - 4.5, { cast: false });
       [[-6, STAGE_B], [-3.2, STAGE_B], [-1, STAGE_W], [1, STAGE_W], [3.2, STAGE_B], [6, STAGE_B]].forEach(([dx, mt], k) => {
         const pv = new THREE.Group(); pv.position.set(cx + dx, AUD_H - 0.32, stageZ - 4.5); pv.userData.noBatch = true; truss.add(pv);
@@ -1664,7 +1660,7 @@ function buildWorld(ctx) {
   }
 
   // ── รวม mesh นิ่งที่ใช้วัสดุเดียวกันเป็นก้อนเดียว (ลด draw call หลายพัน → ไม่กี่ร้อย) · ส่วนที่ขยับ/ซ่อนได้แยกเป็นกลุ่มของตัวเอง
-  if (!window.F5_NOBATCH) { console.info('[F5] compactGroups', compactGroups(world).join(' → ')); staticBatch([world, ...booths.map(b => b.group), ...SB.levels.map(Lv => Lv.g), SB.extras.g, scan]); }
+  if (!window.F5_NOBATCH) { console.info('[F5] compactGroups', compactGroups(world).join(' → ')); const subRoots = []; world.traverse(o => { if (o.userData.batchRoot) subRoots.push(o); }); staticBatch([world, ...subRoots, ...booths.map(b => b.group), ...SB.levels.map(Lv => Lv.g), SB.extras.g, scan]); }
 
   if (MOBILE || window.F5_DIET) textureDiet(ctx.scene);
 
@@ -1788,22 +1784,30 @@ function makePeople(parent, booths, seats, routeAt, L) {
     const dummy = () => new THREE.Group();
     return { g, body: g, legPivotL: dummy(), legPivotR: dummy(), aL: dummy(), aR: dummy(), ...o };
   }
-  function rigged(o) {                     // แยกชิ้น (คนเดิน) · ข้อต่อ สะโพก/เข่า/ไหล่/ศอก ให้ท่าเดินเป็นธรรมชาติ
-    const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-    const piv = {}; for (const k of Object.keys(PIV)) { piv[k] = new THREE.Group(); piv[k].position.set(...PIV[k]); body.add(piv[k]); }
-    const KNEE = -0.46, ELBOW = -0.3;
-    for (const sd of ['L', 'R']) { piv['shin' + sd] = new THREE.Group(); piv['shin' + sd].position.set(0, KNEE, 0); piv['leg' + sd].add(piv['shin' + sd]);
-      piv['fore' + sd] = new THREE.Group(); piv['fore' + sd].position.set(0, ELBOW, 0); piv['arm' + sd].add(piv['fore' + sd]); }
-    const byG = {};   // รวมชิ้นส่วนในข้อต่อเดียวกันเป็น mesh เดียว (สีตามจุดยอด) → ~9 draw call ต่อคน
+  function rigged(o) {                     // คนเดิน: โครงกระดูก 1 ชุด (สะโพก/เข่า/ไหล่/ศอก) ใน mesh เดียว → 1 draw call ต่อคน
+    const g = new THREE.Group(), KNEE = -0.46, ELBOW = -0.3;
+    const names = ['root', ...Object.keys(PIV), 'shinL', 'shinR', 'foreL', 'foreR'], bone = {}, off = {};
+    bone.root = new THREE.Bone(); off.root = [0, 0, 0];
+    for (const k of Object.keys(PIV)) { const b = new THREE.Bone(); b.position.set(...PIV[k]); bone.root.add(b); bone[k] = b; off[k] = PIV[k]; }
+    for (const sd of ['L', 'R']) {
+      const sh = new THREE.Bone(); sh.position.set(0, KNEE, 0); bone['leg' + sd].add(sh); bone['shin' + sd] = sh; off['shin' + sd] = [off['leg' + sd][0], off['leg' + sd][1] + KNEE, off['leg' + sd][2]];
+      const fo = new THREE.Bone(); fo.position.set(0, ELBOW, 0); bone['arm' + sd].add(fo); bone['fore' + sd] = fo; off['fore' + sd] = [off['arm' + sd][0], off['arm' + sd][1] + ELBOW, off['arm' + sd][2]];
+    }
+    const geos = [];
     for (let [grp, geo, col, x, y, z, rx = 0, ry = 0, rz = 0] of parts(o)) {
       if ((grp === 'legL' || grp === 'legR') && y < KNEE - 0.04) { grp = 'shin' + grp.slice(-1); y -= KNEE; }
       else if ((grp === 'armL' || grp === 'armR') && y < ELBOW - 0.04) { grp = 'fore' + grp.slice(-1); y -= ELBOW; }
       const g2 = geo.index ? geo.toNonIndexed() : geo.clone(); g2.deleteAttribute('uv'); g2.applyMatrix4(tmpM.compose(new THREE.Vector3(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz)), one));
-      const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
-      g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); (byG[grp] = byG[grp] || []).push(g2); }
-    for (const [grp, geos] of Object.entries(byG)) { const m = new THREE.Mesh(mergeGeometries(geos, false), vmat); geos.forEach(q => q.dispose()); m.castShadow = true; (grp === 'root' ? body : piv[grp]).add(m); }
+      const ob = off[grp]; g2.translate(ob[0], ob[1], ob[2]);                       // ท่ายืนตรง (bind pose)
+      const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4), bi = names.indexOf(grp);
+      for (let q = 0; q < n; q++) { arr[q * 3] = c.r; arr[q * 3 + 1] = c.g; arr[q * 3 + 2] = c.b; si[q * 4] = bi; sw[q * 4] = 1; }
+      g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); g2.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g2.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+      geos.push(g2);
+    }
+    const mesh = new THREE.SkinnedMesh(mergeGeometries(geos, false), vmat); geos.forEach(q => q.dispose());
+    mesh.add(bone.root); mesh.bind(new THREE.Skeleton(names.map(n => bone[n]))); mesh.castShadow = true; g.add(mesh);
     g.scale.setScalar(o.scale || 1); parent.add(g);
-    return { g, body, legPivotL: piv.legL, legPivotR: piv.legR, aL: piv.armL, aR: piv.armR, kL: piv.shinL, kR: piv.shinR, eL: piv.foreL, eR: piv.foreR, ...o };
+    return { g, body: bone.root, legPivotL: bone.legL, legPivotR: bone.legR, aL: bone.armL, aR: bone.armR, kL: bone.shinL, kR: bone.shinR, eL: bone.foreL, eR: bone.foreR, ...o };
   }
   let k = 0;
   const who = extra => { const female = rnd() < 0.42, r = rnd(); return Object.assign({ k: k++, female, skirt: female && rnd() < 0.55, dress: female && rnd() < 0.2, jacket: female && rnd() < 0.45, longHair: female && rnd() < 0.6, shirtOnly: !female && rnd() < 0.18, style: r < 0.12 ? 'casual' : 'formal', scale: (female ? 0.94 : 1.0) + rnd() * 0.06 }, extra); };
