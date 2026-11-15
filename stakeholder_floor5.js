@@ -468,10 +468,10 @@ function standeeTex() {
   const c = document.createElement('canvas'); c.width = 600; c.height = 900; const g = c.getContext('2d');
   g.clearRect(0, 0, 600, 900);
   g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(40, 30, 520, 300, 40); g.fill();
-  g.fillStyle = '#1d5fc0'; g.font = `800 66px ${F_HEAD}`; g.fillText('อยากรู้', 70, 110); g.font = `700 50px ${F_HEAD}`; g.fillText('คุณภาพน้ำ สแกนเลย', 70, 175);
+  g.fillStyle = '#1d5fc0'; g.font = `700 66px ${F_HEAD}`; g.fillText('อยากรู้', 70, 110, 460); fitText(g, 'คุณภาพน้ำ สแกนเลย', 700, 50, F_HEAD, 420); g.fillText('คุณภาพน้ำ สแกนเลย', 70, 175, 460);
   g.fillStyle = '#0b2f5c'; for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) if ((i * 7 + j * 3) % 4 < 2 || i % 8 === 0 || j % 8 === 0) g.fillRect(420 + i * 13, 190 + j * 13, 12, 12);
   drop(g, 290, 600, 2.1);
-  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(70, 760, 460, 120, 30); g.fill(); g.fillStyle = '#1d5fc0'; g.font = `800 64px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('น้ำประปาดื่มได้', 300, 845);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(70, 760, 460, 120, 30); g.fill(); g.fillStyle = '#1d5fc0'; g.font = `700 64px ${F_HEAD}`; g.textAlign = 'center'; g.fillText('น้ำประปาดื่มได้', 300, 845, 420);
   return canvasTex(c, 8);
 }
 function regWallCanvas() {                                      // ผนังลงทะเบียน (แบบงาน IWA)
@@ -479,20 +479,21 @@ function regWallCanvas() {                                      // ผนัง�
   const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1d5fc0'); gr.addColorStop(1, '#2f8fe8'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   waves(g, W, H, 820, 0.4);
   g.globalAlpha = .12; g.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc((i * 523) % W, (i * 271) % 700, 10 + (i % 6) * 12, 0, 7); g.fill(); } g.globalAlpha = 1;
-  emblem(g, W / 2, 210, 130);
-  g.fillStyle = '#fff'; g.textAlign = 'center';
-  g.font = `600 70px ${F_HEAD}`; g.fillText('ยินดีต้อนรับ · WELCOME', W / 2, 420);
-  g.font = `700 160px ${F_HEAD}`; g.fillText('Stakeholder Day', W / 2, 580);
-  g.font = `600 74px ${F_HEAD}`; g.fillText('การประปานครหลวง · Metropolitan Waterworks Authority', W / 2, 690);
-  g.font = `500 56px ${F_BODY}`; g.globalAlpha = .92; g.fillText('“ประปาคุณภาพ เพื่อชีวิตที่ดี”', W / 2, 780);
+  // ฉากกว้าง 3 ม. (ภาพ 1000 px) · โต๊ะ+โน้ตบุ๊ก+แจกันสูงถึง ~1.45 ม. = ภาพแถว ~550 → ข้อความทั้งหมดอยู่เหนือแถว 520 ไม่ถูกบัง
+  emblem(g, W / 2, 125, 92);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; const MW = W * 0.86;
+  g.font = `600 60px ${F_HEAD}`; g.fillText('ยินดีต้อนรับ · WELCOME', W / 2, 270, MW);
+  g.font = `700 150px ${F_HEAD}`; g.fillText('Stakeholder Day', W / 2, 410, MW);
+  g.font = `600 58px ${F_HEAD}`; g.fillText('การประปานครหลวง · Metropolitan Waterworks Authority', W / 2, 495, MW);
+  g.font = `500 50px ${F_BODY}`; g.globalAlpha = .92; g.fillText('“ประปาคุณภาพ เพื่อชีวิตที่ดี”', W / 2, 900, MW);
   return c;
 }
 function totemCanvas(t1, t2) {
   const c = document.createElement('canvas'); c.width = 400; c.height = 1200; const g = c.getContext('2d');
   g.fillStyle = '#123f86'; g.fillRect(0, 0, 400, 1200); waves(g, 400, 1200, 1050, 0.45);
   emblem(g, 200, 150, 90); g.fillStyle = '#fff'; g.textAlign = 'center';
-  g.font = `600 40px ${F_BODY}`; g.fillText('Stakeholder Day', 200, 310);
-  fitText(g, t1, 700, 66, F_HEAD, 360); g.fillText(t1, 200, 620); g.fillStyle = '#bfe3ff'; fitText(g, t2, 500, 40, F_BODY, 360); g.fillText(t2, 200, 690);
+  g.font = `600 40px ${F_BODY}`; g.fillText('Stakeholder Day', 200, 310, 330);
+  fitText(g, t1, 700, 66, F_HEAD, 320); g.fillText(t1, 200, 620, 344); g.fillStyle = '#bfe3ff'; fitText(g, t2, 500, 40, F_BODY, 320); g.fillText(t2, 200, 690, 344);
   return c;
 }
 function withLogo(make, aniso) {                            // วาดใหม่เมื่อภาพตรา กปน. โหลดเสร็จ
@@ -506,7 +507,7 @@ const totemTex = (t1, t2) => withLogo(() => totemCanvas(t1, t2), 8);
 function signCanvas(lines, bg, fg, w = 1024, h = 300) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
   g.fillStyle = bg; g.fillRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
-  lines.forEach(([t, wt, sz, y, color, fam]) => { g.fillStyle = color || fg; fitText(g, t, wt, sz, fam || F_HEAD, w * 0.9); g.fillText(t, w / 2, y); });
+  lines.forEach(([t, wt, sz, y, color, fam]) => { g.fillStyle = color || fg; fitText(g, t, wt, sz, fam || F_HEAD, w * 0.8); g.fillText(t, w / 2, y, w * 0.86); });   // เผื่อขอบ + จำกัดความกว้างตอนวาด (Safari บนมือถือวัดความกว้างอักษรไทยคลาดได้ → ตัวอักษรล้นขอบ)
   return canvasTex(c, 8);
 }
 function backdropTex() {
@@ -739,7 +740,7 @@ function makeScene(root, opt) {
   camera.userData.wide = 1;
   { const upm = camera.updateProjectionMatrix.bind(camera);
     camera.updateProjectionMatrix = function () { const f = this.fov, kf = this.aspect < 1.25 ? Math.min(1.25 / this.aspect, 2.1) : 1, k = 1 + (kf - 1) * this.userData.wide;
-      if (k > 1.001) { this.fov = Math.min(Math.max(f, 92), 2 * Math.atan(Math.tan(f * Math.PI / 360) * k) * 180 / Math.PI); upm(); this.fov = f; } else upm(); }; }
+      if (k > 1.001) { this.fov = Math.min(Math.max(f, this.userData.cap || 92), 2 * Math.atan(Math.tan(f * Math.PI / 360) * k) * 180 / Math.PI); upm(); this.fov = f; } else upm(); }; }
 
   const hemi = new THREE.HemisphereLight('#f4f8ff', '#a9a49a', 0.55); scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff6ea', 2.0);
@@ -1668,7 +1669,7 @@ function buildWorld(ctx) {
   const people = makePeople(interior, booths, seats, routeAt, L);
   const routes = [{ at: routeAt, L }, { at: RE.at, L: RE.L }];
 
-  return { world, interior, ZM, zoneGroups, live, beamTex, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM };
+  return { world, interior, ZM, zoneGroups, live, beamTex, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM, blob: people.blob };
 }
 
 function roundedPath(pts, r) {
@@ -1844,6 +1845,18 @@ function makePeople(parent, booths, seats, routeAt, L) {
     for (const p of sit) { p.g.updateMatrix(); const m = p.g.children[0]; geos.push(m.geometry.clone().applyMatrix4(p.g.matrix)); m.geometry.dispose(); parent.remove(p.g); p.g = sitG; p.body = sitG; }
     if (geos.length) { const m = new THREE.Mesh(mergeGeometries(geos, false), vmat); m.castShadow = true; geos.forEach(q => q.dispose()); sitG.add(m); parent.add(sitG); }
   }
+  // มือถือ: คนเดินไม่ทอดเงาจริง (เงาต้องอัปเดตทุกเฟรม = หนัก) → ใช้เงานุ่มใต้เท้าแทน (InstancedMesh เดียว · 1 draw call)
+  if (MOBILE) {
+    const walk = list.filter(p => p.mode === 'walk'); walk.forEach(p => p.g.traverse(o => { o.castShadow = false; }));
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+    gr.addColorStop(0, 'rgba(30,38,50,.5)'); gr.addColorStop(0.5, 'rgba(30,38,50,.28)'); gr.addColorStop(1, 'rgba(30,38,50,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const geo = new THREE.PlaneGeometry(0.8, 0.62).rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ map: canvasTex(c, 1), transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const blob = new THREE.InstancedMesh(geo, mat, walk.length); blob.frustumCulled = false; blob.userData.noBatch = true; blob.renderOrder = 30; parent.add(blob);   // renderOrder สูง: วาดหลังพื้น (พื้นเป็นวัสดุโปร่งใสของโซน → ถ้าวาดก่อนจะโดนพื้นทับ)
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+    list.blob = { mesh: blob, update() { walk.forEach((p, i) => { const on = p.g.visible; v.set(p.g.position.x, p.g.position.y + 0.03, p.g.position.z); q.setFromAxisAngle(sc.set(0, 1, 0), p.g.rotation.y); const k = on ? (p.scale || 1) : 0; m4.compose(v, q, sc.set(k, k, k)); blob.setMatrixAt(i, m4); }); blob.instanceMatrix.needsUpdate = true; } };
+    list.blob.update();
+  }
   return list;
 }
 
@@ -1922,6 +1935,18 @@ function play(opt = {}) {
     if (!ctx.composer) ctx.setupComposer(w, h); else { ctx.composer.setSize(w, h); }
   }
   resize(); addEventListener('resize', resize); st.resize = resize;
+  // จอแนวตั้ง: แผงเส้นทางด้านล่างบังภาพราวหนึ่งในสาม → เลื่อนจุดกลางภาพขึ้นไปกลางพื้นที่ที่มองเห็นจริง (บูธ/จุดที่เล็งไม่จมใต้แผง)
+  st.vOff = 0;
+  function viewShift(now) {
+    if (!st.vT || now - st.vT > 400) { st.vT = now; let tg = 0;
+      const w = root.clientWidth, h = root.clientHeight, j = root.querySelector('.journey');
+      if (h > w * 1.05 && !root.classList.contains('intro') && j) { const r0 = root.getBoundingClientRect(), jt = j.getBoundingClientRect().top - r0.top, hd = root.querySelector('.ui');
+        const top = hd ? Math.min(h * 0.2, hd.getBoundingClientRect().bottom - r0.top) : 0; if (jt > h * 0.3 && jt < h * 0.95) tg = Math.max(0, h / 2 - (top + jt) / 2); }
+      st.vTg = Math.round(tg); }
+    const tg = st.vTg || 0; st.vOff = Math.abs(st.vOff - tg) < 0.5 ? tg : st.vOff + (tg - st.vOff) * 0.08;
+    const w = root.clientWidth, h = root.clientHeight, key = w + 'x' + h + ':' + st.vOff.toFixed(1); if (key === st.vKey) return; st.vKey = key;
+    if (st.vOff > 0.5) camera.setViewOffset(w, h, 0, st.vOff, w, h); else camera.clearViewOffset();
+  }
 
   // ── ป้าย HTML
   const lblRoot = root.querySelector('#f5lbl');
@@ -1998,13 +2023,14 @@ function play(opt = {}) {
       const a = st.zoneA[z] = st.zoneA[z] + (tgt - st.zoneA[z]) * k;
       W.ZM.set(z, a);
     }
-    const rel = st.focus ? (REL[st.focus] || [st.focus]) : null;
+    const rel = st.focus ? (REL[st.focus] || [st.focus]) : null; let moving = false;
     for (const m of W.walls) {
       const tgt = st.wallIntro * (rel && !rel.includes(m.userData.zone) ? 0.08 : 1);
-      const kk = m.userData.k = m.userData.k + (tgt - m.userData.k) * (st.introOn ? 1 : k);
+      const k0 = m.userData.k, kk = m.userData.k = m.userData.k + (tgt - m.userData.k) * (st.introOn ? 1 : k); if (Math.abs(kk - k0) > 1e-4) moving = true;
       const v = Math.max(0.001, kk); m.scale.y = v; m.position.y = m.userData.h * v / 2;
       if (m.userData.label) { m.userData.label.visible = v > 0.9; }
     }
+    st.zMoving = moving; if (moving) st.shPend = true;
   }
 
   // ── ทัวร์ & เส้นทาง
@@ -2053,7 +2079,7 @@ function play(opt = {}) {
     for (const b of W.booths) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < nd && Math.abs(b.along - w.s) < 4.5) { nd = d; near = b; } }
     const slow = near && nd < 4.2 && !near.tbc;
     w.seen = w.seen || {};
-    if (near && near.kind && /wari|snap|cia|cc|twq/.test(near.kind) && !w.seen[near.code] && w.s >= near.along - 0.4) { w.seen[near.code] = true; w.hold = /snap|cia/.test(near.kind) ? 2.6 : 2.2; }   // แวะดูบูธเด่นสักครู่
+    if (near && near.kind && /wari|snap|cia|cc|twq/.test(near.kind) && !w.seen[near.code] && w.s >= near.along - 0.4) { w.seen[near.code] = true; w.hold = /snap|cia/.test(near.kind) ? 2.6 : 2.2; w.hn = near; }   // แวะดูบูธเด่นสักครู่
     if (w.hold > 0) { w.hold -= dt; w.v = lerp(w.v, 0, Math.min(1, dt * 5)); }
     else { const toEnd = W.L - w.s, onStair = w.s > W.sDoor + 3; w.v = lerp(w.v, toEnd < 3 ? Math.max(0.3, toEnd * 0.45) : onStair ? 1.25 : slow ? WALK.slow : WALK.v, Math.min(1, dt * 2.2)); }
     w.s = Math.min(W.L, w.s + w.v * dt);
@@ -2063,16 +2089,27 @@ function play(opt = {}) {
     let look = new THREE.Vector3(ahead.x, floorY(ahead.x, ahead.z) + 1.45, ahead.z);
     { const k = ss(W.sDoor + 5, W.L - 1, w.s); if (k > 0) look.lerp(new THREE.Vector3((AUDm.ax0 + AUDm.ax1) / 2, AUDm.pitY + 2.6, AUDm.az1), k); }   // ลงถึงล่าง: หันมองเวที
     if (slow) { const k = w.hold > 0 ? 0.9 : Math.min(1, (4.2 - nd) / 2.2) * 0.6; look.lerp(new THREE.Vector3(near.x, 1.25, near.z), k); }
-    if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * 2.2));
+    // แวะบูธเด่น: เล็งกลางบูธเต็ม ๆ · จอแนวตั้งถอยหลังออกจากบูธ + ยกกล้อง + ขยายมุมกว้างเล็กน้อย ให้เห็นทั้งบูธ (เดิมเห็นแค่ครึ่ง)
+    w.hb = lerp(w.hb || 0, w.hold > 0 ? 1 : 0, Math.min(1, dt * 2.4)); if (w.hb < 0.002 && !(w.hold > 0)) w.hn = null;
+    if (w.hn && w.hb > 0.002) {
+      const b = w.hn, port = clamp((1.15 - camera.aspect) / 0.6), hb = w.hb * w.hb * (3 - 2 * w.hb);
+      camera.userData.cap = 92 + 10 * port * hb; camera.updateProjectionMatrix();
+      const away = new THREE.Vector3(pos.x - b.x, 0, pos.z - b.z), dist = Math.max(0.5, away.length()); away.normalize();
+      const vf = Math.max(camera.fov, camera.userData.cap) * Math.PI / 360, hh = Math.atan(Math.tan(vf) * camera.aspect);
+      const need = ((b.w || 2) / 2 + 0.55) / Math.tan(hh), back = clamp(need - dist, 0, 1.7) * port * hb;
+      pos.addScaledVector(away, back); pos.y += 0.5 * port * hb;
+      look.lerp(new THREE.Vector3(b.x, 1.25, b.z), hb);
+    } else if (camera.userData.cap) { camera.userData.cap = 0; camera.updateProjectionMatrix(); }
+    if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * (2.2 + 2.5 * (w.hb || 0))));
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
     setWalkCard(jOf(w.s));
-    for (const pp of W.people) if (pp.mode === 'stand') pp.g.visible = Math.hypot(pp.g.position.x - pos.x, pp.g.position.z - pos.z) > 1.1;
+    { const r = 1.1 + 0.7 * (w.hb || 0); for (const pp of W.people) if (pp.mode === 'stand') pp.g.visible = Math.hypot(pp.g.position.x - pos.x, pp.g.position.z - pos.z) > r; }
     if (w.s >= W.L - 0.02) { w.endT = (w.endT || 0) + dt; if (w.endT > 2.6) { setAuto(false); goStep(STEPS.length - 1); } }
   }
   function setAuto(on) {
     st.auto = on; st.autoT = 0; const b = root.querySelector('#f5auto'); b.classList.toggle('pri', on); b.innerHTML = on ? ui('pause') + 'หยุดเดินชม' : ui('walk') + 'เดินชม';
     if (on) { st.walk = { s: 1.3, v: 0.4, look: null }; st.walkJ = -1; st.tween = null; st.spin = false; controls.autoRotate = false; controls.enabled = false; setFocus(null); selectBooth(null); camera.fov = 66; camera.updateProjectionMatrix(); }
-    else if (st.walk) { st.walk = null; W.people.forEach(pp => { if (pp.mode === 'stand') pp.g.visible = true; }); controls.enabled = true; camera.fov = 45; camera.updateProjectionMatrix(); }
+    else if (st.walk) { st.walk = null; camera.userData.cap = 0; W.people.forEach(pp => { if (pp.mode === 'stand') pp.g.visible = true; }); controls.enabled = true; camera.fov = 45; camera.updateProjectionMatrix(); }
   }
   function act(k) {
     if (k === 'next') { setAuto(false); goStep(st.step + 1); }
@@ -2200,7 +2237,7 @@ function play(opt = {}) {
     }
     { const k = ss(5.6, INTRO_END, t); ctx.scene.fog.near = lerp(420, 170, k); ctx.scene.fog.far = lerp(1500, 430, k); }
     st.wallIntro = Math.max(0.001, eOut(ss(4.6, 6.0, t)));
-    W.booths.forEach((b, i) => { const k = Math.max(0.001, eOut(ss(5.4 + i * 0.06, 6.2 + i * 0.06, t))); b.group.scale.setScalar(k); });
+    W.booths.forEach((b, i) => { const k = Math.max(0.001, eOut(ss(5.4 + i * 0.06, 6.2 + i * 0.06, t))); b.group.scale.setScalar(k); b.group.visible = k > 0.002; });   // ยังไม่โผล่ = ไม่ต้องวาด
     W.routeU.uProg.value = ss(6.0, 7.8, t);
     W.people.forEach(p => { p.g.visible = t > 6.6; });
     const ttl = root.querySelector('#f5ttl'); ttl.style.opacity = Math.min(ss(0.1, 0.7, t), 1 - ss(1.4, 2.0, t));
@@ -2280,7 +2317,13 @@ function play(opt = {}) {
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
       if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 40 && (ctx.gtao || renderer.getPixelRatio() > 1)) { st.aoOff = true; if (ctx.gtao) ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
-    if (MOBILE) { st.shN = (st.shN || 0) + 1; if (st.shN % (st.introOn ? 2 : 5) === 1) renderer.shadowMap.needsUpdate = true; }
+    if (MOBILE) {   // มือถือ: เงาอัปเดตเฉพาะตอนฉากเปลี่ยนเสร็จ (เดิมทุก 2–5 เฟรม → เฟรมหนัก/เบาสลับกัน ภาพจึงสะดุด) · คนเดินใช้เงาใต้เท้าแทน
+      const key = !st.introOn ? 9 : st.xHolding ? 1 : st.intro >= 6.5 ? 3 : st.intro >= 5.1 ? 2 : 0;
+      if (st.shKey !== key) { st.shKey = key; renderer.shadowMap.needsUpdate = true; }
+      else if (st.shPend && !st.zMoving) { st.shPend = false; renderer.shadowMap.needsUpdate = true; }
+      if (W.blob) W.blob.update();
+    }
+    viewShift(now);
     if (ctx.composer) ctx.composer.render(); else renderer.render(scene, camera);
     placeLabels();
     st.raf = requestAnimationFrame(frame);

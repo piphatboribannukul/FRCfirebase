@@ -106,8 +106,10 @@
   const err = document.getElementById('err'), prepEl = document.getElementById('prep');
   // โหลดฉากชั้น 5 กับฟอนต์คู่กันเบื้องหลัง — ปุ่มกดได้ทันทีไม่ต้องรอ
   const f5mod = import('./stakeholder_floor5.js').catch(e => { err.textContent = 'โหลดฉากชั้น 5 ไม่สำเร็จ: ' + e.message; });
-  const fonts = Promise.all(['700 40px "Bai Jamjuree"', '600 40px "Bai Jamjuree"', '500 40px "Bai Jamjuree"', '500 40px "IBM Plex Sans Thai"', '600 40px "IBM Plex Sans Thai"'].map(f => document.fonts.load(f, 'กขค Ab'))).catch(() => {});
+  const fonts = Promise.all(['700 40px "Bai Jamjuree"', '600 40px "Bai Jamjuree"', '500 40px "Bai Jamjuree"', '400 40px "IBM Plex Sans Thai"', '500 40px "IBM Plex Sans Thai"', '600 40px "IBM Plex Sans Thai"'].map(f => document.fonts.load(f, 'กขค Ab ·→“”'))).catch(() => {});
   const fontsMax = Promise.race([fonts, new Promise(r => setTimeout(r, 2500))]);   // เน็ตช้า: ไม่รอฟอนต์เกิน 2.5 วิ
+  // ป้ายในฉากชั้น 5 วาดตัวอักษรครั้งเดียวตอนเตรียมฉาก → ต้องได้ฟอนต์จริงก่อน (ไม่งั้นตัวอักษรเพี้ยน/ล้นป้าย) · รอได้นานกว่า เพราะผู้ใช้เห็นวงหมุนบนปุ่มอยู่แล้ว
+  const fontsPrep = Promise.race([fonts.then(() => document.fonts.ready), new Promise(r => setTimeout(r, 8000))]);
 
   const HQ = {
     name: 'การประปานครหลวง สำนักงานใหญ่',
@@ -139,7 +141,7 @@
   let prepP = null, prepDone = false;
   function prepNow() {
     if (prepP) return prepP;
-    prepP = Promise.all([f5mod, fontsMax]).then(frame2).then(() => { try { return window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} })
+    prepP = Promise.all([f5mod, fontsPrep]).then(frame2).then(() => { try { return window.MWA_FLOOR5 && window.MWA_FLOOR5.prepare && window.MWA_FLOOR5.prepare({}); } catch (e) {} })
       .then(() => { prepDone = true; setStatus('พร้อมนำเสนอ', true); try { window.SD3D.preload(HQ.cityFile); } catch (e) {} });
     return prepP;
   }
@@ -153,7 +155,7 @@
   }
   async function goF5() {
     if (busy) return; busy = true; setStatus('กำลังเปิดชั้น 5'); bF5.innerHTML = '<span class="spin dk"></span>กำลังเปิด';
-    await Promise.all([f5mod, fontsMax]); await frame2();
+    await Promise.all([f5mod, fontsPrep]); await frame2();
     if (window.MWA_FLOOR5) window.MWA_FLOOR5.play(Object.assign({ onDone: () => {} }, LITE ? { ao: false, dpr: 1 } : {}));
     show(false); watchBack(); busy = false; bF5.innerHTML = bF5HTML; setStatus('พร้อมนำเสนอ', true);
   }
@@ -161,7 +163,8 @@
   const q = new URLSearchParams(location.search);
   // มือถือ: เข้าชั้น 5 แล้วปิดแผนที่ที่อยู่ด้านหลัง (คืนหน่วยความจำ ~ไม่ให้ iOS ปิดหน้าเว็บ) · กดกลับจากชั้น 5 → หน้าแรก
   if (MOBILE) setInterval(() => { const f5 = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(), mp = window.SD3D && window.SD3D.isOpen();
-    if (f5 && mp) { window.__f5since = window.__f5since || performance.now(); if (performance.now() - window.__f5since > 1500) { try { window.SD3D.release(); } catch (e) {} } } else window.__f5since = 0; }, 500);
+    const idle = !(window.__f5 && window.__f5.introOn && !window.__f5.xHolding);   // ลบแผนที่ตอนภาพหยุดนิ่ง (ช่วงค้างดูแยกชั้น หรือหลังจบฉาก) · ลบระหว่างกล้องเคลื่อนทำให้ภาพสะดุด
+    if (f5 && mp && idle) { window.__f5since = window.__f5since || performance.now(); if (performance.now() - window.__f5since > 500) { try { window.SD3D.release(); } catch (e) {} } } else window.__f5since = 0; }, 500);
   if (MOBILE) { prepEl.style.visibility = 'hidden'; f5mod.then(() => { try { window.SD3D.preload(HQ.cityFile); } catch (e) {} }); }
   if (q.has('floor5')) goF5(); else if (q.has('go')) { goMap(); } else if (!MOBILE) setTimeout(() => window.requestIdleCallback ? requestIdleCallback(prepNow, { timeout: 1200 }) : prepNow(), 250);
   f5mod.then(() => fonts).then(() => { window.F5READY = true; });
