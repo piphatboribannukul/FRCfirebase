@@ -1698,30 +1698,45 @@ function makePeople(parent, booths, seats, routeAt, L) {
   const blouses = ['#ffffff', '#e9dfd3', '#d9e6f2', '#f1d9de', '#c9d8e6', '#2b3a55', '#7a2f3e'];
   const casual = ['#e9eef3', '#cfdbe7', '#ffffff', '#c8b8a2', '#8fa3b8'];
   const skins = ['#d7a985', '#c8936c', '#e3bc98', '#b88563', '#cf9d78', '#dcb08c'];
-  const hairs = ['#1a1714', '#231d18', '#2e241c', '#141210', '#3b2e24'];
+  const hairs = ['#2b2019', '#33261c', '#3f2e22', '#241b15', '#4a3628'];
   const vmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
   const cache = {}, mm = c => cache[c] || (cache[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.78 }));
   const lathe = (pts, seg = 18) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
   const taper = (r0, r1, h, seg = 12) => new THREE.CylinderGeometry(r0, r1, h, seg, 1);
+  // แขนขาแบบมีกล้ามเนื้อ (ต้นขา/น่อง/ต้นแขน) แทนทรงกระบอกตรง · จุดศูนย์กลางชิ้นอยู่กลางความยาวเหมือนเดิม (โครงกระดูกใช้ตำแหน่งนี้แบ่งท่อนบน/ล่าง)
+  const limb = (pts, h, seg = 16) => lathe(pts.map(([r, t]) => [r, (t - 0.5) * h]), seg);
+  // ผมแนบศีรษะ: เปลือกตามรูปศีรษะจริง ขอบหน้าผากสูง ท้ายทอยต่ำ (เดิมเป็นครึ่งทรงกลมครอบ → ศีรษะทะลุผม ดูเหมือนหมวก)
+  const HEADP = [[0.001, -0.118], [0.04, -0.113], [0.066, -0.09], [0.083, -0.05], [0.094, -0.005], [0.099, 0.035], [0.094, 0.075], [0.075, 0.105], [0.042, 0.123], [0.001, 0.128]];
+  const rHead = y => { for (let i = 1; i < HEADP.length; i++) { const [r0, y0] = HEADP[i - 1], [r1, y1] = HEADP[i]; if (y <= y1) return r0 + (r1 - r0) * clamp((y - y0) / (y1 - y0)); } return 0.001; };
+  function hairCap(front, back, k = 1.075, nT = 36, nY = 12) {
+    const pos = [], idx = [];
+    for (let i = 0; i <= nT; i++) { const th = i / nT * Math.PI * 2, f = Math.pow(0.5 + 0.5 * Math.cos(th), 1.4), e = back + (front - back) * f;
+      for (let j = 0; j <= nY; j++) { const t = j / nY, y = e + (0.129 - e) * (1 - (1 - t) * (1 - t)), r = j === nY ? 0 : rHead(Math.min(y, 0.127)) * k + 0.003;
+        pos.push(r * Math.sin(th) * 0.9, y + 0.004 * t, r * Math.cos(th) * 1.02); } }
+    for (let i = 0; i < nT; i++) for (let j = 0; j < nY; j++) { const a = i * (nY + 1) + j, b = a + nY + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  }
   const G = {
-    thigh: taper(0.074, 0.058, 0.46), shin: taper(0.056, 0.044, 0.42), knee: new THREE.SphereGeometry(0.058, 12, 8),
-    thighF: taper(0.064, 0.05, 0.46), shinF: taper(0.046, 0.034, 0.42), kneeF: new THREE.SphereGeometry(0.049, 12, 8),
+    thigh: limb([[0.054, 0], [0.058, 0.18], [0.068, 0.55], [0.078, 0.85], [0.08, 1]], 0.46), shin: limb([[0.035, 0], [0.04, 0.12], [0.056, 0.55], [0.059, 0.72], [0.054, 0.9], [0.052, 1]], 0.42), knee: new THREE.SphereGeometry(0.054, 16, 10),
+    thighF: limb([[0.047, 0], [0.05, 0.18], [0.06, 0.55], [0.069, 0.85], [0.071, 1]], 0.46), shinF: limb([[0.03, 0], [0.034, 0.12], [0.048, 0.55], [0.05, 0.72], [0.047, 0.9], [0.046, 1]], 0.42), kneeF: new THREE.SphereGeometry(0.047, 16, 10),
     shoe: lathe([[0.001, 0], [0.05, 0.005], [0.055, 0.04], [0.045, 0.07], [0.001, 0.075]], 14), heel: taper(0.012, 0.012, 0.06, 6),
-    pelvis: new RoundedBoxGeometry(0.31, 0.19, 0.2, 3, 0.07),
-    torso: lathe([[0.13, 0], [0.135, 0.06], [0.155, 0.18], [0.175, 0.3], [0.18, 0.38], [0.16, 0.44], [0.09, 0.48], [0.055, 0.5]], 22),
+    pelvis: lathe([[0.1, -0.1], [0.135, -0.07], [0.15, -0.02], [0.148, 0.04], [0.132, 0.1]], 22),
+    torso: lathe([[0.128, 0], [0.132, 0.06], [0.148, 0.17], [0.166, 0.28], [0.176, 0.35], [0.176, 0.395], [0.162, 0.435], [0.125, 0.465], [0.075, 0.488], [0.05, 0.5]], 26),
     jacketHem: lathe([[0.165, 0], [0.16, 0.1], [0.14, 0.2]], 22),
     skirt: lathe([[0.16, 0.42], [0.2, 0.25], [0.235, 0]], 22), dress: lathe([[0.15, 0.62], [0.17, 0.45], [0.21, 0.2], [0.24, 0]], 22),
     vee: new THREE.CircleGeometry(0.085, 3), tie: new THREE.BoxGeometry(0.035, 0.24, 0.01), collar: taper(0.062, 0.07, 0.05, 14),
-    shoulder: new THREE.SphereGeometry(0.056, 14, 10),
-    upper: taper(0.056, 0.047, 0.3), fore: taper(0.046, 0.036, 0.27), handG: new THREE.SphereGeometry(0.042, 10, 8),
-    neck: taper(0.045, 0.05, 0.1), head: new THREE.SphereGeometry(0.1, 22, 18), ear: new THREE.SphereGeometry(0.022, 8, 6),
-    hairS: new THREE.SphereGeometry(0.106, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), hairL: lathe([[0.1, 0.24], [0.11, 0.15], [0.105, 0.05], [0.085, 0]], 18),
+    shoulder: new THREE.SphereGeometry(0.057, 18, 12), elbow: new THREE.SphereGeometry(0.043, 12, 8),
+    upper: limb([[0.044, 0], [0.047, 0.2], [0.054, 0.62], [0.055, 0.85], [0.054, 1]], 0.3), fore: limb([[0.03, 0], [0.033, 0.1], [0.043, 0.62], [0.044, 0.85], [0.042, 1]], 0.27), handG: new THREE.SphereGeometry(0.042, 14, 10),
+    neck: taper(0.043, 0.048, 0.1, 16),
+    head: lathe([[0.001, -0.118], [0.04, -0.113], [0.066, -0.09], [0.083, -0.05], [0.094, -0.005], [0.099, 0.035], [0.094, 0.075], [0.075, 0.105], [0.042, 0.123], [0.001, 0.128]], 26),
+    nose: new THREE.SphereGeometry(0.016, 10, 8), ear: new THREE.SphereGeometry(0.021, 10, 8),
+    hairS: hairCap(0.07, -0.05), hairF: hairCap(0.075, -0.02), hairL: lathe([[0.096, 0.26], [0.108, 0.17], [0.106, 0.07], [0.09, 0]], 24),
     bun: new THREE.SphereGeometry(0.05, 12, 10), badge: new THREE.BoxGeometry(0.07, 0.095, 0.01), strap: new THREE.TorusGeometry(0.12, 0.007, 4, 20, Math.PI),
     doc: new THREE.BoxGeometry(0.22, 0.3, 0.012), phone: new THREE.BoxGeometry(0.075, 0.15, 0.012), hbag: new RoundedBoxGeometry(0.26, 0.2, 0.09, 2, 0.03), mbag: new RoundedBoxGeometry(0.06, 0.28, 0.34, 2, 0.02), bstrap: new THREE.BoxGeometry(0.03, 0.62, 0.012),
     vest: lathe([[0.143, 0], [0.163, 0.18], [0.186, 0.3], [0.19, 0.38], [0.168, 0.44]], 22), vestBand: new THREE.CylinderGeometry(0.157, 0.157, 0.035, 22, 1, true), vestBand2: new THREE.CylinderGeometry(0.179, 0.179, 0.035, 22, 1, true),
     helmet: new THREE.SphereGeometry(0.118, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), brim: new THREE.CylinderGeometry(0.13, 0.13, 0.012, 22),
   };
-  G.torso.scale(1.13, 1, 0.64); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3); G.head.scale(0.86, 1.08, 0.96); G.hairS.scale(0.88, 1.06, 1.0); G.hairL.scale(0.95, 1, 0.8);
+  G.torso.scale(1.07, 1, 0.72); G.pelvis.scale(1.04, 1, 0.76); G.head.scale(0.9, 1, 1.02); G.nose.scale(0.85, 1.25, 1); G.ear.scale(0.6, 1, 0.9); G.shoulder.scale(0.92, 0.8, 1.0); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3);  G.hairL.scale(0.95, 1, 0.8);
   G.vest.scale(1.13, 1, 0.68); G.vestBand.scale(1.13, 1, 0.68); G.vestBand2.scale(1.13, 1, 0.68); G.helmet.scale(0.92, 0.85, 1.02); G.brim.scale(0.92, 1, 1.05); G.skirt.scale(1.05, 1, 0.75); G.dress.scale(1.05, 1, 0.75); G.handG.scale(0.8, 1.5, 0.6); G.vee.rotateZ(-Math.PI / 2); G.vee.scale(0.75, 1.5, 1); G.shoe.rotateX(0);
   const list = [];
   const pick = (arr, k) => arr[((k % arr.length) + arr.length) % arr.length];
@@ -1756,19 +1771,20 @@ function makePeople(parent, booths, seats, routeAt, L) {
       P.push(['root', G.vestBand, '#c6ced6', 0, 1.08, 0], ['root', G.vestBand2, '#c6ced6', 0, 1.24, 0]);
       P.push(['root', G.helmet, '#1f6fd6', 0, 1.69, 0.004], ['root', G.brim, '#1f6fd6', 0, 1.705, 0.03]);
     }
-    P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.087, 1.63, 0], ['root', G.ear, sk, 0.087, 1.63, 0]);
-    P.push(['root', G.hairS, hr, 0, 1.655, -0.012]);
+    P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.088, 1.635, -0.005], ['root', G.ear, sk, 0.088, 1.635, -0.005], ['root', G.nose, sk, 0, 1.63, 0.104]);
+    if (!o.snap) P.push(['root', f ? G.hairF : G.hairS, hr, 0, 1.64, 0.006]);                  // ผมเอียงไปหลัง: เห็นหน้าผาก ท้ายทอยคลุมต่ำ (ไม่ใช่หมวกครอบ)
     if (f && o.longHair) P.push(['root', G.hairL, hr, 0, 1.43, -0.04]); else if (f) P.push(['root', G.bun, hr, 0, 1.66, -0.1]);
-    for (const x of [-0.198, 0.198]) P.push(['root', G.shoulder, sleeve, x, 1.41, 0]);
+    for (const x of [-0.19, 0.19]) P.push(['root', G.shoulder, sleeve, x, 1.39, 0]);
     if (o.badge !== false) { P.push(['root', G.badge, '#f4f6f8', 0, 1.22, 0.122]); P.push(['root', G.strap, '#1d5fc0', 0, 1.33, 0.06, Math.PI * 0.6, 0, Math.PI]); }
-    for (const g of ['armL', 'armR']) P.push([g, G.upper, sleeve, 0, -0.16, 0], [g, G.fore, o.staff ? sk : sleeve, 0, -0.44, 0.012], [g, G.handG, sk, 0, -0.62, 0.02]);
+    for (const g of ['armL', 'armR']) P.push([g, G.upper, sleeve, 0, -0.15, 0], [g, G.elbow, sleeve, 0, -0.3, 0.004], [g, G.fore, o.staff ? sk : sleeve, 0, -0.435, 0.012], [g, G.handG, sk, 0, -0.615, 0.02]);
     if (o.doc) P.push(['armR', G.doc, '#ffffff', 0, -0.62, 0.06, 0.2]);
     if (o.phone) P.push(['armR', G.phone, '#15171b', 0, -0.66, 0.05, -0.2]);
     if (o.bag) { const bc = pick(['#3a2a22', '#1b1b1f', '#6b4a33', '#8a7a6a', '#2b3a55'], k + 5);
       if (f) P.push(['armL', G.hbag, bc, 0, -0.6, 0.02]); else P.push(['root', G.mbag, bc, -0.2, 0.92, 0.02], ['root', G.bstrap, bc, 0.02, 1.22, 0.125, 0, 0, -0.62]); }
     return P;
   }
-  const PIV = { legL: [-0.092, 0.92, 0], legR: [0.092, 0.92, 0], armL: [-0.215, 1.42, 0], armR: [0.215, 1.42, 0] };
+  const shadeOf = ny => 0.72 + 0.28 * (0.5 + 0.5 * ny);   // เงาในตัว (ด้านล่าง/ใต้คางเข้มขึ้น) ให้ดูมีมิติ ไม่แบนเหมือนหุ่นกระดาษ
+  const PIV = { legL: [-0.092, 0.92, 0], legR: [0.092, 0.92, 0], armL: [-0.204, 1.42, 0], armR: [0.204, 1.42, 0] };
   const tmpM = new THREE.Matrix4(), tmpE = new THREE.Euler(), tmpQ = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
   function merged(o, pose) {               // รวมเป็น geometry เดียว · pose = มุมขา/แขน (นั่ง/ยืน)
     const geos = [];
@@ -1777,7 +1793,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
       if (grp !== 'root') { const pv = PIV[grp], r = pose[grp] || 0, fk = (grp === 'armL' || grp === 'armR') && y < -0.34 ? pose['fore' + grp.slice(-1)] || 0 : 0;
         if (fk) { g2.translate(0, 0.3, 0); g2.applyMatrix4(tmpM.makeRotationX(fk)); g2.translate(0, -0.3, 0); }   // งอศอก
         g2.applyMatrix4(tmpM.makeRotationX(r)); g2.translate(pv[0], pv[1], pv[2]); }
-      const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+      const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3), nr = g2.attributes.normal.array; for (let i = 0; i < n; i++) { const sh = shadeOf(nr[i * 3 + 1]); arr[i * 3] = c.r * sh; arr[i * 3 + 1] = c.g * sh; arr[i * 3 + 2] = c.b * sh; }
       g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g2.index ? g2 : g2);
     }
     const gm = mergeGeometries(geos.map(q => q.index ? q : q), false); geos.forEach(q => q.dispose());
@@ -1801,7 +1817,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
       const g2 = geo.index ? geo.toNonIndexed() : geo.clone(); g2.deleteAttribute('uv'); g2.applyMatrix4(tmpM.compose(new THREE.Vector3(x, y, z), tmpQ.setFromEuler(tmpE.set(rx, ry, rz)), one));
       const ob = off[grp]; g2.translate(ob[0], ob[1], ob[2]);                       // ท่ายืนตรง (bind pose)
       const c = new THREE.Color(col), n = g2.attributes.position.count, arr = new Float32Array(n * 3), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4), bi = names.indexOf(grp);
-      for (let q = 0; q < n; q++) { arr[q * 3] = c.r; arr[q * 3 + 1] = c.g; arr[q * 3 + 2] = c.b; si[q * 4] = bi; sw[q * 4] = 1; }
+      const nr = g2.attributes.normal.array; for (let q = 0; q < n; q++) { const sh = shadeOf(nr[q * 3 + 1]); arr[q * 3] = c.r * sh; arr[q * 3 + 1] = c.g * sh; arr[q * 3 + 2] = c.b * sh; si[q * 4] = bi; sw[q * 4] = 1; }
       g2.setAttribute('color', new THREE.BufferAttribute(arr, 3)); g2.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g2.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
       geos.push(g2);
     }
@@ -2120,8 +2136,8 @@ function play(opt = {}) {
     else if (k === 'spin') { st.spin = !st.spin; controls.autoRotate = st.spin; controls.autoRotateSpeed = 0.7; st.tween = null; }
     else if (k === 'zin' || k === 'zout') { const d = controls.target.clone().sub(camera.position); camera.position.addScaledVector(d, k === 'zin' ? 0.28 : -0.4); }
     else if (k === 'xgo') xRelease();
-    else if (k === 'explode') { st.xDone = false; st.xE = 1; const r = xp.querySelector('input'); if (r) r.value = 43; st.intro = 0.8; st.introOn = true; root.classList.add('intro'); setFocus(null); selectBooth(null); }
-    else if (k === 'skip') { xRelease(); st.intro = INTRO_END + 0.4; }
+    else if (k === 'explode') { st.xDone = false; st.xE = 1; const r = xp.querySelector('input'); if (r) r.value = 43; st.intro = 0.8; st.camT = 0.8; st.camRate = 1; st.introOn = true; root.classList.add('intro'); setFocus(null); selectBooth(null); }
+    else if (k === 'skip') { xRelease(); st.intro = INTRO_END + 0.4; st.camT = INTRO_END; }
     else if (k === 'fs') { try { document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen(); } catch (e) {} }
     else if (k === 'back') stop();
     else if (k === 'desel') { selectBooth(null); }
@@ -2205,7 +2221,7 @@ function play(opt = {}) {
   }
   const eOut = x => 1 - Math.pow(1 - x, 3);
   const HOLO = new THREE.Color(0.35, 2.0, 4.2), EDGE0 = new THREE.Color('#7fd0ff');
-  function applyIntro(t) {
+  function applyIntro(t, tc = t) {   // tc = เวลาของกล้อง (เดินต่อช้า ๆ ระหว่างค้างดูแยกชั้น ไม่หยุดกึก/ไม่แกว่งกลับ)
     // 0–1.0 ภาพอาคาร · 1.0–2.6 วงสแกนแสงไล่จากยอดตึกลงมาถึงชั้น 5 (ชั้นที่ผ่านกลายเป็นโฮโลแกรมเส้นเรือง)
     // 2.6–5.0 ชั้น 6–12 ลอยแยกขึ้นทีละชั้นจากบนสุดแล้วสลาย · 3.0–4.6 ชั้นล่างกลายเป็นโครงเส้น · 3.6–4.8 ผนังกระจกชั้น 5 เรืองแล้วสลาย
     // 4.6–7.8 ผนังห้อง บูธ เส้นนำทาง ผู้คน · กล้องเครนขึ้นมุมสูงแล้วลงสู่ภาพรวมชั้น 5
@@ -2242,17 +2258,17 @@ function play(opt = {}) {
     W.people.forEach(p => { p.g.visible = t > 6.6; });
     const ttl = root.querySelector('#f5ttl'); ttl.style.opacity = Math.min(ss(0.1, 0.7, t), 1 - ss(1.4, 2.0, t));
     // กล้อง: ดันเข้าเล็กน้อย → เครนขึ้นวนโค้งให้เห็นชั้นที่ลอยแยก → ลงสู่ภาพรวมชั้น 5
-    const c = easeIO(ss(opt.fromCam ? 0 : 0.6, INTRO_END - 0.1, t)), s0 = STEPS[0];
+    const c = easeIO(ss(opt.fromCam ? 0 : 0.6, INTRO_END - 0.1, tc)), s0 = STEPS[0];
     if (introCam.fov0 !== 45) { const f = lerp(introCam.fov0, 45, ss(0, 3, t)); if (Math.abs(camera.fov - f) > 1e-3) { camera.fov = f; camera.userData.wide = opt.fromCam ? ss(0, 3, t) : 1; camera.updateProjectionMatrix(); } }
     else if (opt.fromCam && camera.userData.wide < 1) { camera.userData.wide = ss(0, 3, t); camera.updateProjectionMatrix(); }
     const p1 = new THREE.Vector3(...s0.cam), t1 = new THREE.Vector3(...s0.tgt);
     const a0 = Math.atan2(introCam.p0.z, introCam.p0.x); let a1 = Math.atan2(p1.z, p1.x);
     while (a1 - a0 > Math.PI) a1 -= Math.PI * 2; while (a1 - a0 < -Math.PI) a1 += Math.PI * 2;
     const r0 = Math.hypot(introCam.p0.x, introCam.p0.z) * (1 - (opt.fromCam ? 0.25 : 0.12) * ss(0, opt.fromCam ? 2.2 : 1.2, t)), r1 = Math.hypot(p1.x, p1.z);
-    const a = lerp(a0, a1, c) + (XRAY && st.xHolding ? 0.16 * Math.sin(Math.PI * Math.min(1, st.xHoldT / X_HOLD_LEN)) : 0), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * Math.min(1, c * 1.15)) * 46;
+    const a = lerp(a0, a1, c), r = lerp(r0, r1, c), lift = Math.sin(Math.PI * Math.min(1, c * 1.15)) * 46;
     camera.position.set(Math.cos(a) * r, lerp(introCam.p0.y, p1.y, c) + lift, Math.sin(a) * r);
-    const tgtUp = Math.sin(Math.PI * ss(1.6, 6.5, t)) * 18;
-    controls.target.lerpVectors(introCam.t0, t1, easeIO(ss(1.6, INTRO_END - 0.1, t))); controls.target.y += tgtUp;
+    const tgtUp = Math.sin(Math.PI * ss(1.6, 6.5, tc)) * 18;
+    controls.target.lerpVectors(introCam.t0, t1, easeIO(ss(1.6, INTRO_END - 0.1, tc))); controls.target.y += tgtUp;
   }
 
   // ── จำลองคนเดิน
@@ -2260,9 +2276,9 @@ function play(opt = {}) {
     st.simT += dt * st.speed;
     for (const p of W.people) {
       if (p.mode === 'walk') {
-        const R = W.routes[p.br || 0], s = ((p.s0 + st.simT * p.v + Math.sin(st.simT * 0.25 + p.vp) * p.vj * 20) % (R.L + 6) + R.L + 6) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
-        const nar = 0.2 + 0.8 * ss(0.6, 3.2, Math.abs(s - W.sDoor));                     // ผ่านประตู Auditorium ทีละคน (เข้าแนวกลาง)
-        const r = R.at(Math.min(s, R.L)); const nx = -r.tz, nz = r.tx, px = r.x + nx * p.off * nar, pz = r.z + nz * p.off * nar;
+        const R = W.routes[p.br || 0], s = ((p.s0 + st.simT * p.v + Math.sin(st.simT * 0.25 + p.vp) * p.vj * 7) % (R.L + 6) + R.L + 6) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
+        const nar = 0.55 + 0.45 * ss(0.6, 3.2, Math.abs(s - W.sDoor));                     // ผ่านประตู Auditorium ทีละคน (เข้าแนวกลาง)
+        const r = R.at(Math.min(s, R.L)), lo = Math.sign(p.off) * Math.max(0.32, Math.abs(p.off) * nar); const nx = -r.tz, nz = r.tx, px = r.x + nx * lo, pz = r.z + nz * lo;   // สองแถวห่างกัน ≥ 0.64 ม. เสมอ (ไม่เดินทะลุกัน)
         p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx, r.tz);
         p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 2.0);
         const ph = (st.simT * p.v) * 6.6 + p.ph, w = Math.sin(ph) * 0.42, c = Math.cos(ph);
@@ -2307,7 +2323,11 @@ function play(opt = {}) {
         if (st.xHolding) { st.xHoldT += dt; if ((!st.xUser && st.xHoldT > X_HOLD_LEN) || (st.xUser && now - st.xLast > 9000)) xRelease(); }
         else st.intro += dt;
       } else st.intro += dt;
-      applyIntro(st.intro); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; applyIntro(INTRO_END + 1); if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
+      // กล้องมีเวลาของตัวเอง: ชะลอก่อนถึงจุดค้าง → ระหว่างค้างเคลื่อนต่อทิศเดิมช้า ๆ → เร่งกลับ (เดิมกล้องหยุดกึกแล้วแกว่งไปกลับ = ภาพ "เด้งกลับ")
+      const xr = !XRAY ? 1 : st.xHolding ? 0.11 * (1 - ss(X_HOLD_LEN, X_HOLD_LEN + 2.5, st.xHoldT)) : st.xDone ? 1 : 1 - 0.84 * ss(X_HOLD - 0.7, X_HOLD, st.intro);
+      st.camRate = st.camRate == null ? 1 : st.camRate + (xr - st.camRate) * Math.min(1, dt * (st.xDone ? 2.2 : 8));
+      st.camT = Math.min(INTRO_END, (st.camT || 0) + dt * st.camRate);
+      applyIntro(st.intro, st.camT); camera.lookAt(controls.target); if (st.intro >= INTRO_END) { st.introOn = false; applyIntro(INTRO_END + 1); if (st.bigShadow) { st.bigShadow = false; shadowBox(false); } root.classList.remove('intro'); goStep(0, true); } }
     else if (st.walk) walkStep(dt);
     else { tweenStep(dt); controls.update(); }
     updateZones(dt);

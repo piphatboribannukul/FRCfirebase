@@ -1,5 +1,52 @@
 // ชุดหน้าตาร่วม (หน้าแรก · แผนที่ · ชั้น 5): ไอคอนเส้นชุดเดียว + ตัวอักษรระบบ + สีเด่นน้ำเงินเดียว
 // โหลดก่อน stakeholder3d.js / stakeholder_floor5.js · ใช้ SUI.i('ชื่อไอคอน') ในโค้ด
+// ── แก้ตัวอักษรไทยบนป้าย 3 มิติ (canvas) ใน Safari/iOS ──
+// Safari จัด textAlign='center'/'right' ของข้อความไทยผิด: ข้อความเริ่มที่จุดกึ่งกลางแล้วล้นขอบขวา (ภาษาอังกฤษล้วนปกติ)
+// วิธีแก้: ทดสอบครั้งเดียวต่อฟอนต์ว่าเบราว์เซอร์จัดกึ่งกลางผิดไหม ถ้าผิด → วัดขอบหมึกจริงของข้อความ (วาดลงผ้าใบเล็กแล้วสแกน) แล้ววาดแบบชิดซ้ายในตำแหน่งที่คำนวณเอง
+(() => {
+  const P = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype; if (!P || P.__thaiFix) return; P.__thaiFix = true;
+  // iPhone/iPad ทุกเบราว์เซอร์ใช้ WebKit → แก้เสมอ · เบราว์เซอร์อื่นทดสอบเองต่อฟอนต์
+  const TH = /[฀-๿]/, FORCE = /[?&]textfix\b/.test(location.search) || /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1), REF = 40, broken = new Map(), inks = new Map();
+  const fillO = P.fillText, measO = P.measureText; let tmp = null, tg = null;
+  const pad = () => { if (!tmp) { tmp = document.createElement('canvas'); tg = tmp.getContext('2d', { willReadFrequently: true }); } return tg; };
+  const pxOf = f => { const m = /(\d+(?:\.\d+)?)px/.exec(f); return m ? +m[1] : 10; };
+  const famOf = f => f.replace(/(\d+(?:\.\d+)?)px(\s*\/\s*[^\s]+)?/, '#px');
+  // ขอบหมึก (ซ้าย, กว้าง) ต่อ 1 px ของขนาดฟอนต์ · วาดชิดซ้ายที่ x=pad ซึ่ง Safari วาดถูก
+  function ink(fam, t) {
+    const key = fam + '|' + t; let r = inks.get(key); if (r) return r;
+    const g = pad(), x0 = REF, W = Math.ceil(REF * (t.length + 4) * 1.1), H = REF * 3; tmp.width = Math.min(W, 8000); tmp.height = H;
+    g.font = fam.replace('#px', REF + 'px'); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = '#000'; fillO.call(g, t, x0, REF * 2);
+    const d = g.getImageData(0, 0, tmp.width, H).data, w = tmp.width; let mn = w, mx = -1;
+    for (let y = 0; y < H; y++) { const o = y * w * 4; for (let x = 0; x < mn; x++) if (d[o + x * 4 + 3] > 8) { mn = x; break; } for (let x = w - 1; x > mx; x--) if (d[o + x * 4 + 3] > 8) { mx = x; break; } }
+    r = mx < 0 ? null : { l: (mn - x0) / REF, w: (mx - mn + 1) / REF }; if (inks.size > 3000) inks.clear(); inks.set(key, r); return r;
+  }
+  // ทดสอบต่อฟอนต์: วาด 'ทดสอบภาษาไทย' แบบ center ที่ x=กลาง แล้วดูว่าหมึกอยู่กลางจริงไหม
+  function isBroken(fam) {
+    if (FORCE) return true; const k = fam + '|' + (document.fonts ? document.fonts.status : ''); if (broken.has(k)) return broken.get(k);
+    const g = pad(), t = 'ทดสอบภาษาไทย', W = 900, H = 120; tmp.width = W; tmp.height = H;
+    g.font = fam.replace('#px', REF + 'px'); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#000'; fillO.call(g, t, W / 2, 80);
+    const d = g.getImageData(0, 0, W, H).data; let mn = W, mx = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 8) { if (x < mn) mn = x; if (x > mx) mx = x; }
+    const b = mx > 0 && Math.abs((mn + mx) / 2 - W / 2) > (mx - mn) * 0.15; broken.set(k, b);
+    if (b && !P.__thaiLog) { P.__thaiLog = 1; console.info('[SUI] Thai canvas text alignment fix on'); }
+    return b;
+  }
+  P.fillText = function (t, x, y, mw) {
+    t = String(t); const a = this.textAlign;
+    if (!TH.test(t) || ((a === 'left' || a === 'start') && !(mw > 0))) return fillO.apply(this, arguments);
+    const fam = famOf(this.font); if (!isBroken(fam)) return fillO.apply(this, arguments);
+    const m = ink(fam, t); if (!m) return fillO.apply(this, arguments);
+    const s = pxOf(this.font), L = m.l * s, W = m.w * s, k = mw > 0 && W > mw ? mw / W : 1;
+    const ox = a === 'center' ? x - (L + W / 2) * k : (a === 'right' || a === 'end') ? x - (L + W) * k : x;
+    this.save(); this.textAlign = 'left'; this.translate(ox, y); if (k < 1) this.scale(k, 1); fillO.call(this, t, 0, 0); this.restore();
+  };
+  P.measureText = function (t) {
+    const r = measO.apply(this, arguments); t = String(t); if (!TH.test(t)) return r;
+    const fam = famOf(this.font); if (!isBroken(fam)) return r; const m = ink(fam, t); if (!m) return r;
+    const s = pxOf(this.font), w = (2 * Math.max(0, m.l) + m.w) * s;   // ความกว้างโดยประมาณ = หมึก + ช่องว่างสองข้าง
+    return { width: w, actualBoundingBoxLeft: r.actualBoundingBoxLeft, actualBoundingBoxRight: r.actualBoundingBoxRight, actualBoundingBoxAscent: r.actualBoundingBoxAscent, actualBoundingBoxDescent: r.actualBoundingBoxDescent, fontBoundingBoxAscent: r.fontBoundingBoxAscent, fontBoundingBoxDescent: r.fontBoundingBoxDescent };
+  };
+})();
 (() => {
 const SYS = `-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai","Noto Sans Thai","Helvetica Neue",sans-serif`;
 const I = p => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
