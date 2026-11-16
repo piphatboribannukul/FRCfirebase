@@ -1577,7 +1577,7 @@ function buildWorld(ctx) {
   const sDoor = (() => { let best = 1e9, bs = 0; for (let s = 0; s <= L; s += 0.1) { const p = R0.at(s), d = Math.hypot(p.x - X(1310), p.z - Z(441)); if (d < best) { best = d; bs = s; } } return bs; })();
   const sAt = (px, py) => { let best = 1e9, bs = 0; for (let s = 0; s <= L; s += 0.1) { const p = R0.at(s), d = Math.hypot(p.x - X(px), p.z - Z(py)); if (d < best) { best = d; bs = s; } } return bs; };
   const sHall = sAt(1355, 345), sHallOut = sAt(1131, 360);            // เข้าห้องแสดงทางประตูตะวันออก · ออกทางประตูตะวันตก
-  const RE = (() => { const r = mkPath(ROUTE_E_PX, sDoor); return { at: s => r.at(s < sDoor ? sDoor : s), L: r.L, r, base: R0 }; })();
+  const RE = (() => { const r = mkPath(ROUTE_E_PX, sDoor); return { at: s => s < sDoor ? R0.at(s) : r.at(s), L: r.L, r, base: R0 }; })();   // ก่อนถึงประตูเดินตามเส้นหลัก (เดิมคืนจุดประตู → คนสายนี้ไปยืนซ้อนกันหน้าประตู)
   const routeU = { uTime: { value: 0 }, uProg: { value: 0 }, uLen: { value: Math.max(L, RE.L) }, uA: { value: new THREE.Color('#7f9a52') }, uB: { value: new THREE.Color('#14b8d6') }, uC: { value: new THREE.Color('#3f8cff') }, uOp: { value: 1 } };
   const mkRibbon = (w, y, frag, P = R0) => {
     const { path, cum } = P; const pos = [], uv = [], idx = [];
@@ -1856,10 +1856,11 @@ function makePeople(parent, booths, seats, routeAt, L) {
   });
   // พักดื่มกาแฟ
   [[X(880), Z(275)], [X(940), Z(275)], [X(880), Z(320)], [X(940), Z(320)]].forEach(([x, z], ti) => {
-    for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who({ bag: rnd() < 0.3 }), { armR: -0.35, foreR: -1.05, armL: j ? -0.15 : -0.06, foreL: j ? -0.7 : 0 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.ph = rnd() * 6; list.push(p); }
+    for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who({ bag: rnd() < 0.3 }), { armR: -0.35, foreR: -1.05, armL: j ? -0.15 : -0.06, foreL: j ? -0.7 : 0 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.cup = true; p.ph = rnd() * 6; list.push(p); }
   });
   // ผู้นั่งใน Auditorium
-  for (let i = 0; i < 120; i++) { const st = seats[Math.floor(rnd() * seats.length)]; const p = merged(who({ badge: false, sit: true }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.36, st[2] + 0.04); p.g.rotation.y = 0; p.mode = 'sit'; list.push(p); }
+  const seatPick = seats.map((x, i) => [rnd(), i]).sort((a, b) => a[0] - b[0]).slice(0, Math.min(120, seats.length)).map(x => seats[x[1]]);   // ที่นั่งไม่ซ้ำกัน (เดิมสุ่มซ้ำ → สองคนนั่งเก้าอี้ตัวเดียว)
+  for (let i = 0; i < seatPick.length; i++) { const st = seatPick[i]; const p = merged(who({ badge: false, sit: true }), { legL: -Math.PI / 2, legR: -Math.PI / 2, armL: -0.6, armR: -0.6 }); p.g.position.set(st[0], st[1] - 0.36, st[2] + 0.04); p.g.rotation.y = 0; p.seat = st; p.mode = 'sit'; list.push(p); }
   { // ผู้นั่งนิ่ง → รวมทั้งห้องเป็น mesh เดียว
     const sit = list.filter(p => p.mode === 'sit'), sitG = new THREE.Group(), geos = [];
     for (const p of sit) { p.g.updateMatrix(); const m = p.g.children[0]; geos.push(m.geometry.clone().applyMatrix4(p.g.matrix)); m.geometry.dispose(); parent.remove(p.g); p.g = sitG; p.body = sitG; }
@@ -2276,6 +2277,46 @@ function play(opt = {}) {
   }
 
   // ── จำลองคนเดิน
+  // ── คนสมจริง (โมเดล Rocketbox) โหลดตามหลังแบบไม่บล็อก → สลับแทนคนแบบเรขาคณิตเมื่อพร้อม · ?lowpeople = ใช้แบบเดิม
+  const Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
+  function syncReal() { if (!W.realStand) return; for (const p of W.realStand) { const v = p.g.visible; if (v !== p._rv) { p._rv = v; p.inst.im.setMatrixAt(p.inst.i, v ? p.inst.m : Z0); p.inst.im.instanceMatrix.needsUpdate = true; } } }
+  function swapPeople(m, P) {
+    if (!st.running || W.realStand) return;
+    const MT = P.types.filter(t => !t.female), FT = P.types.filter(t => t.female);
+    const typeOf = p => { const L = p.female ? FT : MT; return L[(p.k * 7 + 3) % L.length]; };
+    const groups = new Map(), sitMax = MOBILE ? 48 : 999; let nSit = 0, sitG = null, parent = null;
+    const add = (t, pose, p, mtx) => { const k = t.name + '|' + pose; if (!groups.has(k)) groups.set(k, { t, pose, list: [] }); groups.get(k).list.push([p, mtx]); };
+    const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    for (const p of W.people) {
+      if (p.mode === 'walk') {
+        const rig = m.makeRig(typeOf(p), P.mat); rig.mesh.castShadow = !MOBILE;
+        p.g.traverse(c => { if (c.isMesh) c.visible = false; }); p.g.add(rig.root); p.real = rig;
+      } else if (p.mode === 'stand') {
+        parent = parent || p.g.parent; if (p.g.parent) p.g.parent.remove(p.g);
+        const pose = p.phone ? 'phone' : p.cup ? 'hold' : p.k % 3 === 0 ? 'hold' : 'stand', sc = (p.g.scale.x || 1) * (0.96 + (p.k % 5) * 0.012);
+        add(typeOf(p), pose, p, new THREE.Matrix4().compose(p.g.position, q.setFromAxisAngle(up, p.g.rotation.y), new THREE.Vector3(sc, sc, sc)));
+      } else if (p.mode === 'sit' && p.seat) {
+        sitG = p.g; if (nSit++ >= sitMax) continue;
+        add(typeOf(p), 'sit', null, new THREE.Matrix4().compose(new THREE.Vector3(p.seat[0], p.seat[1] + 0.62, p.seat[2] - 0.1), q.identity(), new THREE.Vector3(1, 1, 1)));
+      }
+    }
+    parent = parent || W.interior; W.realStand = [];
+    for (const { t, pose, list } of groups.values()) {
+      const geo = m.bakePose(m.makeRig(t, P.mat), m.POSES[pose], pose === 'sit' ? { seat: true } : {});
+      const im = new THREE.InstancedMesh(geo, P.mat, list.length); im.castShadow = pose !== 'sit'; im.userData.noBatch = true;
+      list.forEach(([p, mtx], i) => im.setMatrixAt(i, mtx)); im.computeBoundingSphere();   // ขอบเขตจากตำแหน่งจริงก่อน (ถ้าคิดตอนซ่อนอยู่ ขอบเขต = 0 → ถูกตัดทิ้งไม่วาด)
+      list.forEach(([p, mtx], i) => { if (p) { if (!p.g.visible) im.setMatrixAt(i, Z0); p.inst = { im, i, m: mtx }; p._rv = p.g.visible; W.realStand.push(p); } });
+      parent.add(im);
+    }
+    if (sitG && sitG.parent) sitG.parent.remove(sitG);
+    st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true;
+    console.info('[f5] real people on:', W.people.length, 'people,', groups.size, 'instanced groups');
+  }
+  if (!/[?&]lowpeople\b/.test(location.search)) {
+    W.realP = W.realP || import('./stakeholder_people.js').then(m => (W.realM = m, m.loadPeople('stakeholder_people.bin', 'stakeholder_people.webp', { maxTex: MOBILE ? 2048 : 0 })));
+    W.realP.then(P => swapPeople(W.realM, P)).catch(e => console.warn('[f5] real people failed, keeping simple ones', e));
+  }
+
   function simPeople(dt, now) {
     st.simT += dt * st.speed;
     for (const p of W.people) {
@@ -2292,6 +2333,7 @@ function play(opt = {}) {
         p.eL.rotation.x = -0.28 - 0.22 * Math.max(0, -Math.sin(ph)); p.eR.rotation.x = -0.28 - 0.22 * Math.max(0, Math.sin(ph));   // งอศอกตอนแขนแกว่งไปหน้า
         if (p.doc) p.eR.rotation.x = -0.9; if (p.bag && p.female) p.eL.rotation.x = -0.15;
         p.body.position.y = Math.abs(c) * 0.028; p.body.rotation.y = Math.sin(ph) * 0.07; p.body.rotation.z = Math.sin(ph) * 0.02;
+        if (p.real && p.g.visible) { W.realM.poseRig(p.real, W.realM.walkSpec(ph, { doc: p.doc, bagL: p.bag && p.female })); p.real.root.position.y = Math.abs(c) * 0.018; p.real.root.rotation.y = Math.sin(ph) * 0.05; }
       } else if (p.mode === 'stand') { p.body.rotation.y = Math.sin(now / 1700 + p.ph) * 0.12; }
     }
   }
@@ -2336,7 +2378,7 @@ function play(opt = {}) {
     else { tweenStep(dt); controls.update(); }
     updateZones(dt);
     W.routeU.uTime.value = now / 1000;
-    simPeople(dt, now);
+    simPeople(dt, now); syncReal();
     { const tS = now / 1000; for (const f of W.live) f(dt, tS, camera.position); selFX.update(dt, tS); }
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
