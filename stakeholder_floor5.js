@@ -1729,14 +1729,15 @@ function makePeople(parent, booths, seats, routeAt, L) {
     upper: limb([[0.044, 0], [0.047, 0.2], [0.054, 0.62], [0.055, 0.85], [0.054, 1]], 0.3), fore: limb([[0.03, 0], [0.033, 0.1], [0.043, 0.62], [0.044, 0.85], [0.042, 1]], 0.27), handG: new THREE.SphereGeometry(0.042, 14, 10),
     neck: taper(0.043, 0.048, 0.1, 16),
     head: lathe([[0.001, -0.118], [0.04, -0.113], [0.066, -0.09], [0.083, -0.05], [0.094, -0.005], [0.099, 0.035], [0.094, 0.075], [0.075, 0.105], [0.042, 0.123], [0.001, 0.128]], 26),
-    nose: new THREE.SphereGeometry(0.016, 10, 8), ear: new THREE.SphereGeometry(0.021, 10, 8),
+    nose: new THREE.SphereGeometry(0.0125, 10, 8), eye: new THREE.SphereGeometry(0.0105, 10, 8), brow: new THREE.SphereGeometry(0.012, 8, 6),
+    mouth: new THREE.TorusGeometry(0.017, 0.0029, 6, 14, 1.4).rotateZ(-Math.PI / 2 - 0.7), ear: new THREE.SphereGeometry(0.021, 10, 8),
     hairS: hairCap(0.07, -0.05), hairF: hairCap(0.075, -0.02), hairL: lathe([[0.096, 0.26], [0.108, 0.17], [0.106, 0.07], [0.09, 0]], 24),
     bun: new THREE.SphereGeometry(0.05, 12, 10), badge: new THREE.BoxGeometry(0.07, 0.095, 0.01), strap: new THREE.TorusGeometry(0.12, 0.007, 4, 20, Math.PI),
     doc: new THREE.BoxGeometry(0.22, 0.3, 0.012), phone: new THREE.BoxGeometry(0.075, 0.15, 0.012), hbag: new RoundedBoxGeometry(0.26, 0.2, 0.09, 2, 0.03), mbag: new RoundedBoxGeometry(0.06, 0.28, 0.34, 2, 0.02), bstrap: new THREE.BoxGeometry(0.03, 0.62, 0.012),
     vest: lathe([[0.143, 0], [0.163, 0.18], [0.186, 0.3], [0.19, 0.38], [0.168, 0.44]], 22), vestBand: new THREE.CylinderGeometry(0.157, 0.157, 0.035, 22, 1, true), vestBand2: new THREE.CylinderGeometry(0.179, 0.179, 0.035, 22, 1, true),
     helmet: new THREE.SphereGeometry(0.118, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), brim: new THREE.CylinderGeometry(0.13, 0.13, 0.012, 22),
   };
-  G.torso.scale(1.07, 1, 0.72); G.pelvis.scale(1.04, 1, 0.76); G.head.scale(0.9, 1, 1.02); G.nose.scale(0.85, 1.25, 1); G.ear.scale(0.6, 1, 0.9); G.shoulder.scale(0.92, 0.8, 1.0); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3);  G.hairL.scale(0.95, 1, 0.8);
+  G.torso.scale(1.07, 1, 0.72); G.pelvis.scale(1.04, 1, 0.76); G.head.scale(0.9, 1, 1.02); G.nose.scale(0.85, 1.35, 0.85); G.eye.scale(1.25, 0.8, 0.45); G.brow.scale(1.6, 0.28, 0.4); G.mouth.scale(1, 1, 0.55); G.ear.scale(0.6, 1, 0.9); G.shoulder.scale(0.92, 0.8, 1.0); G.jacketHem.scale(1.13, 1, 0.66); G.shoe.scale(1, 1, 2.3);  G.hairL.scale(0.95, 1, 0.8);
   G.vest.scale(1.13, 1, 0.68); G.vestBand.scale(1.13, 1, 0.68); G.vestBand2.scale(1.13, 1, 0.68); G.helmet.scale(0.92, 0.85, 1.02); G.brim.scale(0.92, 1, 1.05); G.skirt.scale(1.05, 1, 0.75); G.dress.scale(1.05, 1, 0.75); G.handG.scale(0.8, 1.5, 0.6); G.vee.rotateZ(-Math.PI / 2); G.vee.scale(0.75, 1.5, 1); G.shoe.rotateX(0);
   const list = [];
   const pick = (arr, k) => arr[((k % arr.length) + arr.length) % arr.length];
@@ -1771,7 +1772,10 @@ function makePeople(parent, booths, seats, routeAt, L) {
       P.push(['root', G.vestBand, '#c6ced6', 0, 1.08, 0], ['root', G.vestBand2, '#c6ced6', 0, 1.24, 0]);
       P.push(['root', G.helmet, '#1f6fd6', 0, 1.69, 0.004], ['root', G.brim, '#1f6fd6', 0, 1.705, 0.03]);
     }
-    P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.088, 1.635, -0.005], ['root', G.ear, sk, 0.088, 1.635, -0.005], ['root', G.nose, sk, 0, 1.63, 0.104]);
+    P.push(['root', G.neck, sk, 0, 1.5, 0], ['root', G.head, sk, 0, 1.64, 0.006], ['root', G.ear, sk, -0.088, 1.635, -0.005], ['root', G.ear, sk, 0.088, 1.635, -0.005], ['root', G.nose, sk, 0, 1.632, 0.1]);
+    // หน้า: ตา คิ้ว ปากยิ้มบาง ๆ (วางบนผิวศีรษะ หมุนตามความโค้งของหน้า)
+    for (const sx of [-1, 1]) P.push(['root', G.eye, '#2a201b', sx * 0.032, 1.655, 0.0955, 0, sx * 0.34, 0], ['root', G.brow, hr, sx * 0.033, 1.676, 0.0975, 0, sx * 0.34, sx * 0.07]);
+    P.push(['root', G.mouth, f ? '#b4645e' : '#93564d', 0, 1.615, 0.0915]);
     if (!o.snap) P.push(['root', f ? G.hairF : G.hairS, hr, 0, 1.64, 0.006]);                  // ผมเอียงไปหลัง: เห็นหน้าผาก ท้ายทอยคลุมต่ำ (ไม่ใช่หมวกครอบ)
     if (f && o.longHair) P.push(['root', G.hairL, hr, 0, 1.43, -0.04]); else if (f) P.push(['root', G.bun, hr, 0, 1.66, -0.1]);
     for (const x of [-0.19, 0.19]) P.push(['root', G.shoulder, sleeve, x, 1.39, 0]);
