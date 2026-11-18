@@ -535,11 +535,19 @@ function screenTex(title, sub, accent) {
 
 // ───────────────────────────── ฉาก ─────────────────────────────
 let S = null;                                              // สถานะฉากปัจจุบัน
+let REG_DESK = null;                                       // ตำแหน่งโต๊ะลงทะเบียน (ให้น้องยอดน้ำนั่งต้อนรับ)
 
 function css() {
   if (document.getElementById('f5-css')) return;
   const st = document.createElement('style'); st.id = 'f5-css';
   st.textContent = `
+#f5 .yb{position:absolute;left:0;top:0;z-index:6;max-width:260px;padding:10px 13px 11px;border-radius:16px;background:#fff;color:#14233a;box-shadow:0 10px 30px rgba(10,40,90,.18),0 1px 0 rgba(10,40,90,.06);font:500 14.5px/1.45 var(--f5body,'IBM Plex Sans Thai',sans-serif);pointer-events:none;opacity:0;transition:opacity .25s;will-change:transform}
+#f5 .yb.on{opacity:1}
+#f5 .yb b{font-weight:700;color:#0d5fae}
+#f5 .yb .who{display:flex;align-items:center;gap:6px;font:700 12px/1 var(--f5head,'Bai Jamjuree',sans-serif);color:#0d6fbf;margin-bottom:5px;letter-spacing:.01em}
+#f5 .yb .who i{width:8px;height:8px;border-radius:50%;background:#0d6fbf;display:inline-block}
+#f5 .yb:after{content:'';position:absolute;left:20px;bottom:-7px;width:14px;height:14px;background:#fff;transform:rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 6px rgba(10,40,90,.07)}
+@media (max-width:640px){#f5 .yb{max-width:210px;font-size:13px;padding:8px 11px 9px}}
 #f5{position:fixed;inset:0;z-index:1000050;background:#dfe5eb;font-family:${F_BODY};color:#0f1d2b;opacity:0;transition:opacity .7s ease;overflow:hidden;-webkit-font-smoothing:antialiased}
 #f5.on{opacity:1}#f5:not(.on){pointer-events:none}
 #f5 canvas.gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -680,6 +688,8 @@ function build(opt) {
   const root = document.createElement('div'); root.id = 'f5'; root.className = 'intro';
   root.innerHTML = `
 <canvas class="gl" tabindex="0"></canvas>
+<div class="yb" id="f5yb1"><div class="who"><i></i>ยอดน้ำ · ผู้นำชม</div><div class="tx"></div></div>
+<div class="yb" id="f5yb2"><div class="who"><i></i>ยอดน้ำ · ต้อนรับ</div><div class="tx"></div></div>
 <div class="ui top card hide-intro">
   <div class="brand"><div class="logo"><img src="${ASSET_BASE}mwa_logo.png" alt=""></div><div><b>Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
   <div class="search"><span style="color:#8a97a6;display:grid">${ui('search')}</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
@@ -976,12 +986,12 @@ function buildWorld(ctx) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH), wm); p.position.set(xc, WH / 2 + 0.1, zw + 0.125); zg('lobby').add(p);
     add('lobby', box(WW + 0.2, 0.06, 0.25), lightStripLobby, xc, WH + 0.23, zw + 0.2, { cast: false });
     // โต๊ะลงทะเบียน (หน้าโต๊ะสีน้ำเงินเข้ม "ลงทะเบียน · WELCOME")
-    const dz = zw + 1.55, DW = 4.6;
+    const dz = zw + 1.55, DW = 4.6; REG_DESK = { x: xc, z: dz };
     const fm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน · Registration', 700, 110, 150], ['Stakeholder Day · การประปานครหลวง', 500, 56, 248, '#bfe3ff', F_BODY]], '#123f86', '#fff', 1600, 340), roughness: 0.5 }));
     add('lobby', new RoundedBoxGeometry(DW, 1.0, 0.65, 3, 0.04), M.white, xc, 0.5, dz);
     const fp = new THREE.Mesh(new THREE.PlaneGeometry(DW - 0.06, 0.94), fm); fp.position.set(xc, 0.5, dz + 0.327); zg('lobby').add(fp);
     add('lobby', box(DW + 0.06, 0.04, 0.72), M.wood, xc, 1.02, dz);
-    for (const dx of [-1.4, 0, 1.4]) { add('lobby', box(0.42, 0.28, 0.03), M.dark, xc + dx, 1.2, dz - 0.15).rotation.x = -0.2; add('lobby', box(0.04, 0.06, 0.04), M.alu, xc + dx, 1.07, dz - 0.18); }
+    for (const dx of [-0.55, 0.55, 1.55]) { add('lobby', box(0.42, 0.28, 0.03), M.dark, xc + dx, 1.2, dz - 0.15).rotation.x = -0.2; add('lobby', box(0.04, 0.06, 0.04), M.alu, xc + dx, 1.07, dz - 0.18); }
     // ป้ายตั้ง 3 ป้าย
     [['ลงทะเบียนล่วงหน้า', 'Pre-Registered', -2.75], ['ลงทะเบียนหน้างาน', 'Onsite Registration', 2.75], ['ประชาสัมพันธ์', 'Helpdesk', 3.6]].forEach(([t1, t2, dx]) => { const dd = 0.15;
       const tm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: totemTex(t1, t2), roughness: 0.55 }));
@@ -2317,6 +2327,65 @@ function play(opt = {}) {
     W.realP.then(P => swapPeople(W.realM, P)).catch(e => console.warn('[f5] real people failed, keeping simple ones', e));
   }
 
+  // ── น้องยอดน้ำ: ผู้นำชม (เดินนำในโหมดเดินชม) + ต้อนรับ (นั่งโต๊ะลงทะเบียน) ─────────────────────────
+  const YB = { g: null, r: null };
+  import('./stakeholder_yodnam.js').then(async m => {
+    const tex = await new THREE.TextureLoader().loadAsync('stakeholder_yodnam_faces.webp'); tex.userData.live = true;
+    if (!st.running && !st.prep) { /* ยังใช้ได้: ฉากเริ่มทีหลัง */ }
+    YB.m = m;
+    const g = m.makeYodnam(tex, 1.18); g.root.visible = false; g.root.traverse(o => { if (o.isMesh) o.castShadow = !MOBILE; }); W.interior.add(g.root); YB.g = g;
+    if (REG_DESK) { const r = m.makeYodnam(tex, 1.5); r.root.position.set(REG_DESK.x - 1.55, 0.64, REG_DESK.z - 0.66); r.root.traverse(o => { if (o.isMesh) o.castShadow = !MOBILE; }); W.interior.add(r.root); YB.r = r; r.update(0.5, { sit: true }); }
+    st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true;
+  }).catch(e => console.warn('[f5] yodnam', e));
+  const say = (id, html, face, dur = 5) => { const b = YB[id] = YB[id] || {}; if (b.html === html && b.t > 0) return; b.html = html; b.t = dur; b.face = face; b.n = 0;
+    const el = root.querySelector(id === 'gs' ? '#f5yb1' : '#f5yb2'); b.el = el; b.full = html; el.querySelector('.tx').innerHTML = ''; };
+  const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
+  function bubble(id, obj, h, dt) {
+    const b = YB[id]; if (!b || !b.el) return; const el = b.el;
+    if (!obj || !obj.root.visible || b.t <= 0) { el.classList.remove('on'); if (b) b.t = Math.max(0, (b.t || 0) - dt); return; }
+    b.t -= dt;
+    // พิมพ์ทีละตัว (ข้อความไทยตัดตามกลุ่มอักษร ไม่ให้สระลอย) · แท็ก <b> เก็บไว้ทั้งก้อน
+    if (!b.parts) b.parts = null;
+    if (b.n < 1e9) { const plain = b.full.replace(/<[^>]+>/g, ''), gs = GR(plain); b.n = Math.min(gs.length, b.n + dt * 38); if (b.n >= gs.length) { el.querySelector('.tx').innerHTML = b.full; b.n = 1e9; } else el.querySelector('.tx').textContent = gs.slice(0, Math.floor(b.n)).join(''); }
+    v3.set(0, h, 0); obj.root.localToWorld(v3); v3.project(camera);
+    const w = root.clientWidth, hh = root.clientHeight, x = (v3.x + 1) / 2 * w, y = (1 - v3.y) / 2 * hh;
+    const ok = v3.z < 1 && x > -40 && x < w + 40 && y > 40 && y < hh - 20; el.classList.toggle('on', ok && b.t > 0);
+    if (ok) { const bw = el.offsetWidth, bh = el.offsetHeight, lx = clamp(x - 28, 8, w - bw - 8), ty = Math.max(70, y - bh - 14); el.style.transform = `translate(${lx}px,${ty}px)`; }
+  }
+  const LINES = ['สวัสดีครับ ผม<b>ยอดน้ำ</b> จะพาเดินชมงาน Stakeholder Day เองครับ ตามผมมาเลย!', 'ทางเดินนี้มี<b>นวัตกรรมของ กปน.</b> ให้ชมตลอดทางครับ', 'ส่วน<b>นิทรรศการ กปน.</b> ครับ เรื่องน้ำประปาคุณภาพดีอยู่ตรงนี้', 'ห้องนี้เป็น<b>บูธบริษัทพันธมิตร</b>ครับ แวะชมได้ทุกบูธเลย', 'ใกล้ถึง<b>ห้องประชุม</b>แล้วครับ', 'ถึงแล้วครับ <b>ห้อง Auditorium</b> เชิญนั่งตามสบายเลยครับ'];
+  function yodStep(dt) {
+    const m = YB.m, g = YB.g, r = YB.r; if (!m) return;
+    // ต้อนรับ: โบกมือเมื่อกล้องเข้าใกล้โต๊ะ หรืออยู่ที่จุด "ผนังต้อนรับ"
+    if (r && st.walk && YB.rs && YB.rs.t > 0) YB.rs.t = 0;   // เดินชม: ให้ผู้นำชมพูดคนเดียว (ไม่ให้กล่องข้อความซ้อนกัน)
+    if (r) { const near = !st.introOn && (camera.position.distanceTo(r.root.position) < 9 || (STEPS[st.step] && STEPS[st.step].j === 0 && st.step > 0 && !st.walk));
+      if (near && !YB.rNear && !st.walk) say('rs', 'ยินดีต้อนรับสู่ <b>Stakeholder Day</b> ครับ ลงทะเบียนที่นี่ได้เลย', m.FACE.happy, 5); YB.rNear = near;
+      const talking = YB.rs && YB.rs.t > 0; r.update(dt, { sit: true, wave: talking && YB.rs.t > 2.5, talk: talking, face: talking ? (YB.rs.t > 3.6 ? m.FACE.happy : m.FACE.normal) : null }); bubble('rs', r, r.size * 1.02, dt); }
+    if (!g) return;
+    const w = st.walk;
+    if (!w) { g.root.visible = false; bubble('gs', g, 1, dt); YB.gj = -1; YB.gHold = null; return; }
+    // ตำแหน่งเป้าหมาย: เดินนำหน้ากล้อง ~2.6 ม. ชิดขวาของเส้นทาง · แวะบูธ: ยืนข้างกล้อง หันมาคุย
+    const lead = clamp(W.L - w.s, 0.8, 4.3), q = W.routeAt(Math.min(w.s + lead, W.L)), tgt = v3b.set(q.x - q.tz * 0.85, 0, q.z + q.tx * 0.85);
+    let face = Math.atan2(q.tx, q.tz), speak = false;
+    const cp = camera.position;
+    if (w.hn && w.hb > 0.25) {
+      const b = w.hn, d = new THREE.Vector3(b.x - cp.x, 0, b.z - cp.z), dl = Math.max(0.5, d.length()); d.normalize();
+      const al = dl * 0.6, lt = al * 0.36; tgt.set(cp.x + d.x * al - d.z * lt, 0, cp.z + d.z * al + d.x * lt);
+      face = Math.atan2(cp.x - tgt.x, cp.z - tgt.z) - 0.35;
+      if (YB.gHold !== b.code) { YB.gHold = b.code; say('gs', `นี่คือบูธ <b>${b.name}</b> ครับ${b.sub ? ' — ' + b.sub : ''}`, m.FACE.sparkle, 4.5); }
+    }
+    if (w.s < 2.2 && (w.t0 = (w.t0 || 0) + dt) < 3.2) { face = Math.atan2(cp.x - g.root.position.x, cp.z - g.root.position.z); }   // เริ่ม: หันมาทักทายก่อน
+    const j = jOf(w.s); if (j !== YB.gj) { YB.gj = j; say('gs', LINES[j], j === 0 ? m.FACE.happy : j === 5 ? m.FACE.wink : m.FACE.normal, j === 0 ? 5.5 : 4.2); }
+    if (!g.root.visible) { g.root.visible = true; g.root.position.set(tgt.x, floorY(tgt.x, tgt.z), tgt.z); g.root.rotation.y = face; }
+    const p0 = g.root.position, k = Math.min(1, dt * 3.2), ox = p0.x, oz = p0.z;
+    p0.x += (tgt.x - p0.x) * k; p0.z += (tgt.z - p0.z) * k; p0.y += (floorY(p0.x, p0.z) - p0.y) * Math.min(1, dt * 8);
+    const sp = Math.hypot(p0.x - ox, p0.z - oz) / Math.max(1e-3, dt);
+    let da = face - g.root.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); g.root.rotation.y += da * Math.min(1, dt * 5);
+    const talking = YB.gs && YB.gs.t > 0;
+    g.update(dt, { walk: Math.min(1, sp / 1.6), wave: talking && (YB.gj === 0 && w.s < 2.4 || (YB.gj === 5 && w.s > W.L - 0.5)), talk: talking, face: talking ? YB.gs.face : null });
+    bubble('gs', g, g.size * 1.02, dt);
+  }
+  const v3b = new THREE.Vector3();
+
   function simPeople(dt, now) {
     st.simT += dt * st.speed;
     for (const p of W.people) {
@@ -2378,7 +2447,7 @@ function play(opt = {}) {
     else { tweenStep(dt); controls.update(); }
     updateZones(dt);
     W.routeU.uTime.value = now / 1000;
-    simPeople(dt, now); syncReal();
+    simPeople(dt, now); syncReal(); yodStep(dt);
     { const tS = now / 1000; for (const f of W.live) f(dt, tS, camera.position); selFX.update(dt, tS); }
     const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
