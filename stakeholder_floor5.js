@@ -547,6 +547,9 @@ function css() {
 #f5 .yb .who{display:flex;align-items:center;gap:6px;font:700 12px/1 var(--f5head,'Bai Jamjuree',sans-serif);color:#0d6fbf;margin-bottom:5px;letter-spacing:.01em}
 #f5 .yb .who i{width:8px;height:8px;border-radius:50%;background:#0d6fbf;display:inline-block}
 #f5 .yb:after{content:'';position:absolute;left:20px;bottom:-7px;width:14px;height:14px;background:#fff;transform:rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 6px rgba(10,40,90,.07)}
+#f5 .yb.sai .who{color:#2a93d6}
+#f5 .yb.sai .who i{background:#3aa6e6}
+#f5 .yb.sai b{color:#1f86c9}
 @media (max-width:640px){#f5 .yb{max-width:210px;font-size:13px;padding:8px 11px 9px}}
 #f5{position:fixed;inset:0;z-index:1000050;background:#dfe5eb;font-family:${F_BODY};color:#0f1d2b;opacity:0;transition:opacity .7s ease;overflow:hidden;-webkit-font-smoothing:antialiased}
 #f5.on{opacity:1}#f5:not(.on){pointer-events:none}
@@ -688,8 +691,6 @@ function build(opt) {
   const root = document.createElement('div'); root.id = 'f5'; root.className = 'intro';
   root.innerHTML = `
 <canvas class="gl" tabindex="0"></canvas>
-<div class="yb" id="f5yb1"><div class="who"><i></i>ยอดน้ำ · ผู้นำชม</div><div class="tx"></div></div>
-<div class="yb" id="f5yb2"><div class="who"><i></i>ยอดน้ำ · ต้อนรับ</div><div class="tx"></div></div>
 <div class="ui top card hide-intro">
   <div class="brand"><div class="logo"><img src="${ASSET_BASE}mwa_logo.png" alt=""></div><div><b>Stakeholder Day</b><small>ชั้น 5 อาคารสำนักงานใหญ่ · ผังการจัดงาน (ร่าง)</small></div></div>
   <div class="search"><span style="color:#8a97a6;display:grid">${ui('search')}</span><input id="f5q" placeholder="ค้นหาบูธ บริษัท หรือโซน" aria-label="ค้นหาบูธ"></div>
@@ -2119,7 +2120,8 @@ function play(opt = {}) {
     const pos = new THREE.Vector3(q.x, w.fy + WALK.eye + Math.sin(w.s * 3.6) * 0.018, q.z);
     let look = new THREE.Vector3(ahead.x, floorY(ahead.x, ahead.z) + 1.45, ahead.z);
     { const k = ss(W.sDoor + 5, W.L - 1, w.s); if (k > 0) look.lerp(new THREE.Vector3((AUDm.ax0 + AUDm.ax1) / 2, AUDm.pitY + 2.6, AUDm.az1), k); }   // ลงถึงล่าง: หันมองเวที
-    if (slow) { const k = w.hold > 0 ? 0.9 : Math.min(1, (4.2 - nd) / 2.2) * 0.6; look.lerp(new THREE.Vector3(near.x, 1.25, near.z), k); }
+    if (slow && !w.greet) { const k = w.hold > 0 ? 0.9 : Math.min(1, (4.2 - nd) / 2.2) * 0.6; look.lerp(new THREE.Vector3(near.x, 1.25, near.z), k); }
+    if (w.greet && typeof YB !== 'undefined' && YB.walkOn) { const a = YB.guides[0].root.position, b = YB.guides[1].root.position; look.lerp(new THREE.Vector3((a.x + b.x) / 2, 0.85, (a.z + b.z) / 2), 0.85); }   // ทักทาย: มองยอดน้ำ/สายน้ำ
     // แวะบูธเด่น: เล็งกลางบูธเต็ม ๆ · จอแนวตั้งถอยหลังออกจากบูธ + ยกกล้อง + ขยายมุมกว้างเล็กน้อย ให้เห็นทั้งบูธ (เดิมเห็นแค่ครึ่ง)
     w.hb = lerp(w.hb || 0, w.hold > 0 ? 1 : 0, Math.min(1, dt * 2.4)); if (w.hb < 0.002 && !(w.hold > 0)) w.hn = null;
     if (w.hn && w.hb > 0.002) {
@@ -2134,7 +2136,8 @@ function play(opt = {}) {
     if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * (2.2 + 2.5 * (w.hb || 0))));
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
     setWalkCard(jOf(w.s));
-    { const r = 1.1 + 0.7 * (w.hb || 0); for (const pp of W.people) if (pp.mode === 'stand') pp.g.visible = Math.hypot(pp.g.position.x - pos.x, pp.g.position.z - pos.z) > r; }
+    { const r = 1.1 + 0.7 * (w.hb || 0), G = (typeof YB !== 'undefined' && YB.walkOn) ? YB.guides.map(g => g.root.position) : [];   // ซ่อนคนที่ยืนใกล้กล้อง หรือยืนซ้อนตำแหน่งยอดน้ำ/สายน้ำ
+      for (const pp of W.people) if (pp.mode === 'stand') { const gp = pp.g.position; pp.g.visible = Math.hypot(gp.x - pos.x, gp.z - pos.z) > r && G.every(q => Math.hypot(gp.x - q.x, gp.z - q.z) > 0.9); } }
     if (w.s >= W.L - 0.02) { w.endT = (w.endT || 0) + dt; if (w.endT > 2.6) { setAuto(false); goStep(STEPS.length - 1); } }
   }
   function setAuto(on) {
@@ -2327,62 +2330,92 @@ function play(opt = {}) {
     W.realP.then(P => swapPeople(W.realM, P)).catch(e => console.warn('[f5] real people failed, keeping simple ones', e));
   }
 
-  // ── น้องยอดน้ำ: ผู้นำชม (เดินนำในโหมดเดินชม) + ต้อนรับ (นั่งโต๊ะลงทะเบียน) ─────────────────────────
-  const YB = { g: null, r: null };
-  import('./stakeholder_yodnam.js').then(async m => {
-    const tex = await new THREE.TextureLoader().loadAsync('stakeholder_yodnam_faces.webp'); tex.userData.live = true;
-    if (!st.running && !st.prep) { /* ยังใช้ได้: ฉากเริ่มทีหลัง */ }
-    YB.m = m;
-    const g = m.makeYodnam(tex, 1.18); g.root.visible = false; g.root.traverse(o => { if (o.isMesh) o.castShadow = !MOBILE; }); W.interior.add(g.root); YB.g = g;
-    if (REG_DESK) { const r = m.makeYodnam(tex, 1.5); r.root.position.set(REG_DESK.x - 1.55, 0.64, REG_DESK.z - 0.66); r.root.traverse(o => { if (o.isMesh) o.castShadow = !MOBILE; }); W.interior.add(r.root); YB.r = r; r.update(0.5, { sit: true }); }
+  // ── พี่ยอดน้ำ + น้องสายน้ำ: เดินนำชมคู่กัน (โหมดเดินชม) · ทีมต้อนรับหลายตัวที่โต๊ะลงทะเบียน ──────────
+  const YB = { m: null, guides: [], recep: [], q: [], cur: null };
+  const TLd = u => new THREE.TextureLoader().loadAsync(u).then(t => { t.userData.live = true; t.colorSpace = THREE.NoColorSpace; return t; });
+  Promise.all([import('./stakeholder_yodnam.js'), TLd('stakeholder_yodnam_faces.webp'), TLd('stakeholder_sainam_faces.webp')]).then(([m, ty, ts]) => {
+    YB.m = m; const tex = { yod: ty, sai: ts };
+    const mk = (k, size, extra = {}) => { const o = m.makeMascot(k, tex[k], size, { outline: extra.outline !== false }); o.root.traverse(c => { if (c.isMesh && !c.userData.outline) c.castShadow = !MOBILE; }); W.interior.add(o.root);
+      Object.assign(o, { name: k === 'yod' ? 'พี่ยอดน้ำ' : 'น้องสายน้ำ', act: null, actT: 0, face: null, look: 0 }, extra); o.el = bubbleEl(o); return o; };
+    YB.guides = [mk('yod', 1.5, { role: 'g' }), mk('sai', 1.38, { role: 'g' })]; YB.guides.forEach(g => { g.root.visible = false; });
+    if (REG_DESK) { const R = REG_DESK, sy = sz => 1.07 - 0.3 * sz / 1.05;
+      const seat = (k, dx, sz) => { const o = mk(k, sz, { role: 'r', sit: true, outline: !MOBILE }); o.root.position.set(R.x + dx, sy(sz), R.z - 0.66); return o; };
+      const stand = (k, dx, dz, ry, sz) => { const o = mk(k, sz, { role: 'r', outline: !MOBILE }); o.root.position.set(R.x + dx, 0, R.z + dz); o.root.rotation.y = ry; return o; };
+      YB.recep = [seat('yod', -1.55, 1.5), seat('sai', 1.55, 1.42), stand('sai', -3.45, 0.55, 0.35, 1.3), stand('yod', 4.35, 0.55, -0.35, 1.4)];
+      YB.recep.forEach((o, i) => { o.next = 1 + i * 1.3; }); }
     st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true;
-  }).catch(e => console.warn('[f5] yodnam', e));
-  const say = (id, html, face, dur = 5) => { const b = YB[id] = YB[id] || {}; if (b.html === html && b.t > 0) return; b.html = html; b.t = dur; b.face = face; b.n = 0;
-    const el = root.querySelector(id === 'gs' ? '#f5yb1' : '#f5yb2'); b.el = el; b.full = html; el.querySelector('.tx').innerHTML = ''; };
+  }).catch(e => console.warn('[f5] mascots', e));
+  function bubbleEl(o) { const el = document.createElement('div'); el.className = 'yb ' + o.kind; el.innerHTML = `<div class="who"><i></i>${o.name}</div><div class="tx"></div>`; root.appendChild(el); return el; }
   const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
-  function bubble(id, obj, h, dt) {
-    const b = YB[id]; if (!b || !b.el) return; const el = b.el;
-    if (!obj || !obj.root.visible || b.t <= 0) { el.classList.remove('on'); if (b) b.t = Math.max(0, (b.t || 0) - dt); return; }
-    b.t -= dt;
-    // พิมพ์ทีละตัว (ข้อความไทยตัดตามกลุ่มอักษร ไม่ให้สระลอย) · แท็ก <b> เก็บไว้ทั้งก้อน
-    if (!b.parts) b.parts = null;
-    if (b.n < 1e9) { const plain = b.full.replace(/<[^>]+>/g, ''), gs = GR(plain); b.n = Math.min(gs.length, b.n + dt * 38); if (b.n >= gs.length) { el.querySelector('.tx').innerHTML = b.full; b.n = 1e9; } else el.querySelector('.tx').textContent = gs.slice(0, Math.floor(b.n)).join(''); }
-    v3.set(0, h, 0); obj.root.localToWorld(v3); v3.project(camera);
+  // คิวบทพูด: ทีละประโยค ผู้พูดทำท่าตามบท ผู้ฟังหันหน้าไปหาผู้พูด
+  const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) YB.cur.t = Math.min(YB.cur.t, 0.25); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
+  function runSpeech(dt) {
+    let c = YB.cur; if (c) { c.t -= dt; if (c.t <= 0) { c.o.el.classList.remove('on'); c.o.act = null; c.o.face = null; YB.cur = c = null; } }
+    if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; c.o.el.querySelector('.tx').textContent = ''; }
+    if (c) { const tx = c.o.el.querySelector('.tx'); if (c.n < c.gs.length) { c.n = Math.min(c.gs.length, c.n + dt * 40); if (c.n >= c.gs.length) tx.innerHTML = c.html; else tx.textContent = c.gs.slice(0, Math.floor(c.n)).join(''); } }
+  }
+  function placeBubble(o) {
+    const el = o.el, on = YB.cur && YB.cur.o === o && o.root.visible;
+    if (!on) { el.classList.remove('on'); return; }
+    v3.set(0, o.top + 0.06, 0); o.root.localToWorld(v3); v3.project(camera);
     const w = root.clientWidth, hh = root.clientHeight, x = (v3.x + 1) / 2 * w, y = (1 - v3.y) / 2 * hh;
-    const ok = v3.z < 1 && x > -40 && x < w + 40 && y > 40 && y < hh - 20; el.classList.toggle('on', ok && b.t > 0);
+    const ok = v3.z < 1 && x > -60 && x < w + 60 && y > 40 && y < hh; el.classList.toggle('on', ok);
     if (ok) { const bw = el.offsetWidth, bh = el.offsetHeight, lx = clamp(x - 28, 8, w - bw - 8), ty = Math.max(70, y - bh - 14); el.style.transform = `translate(${lx}px,${ty}px)`; }
   }
-  const LINES = ['สวัสดีครับ ผม<b>ยอดน้ำ</b> จะพาเดินชมงาน Stakeholder Day เองครับ ตามผมมาเลย!', 'ทางเดินนี้มี<b>นวัตกรรมของ กปน.</b> ให้ชมตลอดทางครับ', 'ส่วน<b>นิทรรศการ กปน.</b> ครับ เรื่องน้ำประปาคุณภาพดีอยู่ตรงนี้', 'ห้องนี้เป็น<b>บูธบริษัทพันธมิตร</b>ครับ แวะชมได้ทุกบูธเลย', 'ใกล้ถึง<b>ห้องประชุม</b>แล้วครับ', 'ถึงแล้วครับ <b>ห้อง Auditorium</b> เชิญนั่งตามสบายเลยครับ'];
+  const STAGE = [null,
+    [[0, 'ทางเดินนี้มี<b>นวัตกรรมของ กปน.</b> ให้ชมตลอดทางครับ', 'point', 0], [1, 'ไปดูกันเลยค่ะ!', 'cheer', 1]],
+    [[1, 'มาถึง<b>นิทรรศการ กปน.</b> แล้วค่ะ', 'present', 3], [0, 'เรื่องน้ำประปาคุณภาพดีอยู่ตรงนี้ครับ', 'talk', 0]],
+    [[0, 'ห้องนี้เป็น<b>บูธบริษัทพันธมิตร</b>ครับ', 'present', 0], [1, 'แวะชมได้ทุกบูธเลยนะคะ', 'cheer', 1]],
+    [[1, 'ใกล้ถึง<b>ห้องประชุม</b>แล้วค่ะ', 'point', 0]],
+    [[0, 'ถึงแล้วครับ <b>ห้อง Auditorium</b>', 'present', 1], [1, 'ขอบคุณที่มาเที่ยวงานด้วยกันนะคะ!', 'hop', 1], [0, 'แล้วพบกันใหม่ครับ', 'wave', 2]]];
+  const yawTo = (o, x, z) => Math.atan2(x - o.root.position.x, z - o.root.position.z);
+  const turn = (o, a, dt, k = 5) => { let d = a - o.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); o.root.rotation.y += d * Math.min(1, dt * k); };
+  function moveTo(o, x, z, dt, k = 3.2) { const p = o.root.position, ox = p.x, oz = p.z; p.x += (x - p.x) * Math.min(1, dt * k); p.z += (z - p.z) * Math.min(1, dt * k); p.y += (floorY(p.x, p.z) - p.y) * Math.min(1, dt * 8); return Math.hypot(p.x - ox, p.z - oz) / Math.max(1e-3, dt); }
   function yodStep(dt) {
-    const m = YB.m, g = YB.g, r = YB.r; if (!m) return;
-    // ต้อนรับ: โบกมือเมื่อกล้องเข้าใกล้โต๊ะ หรืออยู่ที่จุด "ผนังต้อนรับ"
-    if (r && st.walk && YB.rs && YB.rs.t > 0) YB.rs.t = 0;   // เดินชม: ให้ผู้นำชมพูดคนเดียว (ไม่ให้กล่องข้อความซ้อนกัน)
-    if (r) { const near = !st.introOn && (camera.position.distanceTo(r.root.position) < 9 || (STEPS[st.step] && STEPS[st.step].j === 0 && st.step > 0 && !st.walk));
-      if (near && !YB.rNear && !st.walk) say('rs', 'ยินดีต้อนรับสู่ <b>Stakeholder Day</b> ครับ ลงทะเบียนที่นี่ได้เลย', m.FACE.happy, 5); YB.rNear = near;
-      const talking = YB.rs && YB.rs.t > 0; r.update(dt, { sit: true, wave: talking && YB.rs.t > 2.5, talk: talking, face: talking ? (YB.rs.t > 3.6 ? m.FACE.happy : m.FACE.normal) : null }); bubble('rs', r, r.size * 1.02, dt); }
-    if (!g) return;
-    const w = st.walk;
-    if (!w) { g.root.visible = false; bubble('gs', g, 1, dt); YB.gj = -1; YB.gHold = null; return; }
-    // ตำแหน่งเป้าหมาย: เดินนำหน้ากล้อง ~2.6 ม. ชิดขวาของเส้นทาง · แวะบูธ: ยืนข้างกล้อง หันมาคุย
-    const lead = clamp(W.L - w.s, 0.8, 4.3), q = W.routeAt(Math.min(w.s + lead, W.L)), tgt = v3b.set(q.x - q.tz * 0.85, 0, q.z + q.tx * 0.85);
-    let face = Math.atan2(q.tx, q.tz), speak = false;
-    const cp = camera.position;
-    if (w.hn && w.hb > 0.25) {
-      const b = w.hn, d = new THREE.Vector3(b.x - cp.x, 0, b.z - cp.z), dl = Math.max(0.5, d.length()); d.normalize();
-      const al = dl * 0.6, lt = al * 0.36; tgt.set(cp.x + d.x * al - d.z * lt, 0, cp.z + d.z * al + d.x * lt);
-      face = Math.atan2(cp.x - tgt.x, cp.z - tgt.z) - 0.35;
-      if (YB.gHold !== b.code) { YB.gHold = b.code; say('gs', `นี่คือบูธ <b>${b.name}</b> ครับ${b.sub ? ' — ' + b.sub : ''}`, m.FACE.sparkle, 4.5); }
+    const m = YB.m; if (!m) return;
+    runSpeech(dt);
+    const cp = camera.position, w = st.walk, [gy, gs] = YB.guides, F = m.FACE, G = [gy, gs];
+    // ── ทีมต้อนรับ: ทำท่าสลับกันเรื่อย ๆ · กล้องเข้าใกล้ (นอกโหมดเดินชม) → ทักทาย
+    if (YB.recep.length) {
+      const d = camera.position.distanceTo(YB.recep[0].root.position), near = !st.introOn && (d < 9 || (STEPS[st.step] && STEPS[st.step].j === 0 && st.step > 0 && !w));
+      if (near && !YB.rNear && !w) { const [a, b2] = YB.recep; say([[a, 'ยินดีต้อนรับสู่ <b>Stakeholder Day</b> ครับ!', 'wave', F.happy, 2.6], [b2, 'ลงทะเบียนที่นี่ได้เลยค่ะ', 'present', F.normal, 2.4]], false); }
+      YB.rNear = near;
+      for (const o of YB.recep) {
+        if (!(YB.cur && YB.cur.o === o)) { o.next -= dt; if (o.next < 0) { const pool = o.sit ? ['wave', 'cheer', 'present', 'talk'] : ['wave', 'hop', 'cheer', 'present', 'wave']; o.act = near || Math.random() < 0.5 ? pool[Math.floor(Math.random() * pool.length)] : null; o.face = o.act ? [F.happy, F.normal, F.sparkle][Math.floor(Math.random() * 3)] : null; o.actT = 1.2 + Math.random() * 1.4; o.next = o.actT + 2 + Math.random() * 4; }
+          if (o.actT > 0) { o.actT -= dt; if (o.actT <= 0) { o.act = null; o.face = null; } } }
+        o.update(dt, { sit: o.sit, act: o.act, face: o.face, talk: YB.cur && YB.cur.o === o }); placeBubble(o);
+      }
     }
-    if (w.s < 2.2 && (w.t0 = (w.t0 || 0) + dt) < 3.2) { face = Math.atan2(cp.x - g.root.position.x, cp.z - g.root.position.z); }   // เริ่ม: หันมาทักทายก่อน
-    const j = jOf(w.s); if (j !== YB.gj) { YB.gj = j; say('gs', LINES[j], j === 0 ? m.FACE.happy : j === 5 ? m.FACE.wink : m.FACE.normal, j === 0 ? 5.5 : 4.2); }
-    if (!g.root.visible) { g.root.visible = true; g.root.position.set(tgt.x, floorY(tgt.x, tgt.z), tgt.z); g.root.rotation.y = face; }
-    const p0 = g.root.position, k = Math.min(1, dt * 3.2), ox = p0.x, oz = p0.z;
-    p0.x += (tgt.x - p0.x) * k; p0.z += (tgt.z - p0.z) * k; p0.y += (floorY(p0.x, p0.z) - p0.y) * Math.min(1, dt * 8);
-    const sp = Math.hypot(p0.x - ox, p0.z - oz) / Math.max(1e-3, dt);
-    let da = face - g.root.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); g.root.rotation.y += da * Math.min(1, dt * 5);
-    const talking = YB.gs && YB.gs.t > 0;
-    g.update(dt, { walk: Math.min(1, sp / 1.6), wave: talking && (YB.gj === 0 && w.s < 2.4 || (YB.gj === 5 && w.s > W.L - 0.5)), talk: talking, face: talking ? YB.gs.face : null });
-    bubble('gs', g, g.size * 1.02, dt);
+    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; } } return; }
+    const R0 = W.routeAt(Math.min(w.s, W.L)), hd = Math.atan2(R0.tx, R0.tz);
+    // เริ่มเดินชม: กล้องหยุดรอ ทั้งคู่หันมาทักทาย
+    if (!YB.walkOn) { YB.walkOn = true; YB.j = 0; YB.hold = null; w.hold = 7.2; w.greet = true;
+      const q = W.routeAt(Math.min(w.s + 4.2, W.L));
+      G.forEach((g, i) => { const lat = i ? -0.5 : 0.5; g.root.position.set(q.x - q.tz * lat, floorY(q.x, q.z), q.z + q.tx * lat); g.root.rotation.y = yawTo(g, cp.x, cp.z); g.root.visible = true; });
+      say([[gy, 'สวัสดีครับ! ผม<b>พี่ยอดน้ำ</b>', 'wave', F.happy, 2.4], [gs, 'และ<b>น้องสายน้ำ</b>ค่ะ วันนี้จะพาเที่ยวงาน Stakeholder Day นะคะ', 'hop', F.happy, 3.3], [gy, 'ตามพวกเรามาเลยครับ!', 'present', F.normal, 1.8]]); }
+    const greet = w.greet && w.hold > 0; if (w.greet && w.hold <= 0) w.greet = false;
+    // แวะบูธเด่น: ยืนกระจายสองข้างบูธ หันมาเล่าให้ฟัง
+    const bh = !greet && w.hn && w.hb > 0.2 ? w.hn : null;
+    if (bh && YB.hold !== bh.code) { YB.hold = bh.code; w.hold = Math.max(w.hold, 5.2);
+      say([[gy, `นี่คือบูธ <b>${bh.name}</b> ครับ`, 'point', F.sparkle, 2.2], ...(bh.sub ? [[gs, bh.sub + ' ค่ะ', 'present', F.normal, 2.8]] : [])]); }
+    const j = jOf(w.s); if (!greet && !bh && j !== YB.j) { YB.j = j; if (STAGE[j]) say(STAGE[j].map(([k, h, a, f]) => [G[k], h, a, f])); }
+    const atEnd = w.s >= W.L - 0.6;
+    G.forEach((g, i) => {
+      let tx, tz, face, look = 0;
+      if (greet || atEnd) { const q = W.routeAt(Math.min(w.s + (atEnd ? 2.4 : 4.2), W.L)), lat = i ? -0.5 : 0.5; tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
+      else if (bh) { const d = new THREE.Vector3(cp.x - bh.x, 0, cp.z - bh.z), dl = Math.max(0.5, d.length()); d.normalize(); const fwd = Math.min(dl - 2.2, 1.15), lt = -((bh.w || 3) * 0.5 - (i ? 0.95 : 0.15));   // ยืนคู่กันหน้ามุมขวาของบูธ (ไม่บังกลางบูธ)
+        tx = bh.x + d.x * fwd - d.z * lt; tz = bh.z + d.z * fwd + d.x * lt; const toCam = yawTo(g, cp.x, cp.z), toB = yawTo(g, bh.x, bh.z); face = toCam + clamp(Math.atan2(Math.sin(toB - toCam), Math.cos(toB - toCam)), -1.2, 1.2) * (g.act === 'point' ? 0.5 : 0.22); g.sg = null; }
+      else { // เดินตามเส้นทาง (นับระยะตามเส้น ไม่ตัดมุม) นำหน้ากล้องเสมอ · คู่กันชิดขวา
+        const lead = clamp(W.L - w.s, 1.2, i ? 4.1 : 4.4), want = Math.min(W.L, w.s + lead); if (g.sg == null) g.sg = Math.max(w.s + 1.2, want - 1.4);
+        g.sg += clamp(want - g.sg, -1, 1) * Math.min(1, dt * 2.5) * 3.2; g.sg = Math.max(g.sg, w.s + 1.0);
+        const q = W.routeAt(Math.min(g.sg, W.L)), lat = i ? 0.38 : 1.12; tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = Math.atan2(q.tx, q.tz); }
+      if (greet || atEnd) g.sg = null;
+      const sp = moveTo(g, tx, tz, dt, bh || greet || atEnd ? 3.2 : 9); turn(g, sp > 0.35 && !bh && !greet ? Math.atan2(tx - g.root.position.x, tz - g.root.position.z) * 0 + face : face, dt);
+      // ผู้ฟังหันหน้าไปหาผู้พูด
+      const cur = YB.cur && YB.cur.o; if (cur && cur.role === 'g' && cur !== g) { const a = yawTo(g, cur.root.position.x, cur.root.position.z) - g.root.rotation.y; look = clamp(Math.atan2(Math.sin(a), Math.cos(a)), -0.9, 0.9); }
+      g.update(dt, { walk: Math.min(1, sp / 1.7), act: g.act, face: g.face, talk: cur === g, look });
+      placeBubble(g);
+    });
   }
   const v3b = new THREE.Vector3();
 
@@ -2394,7 +2427,7 @@ function play(opt = {}) {
         const nar = 0.55 + 0.45 * ss(0.6, 3.2, Math.abs(s - W.sDoor));                     // ผ่านประตู Auditorium ทีละคน (เข้าแนวกลาง)
         const r = R.at(Math.min(s, R.L)), lo = Math.sign(p.off) * Math.max(0.32, Math.abs(p.off) * nar); const nx = -r.tz, nz = r.tx, px = r.x + nx * lo, pz = r.z + nz * lo;   // สองแถวห่างกัน ≥ 0.64 ม. เสมอ (ไม่เดินทะลุกัน)
         p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx, r.tz);
-        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < 2.0);
+        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < (st.walk.greet ? 7 : 2.0));   // ช่วงทักทาย: เคลียร์คนเดินผ่านหน้ากล้อง
         const ph = (st.simT * p.v) * 6.6 + p.ph, w = Math.sin(ph) * 0.42, c = Math.cos(ph);
         p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w;                                  // สะโพก
         p.kL.rotation.x = 0.08 + 0.75 * Math.max(0, c) ** 1.5; p.kR.rotation.x = 0.08 + 0.75 * Math.max(0, -c) ** 1.5;   // งอเข่าช่วงก้าวขาไปข้างหน้า
@@ -2467,7 +2500,7 @@ function play(opt = {}) {
   requestAnimationFrame(() => root.classList.add('on'));
   st.raf = requestAnimationFrame(frame);
   st.goStep = goStep; st.selectBooth = selectBooth; st.act = act;
-  window.__f5 = st; st.camera = camera; st.controls = controls; st.THREE = THREE; st.select = (code, fly) => selectBooth(W.booths.find(q => q.code === code) || null, fly);
+  window.__f5 = st; st.YB = YB; st.camera = camera; st.controls = controls; st.THREE = THREE; st.select = (code, fly) => selectBooth(W.booths.find(q => q.code === code) || null, fly);
   return true;
 }
 
