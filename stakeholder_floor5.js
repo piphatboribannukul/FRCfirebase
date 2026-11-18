@@ -547,6 +547,7 @@ function css() {
 #f5 .yb .who{display:flex;align-items:center;gap:6px;font:700 12px/1 var(--f5head,'Bai Jamjuree',sans-serif);color:#0d6fbf;margin-bottom:5px;letter-spacing:.01em}
 #f5 .yb .who i{width:8px;height:8px;border-radius:50%;background:#0d6fbf;display:inline-block}
 #f5 .yb:after{content:'';position:absolute;left:20px;bottom:-7px;width:14px;height:14px;background:#fff;transform:rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 6px rgba(10,40,90,.07)}
+#f5 [data-k=voice] .vx{display:none}#f5 [data-k=voice].off .vx{display:inline}#f5 [data-k=voice].off .vw{display:none}
 #f5 .yb.sai .who{color:#2a93d6}
 #f5 .yb.sai .who i{background:#3aa6e6}
 #f5 .yb.sai b{color:#1f86c9}
@@ -708,7 +709,7 @@ function build(opt) {
 <div class="ui tools card hide-intro">
   <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">${ui('list')}</button><button data-k="zin" title="ซูมเข้า">${ui('plus')}</button><button data-k="zout" title="ซูมออก">${ui('minus')}</button><hr>
   <button data-k="home" title="ภาพรวม">${ui('home')}</button><button data-k="top" title="มุมบน (ผัง)">${ui('plan')}</button><button data-k="spin" title="หมุนรอบ">${ui('spin')}</button><hr>
-  <button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
+  <button data-k="voice" title="เสียงพากย์ ยอดน้ำ/สายน้ำ" aria-label="เปิด/ปิดเสียงพากย์"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="vw" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="vx" d="M16 10l4 4M20 10l-4 4"/></svg></button><button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
 </div>
 <div class="ui detail card" id="f5det"></div>
 <div class="ui list card hide-intro min">
@@ -2129,9 +2130,9 @@ function play(opt = {}) {
       camera.userData.cap = 92 + 10 * port * hb; camera.updateProjectionMatrix();
       const away = new THREE.Vector3(pos.x - b.x, 0, pos.z - b.z), dist = Math.max(0.5, away.length()); away.normalize();
       const vf = Math.max(camera.fov, camera.userData.cap) * Math.PI / 360, hh = Math.atan(Math.tan(vf) * camera.aspect);
-      const need = ((b.w || 2) / 2 + 0.55) / Math.tan(hh), back = clamp(need - dist, 0, 1.7) * port * hb;
+      const need = ((b.w || 2) / 2 + (typeof YB !== 'undefined' && YB.walkOn ? 1.2 : 0.55)) / Math.tan(hh), back = clamp(need - dist, 0, 2.2) * port * hb;   // เผื่อที่ให้ยอดน้ำ/สายน้ำยืนข้างบูธ
       pos.addScaledVector(away, back); pos.y += 0.5 * port * hb;
-      look.lerp(new THREE.Vector3(b.x, 1.25, b.z), hb);
+      { let lx = b.x, lz = b.z; if (typeof YB !== 'undefined' && YB.walkOn && YB.spotFor === b.code && YB.spot) { const mx = (YB.spot[0][0] + YB.spot[1][0]) / 2, mz = (YB.spot[0][1] + YB.spot[1][1]) / 2; lx += (mx - lx) * 0.38; lz += (mz - lz) * 0.38; } look.lerp(new THREE.Vector3(lx, 1.2, lz), hb); }   // เล็งให้เห็นทั้งบูธและยอดน้ำ/สายน้ำที่ยืนข้างบูธ
     } else if (camera.userData.cap) { camera.userData.cap = 0; camera.updateProjectionMatrix(); }
     if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * (2.2 + 2.5 * (w.hb || 0))));
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
@@ -2148,7 +2149,8 @@ function play(opt = {}) {
   function act(k) {
     if (k === 'next') { setAuto(false); goStep(st.step + 1); }
     else if (k === 'prev') { setAuto(false); goStep(st.step - 1); }
-    else if (k === 'auto') setAuto(!st.auto);
+    else if (k === 'auto') { if (!st.auto) voUnlock(); setAuto(!st.auto); }
+    else if (k === 'voice') { VO.on = !VO.on; if (!VO.on && 'speechSynthesis' in window) speechSynthesis.cancel(); else voUnlock(); root.querySelector('[data-k=voice]').classList.toggle('off', !VO.on); }
     else if (k === 'home') { setAuto(false); goStep(0); }
     else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([4, 112, 12], [4, 0, 3], 1.6); }
     else if (k === 'spin') { st.spin = !st.spin; controls.autoRotate = st.spin; controls.autoRotateSpeed = 0.7; st.tween = null; }
@@ -2292,7 +2294,24 @@ function play(opt = {}) {
   // ── จำลองคนเดิน
   // ── คนสมจริง (โมเดล Rocketbox) โหลดตามหลังแบบไม่บล็อก → สลับแทนคนแบบเรขาคณิตเมื่อพร้อม · ?lowpeople = ใช้แบบเดิม
   const Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
-  function syncReal() { if (!W.realStand) return; for (const p of W.realStand) { const v = p.g.visible; if (v !== p._rv) { p._rv = v; p.inst.im.setMatrixAt(p.inst.i, v ? p.inst.m : Z0); p.inst.im.instanceMatrix.needsUpdate = true; } } }
+  function syncReal() { SWAY_T.value = performance.now() / 1000; if (!W.realStand) return; for (const p of W.realStand) { const v = p.g.visible; if (v !== p._rv) { p._rv = v; p.inst.im.setMatrixAt(p.inst.i, v ? p.inst.m : Z0); p.inst.im.instanceMatrix.needsUpdate = true; } } }
+  // คนยืน/นั่ง (รูปทรงอบนิ่ง) ให้มีชีวิต: หันศีรษะช้า ๆ โยกน้ำหนักตัว หายใจ — คำนวณใน vertex shader (ไม่เพิ่มภาระ CPU)
+  const SWAY_T = { value: 0 };
+  function swayMat(base, neck) {
+    const m = base.clone();
+    m.onBeforeCompile = sh => { sh.uniforms.uT = SWAY_T; sh.uniforms.uNeck = { value: new THREE.Vector2(neck[0], neck[1]) };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT; uniform vec2 uNeck;').replace('#include <begin_vertex>', `#include <begin_vertex>
+#ifdef USE_INSTANCING
+{ float ph = instanceMatrix[3].x * 1.7 + instanceMatrix[3].z * 2.3;
+  float hw = smoothstep(uNeck.x - 0.06, uNeck.x + 0.03, transformed.y);
+  float ang = (sin(uT * 0.31 + ph) * 0.65 + sin(uT * 0.17 + ph * 1.9) * 0.35) * 0.45 * hw;
+  vec2 hz = transformed.xz - vec2(0.0, uNeck.y); float cA = cos(ang), sA = sin(ang);
+  transformed.xz = vec2(hz.x * cA + hz.y * sA, -hz.x * sA + hz.y * cA) + vec2(0.0, uNeck.y);
+  transformed.x += transformed.y * sin(uT * 0.7 + ph) * 0.011; transformed.z += transformed.y * sin(uT * 0.53 + ph * 1.3) * 0.006;
+  transformed.y += max(0.0, transformed.y - uNeck.x * 0.7) * 0.014 * sin(uT * 1.6 + ph); }
+#endif`); };
+    m.customProgramCacheKey = () => 'people-sway'; return m;
+  }
   function swapPeople(m, P) {
     if (!st.running || W.realStand) return;
     const MT = P.types.filter(t => !t.female), FT = P.types.filter(t => t.female);
@@ -2306,7 +2325,7 @@ function play(opt = {}) {
         p.g.traverse(c => { if (c.isMesh) c.visible = false; }); p.g.add(rig.root); p.real = rig;
       } else if (p.mode === 'stand') {
         parent = parent || p.g.parent; if (p.g.parent) p.g.parent.remove(p.g);
-        const pose = p.phone ? 'phone' : p.cup ? 'hold' : p.k % 3 === 0 ? 'hold' : 'stand', sc = (p.g.scale.x || 1) * (0.96 + (p.k % 5) * 0.012);
+        const pose = p.phone ? 'phone' : p.cup ? 'hold' : ['relax', 'clasp', 'talk', 'cross', 'relax', 'stand', 'hold'][p.k % 7], sc = (p.g.scale.x || 1) * (0.96 + (p.k % 5) * 0.012);
         add(typeOf(p), pose, p, new THREE.Matrix4().compose(p.g.position, q.setFromAxisAngle(up, p.g.rotation.y), new THREE.Vector3(sc, sc, sc)));
       } else if (p.mode === 'sit' && p.seat) {
         sitG = p.g; if (nSit++ >= sitMax) continue;
@@ -2316,7 +2335,7 @@ function play(opt = {}) {
     parent = parent || W.interior; W.realStand = [];
     for (const { t, pose, list } of groups.values()) {
       const geo = m.bakePose(m.makeRig(t, P.mat), m.POSES[pose], pose === 'sit' ? { seat: true } : {});
-      const im = new THREE.InstancedMesh(geo, P.mat, list.length); im.castShadow = pose !== 'sit'; im.userData.noBatch = true;
+      const im = new THREE.InstancedMesh(geo, swayMat(P.mat, geo.userData.neck || [1.5, 0]), list.length); im.castShadow = pose !== 'sit'; im.userData.noBatch = true;
       list.forEach(([p, mtx], i) => im.setMatrixAt(i, mtx)); im.computeBoundingSphere();   // ขอบเขตจากตำแหน่งจริงก่อน (ถ้าคิดตอนซ่อนอยู่ ขอบเขต = 0 → ถูกตัดทิ้งไม่วาด)
       list.forEach(([p, mtx], i) => { if (p) { if (!p.g.visible) im.setMatrixAt(i, Z0); p.inst = { im, i, m: mtx }; p._rv = p.g.visible; W.realStand.push(p); } });
       parent.add(im);
@@ -2347,11 +2366,19 @@ function play(opt = {}) {
   }).catch(e => console.warn('[f5] mascots', e));
   function bubbleEl(o) { const el = document.createElement('div'); el.className = 'yb ' + o.kind; el.innerHTML = `<div class="who"><i></i>${o.name}</div><div class="tx"></div>`; root.appendChild(el); return el; }
   const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
+  // ── เสียงพากย์: ใช้เสียงภาษาไทยในเครื่อง (Web Speech) · ยอดน้ำเสียงทุ้มกว่า สายน้ำเสียงสูง · ปิดได้ที่ปุ่มลำโพง
+  const VO = { on: true, voice: null }, HAS_VO = 'speechSynthesis' in window;
+  const pickVoice = () => { if (!HAS_VO) return null; const vs = speechSynthesis.getVoices().filter(v => /^th/i.test(v.lang)); if (!vs.length) return null; const pref = /Premwadee|Narisa|Kanya|Achara|Google|Niwat|Pattara/i; return vs.find(v => pref.test(v.name)) || vs[0]; };
+  if (HAS_VO) speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => { VO.voice = pickVoice(); });
+  function voUnlock() { if (!HAS_VO || VO.unlocked) return; VO.unlocked = true; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }   // iPhone ต้องเริ่มเสียงจากการแตะครั้งแรก
+  function speakLine(c) { if (!VO.on || !HAS_VO) return; VO.voice = VO.voice || pickVoice(); if (!VO.voice) return;
+    const u = new SpeechSynthesisUtterance(c.html.replace(/<[^>]+>/g, '').replace(/[·—]/g, ' ')); u.voice = VO.voice; u.lang = VO.voice.lang; u.pitch = c.o.kind === 'sai' ? 1.6 : 1.15; u.rate = 1.06;
+    c.speaking = true; u.onend = u.onerror = () => { c.speaking = false; }; speechSynthesis.speak(u); }
   // คิวบทพูด: ทีละประโยค ผู้พูดทำท่าตามบท ผู้ฟังหันหน้าไปหาผู้พูด
-  const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) YB.cur.t = Math.min(YB.cur.t, 0.25); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
+  const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) { YB.cur.t = Math.min(YB.cur.t, 0.25); YB.cur.speaking = false; } if (HAS_VO) speechSynthesis.cancel(); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
   function runSpeech(dt) {
-    let c = YB.cur; if (c) { c.t -= dt; if (c.t <= 0) { c.o.el.classList.remove('on'); c.o.act = null; c.o.face = null; YB.cur = c = null; } }
-    if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; c.o.el.querySelector('.tx').textContent = ''; }
+    let c = YB.cur; if (c) { c.t -= dt; if ((c.t <= 0 && !c.speaking) || c.t < -9) { c.o.el.classList.remove('on'); c.o.act = null; c.o.face = null; YB.cur = c = null; } }
+    if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; c.o.el.querySelector('.tx').textContent = ''; speakLine(c); }
     if (c) { const tx = c.o.el.querySelector('.tx'); if (c.n < c.gs.length) { c.n = Math.min(c.gs.length, c.n + dt * 40); if (c.n >= c.gs.length) tx.innerHTML = c.html; else tx.textContent = c.gs.slice(0, Math.floor(c.n)).join(''); } }
   }
   function placeBubble(o) {
@@ -2368,6 +2395,37 @@ function play(opt = {}) {
     [[0, 'ห้องนี้เป็น<b>บูธบริษัทพันธมิตร</b>ครับ', 'present', 0], [1, 'แวะชมได้ทุกบูธเลยนะคะ', 'cheer', 1]],
     [[1, 'ใกล้ถึง<b>ห้องประชุม</b>แล้วค่ะ', 'point', 0]],
     [[0, 'ถึงแล้วครับ <b>ห้อง Auditorium</b>', 'present', 1], [1, 'ขอบคุณที่มาเที่ยวงานด้วยกันนะคะ!', 'hop', 1], [0, 'แล้วพบกันใหม่ครับ', 'wave', 2]]];
+  // เคลื่อนที่แบบสปริงหน่วงวิกฤต (เหมือน SmoothDamp): ความเร็วต่อเนื่อง ไม่กระโดด ไม่วาบ · จำกัดความเร็วสูงสุด
+  function spring(g, tx, tz, dt) {
+    const p = g.root.position; g.v = g.v || [0, 0];
+    if (Math.hypot(p.x - tx, p.z - tz) > 14) { p.x = tx; p.z = tz; g.v[0] = g.v[1] = 0; }
+    const T = 0.5, MAXV = 3.0, om = 2 / T, x = om * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    let cx = p.x - tx, cz = p.z - tz; const mc = MAXV * T, cl = Math.hypot(cx, cz); if (cl > mc) { cx *= mc / cl; cz *= mc / cl; }
+    const ux = (g.v[0] + om * cx) * dt, uz = (g.v[1] + om * cz) * dt;
+    g.v[0] = (g.v[0] - om * ux) * e; g.v[1] = (g.v[1] - om * uz) * e;
+    p.x = p.x - cx + (cx + ux) * e; p.z = p.z - cz + (cz + uz) * e; p.y += (floorY(p.x, p.z) - p.y) * Math.min(1, dt * 8);
+    return Math.hypot(g.v[0], g.v[1]);
+  }
+  // ระยะถึงผนังสองข้างของเส้นทาง (คำนวณครั้งเดียว ทุก 0.5 ม.)
+  function clearAt(sv) {
+    if (!YB.clear) { const rc = new THREE.Raycaster(), objs = [...W.walls, ...W.booths.map(b => b.hit)], o = new THREE.Vector3(), d = new THREE.Vector3(); rc.far = 3; W.interior.updateMatrixWorld(true); YB.clear = [];
+      for (let s0 = 0; s0 <= W.L + 0.5; s0 += 0.5) { const q = W.routeAt(Math.min(s0, W.L)); o.set(q.x, 0.9, q.z); const r = [];
+        for (const sg of [1, -1]) { d.set(-q.tz * sg, 0, q.tx * sg).normalize(); rc.set(o, d); const h = rc.intersectObjects(objs, false)[0]; r.push(h ? h.distance : 3); } YB.clear.push(r); } }
+    const k = clamp(sv / 0.5, 0, YB.clear.length - 1), a = YB.clear[Math.floor(k)], b = YB.clear[Math.ceil(k)];
+    return [Math.min(a[0], b[0]), Math.min(a[1], b[1])];
+  }
+  // จุดยืนแนะนำบูธ: ข้างบูธ (นอกความกว้างบูธ) ด้านหน้า เลือกฝั่งที่ใกล้กล้องและไม่ชนบูธอื่น
+  function boothSpot(b, cp) {
+    const f = FACEV[b.face] || [0, 1], sx = f[1], sz = -f[0], hw = (b.w || 2) / 2, hd = (b.d || 1) / 2, o = Math.max(0.2, hd - 0.15);   // ระดับเดียวกับหน้าบูธ (ไม่ยื่นมาหน้ากล้อง)
+    const rc = new THREE.Raycaster(), fx = b.x + f[0] * o, fz = b.z + f[1] * o, org = new THREE.Vector3(), dir = new THREE.Vector3();
+    const wallOk = (x, z) => { const dl = Math.hypot(x - fx, z - fz); if (dl < 0.05) return true; org.set(fx, 0.9, fz); dir.set((x - fx) / dl, 0, (z - fz) / dl); rc.set(org, dir); rc.far = dl + 0.45; return !rc.intersectObjects(W.walls, false).length; };
+    const free = (x, z) => wallOk(x, z) && W.booths.every(q => q === b || Math.hypot(x - q.x, z - q.z) > Math.max(q.w || 2, q.d || 1) / 2 + 0.55);
+    const C = [1, -1].map(sg => { const a = [b.x + f[0] * o + sx * sg * (hw + 0.5), b.z + f[1] * o + sz * sg * (hw + 0.5)], c = [b.x + f[0] * (o + 0.55) + sx * sg * (hw + 1.2), b.z + f[1] * (o + 0.55) + sz * sg * (hw + 1.2)];
+      const vx = b.x - cp.x, vz = b.z - cp.z, rt = (a[0] - cp.x) * -vz + (a[1] - cp.z) * vx;   // > 0 = อยู่ขวามือของกล้อง (แผงข้อมูลอยู่ซ้ายล่าง)
+      return { pts: [a, c], ok: free(...a) && free(...c), r: rt > 0 ? 1 : 0 }; });
+    C.sort((p, q) => (q.ok - p.ok) || (q.r - p.r));
+    return C[0].pts;
+  }
   const yawTo = (o, x, z) => Math.atan2(x - o.root.position.x, z - o.root.position.z);
   const turn = (o, a, dt, k = 5) => { let d = a - o.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); o.root.rotation.y += d * Math.min(1, dt * k); };
   function moveTo(o, x, z, dt, k = 3.2) { const p = o.root.position, ox = p.x, oz = p.z; p.x += (x - p.x) * Math.min(1, dt * k); p.z += (z - p.z) * Math.min(1, dt * k); p.y += (floorY(p.x, p.z) - p.y) * Math.min(1, dt * 8); return Math.hypot(p.x - ox, p.z - oz) / Math.max(1e-3, dt); }
@@ -2386,10 +2444,10 @@ function play(opt = {}) {
         o.update(dt, { sit: o.sit, act: o.act, face: o.face, talk: YB.cur && YB.cur.o === o }); placeBubble(o);
       }
     }
-    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; } } return; }
+    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; YB.cur.speaking = false; if (HAS_VO) speechSynthesis.cancel(); } } return; }
     const R0 = W.routeAt(Math.min(w.s, W.L)), hd = Math.atan2(R0.tx, R0.tz);
     // เริ่มเดินชม: กล้องหยุดรอ ทั้งคู่หันมาทักทาย
-    if (!YB.walkOn) { YB.walkOn = true; YB.j = 0; YB.hold = null; w.hold = 7.2; w.greet = true;
+    if (!YB.walkOn) { YB.walkOn = true; YB.j = 0; YB.hold = null; YB.done = {}; YB.spotFor = null; w.hold = 7.2; w.greet = true;
       const q = W.routeAt(Math.min(w.s + 4.2, W.L));
       G.forEach((g, i) => { const lat = i ? -0.5 : 0.5; g.root.position.set(q.x - q.tz * lat, floorY(q.x, q.z), q.z + q.tx * lat); g.root.rotation.y = yawTo(g, cp.x, cp.z); g.root.visible = true; });
       say([[gy, 'สวัสดีครับ! ผม<b>พี่ยอดน้ำ</b>', 'wave', F.happy, 2.4], [gs, 'และ<b>น้องสายน้ำ</b>ค่ะ วันนี้จะพาเที่ยวงาน Stakeholder Day นะคะ', 'hop', F.happy, 3.3], [gy, 'ตามพวกเรามาเลยครับ!', 'present', F.normal, 1.8]]); }
@@ -2400,20 +2458,27 @@ function play(opt = {}) {
       say([[gy, `นี่คือบูธ <b>${bh.name}</b> ครับ`, 'point', F.sparkle, 2.2], ...(bh.sub ? [[gs, bh.sub + ' ค่ะ', 'present', F.normal, 2.8]] : [])]); }
     const j = jOf(w.s); if (!greet && !bh && j !== YB.j) { YB.j = j; if (STAGE[j]) say(STAGE[j].map(([k, h, a, f]) => [G[k], h, a, f])); }
     const atEnd = w.s >= W.L - 0.6;
+    // ไปรอข้างบูธเด่นล่วงหน้า (ก่อนกล้องถึง ~7 ม.) → กล้องมาถึงก็เห็นยืนรอแนะนำอยู่แล้ว ไม่เดินตัดหน้ากล้อง
+    YB.done = YB.done || {};
+    const nb = bh || (!greet && W.booths.find(b => b.kind && /wari|snap|cia|cc|twq/.test(b.kind) && !YB.done[b.code] && b.along - w.s < 7 && b.along - w.s > -0.5));
+    if (nb && YB.spotFor !== nb.code) { YB.spotFor = nb.code; YB.spot = boothSpot(nb, W.routeAt(Math.max(0, nb.along - 3))); }
+    if (YB.spotFor && !bh && W.booths.find(b => b.code === YB.spotFor && w.s - b.along > 0.6)) { YB.done[YB.spotFor] = true; YB.spotFor = null; }
+    const pre = !bh && nb && YB.spotFor === nb.code ? nb : null;
     G.forEach((g, i) => {
       let tx, tz, face, look = 0;
-      if (greet || atEnd) { const q = W.routeAt(Math.min(w.s + (atEnd ? 2.4 : 4.2), W.L)), lat = i ? -0.5 : 0.5; tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
-      else if (bh) { const d = new THREE.Vector3(cp.x - bh.x, 0, cp.z - bh.z), dl = Math.max(0.5, d.length()); d.normalize(); const fwd = Math.min(dl - 2.2, 1.15), lt = -((bh.w || 3) * 0.5 - (i ? 0.95 : 0.15));   // ยืนคู่กันหน้ามุมขวาของบูธ (ไม่บังกลางบูธ)
-        tx = bh.x + d.x * fwd - d.z * lt; tz = bh.z + d.z * fwd + d.x * lt; const toCam = yawTo(g, cp.x, cp.z), toB = yawTo(g, bh.x, bh.z); face = toCam + clamp(Math.atan2(Math.sin(toB - toCam), Math.cos(toB - toCam)), -1.2, 1.2) * (g.act === 'point' ? 0.5 : 0.22); g.sg = null; }
-      else { // เดินตามเส้นทาง (นับระยะตามเส้น ไม่ตัดมุม) นำหน้ากล้องเสมอ · คู่กันชิดขวา
-        const lead = clamp(W.L - w.s, 1.2, i ? 4.1 : 4.4), want = Math.min(W.L, w.s + lead); if (g.sg == null) g.sg = Math.max(w.s + 1.2, want - 1.4);
-        g.sg += clamp(want - g.sg, -1, 1) * Math.min(1, dt * 2.5) * 3.2; g.sg = Math.max(g.sg, w.s + 1.0);
-        const q = W.routeAt(Math.min(g.sg, W.L)), lat = i ? 0.38 : 1.12; tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = Math.atan2(q.tx, q.tz); }
-      if (greet || atEnd) g.sg = null;
-      const sp = moveTo(g, tx, tz, dt, bh || greet || atEnd ? 3.2 : 9); turn(g, sp > 0.35 && !bh && !greet ? Math.atan2(tx - g.root.position.x, tz - g.root.position.z) * 0 + face : face, dt);
+      if (greet || atEnd) { const sq = Math.min(w.s + (atEnd ? 2.4 : 4.2), W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq), lat = i ? Math.max(-0.5, -cl + 0.45) : Math.min(0.5, cr - 0.45); tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
+      else if (bh || pre) { const bh2 = bh || pre; [tx, tz] = YB.spot[i];   // ยืนข้างบูธ (นอกพื้นที่จัดแสดง) หันมาหากล้อง เอียงเข้าหาบูธ
+        const toCam = yawTo(g, cp.x, cp.z), toB = yawTo(g, bh2.x, bh2.z); face = toCam + clamp(Math.atan2(Math.sin(toB - toCam), Math.cos(toB - toCam)), -1.4, 1.4) * (g.act === 'point' ? 0.55 : 0.3); }
+      else { const lead = clamp(W.L - w.s, 1.2, i ? 4.1 : 4.4), sq = Math.min(w.s + lead, W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq);
+        // ชิดขวาแต่ไม่ทะลุผนัง: ถ้าทางแคบ สายน้ำเดินตามหลังยอดน้ำแทนเดินคู่
+        const ly = Math.max(-cl + 0.45, Math.min(1.12, cr - 0.45)); let lat = ly, back = 0;
+        if (i) { lat = ly - 0.74; if (lat < -cl + 0.45) { lat = ly; back = 0.95; } }
+        const q2 = back ? W.routeAt(Math.max(0, sq - back)) : q; tx = q2.x - q2.tz * lat; tz = q2.z + q2.tx * lat; face = Math.atan2(q2.tx, q2.tz); }
+      const sp = spring(g, tx, tz, dt);
+      turn(g, sp > 0.35 ? Math.atan2(g.v[0], g.v[1]) : face, dt, sp > 0.35 ? 7 : 4);
       // ผู้ฟังหันหน้าไปหาผู้พูด
       const cur = YB.cur && YB.cur.o; if (cur && cur.role === 'g' && cur !== g) { const a = yawTo(g, cur.root.position.x, cur.root.position.z) - g.root.rotation.y; look = clamp(Math.atan2(Math.sin(a), Math.cos(a)), -0.9, 0.9); }
-      g.update(dt, { walk: Math.min(1, sp / 1.7), act: g.act, face: g.face, talk: cur === g, look });
+      g.update(dt, { speed: sp, act: sp > 0.5 && (g.act === 'hop' || g.act === 'point') ? 'talk' : g.act, face: g.face, talk: cur === g, look });
       placeBubble(g);
     });
   }
@@ -2506,7 +2571,7 @@ function play(opt = {}) {
 
 function stop(silent) {
   const st = S; if (!st) return; S = null;
-  st.running = false; cancelAnimationFrame(st.raf);
+  st.running = false; cancelAnimationFrame(st.raf); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
   removeEventListener('resize', st.resize); removeEventListener('keydown', st.onKey);
   const fin = () => { try { st.ctx.renderer.dispose(); st.ctx.renderer.forceContextLoss && st.ctx.renderer.forceContextLoss(); } catch (e) {} st.root.remove(); };
   if (silent) fin(); else { st.root.classList.remove('on'); setTimeout(fin, 700); }

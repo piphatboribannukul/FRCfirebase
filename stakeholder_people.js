@@ -56,7 +56,7 @@ export function makeRig(type, mat) {
   return { root, mesh, bones, by, bind, foot, type };
 }
 
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3(), _t = new THREE.Vector3(), _q = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qr = new THREE.Quaternion();
+const _e = new THREE.Euler(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3(), _t = new THREE.Vector3(), _q = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qr = new THREE.Quaternion();
 // จัดท่า: spec = { ชื่อกระดูก: [x,y,z] ทิศที่ต้องการในพิกัดตัวคน (+Z หน้า, +X ซ้ายของคน, +Y บน) }, flatFeet = เท้าขนานพื้น
 export function poseRig(rig, spec, flatFeet = true) {
   rig.bones.forEach((b, i) => { b.position.copy(rig.bind[i][0]); b.quaternion.copy(rig.bind[i][1]); });
@@ -64,6 +64,10 @@ export function poseRig(rig, spec, flatFeet = true) {
   const rq = rig.root.getWorldQuaternion(_qr);
   for (const n of ORDER) {
     const b = rig.by[n]; if (!b) continue;
+    if (spec.rot && spec.rot[n]) {   // หมุนเพิ่มในพิกัดตัวคน (เอียงสะโพก/ลำตัว หันศีรษะ)
+      _e.set(...spec.rot[n]); _q.setFromEuler(_e); _q.premultiply(rq).multiply(_qp.copy(rq).invert());
+      b.getWorldQuaternion(_qw); _qw.premultiply(_q); b.parent.getWorldQuaternion(_qp).invert(); b.quaternion.copy(_qp.multiply(_qw)); b.updateMatrixWorld(true);
+    }
     if (spec[n] && CHILD[n] && rig.by[CHILD[n]]) {
       b.getWorldPosition(_a); rig.by[CHILD[n]].getWorldPosition(_b); _d.subVectors(_b, _a).normalize();
       _t.fromArray(spec[n]).normalize().applyQuaternion(rq);
@@ -92,7 +96,8 @@ export function bakePose(rig, spec, opt = {}) {
   let dy = -minY;
   if (opt.seat) { const h = new THREE.Vector3(); rig.by.L_Thigh.getWorldPosition(h); dy = -(h.y - 0.1); }   // นั่ง: ก้นอยู่ที่ y=0 (วางบนเบาะ)
   for (let i = 0; i < n; i++) out[i * 3 + 1] += dy;
-  const b = new THREE.BufferGeometry(); b.setAttribute('position', new THREE.BufferAttribute(out, 3)); b.setAttribute('normal', new THREE.BufferAttribute(on, 3)); b.setAttribute('uv', g.attributes.uv); b.setIndex(g.index); b.computeBoundingSphere();
+  const nk = new THREE.Vector3(); (rig.by.Neck || rig.by.Head).getWorldPosition(nk);
+  const b = new THREE.BufferGeometry(); b.userData.neck = [nk.y + dy, nk.z]; b.setAttribute('position', new THREE.BufferAttribute(out, 3)); b.setAttribute('normal', new THREE.BufferAttribute(on, 3)); b.setAttribute('uv', g.attributes.uv); b.setIndex(g.index); b.computeBoundingSphere();
   return b;
 }
 
@@ -101,6 +106,11 @@ export const POSES = {
   stand: { L_UpperArm: [0.16, -1, 0.02], R_UpperArm: [-0.16, -1, 0.02], L_Forearm: [0.1, -1, 0.22], R_Forearm: [-0.1, -1, 0.22], L_Thigh: [0.03, -1, 0], R_Thigh: [-0.03, -1, 0], L_Calf: [0.01, -1, -0.02], R_Calf: [-0.01, -1, -0.02] },
   phone: { L_UpperArm: [0.16, -1, 0.02], R_UpperArm: [-0.14, -1, 0.18], L_Forearm: [0.1, -1, 0.22], R_Forearm: [0.25, 0.55, 1], L_Thigh: [0.06, -1, 0], R_Thigh: [-0.02, -1, 0.02], L_Calf: [0.02, -1, -0.02], R_Calf: [-0.01, -1, 0] },
   hold: { L_UpperArm: [0.12, -1, 0.15], R_UpperArm: [-0.12, -1, 0.15], L_Forearm: [-0.35, -0.25, 1], R_Forearm: [0.35, -0.25, 1], L_Thigh: [0.04, -1, 0], R_Thigh: [-0.04, -1, 0], L_Calf: [0.01, -1, -0.02], R_Calf: [-0.01, -1, -0.02] },
+  // ท่ายืนแบบธรรมชาติ: ลงน้ำหนักขาเดียว งอเข่าเล็กน้อย ข้อศอกงอ หันศีรษะ
+  relax: { rot: { Pelvis: [0, 0, 0.05], Spine1: [0, 0.05, -0.06], Head: [0.06, 0.22, 0.05] }, L_UpperArm: [0.14, -1, 0.06], R_UpperArm: [-0.12, -1, 0.04], L_Forearm: [0.04, -1, 0.42], R_Forearm: [-0.06, -1, 0.3], L_Thigh: [0.02, -1, 0.0], R_Thigh: [-0.1, -1, 0.08], L_Calf: [0.02, -1, -0.02], R_Calf: [-0.04, -1, -0.1] },
+  clasp: { rot: { Head: [0.1, -0.15, 0] }, L_UpperArm: [0.1, -1, 0.3], R_UpperArm: [-0.1, -1, 0.3], L_Forearm: [-0.75, -0.05, 1], R_Forearm: [0.75, -0.05, 1], L_Thigh: [0.05, -1, 0], R_Thigh: [-0.05, -1, 0], L_Calf: [0.02, -1, -0.02], R_Calf: [-0.02, -1, -0.02] },
+  talk: { rot: { Spine1: [0.03, -0.1, 0], Head: [0.04, -0.3, -0.04] }, L_UpperArm: [0.13, -1, 0.05], R_UpperArm: [-0.25, -1, 0.42], L_Forearm: [0.06, -1, 0.35], R_Forearm: [-0.1, 0.45, 1], L_Thigh: [0.06, -1, 0.03], R_Thigh: [-0.03, -1, -0.03], L_Calf: [0.02, -1, -0.04], R_Calf: [-0.01, -1, -0.02] },
+  cross: { rot: { Pelvis: [0, 0, -0.04], Head: [0.02, 0.18, 0] }, L_UpperArm: [0.22, -1, 0.3], R_UpperArm: [-0.22, -1, 0.3], L_Forearm: [-1, 0.2, 0.42], R_Forearm: [1, 0.28, 0.42], L_Thigh: [0.09, -1, 0.06], R_Thigh: [-0.02, -1, 0], L_Calf: [0.03, -1, -0.08], R_Calf: [-0.01, -1, 0] },
   sit: { L_UpperArm: [0.12, -1, 0.3], R_UpperArm: [-0.12, -1, 0.3], L_Forearm: [-0.12, -0.35, 1], R_Forearm: [0.12, -0.35, 1], L_Thigh: [0.08, -0.3, 1], R_Thigh: [-0.08, -0.3, 1], L_Calf: [0.02, -1, 0.06], R_Calf: [-0.02, -1, 0.06] },
 };
 
