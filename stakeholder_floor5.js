@@ -2150,7 +2150,7 @@ function play(opt = {}) {
     if (k === 'next') { setAuto(false); goStep(st.step + 1); }
     else if (k === 'prev') { setAuto(false); goStep(st.step - 1); }
     else if (k === 'auto') { if (!st.auto) voUnlock(); setAuto(!st.auto); }
-    else if (k === 'voice') { VO.on = !VO.on; if (!VO.on && 'speechSynthesis' in window) speechSynthesis.cancel(); else voUnlock(); root.querySelector('[data-k=voice]').classList.toggle('off', !VO.on); }
+    else if (k === 'voice') { VO.on = !VO.on; if (!VO.on) vStop(); else voUnlock(); root.querySelector('[data-k=voice]').classList.toggle('off', !VO.on); }
     else if (k === 'home') { setAuto(false); goStep(0); }
     else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([4, 112, 12], [4, 0, 3], 1.6); }
     else if (k === 'spin') { st.spin = !st.spin; controls.autoRotate = st.spin; controls.autoRotateSpeed = 0.7; st.tween = null; }
@@ -2368,14 +2368,24 @@ function play(opt = {}) {
   const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
   // ── เสียงพากย์: ใช้เสียงภาษาไทยในเครื่อง (Web Speech) · ยอดน้ำเสียงทุ้มกว่า สายน้ำเสียงสูง · ปิดได้ที่ปุ่มลำโพง
   const VO = { on: true, voice: null }, HAS_VO = 'speechSynthesis' in window;
-  const pickVoice = () => { if (!HAS_VO) return null; const vs = speechSynthesis.getVoices().filter(v => /^th/i.test(v.lang)); if (!vs.length) return null; const pref = /Premwadee|Narisa|Kanya|Achara|Google|Niwat|Pattara/i; return vs.find(v => pref.test(v.name)) || vs[0]; };
-  if (HAS_VO) speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => { VO.voice = pickVoice(); });
+  // เลือกเสียงที่เป็นธรรมชาติที่สุดในเครื่อง: เสียง Neural/Natural (Edge) > Google > เสียงคุณภาพสูงของ iPhone · ไม่บิดระดับเสียงมาก (บิดมากแล้วฟังตลก)
+  const rankV = v => (/Natural|Online|Neural/i.test(v.name) ? 100 : 0) + (/Google/i.test(v.name) ? 60 : 0) + (/Premium|Enhanced|Siri/i.test(v.name) ? 50 : 0) + (/Premwadee|Narisa|Kanya|Achara|Niwat/i.test(v.name) ? 30 : 0) + (v.localService ? 0 : 5);
+  const pickVoice = male => { if (!HAS_VO) return null; const vs = speechSynthesis.getVoices().filter(v => /^th/i.test(v.lang)); if (!vs.length) return null;
+    const isM = v => /Niwat|Pattara|male/i.test(v.name) && !/female/i.test(v.name); vs.sort((a, b) => rankV(b) - rankV(a));
+    const best = vs[0], m = vs.find(isM), f = vs.find(v => !isM(v)); if (male) return m && rankV(m) >= rankV(best) - 40 ? m : best; return f || best; };
+  if (HAS_VO) speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => { VO.vy = pickVoice(true); VO.vs = pickVoice(false); });
   function voUnlock() { if (!HAS_VO || VO.unlocked) return; VO.unlocked = true; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }   // iPhone ต้องเริ่มเสียงจากการแตะครั้งแรก
-  function speakLine(c) { if (!VO.on || !HAS_VO) return; VO.voice = VO.voice || pickVoice(); if (!VO.voice) return;
-    const u = new SpeechSynthesisUtterance(c.html.replace(/<[^>]+>/g, '').replace(/[·—]/g, ' ')); u.voice = VO.voice; u.lang = VO.voice.lang; u.pitch = c.o.kind === 'sai' ? 1.6 : 1.15; u.rate = 1.06;
+  // ไฟล์เสียงพากย์จริง (ถ้ามี): stakeholder_voice/index.json = { "<kind>:<ข้อความ>": "ไฟล์.mp3" } → เล่นไฟล์แทนเสียงสังเคราะห์
+  fetch('stakeholder_voice/index.json').then(r => r.ok ? r.json() : null).then(j => { VO.files = j || null; }).catch(() => {});
+  const vStop = () => { if (HAS_VO) speechSynthesis.cancel(); if (VO.audio) VO.audio.pause(); };
+  function speakFile(c, txt) { const f = VO.files && VO.files[c.o.kind + ':' + txt]; if (!f) return false;
+    const a = VO.audio = VO.audio || new Audio(); a.pause(); a.src = 'stakeholder_voice/' + f; c.speaking = true; a.onended = a.onerror = () => { c.speaking = false; }; a.play().catch(() => { c.speaking = false; }); return true; }
+  function speakLine(c) { if (!VO.on) return; if (speakFile(c, c.html.replace(/<[^>]+>/g, ''))) return; if (!HAS_VO) return; VO.vy = VO.vy || pickVoice(true); VO.vs = VO.vs || pickVoice(false); const sai = c.o.kind === 'sai', v = sai ? VO.vs : VO.vy; if (!v) return;
+    const u = new SpeechSynthesisUtterance(c.html.replace(/<[^>]+>/g, '').replace(/\s*[·—]\s*/g, ', ')); u.voice = v; u.lang = v.lang;
+    const fem = !/Niwat|Pattara/i.test(v.name); u.pitch = sai ? 1.12 : (fem ? 0.97 : 1.08); u.rate = sai ? 1.04 : 1.0;   // น้ำเสียงเด็กแบบเบา ๆ ไม่บิดจนเพี้ยน
     c.speaking = true; u.onend = u.onerror = () => { c.speaking = false; }; speechSynthesis.speak(u); }
   // คิวบทพูด: ทีละประโยค ผู้พูดทำท่าตามบท ผู้ฟังหันหน้าไปหาผู้พูด
-  const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) { YB.cur.t = Math.min(YB.cur.t, 0.25); YB.cur.speaking = false; } if (HAS_VO) speechSynthesis.cancel(); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
+  const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) { YB.cur.t = Math.min(YB.cur.t, 0.25); YB.cur.speaking = false; } vStop(); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
   function runSpeech(dt) {
     let c = YB.cur; if (c) { c.t -= dt; if ((c.t <= 0 && !c.speaking) || c.t < -9) { c.o.el.classList.remove('on'); c.o.act = null; c.o.face = null; YB.cur = c = null; } }
     if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; c.o.el.querySelector('.tx').textContent = ''; speakLine(c); }
@@ -2444,7 +2454,7 @@ function play(opt = {}) {
         o.update(dt, { sit: o.sit, act: o.act, face: o.face, talk: YB.cur && YB.cur.o === o }); placeBubble(o);
       }
     }
-    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; YB.cur.speaking = false; if (HAS_VO) speechSynthesis.cancel(); } } return; }
+    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; YB.cur.speaking = false; vStop(); } } return; }
     const R0 = W.routeAt(Math.min(w.s, W.L)), hd = Math.atan2(R0.tx, R0.tz);
     // เริ่มเดินชม: กล้องหยุดรอ ทั้งคู่หันมาทักทาย
     if (!YB.walkOn) { YB.walkOn = true; YB.j = 0; YB.hold = null; YB.done = {}; YB.spotFor = null; w.hold = 7.2; w.greet = true;
