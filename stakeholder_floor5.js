@@ -547,7 +547,7 @@ function css() {
 #f5 .yb .who{display:flex;align-items:center;gap:6px;font:700 12px/1 var(--f5head,'Bai Jamjuree',sans-serif);color:#0d6fbf;margin-bottom:5px;letter-spacing:.01em}
 #f5 .yb .who i{width:8px;height:8px;border-radius:50%;background:#0d6fbf;display:inline-block}
 #f5 .yb:after{content:'';position:absolute;left:20px;bottom:-7px;width:14px;height:14px;background:#fff;transform:rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 6px rgba(10,40,90,.07)}
-#f5 [data-k=voice] .vx{display:none}#f5 [data-k=voice].off .vx{display:inline}#f5 [data-k=voice].off .vw{display:none}
+#f5 [data-k=music] .vx{display:none}#f5 [data-k=music].off .vx{display:inline}#f5 [data-k=music].off{opacity:.6}#f5 [data-k=voice] .vx{display:none}#f5 [data-k=voice].off .vx{display:inline}#f5 [data-k=voice].off .vw{display:none}
 #f5 .yb.sai .who{color:#2a93d6}
 #f5 .yb.sai .who i{background:#3aa6e6}
 #f5 .yb.sai b{color:#1f86c9}
@@ -709,7 +709,7 @@ function build(opt) {
 <div class="ui tools card hide-intro">
   <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">${ui('list')}</button><button data-k="zin" title="ซูมเข้า">${ui('plus')}</button><button data-k="zout" title="ซูมออก">${ui('minus')}</button><hr>
   <button data-k="home" title="ภาพรวม">${ui('home')}</button><button data-k="top" title="มุมบน (ผัง)">${ui('plan')}</button><button data-k="spin" title="หมุนรอบ">${ui('spin')}</button><hr>
-  <button data-k="voice" title="เสียงพากย์ ยอดน้ำ/สายน้ำ" aria-label="เปิด/ปิดเสียงพากย์"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="vw" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="vx" d="M16 10l4 4M20 10l-4 4"/></svg></button><button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
+  <button data-k="music" title="ดนตรีประกอบ" aria-label="เปิด/ปิดดนตรีประกอบ"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/><path class="vx" d="M3 3l18 18"/></svg></button><button data-k="voice" hidden style="display:none" title="เสียงพากย์ ยอดน้ำ/สายน้ำ" aria-label="เปิด/ปิดเสียงพากย์"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="vw" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="vx" d="M16 10l4 4M20 10l-4 4"/></svg></button><button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
 </div>
 <div class="ui detail card" id="f5det"></div>
 <div class="ui list card hide-intro min">
@@ -2150,6 +2150,7 @@ function play(opt = {}) {
     if (k === 'next') { setAuto(false); goStep(st.step + 1); }
     else if (k === 'prev') { setAuto(false); goStep(st.step - 1); }
     else if (k === 'auto') { if (!st.auto) voUnlock(); setAuto(!st.auto); }
+    else if (k === 'music') { BGM.toggle(); }
     else if (k === 'voice') { VO.on = !VO.on; if (!VO.on) vStop(); else voUnlock(); root.querySelector('[data-k=voice]').classList.toggle('off', !VO.on); }
     else if (k === 'home') { setAuto(false); goStep(0); }
     else if (k === 'top') { setAuto(false); setFocus(null); selectBooth(null); flyTo([4, 112, 12], [4, 0, 3], 1.6); }
@@ -2367,7 +2368,64 @@ function play(opt = {}) {
   function bubbleEl(o) { const el = document.createElement('div'); el.className = 'yb ' + o.kind; el.innerHTML = `<div class="who"><i></i>${o.name}</div><div class="tx"></div>`; root.appendChild(el); return el; }
   const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
   // ── เสียงพากย์: ใช้เสียงภาษาไทยในเครื่อง (Web Speech) · ยอดน้ำเสียงทุ้มกว่า สายน้ำเสียงสูง · ปิดได้ที่ปุ่มลำโพง
-  const VO = { on: true, voice: null }, HAS_VO = 'speechSynthesis' in window;
+  // ── ดนตรีประกอบเบา ๆ (สังเคราะห์สดด้วย Web Audio · ไม่มีไฟล์ ไม่ติดลิขสิทธิ์) ──
+  // แพดคอร์ดนุ่ม ๆ I–vi–IV–V + โน้ตกริ๊งเบา ๆ แบบคาลิมบา ผ่านรีเวิร์บ · เริ่มเมื่อผู้ชมแตะจอครั้งแรก (นโยบาย autoplay)
+  const BGM = (() => {
+    let ctx = null, out = null, timer = 0, t0 = 0, bar = 0, on = true, started = false;
+    try { on = localStorage.getItem('f5music') !== '0'; } catch (e) {}
+    const VOL = 0.9, BAR = 4.8;
+    const CH = [[48, 55, 64, 71], [45, 52, 60, 67], [41, 48, 57, 64], [43, 50, 59, 62]];   // Cmaj7 · Am7 · Fmaj7 · G6
+    const PENT = [[72, 74, 76, 79, 81], [69, 72, 74, 76, 79], [69, 72, 74, 77, 79], [67, 71, 74, 76, 79]];
+    const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+    function build() {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+      ctx = new AC(); out = ctx.createGain(); out.gain.value = 0;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+      const rv = ctx.createConvolver(), n = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, n, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6); }
+      rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.55; const dry = ctx.createGain(); dry.gain.value = 0.6;
+      lp.connect(dry); lp.connect(rv); rv.connect(wet); dry.connect(out); wet.connect(out); out.connect(ctx.destination);
+      BGM.bus = lp; return true;
+    }
+    function pad(notes, t) {
+      notes.forEach((m, i) => { [-4, 4].forEach(det => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = hz(m); o.detune.value = det;
+        const a = i ? 0.042 : 0.05; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 1.6); g.gain.setValueAtTime(a, t + BAR - 0.4); g.gain.linearRampToValueAtTime(0, t + BAR + 1.4);
+        o.connect(g); g.connect(BGM.bus); o.start(t); o.stop(t + BAR + 1.5); }); });
+    }
+    function pluck(m, t, v) {
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o2.type = 'sine'; o.frequency.value = hz(m); o2.frequency.value = hz(m) * 3.01;
+      const g2 = ctx.createGain(); g2.gain.value = 0.12; o2.connect(g2); g2.connect(g); o.connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + 2.2);
+      g.connect(BGM.bus); o.start(t); o2.start(t); o.stop(t + 2.3); o2.stop(t + 2.3);
+    }
+    function sched() {
+      if (!ctx) return; const ahead = ctx.currentTime + 1.2;
+      while (t0 < ahead) {
+        const k = bar % 4, P = PENT[k]; pad(CH[k], t0);
+        const step = BAR / 8; let last = -1;
+        for (let i = 0; i < 8; i++) { if (Math.random() < (i % 2 ? 0.28 : 0.5)) { let j; do { j = Math.floor(Math.random() * P.length); } while (j === last && P.length > 1); last = j; pluck(P[j], t0 + i * step + Math.random() * 0.03, 0.065 + Math.random() * 0.04); } }
+        t0 += BAR; bar++;
+      }
+    }
+    function fade(v, s = 1.5) { if (!ctx) return; const t = ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(v, t + s); }
+    function start() {
+      if (!on) return;
+      if (!ctx && !build()) return;
+      if (ctx.state === 'suspended') ctx.resume();
+      if (!started) { started = true; t0 = ctx.currentTime + 0.1; sched(); timer = setInterval(sched, 400); }
+      fade(document.hidden ? 0 : VOL, 2.5);
+    }
+    function stop() { fade(0, 0.8); }
+    function sync() { const b = root.querySelector('[data-k=music]'); if (b) b.classList.toggle('off', !on); }
+    const kick = () => { if (on && S === st) start(); }, EV = ['pointerdown', 'keydown', 'touchend'];
+    const vis = () => { if (!ctx || !on) return; if (document.hidden) fade(0, 0.4); else { ctx.resume(); fade(VOL, 1.5); } };
+    EV.forEach(ev => window.addEventListener(ev, kick, { passive: true })); document.addEventListener('visibilitychange', vis);
+    function dispose() { EV.forEach(ev => window.removeEventListener(ev, kick)); document.removeEventListener('visibilitychange', vis); clearInterval(timer); if (ctx) { const c = ctx; fade(0, 0.6); setTimeout(() => { try { c.close(); } catch (e) {} }, 700); } }
+    return { bus: null, sync, start: kick, dispose, toggle() { on = !on; try { localStorage.setItem('f5music', on ? '1' : '0'); } catch (e) {} if (on) start(); else stop(); sync(); } };
+  })();
+  BGM.sync(); st.bgm = BGM; setTimeout(BGM.start, 300);   // Chrome ปล่อยเสียงได้เลยหากเคยแตะหน้าเว็บแล้ว · iPhone จะเริ่มเมื่อแตะครั้งถัดไป
+  const VO = { on: false, voice: null }, HAS_VO = 'speechSynthesis' in window;
   // เลือกเสียงที่เป็นธรรมชาติที่สุดในเครื่อง: เสียง Neural/Natural (Edge) > Google > เสียงคุณภาพสูงของ iPhone · ไม่บิดระดับเสียงมาก (บิดมากแล้วฟังตลก)
   const rankV = v => (/Natural|Online|Neural/i.test(v.name) ? 100 : 0) + (/Google/i.test(v.name) ? 60 : 0) + (/Premium|Enhanced|Siri/i.test(v.name) ? 50 : 0) + (/Premwadee|Narisa|Kanya|Achara|Niwat/i.test(v.name) ? 30 : 0) + (v.localService ? 0 : 5);
   const pickVoice = male => { if (!HAS_VO) return null; const vs = speechSynthesis.getVoices().filter(v => /^th/i.test(v.lang)); if (!vs.length) return null;
@@ -2581,7 +2639,7 @@ function play(opt = {}) {
 
 function stop(silent) {
   const st = S; if (!st) return; S = null;
-  st.running = false; cancelAnimationFrame(st.raf); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+  st.running = false; cancelAnimationFrame(st.raf); try { st.bgm && st.bgm.dispose(); } catch (e) {} try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
   removeEventListener('resize', st.resize); removeEventListener('keydown', st.onKey);
   const fin = () => { try { st.ctx.renderer.dispose(); st.ctx.renderer.forceContextLoss && st.ctx.renderer.forceContextLoss(); } catch (e) {} st.root.remove(); };
   if (silent) fin(); else { st.root.classList.remove('on'); setTimeout(fin, 700); }
