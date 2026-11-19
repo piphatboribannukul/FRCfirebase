@@ -159,7 +159,7 @@ function textureDiet(scene) {
     const c = smallCanvas(i, TEX_MAX); b0 += w * h * 4; b1 += c.width * c.height * 4; n++; t.image = c; t.needsUpdate = true; freeAfterUpload(t); } }));
   console.info('[F5] textureDiet', n, 'tex', (b0 / 1048576).toFixed(0), '→', (b1 / 1048576).toFixed(0), 'MB (คืนหลังอัปโหลด)');
 }
-function realImg(tex, file) { const i = new Image(); i.onload = () => { tex.dispose(); tex.image = MOBILE ? smallCanvas(i, TEX_MAX) : i; tex.needsUpdate = true; };   /* dispose: สร้างพื้นผิวใหม่ตามขนาดภาพจริง */ i.src = ASSET_BASE + file; return tex; }
+function realImg(tex, file) { const i = new Image(); i.decoding = 'async'; i.onload = () => { (i.decode ? i.decode().catch(() => {}) : Promise.resolve()).then(() => { tex.dispose(); tex.image = MOBILE ? smallCanvas(i, TEX_MAX) : i; tex.needsUpdate = true; }); };   /* ถอดรหัสภาพนอกเธรดหลักก่อนส่งขึ้น GPU (ไม่สะดุดตอนภาพมาถึง) */   /* dispose: สร้างพื้นผิวใหม่ตามขนาดภาพจริง */ i.src = ASSET_BASE + file; return tex; }
 const REAL_BACKDROP = { twq: ['stakeholder_twq_backdrop.jpg', 1900 / 1733], cc: ['stakeholder_cc_backdrop.jpg', 2576 / 2349] };
 
 // ───────────────────────────── พื้นผิว ─────────────────────────────
@@ -1443,7 +1443,7 @@ function buildWorld(ctx) {
       const h = (x * 7.3 + z * 3.1); for (let k = 0; k < 7; k++) { const a = h + k * 2.4, r = 0.12 + (k % 3) * 0.07, y = 0.75 + (k / 6) * 0.95 * tall;
         const lf = add(zone, leafG, leafMs[k % 4], x + Math.cos(a) * r, y, z + Math.sin(a) * r); lf.scale.set(0.26 - k * 0.012, 0.17, 0.2 - k * 0.01); lf.rotation.y = a; }
     };
-    [[905, 440], [1440, 392], [1500, 392], [1112, 372], [940, 420], [770, 712], [896, 362], [775, 688], [880, 690], [1366, 427], [786, 868]].forEach(([px, py], i) => plantAt('other', X(px), Z(py), i % 3 ? 1 : 1.25));
+    [[905, 440], [1440, 392], [1500, 392], [1112, 372], [770, 712], [896, 362], [775, 688], [880, 690], [1366, 427]].forEach(([px, py], i) => plantAt('other', X(px), Z(py), i % 3 ? 1 : 1.25));
   }
   // ── โรลอัพ Stakeholder Day ตามจุดเลี้ยว
   {
@@ -1853,7 +1853,7 @@ function makePeople(parent, booths, seats, routeAt, L) {
     const big = (b.w || 2) > 2, fv = FACEV[b.face];
     const n = b.tbc ? 0 : (rnd() < (big ? 0.6 : 0.4) ? 1 : 0);                       // ผู้เยี่ยมชม 0–1 คน + เจ้าหน้าที่ 1 คน = บูธละ 1–2 คน
     for (let j = 0; j < n; j++) {
-      const side = (rnd() - 0.5) * (big ? 1.4 : 0.6), dist = (b.d || 1) / 2 + 0.55 + rnd() * 0.2;
+      const feat = /wari|snap|cia|cc|twq/.test(b.kind || ''), side = feat ? (rnd() < 0.5 ? -1 : 1) * ((b.w || 2) / 2 + 0.3) : (rnd() - 0.5) * (big ? 1.4 : 0.6), dist = (b.d || 1) / 2 + (feat ? 0.25 : 0.55 + rnd() * 0.2);   // บูธเด่น: ผู้เยี่ยมชมยืนข้างมุมบูธ (ไม่บังกล้อง)
       const px = b.x + fv[0] * dist + (fv[1] !== 0 ? side : 0), pz = b.z + fv[1] * dist + (fv[0] !== 0 ? side : 0);
       if (routeD(px, pz) < 1.25) continue;                                            // ไม่ยืนขวางเส้นทางเดิน
       const r = rnd(), o2 = who({ phone: r < 0.22, bag: rnd() < 0.35 });
@@ -1861,11 +1861,18 @@ function makePeople(parent, booths, seats, routeAt, L) {
       const p = merged(o2, pose); p.g.position.set(px, 0, pz); p.g.rotation.y = Math.atan2(-fv[0], -fv[1]) + (rnd() - 0.5) * 0.5; p.mode = 'stand'; p.ph = rnd() * 6; list.push(p);
     }
     if (b.tbc) return;
-    const spots = b.kind === 'cc' ? [[0.25, 0.75], [2.3, 0.6]] : b.kind === 'twq' ? [[0.1, 0.45], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.25, 0.9]] : b.kind === 'snap' ? [[-1.45, 0.45], [1.05, 1.32]] : b.kind === 'cia' ? [[-0.25, 0.85]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
+    // บูธเด่น (กล้องหยุดชม): เจ้าหน้าที่ยืนค่อนไปด้านข้าง/ในบูธ ไม่ยืนบังหน้าบูธระหว่างกล้องกับนวัตกรรม
+    const spots = b.kind === 'cc' ? [[2.05, 0.15], [2.3, 0.6]] : b.kind === 'twq' ? [[-1.55, 0.1], [-2.2, 0.5]] : b.kind === 'wari' ? [[-1.3, 0.55]] : b.kind === 'snap' ? [[-1.45, 0.45], [1.3, 0.5]] : b.kind === 'cia' ? [[-1.2, 0.35]] : b.kind ? [[0.55, 0.3]] : [[0.42, -0.15]];
     spots.slice(0, b.kind === 'snap' ? 2 : 1).forEach(([lx, lz], si) => {
       const p = merged(who({ staff: b.own === 'mwa', snap: b.kind === 'snap' }), { armL: -0.12, armR: si ? -0.12 : -0.45 }); const c = Math.cos(FACE[b.face]), s2 = Math.sin(FACE[b.face]);
       p.g.position.set(b.x + lx * c + lz * s2, 0, b.z - lx * s2 + lz * c); p.g.rotation.y = FACE[b.face] + (si ? 0.4 : 0); p.mode = 'stand'; p.ph = rnd() * 6; p.staff = true; list.push(p); });
   });
+  // บูธเด่น (กล้องหยุดชม): ไม่ให้มีใครยืนบังระหว่างจุดหยุดกล้องกับตัวบูธ (ตรวจทั้งจุดบนเส้นทาง และจุดถอยหลังของจอแนวตั้ง)
+  { const feat = booths.filter(b => /wari|snap|cia|cc|twq/.test(b.kind || ''));
+    const blocks = (x, z) => feat.some(b => { const c = routeAt(b.along), vx = b.x - c.x, vz = b.z - c.z, db = Math.hypot(vx, vz);
+      for (const back of [0, 1.6]) { const cx = c.x - vx / db * back, cz = c.z - vz / db * back, px = x - cx, pz = z - cz, dp = Math.hypot(px, pz);
+        if (dp > 0.01 && dp < db + back - 0.35 && (px * vx + pz * vz) / (dp * db) > Math.cos(0.62)) return true; } return false; });
+    for (let i = list.length - 1; i >= 0; i--) { const p = list[i]; if (p.mode === 'stand' && blocks(p.g.position.x, p.g.position.z)) { parent.remove(p.g); list.splice(i, 1); } } }
   // พักดื่มกาแฟ
   [[X(880), Z(275)], [X(940), Z(275)], [X(880), Z(320)], [X(940), Z(320)]].forEach(([x, z], ti) => {
     for (let j = 0; j < 1 + (ti % 2); j++) { const a = j * 2.6 + ti; const p = merged(who({ bag: rnd() < 0.3 }), { armR: -0.35, foreR: -1.05, armL: j ? -0.15 : -0.06, foreL: j ? -0.7 : 0 }); p.g.position.set(x + Math.cos(a) * 0.72, 0, z + Math.sin(a) * 0.72); p.g.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); p.mode = 'stand'; p.cup = true; p.ph = rnd() * 6; list.push(p); }
@@ -1922,6 +1929,13 @@ let PRE = null;
 const preKey = opt => Q_AO(opt) + '|' + Q_DPR(opt);
 // คอมไพล์ shader (~70 ชุด) แบบขนานด้วย compileAsync → หน้าเว็บไม่ค้างระหว่างรอ · คืน Promise ที่เสร็จเมื่อพร้อม
 let PREP = null;
+// เหมือน renderer.compileAsync แต่ไม่ค้างถ้าวัสดุบางชิ้นถูกทิ้งระหว่างรอ (ของเดิมโยน error แล้ว Promise ไม่จบ) · รอไม่เกิน 5 วิ
+function compileSafe(renderer, scene, camera, root = scene) {
+  let mats; try { mats = renderer.compile(root, camera, root === scene ? null : scene); } catch (e) { return Promise.resolve(); }
+  const t0 = performance.now();
+  return new Promise(res => { (function chk() { try { for (const m of mats) { const pr = renderer.properties.get(m).currentProgram; if (!pr || pr.isReady()) mats.delete(m); } } catch (e) { mats.clear(); }
+    if (!mats.size || performance.now() - t0 > 5000) res(); else setTimeout(chk, 16); })(); });
+}
 // ส่ง texture ทั้งหมดขึ้น GPU ล่วงหน้า (เป็นช่วง ๆ ไม่ค้าง) — เดิมภาพของบูธ/ผนังที่ยังไม่โผล่ จะอัปโหลดตอนปรากฏกลางฉาก → กระตุก
 async function warmTextures(ctx) {
   const seen = new Set(), list = [];
@@ -1938,7 +1952,7 @@ function prepare(opt = {}) {
   PREP = (async () => {
     try { const w = innerWidth, h = innerHeight; ctx.renderer.setSize(w, h, false); ctx.camera.aspect = w / h; ctx.camera.position.set(-74, 24, -158); ctx.camera.lookAt(0, 0, 0); ctx.camera.updateProjectionMatrix();
       ctx.setupComposer(w, h);
-      if (ctx.renderer.compileAsync) await ctx.renderer.compileAsync(ctx.scene, ctx.camera); else ctx.renderer.compile(ctx.scene, ctx.camera);
+      await compileSafe(ctx.renderer, ctx.scene, ctx.camera);
       await warmTextures(ctx);
       if (PRE && PRE.ctx === ctx && !S) { ctx.renderer.shadowMap.needsUpdate = true; ctx.composer.render(); }   /* อัปโหลด texture/geometry + shader ของ AO/เงา */
     } catch (e) { console.warn('[F5] prepare', e); }
@@ -1963,11 +1977,13 @@ function play(opt = {}) {
 
   // ขนาด
   function resize() {
-    const w = root.clientWidth || innerWidth, h = root.clientHeight || innerHeight;
+    const w = root.clientWidth || innerWidth, h = root.clientHeight || innerHeight; st.rw = w; st.rh = h;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     if (!ctx.composer) ctx.setupComposer(w, h); else { ctx.composer.setSize(w, h); }
   }
   resize(); addEventListener('resize', resize); st.resize = resize;
+  // ขนาดจอเก็บไว้ใช้ทุกเฟรม (อ่าน clientWidth หลังแก้ style = บังคับคำนวณเลย์เอาต์ใหม่ทุกเฟรม → เฟรมสะดุด)
+  try { new ResizeObserver(() => { st.rw = root.clientWidth || st.rw; st.rh = root.clientHeight || st.rh; }).observe(root); } catch (e) {}
   // จอแนวตั้ง: แผงเส้นทางด้านล่างบังภาพราวหนึ่งในสาม → เลื่อนจุดกลางภาพขึ้นไปกลางพื้นที่ที่มองเห็นจริง (บูธ/จุดที่เล็งไม่จมใต้แผง)
   st.vOff = 0;
   function viewShift(now) {
@@ -1977,7 +1993,7 @@ function play(opt = {}) {
         const top = hd ? Math.min(h * 0.2, hd.getBoundingClientRect().bottom - r0.top) : 0; if (jt > h * 0.3 && jt < h * 0.95) tg = Math.max(0, h / 2 - (top + jt) / 2); }
       st.vTg = Math.round(tg); }
     const tg = st.vTg || 0; st.vOff = Math.abs(st.vOff - tg) < 0.5 ? tg : st.vOff + (tg - st.vOff) * 0.08;
-    const w = root.clientWidth, h = root.clientHeight, key = w + 'x' + h + ':' + st.vOff.toFixed(1); if (key === st.vKey) return; st.vKey = key;
+    const w = st.rw, h = st.rh, key = w + 'x' + h + ':' + st.vOff.toFixed(1); if (key === st.vKey) return; st.vKey = key;
     if (st.vOff > 0.5) camera.setViewOffset(w, h, 0, st.vOff, w, h); else camera.clearViewOffset();
   }
 
@@ -1987,22 +2003,27 @@ function play(opt = {}) {
   const bLbl = W.booths.map(b => { const el = document.createElement('div'); el.className = 'lbl'; el.innerHTML = `<div class="bl"><em>${b.code}</em>${esc(b.name)}</div>`; el.style.opacity = 0; lblRoot.appendChild(el); const fv = FACEV[b.face]; return { b, el, p: new THREE.Vector3(b.x + fv[0] * 0.2, 2.85, b.z + fv[1] * 0.2) }; });
   const v3 = new THREE.Vector3();
   function placeLabels() {
-    const w = root.clientWidth, h = root.clientHeight, introA = ss(8.0, 9.0, st.intro);
+    const w = st.rw, h = st.rh, introA = ss(8.0, 9.0, st.intro);
     const overview = camera.position.distanceTo(controls.target) > 34;
     for (const z of zoneLbl) {
       v3.copy(z.p).applyMatrix4(W.interior.matrixWorld).project(camera);
       const vis = v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05;
       const a = vis ? introA * (st.focus ? (st.focus === z.id ? 1 : 0) : (overview ? 1 : 0)) : 0;
-      z.el.style.opacity = a; z.el.style.transform = `translate(${(v3.x + 1) / 2 * w}px,${(1 - v3.y) / 2 * h}px) translate(-50%,-100%)`;
-      z.el.firstChild.classList.toggle('on', st.focus === z.id);
+      setLbl(z, a, w, h); const fz = st.focus === z.id; if (z.fz !== fz) { z.fz = fz; z.el.firstChild.classList.toggle('on', fz); }
     }
     for (const q of bLbl) {
       v3.copy(q.p).applyMatrix4(W.interior.matrixWorld).project(camera);
       const d = camera.position.distanceTo(q.b.group.position);
       const near = d < 16 && (!st.focus || st.focus === q.b.zone) && !(st.walk && Math.abs(q.b.along - st.walk.s) > 9);   // เดินชม: แสดงเฉพาะบูธใกล้ตามเส้นทาง (ไม่โผล่ทะลุผนัง)
       const a = (v3.z < 1 && Math.abs(v3.x) < 1.02 && Math.abs(v3.y) < 1.02) ? ((st.sel === q.b || st.hover === q.b) ? 1 : near ? 0.92 : 0) * introA : 0;
-      q.el.style.opacity = a; q.el.style.transform = `translate(${(v3.x + 1) / 2 * w}px,${(1 - v3.y) / 2 * h}px) translate(-50%,-100%)`;
+      setLbl(q, a, w, h);
     }
+  }
+  // เขียน style เฉพาะเมื่อค่าเปลี่ยน · ป้ายที่ซ่อนอยู่ไม่ต้องขยับ (เดิมเขียนทุกป้ายทุกเฟรม)
+  function setLbl(L, a, w, h) {
+    a = Math.round(a * 100) / 100; if (a !== L.a) { L.a = a; L.el.style.opacity = a; }
+    if (a <= 0) return; const tx = Math.round((v3.x + 1) / 2 * w * 2) / 2, ty = Math.round((1 - v3.y) / 2 * h * 2) / 2;
+    if (tx !== L.tx || ty !== L.ty) { L.tx = tx; L.ty = ty; L.el.style.transform = `translate(${tx}px,${ty}px) translate(-50%,-100%)`; }
   }
 
   // ── รายการบูธ
@@ -2106,6 +2127,7 @@ function play(opt = {}) {
     stepsEl.querySelectorAll('.stp').forEach((b, k) => { b.classList.toggle('done', k < j); b.classList.toggle('cur', k === j); });
     stepsEl.querySelector('.fill').style.width = `calc(${j / (JOURNEY.length - 1) * 100}% - ${j / (JOURNEY.length - 1) * 28}px)`;
   }
+  const wRc = new THREE.Raycaster();
   function walkStep(dt) {
     const w = st.walk; let near = null, nd = 1e9;
     const p = W.routeAt(Math.min(w.s, W.L));
@@ -2130,9 +2152,12 @@ function play(opt = {}) {
       camera.userData.cap = 92 + 10 * port * hb; camera.updateProjectionMatrix();
       const away = new THREE.Vector3(pos.x - b.x, 0, pos.z - b.z), dist = Math.max(0.5, away.length()); away.normalize();
       const vf = Math.max(camera.fov, camera.userData.cap) * Math.PI / 360, hh = Math.atan(Math.tan(vf) * camera.aspect);
-      const need = ((b.w || 2) / 2 + (typeof YB !== 'undefined' && YB.walkOn ? 1.2 : 0.55)) / Math.tan(hh), back = clamp(need - dist, 0, 2.2) * port * hb;   // เผื่อที่ให้ยอดน้ำ/สายน้ำยืนข้างบูธ
+      const need = ((b.w || 2) / 2 + (typeof YB !== 'undefined' && YB.walkOn ? 1.2 : 0.55)) / Math.tan(hh);   // เผื่อที่ให้ยอดน้ำ/สายน้ำยืนข้างบูธ
+      // ถอยออกจากบูธ (จอแนวตั้งถอยมาก · จอกว้างถอยเล็กน้อย) แต่ไม่ถอยชนผนัง/บูธฝั่งตรงข้าม
+      if (w.backFor !== b.code) { w.backFor = b.code; wRc.set(new THREE.Vector3(pos.x, 1.2, pos.z), away); wRc.far = 3; const h = wRc.intersectObjects(YB.wobj || (YB.wobj = [...W.walls, ...W.booths.map(q => q.hit)]), false)[0]; w.backMax = h ? Math.max(0, h.distance - 0.6) : 2.2; }
+      const back = Math.min(w.backMax, clamp(need - dist, 0, 2.2) * Math.max(port, 0.45)) * hb;
       pos.addScaledVector(away, back); pos.y += 0.5 * port * hb;
-      { let lx = b.x, lz = b.z; if (typeof YB !== 'undefined' && YB.walkOn && YB.spotFor === b.code && YB.spot) { const mx = (YB.spot[0][0] + YB.spot[1][0]) / 2, mz = (YB.spot[0][1] + YB.spot[1][1]) / 2; lx += (mx - lx) * 0.38; lz += (mz - lz) * 0.38; } look.lerp(new THREE.Vector3(lx, 1.2, lz), hb); }   // เล็งให้เห็นทั้งบูธและยอดน้ำ/สายน้ำที่ยืนข้างบูธ
+      { let lx = b.x, lz = b.z; if (typeof YB !== 'undefined' && YB.walkOn && YB.spotFor === b.code && YB.spot) { const mx = (YB.spot[0][0] + YB.spot[1][0]) / 2, mz = (YB.spot[0][1] + YB.spot[1][1]) / 2; const kf = 0.38 + 0.17 * port; lx += (mx - lx) * kf; lz += (mz - lz) * kf; } look.lerp(new THREE.Vector3(lx, 1.2, lz), hb); }   // เล็งให้เห็นทั้งบูธและยอดน้ำ/สายน้ำที่ยืนข้างบูธ
     } else if (camera.userData.cap) { camera.userData.cap = 0; camera.updateProjectionMatrix(); }
     if (!w.look) w.look = look.clone(); w.look.lerp(look, Math.min(1, dt * (2.2 + 2.5 * (w.hb || 0))));
     camera.position.copy(pos); controls.target.copy(w.look); camera.lookAt(w.look);
@@ -2317,15 +2342,15 @@ function play(opt = {}) {
     if (!st.running || W.realStand) return;
     const MT = P.types.filter(t => !t.female), FT = P.types.filter(t => t.female);
     const typeOf = p => { const L = p.female ? FT : MT; return L[(p.k * 7 + 3) % L.length]; };
-    const groups = new Map(), sitMax = MOBILE ? 48 : 999; let nSit = 0, sitG = null, parent = null;
+    const groups = new Map(), sitMax = MOBILE ? 48 : 999; let nSit = 0, sitG = null, parent = null; const fresh = [], flips = [];
     const add = (t, pose, p, mtx) => { const k = t.name + '|' + pose; if (!groups.has(k)) groups.set(k, { t, pose, list: [] }); groups.get(k).list.push([p, mtx]); };
     const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
     for (const p of W.people) {
       if (p.mode === 'walk') {
-        const rig = m.makeRig(typeOf(p), P.mat); rig.mesh.castShadow = !MOBILE;
-        p.g.traverse(c => { if (c.isMesh) c.visible = false; }); p.g.add(rig.root); p.real = rig;
+        const rig = m.makeRig(typeOf(p), P.mat); rig.mesh.castShadow = !MOBILE; rig.root.visible = false; p.g.add(rig.root); p.real = rig; fresh.push(rig.root);
+        flips.push(() => { p.g.traverse(c => { if (c.isMesh) c.visible = false; }); rig.root.traverse(c => { c.visible = true; }); });
       } else if (p.mode === 'stand') {
-        parent = parent || p.g.parent; if (p.g.parent) p.g.parent.remove(p.g);
+        parent = parent || p.g.parent; flips.push(() => { if (p.g.parent) p.g.parent.remove(p.g); });
         const pose = p.phone ? 'phone' : p.cup ? 'hold' : ['relax', 'clasp', 'talk', 'cross', 'relax', 'stand', 'hold'][p.k % 7], sc = (p.g.scale.x || 1) * (0.96 + (p.k % 5) * 0.012);
         add(typeOf(p), pose, p, new THREE.Matrix4().compose(p.g.position, q.setFromAxisAngle(up, p.g.rotation.y), new THREE.Vector3(sc, sc, sc)));
       } else if (p.mode === 'sit' && p.seat) {
@@ -2339,10 +2364,14 @@ function play(opt = {}) {
       const im = new THREE.InstancedMesh(geo, swayMat(P.mat, geo.userData.neck || [1.5, 0]), list.length); im.castShadow = pose !== 'sit'; im.userData.noBatch = true;
       list.forEach(([p, mtx], i) => im.setMatrixAt(i, mtx)); im.computeBoundingSphere();   // ขอบเขตจากตำแหน่งจริงก่อน (ถ้าคิดตอนซ่อนอยู่ ขอบเขต = 0 → ถูกตัดทิ้งไม่วาด)
       list.forEach(([p, mtx], i) => { if (p) { if (!p.g.visible) im.setMatrixAt(i, Z0); p.inst = { im, i, m: mtx }; p._rv = p.g.visible; W.realStand.push(p); } });
-      parent.add(im);
+      im.visible = false; parent.add(im); fresh.push(im);
     }
-    if (sitG && sitG.parent) sitG.parent.remove(sitG);
-    st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true;
+    flips.push(() => { if (sitG && sitG.parent) sitG.parent.remove(sitG); fresh.forEach(o => { if (o.isInstancedMesh) o.visible = true; }); });
+    // คอมไพล์ shader ของคนจริงแบบขนานก่อน แล้วค่อยสลับแทนคนแบบง่ายทีเดียว (เดิมสลับทันที → เฟรมแรกค้างรอคอมไพล์ = ภาพกระตุก)
+    const flip = () => { if (!st.running || W.realFlipped) return; W.realFlipped = true; flips.forEach(f => f()); st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true; };
+    let ready = Promise.resolve();
+    ready = Promise.all(fresh.map(o => compileSafe(renderer, scene, camera, o)));   // คอมไพล์เฉพาะของใหม่ (ไม่ไล่ทั้งฉาก)
+    Promise.race([ready, new Promise(r => setTimeout(r, 2500))]).then(flip, flip);
     console.info('[f5] real people on:', W.people.length, 'people,', groups.size, 'instanced groups');
   }
   if (!/[?&]lowpeople\b/.test(location.search)) {
@@ -2357,12 +2386,15 @@ function play(opt = {}) {
     YB.m = m; const tex = { yod: ty, sai: ts };
     const mk = (k, size, extra = {}) => { const o = m.makeMascot(k, tex[k], size, { outline: extra.outline !== false }); o.root.traverse(c => { if (c.isMesh && !c.userData.outline) c.castShadow = !MOBILE; }); W.interior.add(o.root);
       Object.assign(o, { name: k === 'yod' ? 'พี่ยอดน้ำ' : 'น้องสายน้ำ', act: null, actT: 0, face: null, look: 0 }, extra); o.el = bubbleEl(o); return o; };
-    YB.guides = [mk('yod', 1.5, { role: 'g' }), mk('sai', 1.38, { role: 'g' })]; YB.guides.forEach(g => { g.root.visible = false; });
+    // ไกด์ตัวโตขึ้น เด่นกว่าคนรอบข้าง
+    YB.guides = [mk('yod', 1.66, { role: 'g' }), mk('sai', 1.53, { role: 'g' })]; YB.guides.forEach(g => { g.root.visible = false; });
     if (REG_DESK) { const R = REG_DESK, sy = sz => 1.07 - 0.3 * sz / 1.05;
       const seat = (k, dx, sz) => { const o = mk(k, sz, { role: 'r', sit: true, outline: !MOBILE }); o.root.position.set(R.x + dx, sy(sz), R.z - 0.66); return o; };
       const stand = (k, dx, dz, ry, sz) => { const o = mk(k, sz, { role: 'r', outline: !MOBILE }); o.root.position.set(R.x + dx, 0, R.z + dz); o.root.rotation.y = ry; return o; };
       YB.recep = [seat('yod', -1.55, 1.5), seat('sai', 1.55, 1.42), stand('sai', -3.45, 0.55, 0.35, 1.3), stand('yod', 4.35, 0.55, -0.35, 1.4)];
       YB.recep.forEach((o, i) => { o.next = 1 + i * 1.3; }); }
+    // ไกด์ซ่อนอยู่จนเริ่มเดินชม → คอมไพล์ shader ไว้ก่อน (ไม่ค้างตอนโผล่ครั้งแรก)
+    YB.guides.forEach(g => compileSafe(renderer, scene, camera, g.root));
     st.shPend = true; if (!MOBILE) renderer.shadowMap.needsUpdate = true;
   }).catch(e => console.warn('[f5] mascots', e));
   function bubbleEl(o) { const el = document.createElement('div'); el.className = 'yb ' + o.kind; el.innerHTML = `<div class="who"><i></i>${o.name}</div><div class="tx"></div>`; root.appendChild(el); return el; }
@@ -2445,17 +2477,17 @@ function play(opt = {}) {
   // คิวบทพูด: ทีละประโยค ผู้พูดทำท่าตามบท ผู้ฟังหันหน้าไปหาผู้พูด
   const say = (lines, clear = true) => { if (clear) { YB.q.length = 0; if (YB.cur) { YB.cur.t = Math.min(YB.cur.t, 0.25); YB.cur.speaking = false; } vStop(); } YB.q.push(...lines.map(([o, html, act, face, dur]) => ({ o, html, act, face, dur: dur || Math.max(2.2, html.replace(/<[^>]+>/g, '').length * 0.075) }))); };
   function runSpeech(dt) {
-    let c = YB.cur; if (c) { c.t -= dt; if ((c.t <= 0 && !c.speaking) || c.t < -9) { c.o.el.classList.remove('on'); c.o.act = null; c.o.face = null; YB.cur = c = null; } }
-    if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; c.o.el.querySelector('.tx').textContent = ''; speakLine(c); }
+    let c = YB.cur; if (c) { c.t -= dt; if ((c.t <= 0 && !c.speaking) || c.t < -9) { c.o.el.classList.remove('on'); c.o.el._on = false; c.o.act = null; c.o.face = null; YB.cur = c = null; } }
+    if (!c && YB.q.length) { c = YB.cur = YB.q.shift(); c.t = c.dur; c.n = 0; c.gs = GR(c.html.replace(/<[^>]+>/g, '')); c.o.act = c.act || 'talk'; c.o.actT = 0; c.o.face = c.face; { const tx = c.o.el.querySelector('.tx'); tx.innerHTML = c.html; c.bw = c.o.el.offsetWidth; c.bh = c.o.el.offsetHeight; tx.textContent = ''; } speakLine(c); }
     if (c) { const tx = c.o.el.querySelector('.tx'); if (c.n < c.gs.length) { c.n = Math.min(c.gs.length, c.n + dt * 40); if (c.n >= c.gs.length) tx.innerHTML = c.html; else tx.textContent = c.gs.slice(0, Math.floor(c.n)).join(''); } }
   }
   function placeBubble(o) {
     const el = o.el, on = YB.cur && YB.cur.o === o && o.root.visible;
-    if (!on) { el.classList.remove('on'); return; }
+    if (!on) { if (el._on !== false) { el._on = false; el.classList.remove('on'); } return; }
     v3.set(0, o.top + 0.06, 0); o.root.localToWorld(v3); v3.project(camera);
-    const w = root.clientWidth, hh = root.clientHeight, x = (v3.x + 1) / 2 * w, y = (1 - v3.y) / 2 * hh;
-    const ok = v3.z < 1 && x > -60 && x < w + 60 && y > 40 && y < hh; el.classList.toggle('on', ok);
-    if (ok) { const bw = el.offsetWidth, bh = el.offsetHeight, lx = clamp(x - 28, 8, w - bw - 8), ty = Math.max(70, y - bh - 14); el.style.transform = `translate(${lx}px,${ty}px)`; }
+    const w = st.rw, hh = st.rh, x = (v3.x + 1) / 2 * w, y = (1 - v3.y) / 2 * hh, c = YB.cur;
+    const ok = v3.z < 1 && x > -60 && x < w + 60 && y > 40 && y < hh; if (ok !== el._on) { el._on = ok; el.classList.toggle('on', ok); }
+    if (ok) { const bw = c.bw || 220, bh = c.bh || 60, lx = Math.round(clamp(x - 28, 8, w - bw - 8)), by = Math.round(Math.max(70 + bh, y - 14)); el.style.transform = `translate(${lx}px,${by}px) translateY(-100%)`; }   // ขนาดกล่องวัดครั้งเดียวตอนเริ่มพูด (ไม่วัดทุกเฟรม)
   }
   const STAGE = [null,
     [[0, 'ทางเดินนี้มี<b>นวัตกรรมของ กปน.</b> ให้ชมตลอดทางครับ', 'point', 0], [1, 'ไปดูกันเลยค่ะ!', 'cheer', 1]],
@@ -2474,6 +2506,24 @@ function play(opt = {}) {
     p.x = p.x - cx + (cx + ux) * e; p.z = p.z - cz + (cz + uz) * e; p.y += (floorY(p.x, p.z) - p.y) * Math.min(1, dt * 8);
     return Math.hypot(g.v[0], g.v[1]);
   }
+  // กันชน: ไม่เดินทะลุผนัง/บูธ (ไถลไปตามผนัง) และไม่เดินชนกล้อง
+  const gRc = new THREE.Raycaster(), gO = new THREE.Vector3(), gD = new THREE.Vector3(), gN = new THREE.Vector3();
+  function guard(g, ox, oz, avoidCam, dt) {
+    const p = g.root.position, push = (x, z, R, v) => { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz); if (d < R) { const k = Math.min(R - d, v * dt) / Math.max(d, 1e-3); p.x += dx * k; p.z += dz * k; } };
+    if (avoidCam) push(camera.position.x, camera.position.z, 1.05, 3.4);
+    // หลบคนเดิน (คนเดินก็หลบไกด์ด้วย → ไม่เดินซ้อนกัน)
+    for (const q of W.people) if (q.mode === 'walk' && q.g.visible) { const qp = q.g.position; if (Math.abs(qp.x - p.x) < 0.7 && Math.abs(qp.z - p.z) < 0.7) push(qp.x, qp.z, 0.62, 1.6); }
+    const mx = p.x - ox, mz = p.z - oz, ml = Math.hypot(mx, mz); if (ml < 1e-5 || ml > 3) return;   // > 3 ม. = วาร์ปเข้าตำแหน่ง (ไม่ใช่การเดิน)
+    YB.wobj = YB.wobj || [...W.walls, ...W.booths.map(b => b.hit)];
+    gO.set(ox, p.y + 0.45, oz); gD.set(mx / ml, 0, mz / ml); gRc.set(gO, gD); gRc.far = ml + 0.32; const h = gRc.intersectObjects(YB.wobj, false)[0]; if (!h) return;
+    gN.copy(h.face ? h.face.normal : gD).transformDirection(h.object.matrixWorld); gN.y = 0; if (gN.lengthSq() < 1e-6) gN.copy(gD).negate(); gN.normalize(); if (gN.dot(gD) > 0) gN.negate();
+    const allow = Math.max(0, h.distance - 0.32), rx = mx - gD.x * allow, rz = mz - gD.z * allow, dn = Math.min(0, rx * gN.x + rz * gN.z);
+    p.x = ox + gD.x * allow + rx - gN.x * dn; p.z = oz + gD.z * allow + rz - gN.z * dn;
+    if (g.v) { const vn = Math.min(0, g.v[0] * gN.x + g.v[1] * gN.z); g.v[0] -= gN.x * vn; g.v[1] -= gN.z * vn; }
+  }
+  // ตำแหน่งบนเส้นทาง (s) ที่ใกล้จุดนี้ที่สุด
+  function nearS(x, z) { if (!YB.rs) { YB.rs = []; for (let s0 = 0; s0 <= W.L; s0 += 0.25) { const q = W.routeAt(s0); YB.rs.push([s0, q.x, q.z]); } }
+    let b = 1e9, bs = 0; for (const r of YB.rs) { const d = (r[1] - x) * (r[1] - x) + (r[2] - z) * (r[2] - z); if (d < b) { b = d; bs = r[0]; } } return bs; }
   // ระยะถึงผนังสองข้างของเส้นทาง (คำนวณครั้งเดียว ทุก 0.5 ม.)
   function clearAt(sv) {
     if (!YB.clear) { const rc = new THREE.Raycaster(), objs = [...W.walls, ...W.booths.map(b => b.hit)], o = new THREE.Vector3(), d = new THREE.Vector3(); rc.far = 3; W.interior.updateMatrixWorld(true); YB.clear = [];
@@ -2512,7 +2562,7 @@ function play(opt = {}) {
         o.update(dt, { sit: o.sit, act: o.act, face: o.face, talk: YB.cur && YB.cur.o === o }); placeBubble(o);
       }
     }
-    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; YB.cur.speaking = false; vStop(); } } return; }
+    if (!w) { if (YB.walkOn) { YB.walkOn = false; G.forEach(g => { g.root.visible = false; g.el.classList.remove('on'); g.el._on = false; }); if (YB.cur && YB.cur.o.role === 'g') { YB.q.length = 0; YB.cur.t = 0; YB.cur.speaking = false; vStop(); } } return; }
     const R0 = W.routeAt(Math.min(w.s, W.L)), hd = Math.atan2(R0.tx, R0.tz);
     // เริ่มเดินชม: กล้องหยุดรอ ทั้งคู่หันมาทักทาย
     if (!YB.walkOn) { YB.walkOn = true; YB.j = 0; YB.hold = null; YB.done = {}; YB.spotFor = null; w.hold = 7.2; w.greet = true;
@@ -2534,15 +2584,21 @@ function play(opt = {}) {
     const pre = !bh && nb && YB.spotFor === nb.code ? nb : null;
     G.forEach((g, i) => {
       let tx, tz, face, look = 0;
-      if (greet || atEnd) { const sq = Math.min(w.s + (atEnd ? 2.4 : 4.2), W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq), lat = i ? Math.max(-0.5, -cl + 0.45) : Math.min(0.5, cr - 0.45); tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
+      if (atEnd && w.look) { const dx = w.look.x - cp.x, dz = w.look.z - cp.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, lat = i ? -0.55 : 0.55;   // ปลายทาง (หน้าเวที): ยืนตรงหน้ากล้อง ในทิศที่กล้องมอง
+        tx = cp.x + ux * 2.3 - uz * lat; tz = cp.z + uz * 2.3 + ux * lat; face = yawTo(g, cp.x, cp.z); }
+      else if (greet || atEnd) { const sq = Math.min(w.s + 4.2, W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq), lat = i ? Math.max(-0.5, -cl + 0.45) : Math.min(0.5, cr - 0.45); tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
       else if (bh || pre) { const bh2 = bh || pre; [tx, tz] = YB.spot[i];   // ยืนข้างบูธ (นอกพื้นที่จัดแสดง) หันมาหากล้อง เอียงเข้าหาบูธ
         const toCam = yawTo(g, cp.x, cp.z), toB = yawTo(g, bh2.x, bh2.z); face = toCam + clamp(Math.atan2(Math.sin(toB - toCam), Math.cos(toB - toCam)), -1.4, 1.4) * (g.act === 'point' ? 0.55 : 0.3); }
-      else { const lead = clamp(W.L - w.s, 1.2, i ? 4.1 : 4.4), sq = Math.min(w.s + lead, W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq);
+      else { const lead = clamp(W.L - w.s, 1.2, i ? 4.2 : 4.5), sq = Math.min(w.s + lead, W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq);
         // ชิดขวาแต่ไม่ทะลุผนัง: ถ้าทางแคบ สายน้ำเดินตามหลังยอดน้ำแทนเดินคู่
         const ly = Math.max(-cl + 0.45, Math.min(1.12, cr - 0.45)); let lat = ly, back = 0;
         if (i) { lat = ly - 0.74; if (lat < -cl + 0.45) { lat = ly; back = 0.95; } }
         const q2 = back ? W.routeAt(Math.max(0, sq - back)) : q; tx = q2.x - q2.tz * lat; tz = q2.z + q2.tx * lat; face = Math.atan2(q2.tx, q2.tz); }
-      const sp = spring(g, tx, tz, dt);
+      // ทางตรงไปจุดหมายติดบูธ/ผนัง → อ้อมผ่านเส้นทางเดินแทน (ไม่ติดค้าง ไม่ทะลุ)
+      if (!greet) { const gp = g.root.position, dx = tx - gp.x, dz = tz - gp.z, dl = Math.hypot(dx, dz);
+        if (dl > 0.45) { YB.wobj = YB.wobj || [...W.walls, ...W.booths.map(b => b.hit)]; gO.set(gp.x, gp.y + 0.45, gp.z); gD.set(dx / dl, 0, dz / dl); gRc.set(gO, gD); gRc.far = dl;
+          if (gRc.intersectObjects(YB.wobj, false).length) { const s0 = nearS(gp.x, gp.z), s1 = nearS(tx, tz), q = W.routeAt(clamp(s0 + Math.sign(s1 - s0) * Math.min(1.3, Math.abs(s1 - s0)), 0, W.L)); tx = q.x; tz = q.z; } } }
+      const ox = g.root.position.x, oz = g.root.position.z; let sp = spring(g, tx, tz, dt); guard(g, ox, oz, !greet, dt);
       turn(g, sp > 0.35 ? Math.atan2(g.v[0], g.v[1]) : face, dt, sp > 0.35 ? 7 : 4);
       // ผู้ฟังหันหน้าไปหาผู้พูด
       const cur = YB.cur && YB.cur.o; if (cur && cur.role === 'g' && cur !== g) { const a = yawTo(g, cur.root.position.x, cur.root.position.z) - g.root.rotation.y; look = clamp(Math.atan2(Math.sin(a), Math.cos(a)), -0.9, 0.9); }
@@ -2552,15 +2608,30 @@ function play(opt = {}) {
   }
   const v3b = new THREE.Vector3();
 
+  const OBS = [];
   function simPeople(dt, now) {
     st.simT += dt * st.speed;
+    OBS.length = 0; if (st.walk) { const c = camera.position; OBS.push([c.x, c.z, 1.2]); if (YB.walkOn) for (const g of YB.guides) if (g.root.visible) OBS.push([g.root.position.x, g.root.position.z, 0.78]);
+      // แวะชมบูธ: ช่องมองระหว่างกล้องกับบูธต้องโล่ง → คนเดินหลบ/หยุดรอ ไม่เดินตัดหน้า
+      const b = st.walk.hn; if (b && st.walk.hb > 0.05) { const dx = b.x - c.x, dz = b.z - c.z, d = Math.hypot(dx, dz); for (let k = 1.3; k < d - 0.7; k += 1.0) OBS.push([c.x + dx / d * k, c.z + dz / d * k, 0.9]); } }
     for (const p of W.people) {
       if (p.mode === 'walk') {
-        const R = W.routes[p.br || 0], s = ((p.s0 + st.simT * p.v + Math.sin(st.simT * 0.25 + p.vp) * p.vj * 7) % (R.L + 6) + R.L + 6) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
+        const R = W.routes[p.br || 0], s = ((p.s0 - (p.lag || 0) + st.simT * p.v + Math.sin(st.simT * 0.25 + p.vp) * p.vj * 7) % (R.L + 6) + R.L + 6) % (R.L + 6), atEnd = s > R.L;   // ครึ่งหนึ่งลงบันไดซ้าย อีกครึ่งลงบันไดขวา
         const nar = 0.55 + 0.45 * ss(0.6, 3.2, Math.abs(s - W.sDoor));                     // ผ่านประตู Auditorium ทีละคน (เข้าแนวกลาง)
-        const r = R.at(Math.min(s, R.L)), lo = Math.sign(p.off) * Math.max(0.32, Math.abs(p.off) * nar); const nx = -r.tz, nz = r.tx, px = r.x + nx * lo, pz = r.z + nz * lo;   // สองแถวห่างกัน ≥ 0.64 ม. เสมอ (ไม่เดินทะลุกัน)
-        p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx, r.tz);
-        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(p.g.position.x - camera.position.x, p.g.position.z - camera.position.z) < (st.walk.greet ? 7 : 2.0));   // ช่วงทักทาย: เคลียร์คนเดินผ่านหน้ากล้อง
+        const r = R.at(Math.min(s, R.L)), lo0 = Math.sign(p.off) * Math.max(0.32, Math.abs(p.off) * nar), nx = -r.tz, nz = r.tx;   // สองแถวห่างกัน ≥ 0.64 ม. เสมอ (ไม่เดินทะลุกัน)
+        // หลบกล้อง (ผู้ชม) และยอดน้ำ/สายน้ำ: เบี่ยงออกด้านข้างอย่างนุ่มนวลภายในความกว้างทางเดิน แทนการเดินทะลุ/หายวาบ
+        let want = lo0;
+        if (OBS.length) { const [cr, cl] = s < W.sDoor - 0.6 ? clearAt(s) : [1.05, 1.05], lmin = Math.min(0, -(cl - 0.38)), lmax = Math.max(0, cr - 0.38);
+          for (const [ox, oz, Rr] of OBS) { const dx = ox - r.x, dz = oz - r.z, oa = dx * r.tx + dz * r.tz, ol = dx * nx + dz * nz, k = 1 - Math.abs(oa) / (Rr * 1.6); if (k <= 0) continue;
+            const need = Rr * Math.min(1, k * 1.8); if (Math.abs(want - ol) >= need) continue;
+            const a = clamp(ol + need, lmin, lmax), b = clamp(ol - need, lmin, lmax), ea = Math.abs(a - ol), eb = Math.abs(b - ol);
+            want = ea >= need - 0.05 && eb >= need - 0.05 ? (Math.abs(a - want) < Math.abs(b - want) ? a : b) : ea > eb ? a : b;
+            // ทางแคบหลบด้านข้างไม่พ้น และสิ่งกีดขวางอยู่ข้างหน้า → ชะลอรอ (ไม่เดินชน/ทะลุ)
+            if (Math.abs(want - ol) < Rr * 0.72 && oa > 0 && oa < 1.3) p.lag = (p.lag || 0) + dt * st.speed * p.v * 1.05; } }
+        const plo = p.lo == null ? want : p.lo; p.lo = plo + (want - plo) * Math.min(1, dt * 3.2); const vl = (p.lo - plo) / Math.max(dt, 1e-3);
+        const px = r.x + nx * p.lo, pz = r.z + nz * p.lo;
+        p.g.position.set(px, floorY(px, pz), pz); p.g.rotation.y = Math.atan2(r.tx * p.v * st.speed + nx * vl, r.tz * p.v * st.speed + nz * vl);
+        p.g.visible = st.intro > 4.6 && !atEnd && s > 0.6 && !(st.walk && Math.hypot(px - camera.position.x, pz - camera.position.z) < (st.walk.greet ? 7 : 0.62));   // ช่วงทักทาย: เคลียร์คนเดินผ่านหน้ากล้อง · ทางแคบหลบไม่พ้นจริง ๆ จึงซ่อน
         const ph = (st.simT * p.v) * 6.6 + p.ph, w = Math.sin(ph) * 0.42, c = Math.cos(ph);
         p.legPivotL.rotation.x = w; p.legPivotR.rotation.x = -w;                                  // สะโพก
         p.kL.rotation.x = 0.08 + 0.75 * Math.max(0, c) ** 1.5; p.kR.rotation.x = 0.08 + 0.75 * Math.max(0, -c) ** 1.5;   // งอเข่าช่วงก้าวขาไปข้างหน้า
@@ -2615,9 +2686,9 @@ function play(opt = {}) {
     W.routeU.uTime.value = now / 1000;
     simPeople(dt, now); syncReal(); yodStep(dt);
     { const tS = now / 1000; for (const f of W.live) f(dt, tS, camera.position); selFX.update(dt, tS); }
-    const mins = 30 + Math.floor(st.simT / 6); root.querySelector('#f5clk').textContent = '08:' + String(Math.min(59, mins)).padStart(2, '0');
+    const mins = Math.min(59, 30 + Math.floor(st.simT / 6)); if (mins !== st.clkM) { st.clkM = mins; root.querySelector('#f5clk').textContent = '08:' + String(mins).padStart(2, '0'); }
     if (!st.introOn && !st.perfDone) { st.perfN = (st.perfN || 0) + 1; st.perfT = (st.perfT || 0) + (now - (st.perfL || now)); st.perfL = now;
-      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 40 && (ctx.gtao || renderer.getPixelRatio() > 1)) { st.aoOff = true; if (ctx.gtao) ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
+      if (st.perfN > 90) { st.perfDone = true; if (st.perfT / st.perfN > 30 && (ctx.gtao || renderer.getPixelRatio() > 1)) { st.aoOff = true; if (ctx.gtao) ctx.gtao.enabled = false; renderer.setPixelRatio(1); ctx.composer.setPixelRatio(1); resize(); console.info('[F5] เครื่องช้า: ปิด AO และลดความละเอียด'); } } }
     if (MOBILE) {   // มือถือ: เงาอัปเดตเฉพาะตอนฉากเปลี่ยนเสร็จ (เดิมทุก 2–5 เฟรม → เฟรมหนัก/เบาสลับกัน ภาพจึงสะดุด) · คนเดินใช้เงาใต้เท้าแทน
       const key = !st.introOn ? 9 : st.xHolding ? 1 : st.intro >= 6.5 ? 3 : st.intro >= 5.1 ? 2 : 0;
       if (st.shKey !== key) { st.shKey = key; renderer.shadowMap.needsUpdate = true; }
@@ -2633,7 +2704,7 @@ function play(opt = {}) {
   requestAnimationFrame(() => root.classList.add('on'));
   st.raf = requestAnimationFrame(frame);
   st.goStep = goStep; st.selectBooth = selectBooth; st.act = act;
-  window.__f5 = st; st.YB = YB; st.camera = camera; st.controls = controls; st.THREE = THREE; st.select = (code, fly) => selectBooth(W.booths.find(q => q.code === code) || null, fly);
+  window.__f5 = st; st.YB = YB; st.STEPS = STEPS; st.camera = camera; st.controls = controls; st.THREE = THREE; st.select = (code, fly) => selectBooth(W.booths.find(q => q.code === code) || null, fly);
   return true;
 }
 

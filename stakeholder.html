@@ -64,6 +64,11 @@
   #prep.ok i { background:var(--ok); animation:none; }
   @keyframes pp { to { opacity:.35; } }
   .stage { width:100%; max-width:1180px; margin:56px auto 0; flex:1; display:flex; align-items:flex-end; }
+  .stage { position:relative; }
+  .heroPalsWrap { position:absolute; top:0; bottom:0; right:1%; width:min(30%,370px); display:flex; flex-direction:column; justify-content:flex-end; pointer-events:none; }
+  .heroPals { position:sticky; bottom:0; width:100%; aspect-ratio:5/4; pointer-events:auto; cursor:pointer; opacity:0; transform:translateY(14px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+  .heroPals.on { opacity:1; transform:none; }
+  .heroPals canvas { display:block; width:100%; height:100%; }
   .stage video { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; border-radius:28px 28px 0 0; background:#e9edf1; }
 
   #err { margin:12px auto 0; color:#dc2626; font-size:13px; } #err:empty { display:none; }
@@ -79,6 +84,7 @@
     .acts button { min-width:0; flex:0 1 auto; height:44px; padding:0 20px; font-size:16px; }
     .stage { width:calc(100% + 40px); margin:40px -20px 0; }
     .stage { align-items:stretch; min-height:300px; }
+    .heroPalsWrap { width:42%; right:0; }
     .stage video { border-radius:0; aspect-ratio:auto; height:auto; object-position:45% 50%; }
   }
   @media (prefers-reduced-motion:reduce) { .hero > * { animation:none; } }
@@ -127,7 +133,14 @@
   // ภาพหน้าแรกเคลื่อนไหวช้า ๆ (วิดีโอวนลูปจากโมเดลจริง) · จอเล็กใช้ไฟล์เล็ก · ปิดเมื่อผู้ใช้ตั้งค่าลดการเคลื่อนไหว หรือเมื่อเข้าฉากแล้ว
   const vid = document.getElementById('heroVid'), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   { const small = innerWidth < 760; vid.poster = small ? 'stakeholder_hero_s.jpg' : 'stakeholder_hero.jpg'; if (!still) { vid.autoplay = true; vid.src = small ? 'stakeholder_hero_s.mp4' : 'stakeholder_hero.mp4'; vid.play().catch(() => {}); } }
-  const show = on => { land.classList.toggle('off', !on); if (!still && vid.src) { if (on) vid.play().catch(() => {}); else vid.pause(); } };
+  const show = on => { land.classList.toggle('off', !on); if (!still && vid.src) { if (on) vid.play().catch(() => {}); else vid.pause(); }
+    if (on) { if (pals) pals.kick(); else if (MOBILE) mountPals(); } else if (MOBILE && pals) { pals.dispose(); pals = null; } };
+  // พี่ยอดน้ำ + น้องสายน้ำ ยืนทักทายที่มุมภาพ (โหลดหลังหน้าเว็บพร้อม)
+  let pals = null, palsP = null;
+  const mountPals = () => palsP || (palsP = import('./stakeholder_hero_mascots.js').then(m => m.mountHeroMascots(vid.parentElement, { paused: () => land.classList.contains('off') }))
+    .then(p => { palsP = null; if (land.classList.contains('off') && MOBILE) p.dispose(); else pals = p; }).catch(e => { palsP = null; console.warn('[hero] mascots', e); }));
+  // คอมพิวเตอร์: รอเตรียมฉากชั้น 5 เบื้องหลังเสร็จก่อน (งานหนักช่วงนั้นทำให้ตัวละครขยับสะดุด) · สูงสุด 5 วิ
+  setTimeout(() => Promise.race([MOBILE ? null : prepNow(), new Promise(r => setTimeout(r, MOBILE ? 0 : 5000))]).then(() => { if (!pals) mountPals(); }), 300);
   let watch = null;
   function watchBack() { clearInterval(watch); watch = setInterval(() => { const mapOn = window.SD3D && window.SD3D.isOpen(), f5On = window.MWA_FLOOR5 && window.MWA_FLOOR5.isOn(); if (!mapOn && !f5On) { clearInterval(watch); show(true); prepP = null; prepDone = false; if (!MOBILE) setTimeout(prepNow, 400); } }, 800); }
   let busy = false;
