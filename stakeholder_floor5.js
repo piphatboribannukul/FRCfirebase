@@ -2400,44 +2400,71 @@ function play(opt = {}) {
   function bubbleEl(o) { const el = document.createElement('div'); el.className = 'yb ' + o.kind; el.innerHTML = `<div class="who"><i></i>${o.name}</div><div class="tx"></div>`; root.appendChild(el); return el; }
   const GR = (() => { try { const sg = new Intl.Segmenter('th', { granularity: 'grapheme' }); return t => [...sg.segment(t)].map(x => x.segment); } catch (e) { return t => [...t]; } })();
   // ── เสียงพากย์: ใช้เสียงภาษาไทยในเครื่อง (Web Speech) · ยอดน้ำเสียงทุ้มกว่า สายน้ำเสียงสูง · ปิดได้ที่ปุ่มลำโพง
-  // ── ดนตรีประกอบเบา ๆ (สังเคราะห์สดด้วย Web Audio · ไม่มีไฟล์ ไม่ติดลิขสิทธิ์) ──
-  // แพดคอร์ดนุ่ม ๆ I–vi–IV–V + โน้ตกริ๊งเบา ๆ แบบคาลิมบา ผ่านรีเวิร์บ · เริ่มเมื่อผู้ชมแตะจอครั้งแรก (นโยบาย autoplay)
+  // ── ดนตรีประกอบแนว "นวัตกรรม/เทคโนโลยี" (สังเคราะห์สดด้วย Web Audio · ไม่มีไฟล์ ไม่ติดลิขสิทธิ์) ──
+  // 104 BPM · คอร์ดสดใส C–G–Am–F · ซินธ์พลัคอาร์เปจโจ 16 จังหวะ + ดีเลย์ · กลองเบา (kick/hat/สแนปนุ่ม) · เบสซินธ์ · แพดกว้าง
+  // วน 16 ห้อง: ช่วงเปิดเบา → เต็มวง → พักกลอง → เต็มวง (ไม่ซ้ำซากจนน่าเบื่อ) · เริ่มเมื่อผู้ชมแตะจอครั้งแรก (นโยบาย autoplay)
   const BGM = (() => {
-    let ctx = null, out = null, timer = 0, t0 = 0, bar = 0, on = true, started = false;
+    let ctx = null, out = null, timer = 0, t0 = 0, step = 0, on = true, started = false, bus = null, dly = null, rvb = null, noise = null;
     try { on = localStorage.getItem('f5music') !== '0'; } catch (e) {}
-    const VOL = 0.9, BAR = 4.8;
-    const CH = [[48, 55, 64, 71], [45, 52, 60, 67], [41, 48, 57, 64], [43, 50, 59, 62]];   // Cmaj7 · Am7 · Fmaj7 · G6
-    const PENT = [[72, 74, 76, 79, 81], [69, 72, 74, 76, 79], [69, 72, 74, 77, 79], [67, 71, 74, 76, 79]];
+    const VOL = 0.75, BPM = 104, S16 = 60 / BPM / 4;
+    // คอร์ดต่อห้อง: [เบส, แพด, โน้ตอาร์เปจโจ]
+    const CH = [
+      [36, [60, 64, 67, 74], [72, 76, 79, 83, 84, 79]],   // Cadd9
+      [43, [59, 62, 67, 74], [71, 74, 79, 81, 83, 79]],   // G
+      [45, [57, 60, 64, 71], [69, 72, 76, 79, 81, 76]],   // Am7
+      [41, [57, 60, 65, 72], [69, 72, 77, 79, 81, 77]],   // Fmaj7
+    ];
+    const ARP = [0, 2, 1, 3, 2, 4, 3, 5, 0, 2, 1, 3, 4, 2, 5, 3];
     const hz = m => 440 * Math.pow(2, (m - 69) / 12);
     function build() {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
       ctx = new AC(); out = ctx.createGain(); out.gain.value = 0;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
-      const rv = ctx.createConvolver(), n = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, n, ctx.sampleRate);
-      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6); }
-      rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.55; const dry = ctx.createGain(); dry.gain.value = 0.6;
-      lp.connect(dry); lp.connect(rv); rv.connect(wet); dry.connect(out); wet.connect(out); out.connect(ctx.destination);
-      BGM.bus = lp; return true;
+      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.2;
+      bus = ctx.createGain(); bus.gain.value = 1; bus.connect(comp); comp.connect(out); out.connect(ctx.destination);
+      // รีเวิร์บสั้นสว่าง + ดีเลย์จุด 8 (dotted 8th) ให้อาร์เปจโจฟุ้ง ๆ แบบงานเทค
+      rvb = ctx.createConvolver(); const n = Math.floor(ctx.sampleRate * 2.2), ir = ctx.createBuffer(2, n, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.2); }
+      rvb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.32; rvb.connect(wet); wet.connect(bus);
+      dly = ctx.createDelay(1); dly.delayTime.value = S16 * 3; const fb = ctx.createGain(); fb.gain.value = 0.32; const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2600;
+      dly.connect(dlp); dlp.connect(fb); fb.connect(dly); const dw = ctx.createGain(); dw.gain.value = 0.38; dlp.connect(dw); dw.connect(bus); dw.connect(rvb);
+      noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); { const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      return true;
     }
-    function pad(notes, t) {
-      notes.forEach((m, i) => { [-4, 4].forEach(det => {
-        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = hz(m); o.detune.value = det;
-        const a = i ? 0.042 : 0.05; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 1.6); g.gain.setValueAtTime(a, t + BAR - 0.4); g.gain.linearRampToValueAtTime(0, t + BAR + 1.4);
-        o.connect(g); g.connect(BGM.bus); o.start(t); o.stop(t + BAR + 1.5); }); });
+    const env = (g, t, a, peak, dec, end) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + dec); return t + (end || dec) + 0.05; };
+    function pad(notes, t, len, lvl) {
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(700, t); lp.frequency.linearRampToValueAtTime(1500, t + len * 0.6); lp.Q.value = 0.4;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + 0.5); g.gain.setValueAtTime(lvl, t + len - 0.25); g.gain.linearRampToValueAtTime(0, t + len + 0.6);
+      lp.connect(g); g.connect(bus); g.connect(rvb);
+      notes.forEach(m => [-7, 7].forEach(det => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = det; o.connect(lp); o.start(t); o.stop(t + len + 0.7); }));
     }
     function pluck(m, t, v) {
-      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o2.type = 'sine'; o.frequency.value = hz(m); o2.frequency.value = hz(m) * 3.01;
-      const g2 = ctx.createGain(); g2.gain.value = 0.12; o2.connect(g2); g2.connect(g); o.connect(g);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + 2.2);
-      g.connect(BGM.bus); o.start(t); o2.start(t); o.stop(t + 2.3); o2.stop(t + 2.3);
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = 'square'; o2.type = 'sawtooth'; o.frequency.value = hz(m); o2.frequency.value = hz(m) * 2.003;
+      lp.type = 'lowpass'; lp.Q.value = 3; lp.frequency.setValueAtTime(4200, t); lp.frequency.exponentialRampToValueAtTime(700, t + 0.16);
+      const g2 = ctx.createGain(); g2.gain.value = 0.35; o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+      const e = env(g, t, 0.004, v, 0.32); g.connect(bus); g.connect(dly); o.start(t); o2.start(t); o.stop(e); o2.stop(e);
     }
+    function kickD(t, v) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14); const e = env(g, t, 0.003, v, 0.32); o.connect(g); g.connect(bus); o.start(t); o.stop(e); }
+    function hiss(t, v, type, f, dec, q) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; fl.type = type; fl.frequency.value = f; if (q) fl.Q.value = q; const e = env(g, t, 0.002, v, dec); s.connect(fl); fl.connect(g); g.connect(bus); if (type === 'bandpass') g.connect(rvb); s.start(t, Math.random() * 0.5); s.stop(e); }
+    function bass(m, t, len, v) { const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'triangle'; o2.type = 'sawtooth'; o.frequency.value = hz(m); o2.frequency.value = hz(m);
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(260, t + len); const g2 = ctx.createGain(); g2.gain.value = 0.25; o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.setValueAtTime(v, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + len); g.connect(bus); o.start(t); o2.start(t); o.stop(t + len + 0.05); o2.stop(t + len + 0.05); }
     function sched() {
-      if (!ctx) return; const ahead = ctx.currentTime + 1.2;
+      if (!ctx) return; const ahead = ctx.currentTime + 0.6;
       while (t0 < ahead) {
-        const k = bar % 4, P = PENT[k]; pad(CH[k], t0);
-        const step = BAR / 8; let last = -1;
-        for (let i = 0; i < 8; i++) { if (Math.random() < (i % 2 ? 0.28 : 0.5)) { let j; do { j = Math.floor(Math.random() * P.length); } while (j === last && P.length > 1); last = j; pluck(P[j], t0 + i * step + Math.random() * 0.03, 0.065 + Math.random() * 0.04); } }
-        t0 += BAR; bar++;
+        const i = step % 16, barN = Math.floor(step / 16), cyc = barN % 16, C = CH[barN % 4], t = t0;
+        const intro = cyc < 4, brk = cyc >= 10 && cyc < 12, full = !intro && !brk;
+        if (i === 0) pad(C[1], t, S16 * 16, intro || brk ? 0.022 : 0.016);
+        // อาร์เปจโจ: ช่วงเปิดเล่นเฉพาะ 8th · เต็มวงเล่น 16th (เน้นจังหวะตก)
+        if (!intro || i % 2 === 0) pluck(C[2][ARP[i]], t, (i % 4 === 0 ? 0.075 : 0.05) * (intro ? 0.8 : 1));
+        if (full) {
+          if (i % 4 === 0) kickD(t, 0.36);
+          if (i % 4 === 2) hiss(t, 0.05, 'highpass', 8000, 0.05);
+          if (i % 16 === 4 || i % 16 === 12) hiss(t, 0.11, 'bandpass', 1800, 0.12, 0.9);   // สแนปนุ่ม
+          if (i % 2 === 0) bass(C[0] + (i % 8 === 6 ? 12 : 0), t, S16 * 1.7, 0.095);
+        } else if (brk && i % 4 === 2) hiss(t, 0.03, 'highpass', 9000, 0.04);
+        if (cyc === 9 && i >= 8) hiss(t, 0.006 + (i - 8) * 0.004, 'highpass', 3000 + (i - 8) * 600, 0.1);   // ไรเซอร์สั้นก่อนพัก
+        t0 += S16; step++;
       }
     }
     function fade(v, s = 1.5) { if (!ctx) return; const t = ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(v, t + s); }
@@ -2445,7 +2472,7 @@ function play(opt = {}) {
       if (!on) return;
       if (!ctx && !build()) return;
       if (ctx.state === 'suspended') ctx.resume();
-      if (!started) { started = true; t0 = ctx.currentTime + 0.1; sched(); timer = setInterval(sched, 400); }
+      if (!started) { started = true; t0 = ctx.currentTime + 0.1; sched(); timer = setInterval(sched, 150); }
       fade(document.hidden ? 0 : VOL, 2.5);
     }
     function stop() { fade(0, 0.8); }
@@ -2454,7 +2481,7 @@ function play(opt = {}) {
     const vis = () => { if (!ctx || !on) return; if (document.hidden) fade(0, 0.4); else { ctx.resume(); fade(VOL, 1.5); } };
     EV.forEach(ev => window.addEventListener(ev, kick, { passive: true })); document.addEventListener('visibilitychange', vis);
     function dispose() { EV.forEach(ev => window.removeEventListener(ev, kick)); document.removeEventListener('visibilitychange', vis); clearInterval(timer); if (ctx) { const c = ctx; fade(0, 0.6); setTimeout(() => { try { c.close(); } catch (e) {} }, 700); } }
-    return { bus: null, sync, start: kick, dispose, toggle() { on = !on; try { localStorage.setItem('f5music', on ? '1' : '0'); } catch (e) {} if (on) start(); else stop(); sync(); } };
+    return { sync, start: kick, dispose, toggle() { on = !on; try { localStorage.setItem('f5music', on ? '1' : '0'); } catch (e) {} if (on) start(); else stop(); sync(); } };
   })();
   BGM.sync(); st.bgm = BGM; setTimeout(BGM.start, 300);   // Chrome ปล่อยเสียงได้เลยหากเคยแตะหน้าเว็บแล้ว · iPhone จะเริ่มเมื่อแตะครั้งถัดไป
   const VO = { on: false, voice: null }, HAS_VO = 'speechSynthesis' in window;
