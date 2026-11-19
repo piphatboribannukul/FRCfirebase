@@ -2611,8 +2611,10 @@ function play(opt = {}) {
     const pre = !bh && nb && YB.spotFor === nb.code ? nb : null;
     G.forEach((g, i) => {
       let tx, tz, face, look = 0;
-      if (atEnd && w.look) { const dx = w.look.x - cp.x, dz = w.look.z - cp.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, lat = i ? -0.55 : 0.55;   // ปลายทาง (หน้าเวที): ยืนตรงหน้ากล้อง ในทิศที่กล้องมอง
-        tx = cp.x + ux * 2.3 - uz * lat; tz = cp.z + uz * 2.3 + ux * lat; face = yawTo(g, cp.x, cp.z); }
+      if (W.L - w.s < 5.5) {
+        // ใกล้ถึงปลายทาง: ไปยืนรอหน้าเวที ตรงหน้าจุดที่กล้องจะหยุด (ในทิศที่กล้องหันมองเวที) แล้วหันมาทักผู้ชม
+        const E = W.routeAt(W.L), sx = (AUDm.ax0 + AUDm.ax1) / 2, sz = AUDm.az1, dx = sx - E.x, dz = sz - E.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, lat = i ? -0.6 : 0.6;
+        tx = E.x + ux * 2.5 - uz * lat; tz = E.z + uz * 2.5 + ux * lat; face = yawTo(g, cp.x, cp.z); }
       else if (greet || atEnd) { const sq = Math.min(w.s + 4.2, W.L), q = W.routeAt(sq), [cr, cl] = clearAt(sq), lat = i ? Math.max(-0.5, -cl + 0.45) : Math.min(0.5, cr - 0.45); tx = q.x - q.tz * lat; tz = q.z + q.tx * lat; face = yawTo(g, cp.x, cp.z); }
       else if (bh || pre) { const bh2 = bh || pre; [tx, tz] = YB.spot[i];   // ยืนข้างบูธ (นอกพื้นที่จัดแสดง) หันมาหากล้อง เอียงเข้าหาบูธ
         const toCam = yawTo(g, cp.x, cp.z), toB = yawTo(g, bh2.x, bh2.z); face = toCam + clamp(Math.atan2(Math.sin(toB - toCam), Math.cos(toB - toCam)), -1.4, 1.4) * (g.act === 'point' ? 0.55 : 0.3); }
@@ -2648,7 +2650,7 @@ function play(opt = {}) {
         const r = R.at(Math.min(s, R.L)), lo0 = Math.sign(p.off) * Math.max(0.32, Math.abs(p.off) * nar), nx = -r.tz, nz = r.tx;   // สองแถวห่างกัน ≥ 0.64 ม. เสมอ (ไม่เดินทะลุกัน)
         // หลบกล้อง (ผู้ชม) และยอดน้ำ/สายน้ำ: เบี่ยงออกด้านข้างอย่างนุ่มนวลภายในความกว้างทางเดิน แทนการเดินทะลุ/หายวาบ
         let want = lo0;
-        if (OBS.length) { const [cr, cl] = s < W.sDoor - 0.6 ? clearAt(s) : [1.05, 1.05], lmin = Math.min(0, -(cl - 0.38)), lmax = Math.max(0, cr - 0.38);
+        if (OBS.length) { const [cr, cl] = s < W.sDoor - 0.6 || !p.br ? clearAt(Math.min(s, W.L)) : [1.05, 1.05], lmin = Math.min(0, -(cl - 0.38)), lmax = Math.max(0, cr - 0.38);
           for (const [ox, oz, Rr] of OBS) { const dx = ox - r.x, dz = oz - r.z, oa = dx * r.tx + dz * r.tz, ol = dx * nx + dz * nz, k = 1 - Math.abs(oa) / (Rr * 1.6); if (k <= 0) continue;
             const need = Rr * Math.min(1, k * 1.8); if (Math.abs(want - ol) >= need) continue;
             const a = clamp(ol + need, lmin, lmax), b = clamp(ol - need, lmin, lmax), ea = Math.abs(a - ol), eb = Math.abs(b - ol);
