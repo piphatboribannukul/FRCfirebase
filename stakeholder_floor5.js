@@ -2623,8 +2623,8 @@ function play(opt = {}) {
         const q2 = back ? W.routeAt(Math.max(0, sq - back)) : q; tx = q2.x - q2.tz * lat; tz = q2.z + q2.tx * lat; face = Math.atan2(q2.tx, q2.tz); }
       // ทางตรงไปจุดหมายติดบูธ/ผนัง → อ้อมผ่านเส้นทางเดินแทน (ไม่ติดค้าง ไม่ทะลุ)
       if (!greet) { const gp = g.root.position, dx = tx - gp.x, dz = tz - gp.z, dl = Math.hypot(dx, dz);
-        if (dl > 0.45) { YB.wobj = YB.wobj || [...W.walls, ...W.booths.map(b => b.hit)]; gO.set(gp.x, gp.y + 0.45, gp.z); gD.set(dx / dl, 0, dz / dl); gRc.set(gO, gD); gRc.far = dl;
-          if (gRc.intersectObjects(YB.wobj, false).length) { const s0 = nearS(gp.x, gp.z), s1 = nearS(tx, tz), q = W.routeAt(clamp(s0 + Math.sign(s1 - s0) * Math.min(1.3, Math.abs(s1 - s0)), 0, W.L)); tx = q.x; tz = q.z; } } }
+        if (dl > 0.45 && dl < 12) { YB.wobj = YB.wobj || [...W.walls, ...W.booths.map(b => b.hit)]; gO.set(gp.x, gp.y + 0.45, gp.z); gD.set(dx / dl, 0, dz / dl); gRc.set(gO, gD); gRc.far = dl;
+          if (gRc.intersectObjects(YB.wobj, false).length) { const s0 = nearS(gp.x, gp.z), s1 = nearS(tx, tz), q = W.routeAt(clamp(s0 + Math.sign(s1 - s0) * Math.min(1.3, Math.abs(s1 - s0)), 0, W.L)), lo = i ? -0.4 : 0.4; tx = q.x - q.tz * lo; tz = q.z + q.tx * lo; /* สองตัวเดินคนละข้าง ไม่ซ้อนกัน */ } } }
       const ox = g.root.position.x, oz = g.root.position.z; let sp = spring(g, tx, tz, dt); guard(g, ox, oz, !greet, dt);
       turn(g, sp > 0.35 ? Math.atan2(g.v[0], g.v[1]) : face, dt, sp > 0.35 ? 7 : 4);
       // ผู้ฟังหันหน้าไปหาผู้พูด
