@@ -2551,14 +2551,14 @@ function play(opt = {}) {
     console.info('[f5] real people on:', W.people.length, 'people,', groups.size, 'instanced groups');
   }
   if (!/[?&]lowpeople\b/.test(location.search)) {
-    W.realP = W.realP || import('./stakeholder_people.js').then(m => (W.realM = m, m.loadPeople('stakeholder_people.bin', 'stakeholder_people.webp', { maxTex: MOBILE ? 2048 : 0 })));
+    W.realP = W.realP || import('./stakeholder_people.js').then(m => (W.realM = m, m.loadPeople(ASSET_BASE + 'stakeholder_people.bin', ASSET_BASE + 'stakeholder_people.webp', { maxTex: MOBILE ? 2048 : 0 })));
     W.realP.then(P => swapPeople(W.realM, P)).catch(e => console.warn('[f5] real people failed, keeping simple ones', e));
   }
 
   // ── พี่ยอดน้ำ + น้องสายน้ำ: เดินนำชมคู่กัน (โหมดเดินชม) · ทีมต้อนรับหลายตัวที่โต๊ะลงทะเบียน ──────────
   const YB = { m: null, guides: [], recep: [], q: [], cur: null };
   const TLd = u => new THREE.TextureLoader().loadAsync(u).then(t => { t.userData.live = true; t.colorSpace = THREE.NoColorSpace; return t; });
-  Promise.all([import('./stakeholder_yodnam.js'), TLd('stakeholder_yodnam_faces.webp'), TLd('stakeholder_sainam_faces.webp')]).then(([m, ty, ts]) => {
+  Promise.all([import('./stakeholder_yodnam.js'), TLd(ASSET_BASE + 'stakeholder_yodnam_faces.webp'), TLd(ASSET_BASE + 'stakeholder_sainam_faces.webp')]).then(([m, ty, ts]) => {
     YB.m = m; const tex = { yod: ty, sai: ts };
     const mk = (k, size, extra = {}) => { const o = m.makeMascot(k, tex[k], size, { outline: extra.outline !== false }); o.root.traverse(c => { if (c.isMesh && !c.userData.outline) c.castShadow = !MOBILE; }); W.interior.add(o.root);
       Object.assign(o, { name: k === 'yod' ? 'พี่ยอดน้ำ' : 'น้องสายน้ำ', act: null, actT: 0, face: null, look: 0 }, extra); o.el = bubbleEl(o); return o; };
