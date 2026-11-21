@@ -618,6 +618,30 @@ function css() {
 #f5 .it .st.ok{background:#e5f7f3;color:#0b8a72}#f5 .it .st.tbc{background:#fff4e0;color:#b26a00}
 #f5 .it .bar{width:46px;height:4px;border-radius:2px;background:#e6ebf0;overflow:hidden;flex:none}
 #f5 .it .bar i{display:block;height:100%;background:#1d5fc0}
+#f5.specmode .journey,#f5.specmode .kpis{opacity:0;pointer-events:none}#f5 .tabs .tspec{color:#c2410c}#f5 .tabs .r{display:none}#f5:has(.list.show:not(.min)) .detail.spec,#f5:has(.list:not(.min)) .detail.spec{max-height:calc(100vh - 420px);min-height:220px}#f5 .tabs .tspec.on{color:#9a3412}
+#f5 .sp-cat{font:700 11.5px ${F_HEAD};color:#8a97a6;letter-spacing:.04em;padding:10px 4px 3px;text-transform:uppercase}
+#f5 .sp-empty{padding:12px;color:#8a97a6;font-size:13px}
+#f5 .sp-acts{display:flex;gap:8px;padding:10px 2px 4px;position:sticky;bottom:0;background:#fff}
+#f5 .sp-acts .btn{flex:1;justify-content:center;height:32px;font-size:12.5px;text-decoration:none}
+#f5 .detail.spec{width:340px;max-height:calc(100vh - 96px);overflow:auto}
+#f5 .sp-dim{display:flex;align-items:flex-end;gap:6px;margin:8px 0 4px;padding:10px 12px;border-radius:12px;background:#fff4ec;border:1px solid #fed7bf}
+#f5 .sp-dim div{flex:1}#f5 .sp-dim span{display:block;font:600 11px ${F_HEAD};color:#c2410c}#f5 .sp-dim b{font:700 22px/1.1 ${F_HEAD};color:#0f1d2b}
+#f5 .sp-dim em{font:600 12px ${F_HEAD};color:#9a6a4c;font-style:normal;padding-bottom:3px}
+#f5 .sp-part{font:700 13.5px ${F_HEAD};margin:10px 0 4px}
+#f5 .sp-cols{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+#f5 .sp-cols span{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border-radius:999px;background:#f3f6f9;font-size:12px;color:#334155}
+#f5 .sp-cols i{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+#f5 .sp-cols code{font:500 10.5px ui-monospace,monospace;color:#7b8898}
+#f5 .sp-kv{margin-top:8px}#f5 .sp-kv span{display:block;font:600 11.5px ${F_HEAD};color:#8a97a6}#f5 .sp-kv p{margin:2px 0 0;font-size:13px;line-height:1.5;color:#1f2d3d}
+#f5 .sp-parts{margin-top:12px;border-top:1px solid #edf1f5;padding-top:8px;display:grid;gap:4px}
+#f5 .sp-parts>span{font:600 11.5px ${F_HEAD};color:#8a97a6}
+#f5 .sp-pt{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid #e8edf2;background:#fff;border-radius:9px;padding:7px 10px;cursor:pointer;text-align:left;font:inherit}
+#f5 .sp-pt b{font:600 12.5px ${F_HEAD};color:#1f2d3d}#f5 .sp-pt small{font-size:11.5px;color:#7b8898;white-space:nowrap}
+#f5 .sp-pt:hover{background:#f7fafc}#f5 .sp-pt.on{border-color:#fb923c;background:#fff7f0}
+#f5 #f5dim{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+#f5 #f5dim .dl{position:absolute;left:0;top:0;transform:translate(-50%,-50%);padding:3px 9px;border-radius:999px;background:#ea580c;color:#fff;font:700 12.5px ${F_HEAD};white-space:nowrap;box-shadow:0 4px 14px rgba(154,52,18,.35)}
+#f5 #f5dim .dl small{font:500 10.5px ${F_BODY};opacity:.85;margin-right:4px}
+@media (max-width:640px){#f5 .detail.spec{max-height:38vh!important;min-height:0!important}#f5 .sp-dim b{font-size:18px}}
 #f5 .journey{left:14px;bottom:14px;width:min(640px,calc(100vw - 430px));padding:12px 16px 12px}
 #f5 .jh{display:flex;align-items:center;gap:8px;font:700 14px ${F_HEAD}}
 #f5 .jh small{margin-left:auto;font:500 12px ${F_BODY};color:#7b8898}
@@ -707,13 +731,13 @@ function build(opt) {
   <div class="kpi card"><div class="ic">${ui('clock')}</div><div><span>เวลาเดินชม (ประมาณ)</span><strong>25<em>นาที</em></strong><small>แวะบูธละ ~1 นาที</small></div></div>
 </div>
 <div class="ui tools card hide-intro">
-  <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">${ui('list')}</button><button data-k="zin" title="ซูมเข้า">${ui('plus')}</button><button data-k="zout" title="ซูมออก">${ui('minus')}</button><hr>
+  <button data-k="list" class="ls" title="รายการบูธ" aria-label="รายการบูธ">${ui('list')}</button><button data-k="spec" class="spb" title="สเปกจัดงาน: ขนาด สี วัสดุ ของบูธ แบ็คดรอป โต๊ะลงทะเบียน ฯลฯ" aria-label="สเปกจัดงาน"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l1.8 1.8M10 9.5l1.8 1.8M13 6.5l1.8 1.8M8.5 11l1 1M11.5 8l1 1"/></svg></button><button data-k="zin" title="ซูมเข้า">${ui('plus')}</button><button data-k="zout" title="ซูมออก">${ui('minus')}</button><hr>
   <button data-k="home" title="ภาพรวม">${ui('home')}</button><button data-k="top" title="มุมบน (ผัง)">${ui('plan')}</button><button data-k="spin" title="หมุนรอบ">${ui('spin')}</button><hr>
   <button data-k="music" title="ดนตรีประกอบ" aria-label="เปิด/ปิดดนตรีประกอบ"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/><path class="vx" d="M3 3l18 18"/></svg></button><button data-k="voice" hidden style="display:none" title="เสียงพากย์ ยอดน้ำ/สายน้ำ" aria-label="เปิด/ปิดเสียงพากย์"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="vw" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="vx" d="M16 10l4 4M20 10l-4 4"/></svg></button><button data-k="explode" title="ดูการแยกชั้นอีกครั้ง">${ui('explode')}</button><button data-k="fs" title="เต็มจอ">${ui('full')}</button>
 </div>
 <div class="ui detail card" id="f5det"></div>
 <div class="ui list card hide-intro min">
-  <div class="tabs"><button data-tab="mwa" class="on">บูธ กปน.<sup>10</sup></button><button data-tab="p">เอกชน<sup>12</sup></button><button data-tab="zone">โซน<sup>7</sup></button><span class="r">เรียงตามเส้นทาง</span><button class="mn" data-k="lmin" title="ย่อ/ขยายรายการ">▾</button></div>
+  <div class="tabs"><button data-tab="mwa" class="on">บูธ กปน.<sup>10</sup></button><button data-tab="p">เอกชน<sup>12</sup></button><button data-tab="zone">โซน<sup>7</sup></button><button data-tab="spec" class="tspec" title="สเปกจัดงาน: ขนาด สี วัสดุ">สเปก</button><span class="r">เรียงตามเส้นทาง</span><button class="mn" data-k="lmin" title="ย่อ/ขยายรายการ">▾</button></div>
   <div class="items" id="f5items"></div>
 </div>
 <div class="ui journey card hide-intro">
@@ -724,7 +748,7 @@ function build(opt) {
 </div>
 <div class="ttl" id="f5ttl"><h1>Stakeholder Day</h1><p>การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่</p></div>
 <button class="ui btn skip" data-k="skip">ข้าม${ui('next')}</button>
-<div id="f5lbl"></div><div id="f5xl"></div><div class="xp" id="f5xp"><span>แยกชั้น</span><input type="range" min="0" max="100" value="43" aria-label="ระยะแยกชั้น"><button class="btn pri" data-k="xgo">เข้าชั้น 5${ui('next')}</button></div>
+<div id="f5lbl"></div><div id="f5dim"></div><div id="f5xl"></div><div class="xp" id="f5xp"><span>แยกชั้น</span><input type="range" min="0" max="100" value="43" aria-label="ระยะแยกชั้น"><button class="btn pri" data-k="xgo">เข้าชั้น 5${ui('next')}</button></div>
 <div class="credit">ภาพจำลองแนวคิด · ขนาดโดยประมาณจากผังร่าง</div>`;
   document.body.appendChild(root);
   return root;
@@ -862,6 +886,10 @@ function buildWorld(ctx) {
   const world = new THREE.Group(); scene.add(world);
   const interior = new THREE.Group(); world.add(interior);       // ชั้น 5 (พื้นอยู่ที่ y = 0)
   const zoneGroups = {}; const zg = z => zoneGroups[z] || (zoneGroups[z] = (() => { const g = new THREE.Group(); g.name = z; interior.add(g); return g; })());
+  // ── จุดอ้างอิงของรายการสเปกจัดงาน (stakeholder_specs.csv คอลัมน์ "จุดในฉาก") · ตำแหน่ง/ทิศ/ขนาดจริงในโมเดล (ม.) ใช้ซูม + วาดเส้นบอกขนาด
+  const SPEC = {};
+  const spec = (key, zone, x, z, yaw, w, d, h, y0 = 0) => { SPEC[key] = { zone, x, z, yaw, w, d, h, y0 }; };
+  const specL = (key, zone, g, lx, lz, w, d, h, y0 = 0) => { const c = Math.cos(g.rotation.y), sn = Math.sin(g.rotation.y); spec(key, zone, g.position.x + lx * c + lz * sn, g.position.z - lx * sn + lz * c, g.rotation.y, w, d, h, y0); };
   const M = {
     white: new THREE.MeshStandardMaterial({ color: '#f7f8f9', roughness: 0.82 }),
     wall: new THREE.MeshStandardMaterial({ color: '#cfdcee', roughness: 0.85 }),
@@ -989,6 +1017,10 @@ function buildWorld(ctx) {
     add('lobby', box(WW + 0.2, 0.06, 0.25), lightStripLobby, xc, WH + 0.23, zw + 0.2, { cast: false });
     // โต๊ะลงทะเบียน (หน้าโต๊ะสีน้ำเงินเข้ม "ลงทะเบียน · WELCOME")
     const dz = zw + 1.55, DW = 4.6; REG_DESK = { x: xc, z: dz };
+    spec('reg:wall', 'lobby', xc, zw + 0.06, 0, WW + 0.2, 0.12, WH + 0.2); spec('reg:wall:print', 'lobby', xc, zw + 0.125, 0, WW, 0.02, WH, 0.1); spec('reg:wall:light', 'lobby', xc, zw + 0.2, 0, WW + 0.2, 0.25, 0.06, WH + 0.2);
+    spec('reg:desk', 'lobby', xc, dz, 0, DW + 0.06, 0.72, 1.04); spec('reg:desk:front', 'lobby', xc, dz + 0.327, 0, DW - 0.06, 0.02, 0.94, 0.03); spec('reg:desk:top', 'lobby', xc, dz, 0, DW + 0.06, 0.72, 0.04, 1.0);
+    [-2.75, 2.75, 3.6].forEach((dx, i) => spec('reg:totem' + (i + 1), 'lobby', xc + dx, dz + 0.15, 0, 0.62, 0.08, 1.9, 0.02));
+    spec('reg:posts', 'lobby', xc - 0.05, dz + 1.3, 0, 4.22, 0.32, 0.95);
     const fm = ZM.reg('lobby', new THREE.MeshStandardMaterial({ map: signCanvas([['ลงทะเบียน · Registration', 700, 110, 150], ['Stakeholder Day · การประปานครหลวง', 500, 56, 248, '#bfe3ff', F_BODY]], '#123f86', '#fff', 1600, 340), roughness: 0.5 }));
     add('lobby', new RoundedBoxGeometry(DW, 1.0, 0.65, 3, 0.04), M.white, xc, 0.5, dz);
     const fp = new THREE.Mesh(new THREE.PlaneGeometry(DW - 0.06, 0.94), fm); fp.position.set(xc, 0.5, dz + 0.327); zg('lobby').add(fp);
@@ -1141,6 +1173,21 @@ function buildWorld(ctx) {
     const hit = new THREE.Mesh(box((sl.w || 2) + 0.1, 2.6, (sl.d || 1) + 0.3), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, 1.3, 0); hit.userData.booth = b; inner.add(hit);
     b.group = g; b.inner = inner; b.hit = hit; b.zone = zone;
     booths.push(b);
+    { const K = 'booth:' + b.code, k = sl.kind;
+      if (k) { const BH = k === 'cc' ? 2.3 : 2.4, W3 = REAL_BACKDROP[k] ? BH * REAL_BACKDROP[k][1] : 3.0, BZ = k === 'wari' ? -1.05 : -0.55, BX = k === 'cc' ? 1.0 : k === 'twq' ? 0.45 : 0;
+        const cw = k === 'cc' ? 5.0 : k === 'twq' ? 3.9 : 3.2, cd = k === 'wari' ? 2.3 : k === 'snap' ? 2.2 : 1.3, cz = k === 'snap' ? 0.45 : 0;
+        specL(K, zone, g, 0, cz, cw, cd, BH + 0.05); specL(K + ':floor', zone, g, 0, cz, cw, cd, 0.02); specL(K + ':backdrop', zone, g, BX, BZ, W3, 0.07, BH, 0.05);
+        if (k === 'generic') specL(K + ':counter', zone, g, 0.55, 0.2, 1.36, 0.56, 1.02);
+        if (k === 'cia') specL(K + ':counter', zone, g, 0.35, 0.55, 0.94, 0.5, 0.94);
+        if (k === 'clinic') specL(K + ':counter', zone, g, 0, 0.27, 1.28, 0.64, 1.02);
+        if (k === 'twq') specL(K + ':table', zone, g, -1.2, 0, 1.5, 0.75, 0.76);
+        if (k === 'snap') specL(K + ':table', zone, g, -0.15, -0.05, 2.1, 0.75, 0.76);
+        if (k === 'wari') specL(K + ':table', zone, g, 0.15, 0.2, 2.2, 2.2, 0.3);
+      } else {
+        specL(K, zone, g, 0, 0, 2.0, 1.0, 2.89); specL(K + ':floor', zone, g, 0, 0, 2.0, 1.0, 0.025); specL(K + ':backdrop', zone, g, 0, -0.45, 2.0, 0.1, 2.45);
+        specL(K + ':header', zone, g, 0, -0.42, 2.06, 0.16, 0.38, 2.51); specL(K + ':side', zone, g, -1.0, -0.12, 0.06, 0.66, 2.62); specL(K + ':counter', zone, g, 0.52, 0.18, 0.9, 0.48, 1.02);
+        specL(K + ':led', zone, g, 0.5, -0.37, 0.8, 0.04, 0.48, 1.54);
+      } }
   });
   function mwaBooth(kind, b, A, zone, inner) {
     const BH = kind === 'cc' ? 2.3 : 2.4, W3 = REAL_BACKDROP[kind] ? BH * REAL_BACKDROP[kind][1] : 3.0, BZ = kind === 'wari' ? -1.05 : -0.55, BX = kind === 'cc' ? 1.0 : kind === 'twq' ? 0.45 : 0;
@@ -1419,6 +1466,7 @@ function buildWorld(ctx) {
     add('dining', new RoundedBoxGeometry(x1 - x0, 0.95, 0.7, 3, 0.05), M.white, (x0 + x1) / 2, 0.475, z);
     add('dining', box(x1 - x0 + 0.06, 0.05, 0.76), M.wood, (x0 + x1) / 2, 0.97, z);
     for (let i = 0; i < 6; i++) add('dining', new THREE.CylinderGeometry(0.18, 0.2, 0.12, 16), M.white, x0 + 0.6 + i * 1.2, 1.06, z);
+    spec('dining:buffet', 'dining', (x0 + x1) / 2, z, 0, x1 - x0 + 0.06, 0.76, 1.0); spec('dining:table1', 'dining', X(880), Z(275), 0, 0.72, 0.72, 1.09);
     [[X(880), Z(275)], [X(940), Z(275)], [X(880), Z(320)], [X(940), Z(320)]].forEach(([x, z2]) => {
       add('dining', new THREE.CylinderGeometry(0.04, 0.04, 1.05, 10), M.alu, x, 0.525, z2);
       add('dining', new THREE.CylinderGeometry(0.36, 0.36, 0.04, 26), M.white, x, 1.07, z2);
@@ -1426,6 +1474,7 @@ function buildWorld(ctx) {
     });
   }
   // ── โต๊ะยืนในห้องแสดง
+  spec('hall:table1', 'hall', X(1230), Z(302), 0, 0.8, 0.8, 1.09);
   [[X(1230), Z(302)], [X(1290), Z(302)]].forEach(([x, z]) => {
     add('hall', new THREE.CylinderGeometry(0.04, 0.04, 1.05, 10), M.alu, x, 0.525, z);
     add('hall', new THREE.CylinderGeometry(0.4, 0.4, 0.04, 26), M.white, x, 1.07, z);
@@ -1444,6 +1493,7 @@ function buildWorld(ctx) {
         const lf = add(zone, leafG, leafMs[k % 4], x + Math.cos(a) * r, y, z + Math.sin(a) * r); lf.scale.set(0.26 - k * 0.012, 0.17, 0.2 - k * 0.01); lf.rotation.y = a; }
     };
     [[905, 440], [1440, 392], [1500, 392], [1112, 372], [770, 712], [896, 362], [775, 688], [880, 690], [1366, 427]].forEach(([px, py], i) => plantAt('other', X(px), Z(py), i % 3 ? 1 : 1.25));
+    spec('plant1', 'other', X(905), Z(440), 0, 0.6, 0.6, 1.95);
   }
   // ── โรลอัพ Stakeholder Day ตามจุดเลี้ยว
   {
@@ -1457,6 +1507,7 @@ function buildWorld(ctx) {
     const rm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, emissive: '#ffffff', emissiveIntensity: 0.12 }); rm.emissiveMap = tex;
     [[950, 690, -Math.PI / 2], [1337, 428, Math.PI], [785, 800, Math.PI / 2], [905, 405, Math.PI / 2]].forEach(([px, py, ry]) => {
       const gg = new THREE.Group(); gg.position.set(X(px), 0, Z(py)); gg.rotation.y = ry; zg('other').add(gg);
+      if (!SPEC.rollup1) specL('rollup1', 'other', gg, 0, 0, 0.86, 0.26, 2.08);
       add('other', box(0.86, 0.08, 0.26), M.alu, 0, 0.04, 0, { parent: gg }); add('other', box(0.8, 2.0, 0.02), rm, 0, 1.08, 0, { parent: gg });
       add('other', box(0.02, 2.0, 0.02), M.alu, 0, 1.08, -0.04, { parent: gg, cast: false });
     });
@@ -1545,6 +1596,8 @@ function buildWorld(ctx) {
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(10.4, 3.0), sm2); scr.position.set((ax0 + ax1) / 2, scY, az1 - 0.12); scr.rotation.y = Math.PI; zg('aud').add(scr);
     add('aud', box(10.8, 3.3, 0.1), M.dark, (ax0 + ax1) / 2, scY, az1 - 0.06);
     add('aud', new RoundedBoxGeometry(0.7, 1.15, 0.5, 2, 0.05), M.wood, (ax0 + ax1) / 2 + 6.5, sTop + 0.57, stageZ + 1.2);   // แท่นพูด
+    spec('aud:stage', 'aud', (ax0 + ax1) / 2, (stageZ + az1) / 2 - 0.1, Math.PI, ax1 - ax0 - 0.4, az1 - stageZ - 0.2, 0.8, pitY);
+    spec('aud:screen', 'aud', (ax0 + ax1) / 2, az1 - 0.06, Math.PI, 10.8, 0.1, 3.3, scY - 1.65); spec('aud:podium', 'aud', (ax0 + ax1) / 2 + 6.5, stageZ + 1.2, Math.PI, 0.7, 0.5, 1.15, sTop);
     { // ไฟเวที: ลำแสงจากราวไฟเพดานลงเวที กวาดช้า ๆ (ขาว 2 ดวงกลาง · น้ำเงิน 4 ดวงข้าง)
       const cx = (ax0 + ax1) / 2, tz = stageZ + 1.4, truss = new THREE.Group(); zg('aud').add(truss);
       live.push((dt, t, cam) => { truss.visible = Math.hypot(cam.x - cx, cam.z - stageZ) < 42; });   // วาดเฉพาะตอนกล้องอยู่ใกล้ห้อง
@@ -1681,7 +1734,7 @@ function buildWorld(ctx) {
   const people = makePeople(interior, booths, seats, routeAt, L);
   const routes = [{ at: routeAt, L }, { at: RE.at, L: RE.L }];
 
-  return { world, interior, ZM, zoneGroups, live, beamTex, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM, blob: people.blob };
+  return { spec: SPEC, world, interior, ZM, zoneGroups, live, beamTex, booths, walls, floors, f5shell, oldBldg, SB, scan, routeU, routeAt, L, routes, sDoor, sHall, sHallOut, seats, people, gy, siteM, blob: people.blob };
 }
 
 function roundedPath(pts, r) {
@@ -2032,7 +2085,8 @@ function play(opt = {}) {
   function renderList() {
     const q = (root.querySelector('#f5q').value || '').trim().toLowerCase();
     let html = '';
-    if (tab === 'zone') {
+    if (tab === 'spec') html = specList(q);
+    else if (tab === 'zone') {
       html = Object.entries(ZONES).map(([id, z], i) => `<div class="it" data-zone="${id}"><div class="sw" style="background:#1d5fc0">${i + 1}</div><div class="mid"><b>${esc(z.name)}</b><small>${W.booths.filter(b => b.zone === id).length || '–'} บูธ</small></div></div>`).join('');
     } else {
       const list = W.booths.filter(b => (q ? (b.name + b.sub + b.code).toLowerCase().includes(q) : b.own === tab));
@@ -2043,13 +2097,13 @@ function play(opt = {}) {
   }
   root.querySelectorAll('.tabs [data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; root.querySelectorAll('.tabs [data-tab]').forEach(x => x.classList.toggle('on', x === b)); renderList(); }));
   root.querySelector('#f5q').addEventListener('input', renderList);
-  items.addEventListener('click', e => { const it = e.target.closest('.it'); if (!it) return; root.querySelector('.list').classList.remove('show'); if (it.dataset.b) selectBooth(W.booths.find(b => b.code === it.dataset.b), true); else if (it.dataset.zone) { const si = STEPS.findIndex(s => s.focus === it.dataset.zone); if (si >= 0) goStep(si); } });
+  items.addEventListener('click', e => { const it = e.target.closest('.it'); if (!it) return; root.querySelector('.list').classList.remove('show'); if (it.dataset.spec) selectSpec(it.dataset.spec); else if (it.dataset.b) selectBooth(W.booths.find(b => b.code === it.dataset.b), true); else if (it.dataset.zone) { const si = STEPS.findIndex(s => s.focus === it.dataset.zone); if (si >= 0) goStep(si); } });
   renderList();
 
   // ── รายละเอียดบูธ
   const det = root.querySelector('#f5det');
   function selectBooth(b, fly) {
-    st.sel = b; renderList();
+    clearSpec(); st.sel = b; renderList();
     if (!b) { det.classList.remove('on'); return; }
     const own = b.own === 'mwa';
     det.innerHTML = `<div class="hd"><div class="sw" style="background:${b.col}">${b.code}</div><div><h3>${esc(b.name)}</h3><div class="sub">${esc(b.sub)}</div></div><button class="x" data-k="desel" aria-label="ปิด">✕</button></div>
@@ -2058,9 +2112,128 @@ function play(opt = {}) {
       <div class="row"><span>ขนาดบูธ</span><b>กว้าง ${b.w || 2} ม. × ลึก ${b.d || 1} ม.</b></div>
       <div class="row"><span>การวาง</span><b>${b.kind ? 'ผ้าตึงโค้ง + เคาน์เตอร์ ชิดผนัง' : 'ชิดผนัง'} ${{ e: 'ฝั่งตะวันตก', w: 'ฝั่งตะวันออก', n: 'ฝั่งใต้', s: 'ฝั่งเหนือ' }[b.face]}</b></div>
       <div class="row"><span>ลำดับบนเส้นทาง</span><b>${b.order} จาก ${W.booths.length} · ${Math.round(b.along)} ม. จากลิฟต์</b></div>
-      <div class="nav"><button class="btn" data-k="bprev">${ui('prev')}บูธก่อนหน้า</button><button class="btn pri" data-k="bnext">บูธถัดไป${ui('next')}</button></div>`;
+      <div class="nav"><button class="btn" data-k="bprev">${ui('prev')}บูธก่อนหน้า</button><button class="btn pri" data-k="bnext">บูธถัดไป${ui('next')}</button></div>
+      <div class="nav"><button class="btn" data-k="bspec" style="color:#c2410c"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l1.8 1.8M10 9.5l1.8 1.8M13 6.5l1.8 1.8M8.5 11l1 1M11.5 8l1 1"/></svg>ขนาด · สี · วัสดุ (สเปกจัดงาน)</button></div>`;
     det.classList.add('on');
     if (fly) { const fv = FACEV[b.face], k = (b.w || 2) > 2 ? 1.35 : 1; flyTo([b.x + fv[0] * 5.2 * k + fv[1] * 1.6, 3.4, b.z + fv[1] * 5.2 * k - fv[0] * 1.6], [b.x, 1.2, b.z], 1.5); setFocus(b.zone); }
+  }
+
+  // ── สเปกจัดงาน: อ่านตาราง stakeholder_specs.csv (แก้ใน Excel ได้) → รายการ + กดแล้วซูม วาดเส้นบอกขนาด กว้าง/ลึก/สูง
+  const SPECUI = { data: null, loading: null, cur: null, grp: null, labels: [] };
+  const dimRoot = root.querySelector('#f5dim');
+  function csvRows(t) { t = t.replace(/^\ufeff/, ''); const out = []; let row = [], f = '', q = false;
+    for (let i = 0; i < t.length; i++) { const c = t[i];
+      if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(f); f = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); f = ''; if (row.some(x => x.trim())) out.push(row); row = []; } else f += c; }
+    if (f || row.length) { row.push(f); if (row.some(x => x.trim())) out.push(row); } return out; }
+  function specParse(t) {
+    const R = csvRows(t), H = (R.shift() || []).map(h => h.trim()), ix = n => H.findIndex(h => h.startsWith(n));
+    const I = { id: ix('รหัส'), cat: ix('หมวด'), name: ix('รายการ'), part: ix('ชิ้นส่วน'), qty: ix('จำนวน'), w: ix('กว้าง'), d: ix('ลึก'), h: ix('สูง'), col: ix('สี'), mat: ix('วัสดุ'), note: ix('รายละเอียด'), st: ix('สถานะ'), tg: ix('จุดในฉาก') };
+    const g = (r, k) => I[k] >= 0 ? String(r[I[k]] || '').trim() : '', num = v => { const n = parseFloat(String(v).replace(/,/g, '')); return isFinite(n) ? n : null; };
+    const HEX = /#([0-9a-f]{6}|[0-9a-f]{3})\b/i, list = [], by = {};
+    for (const r of R) { const id = g(r, 'id'); if (!id) continue; let it = by[id]; if (!it) { it = by[id] = { id, cat: g(r, 'cat') || 'อื่น ๆ', name: g(r, 'name') || id, parts: [] }; list.push(it); }
+      it.parts.push({ part: g(r, 'part') || it.name, qty: g(r, 'qty'), w: num(g(r, 'w')), d: num(g(r, 'd')), h: num(g(r, 'h')), mat: g(r, 'mat'), note: g(r, 'note'), st: g(r, 'st'), tg: g(r, 'tg'),
+        colors: g(r, 'col').split(/[;\n]/).map(x => x.trim()).filter(Boolean).map(x => { const m = x.match(HEX); return { name: x.replace(HEX, '').trim(), hex: m ? '#' + m[1] : null }; }) }); }
+    list.forEach(it => { it.st = it.parts[0].st; it.tbc = /รอ/.test(it.st); }); return list; }
+  function loadSpecs() { return SPECUI.loading || (SPECUI.loading = fetch(ASSET_BASE + 'stakeholder_specs.csv', { cache: 'no-cache' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }).then(t => (SPECUI.data = specParse(t))).catch(e => { SPECUI.loading = null; throw e; })); }
+  const specT = p => p && W.spec[p.tg];
+  // ขนาด (ซม.): ใช้ค่าจากตาราง ถ้าเว้นว่างใช้ขนาดในโมเดล
+  const dimOf = (p, T) => { if (!p) return null; const f = (v, k) => v != null ? v : T ? Math.round(T[k] * 100) : null; return { w: f(p.w, 'w'), d: f(p.d, 'd'), h: f(p.h, 'h') }; };
+  const n0 = v => v == null ? '–' : (Math.round(v * 10) / 10).toLocaleString('th-TH');
+  const dimTxt = D => `${n0(D.w)} × ${n0(D.d)} × ${n0(D.h)} ซม.`;
+  const shortId = id => id.replace(/^(REG|DEC|AUD|FNB)-0?/, (m, a) => a[0]);
+  const lum = hx => { const c = new THREE.Color(hx); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; };
+  const swOf = it => { const cs = it.parts.flatMap(p => p.colors).filter(c => c.hex); return (cs.find(c => lum(c.hex) < 0.55) || cs[0] || {}).hex || '#1d5fc0'; };
+  function specList(q) {
+    if (!SPECUI.data) { loadSpecs().then(() => { if (tab === 'spec') renderList(); }, e => { if (tab === 'spec') items.innerHTML = `<div class="sp-empty">โหลดตารางสเปกไม่ได้ (${esc(e.message)})</div>`; }); return '<div class="sp-empty">กำลังโหลดตารางสเปก…</div>'; }
+    let cat = null, h = '';
+    for (const it of SPECUI.data) {
+      if (q && !(it.id + ' ' + it.name + ' ' + it.cat + ' ' + it.parts.map(p => p.part + ' ' + p.mat + ' ' + p.note).join(' ')).toLowerCase().includes(q)) continue;
+      if (it.cat !== cat) { cat = it.cat; h += `<div class="sp-cat">${esc(cat)}</div>`; }
+      const p = it.parts[0], D = dimOf(p, specT(p));
+      h += `<div class="it${SPECUI.cur && SPECUI.cur.it === it ? ' on' : ''}" data-spec="${esc(it.id)}"><div class="sw" style="background:${swOf(it)}">${esc(shortId(it.id))}</div><div class="mid"><b>${esc(it.name)}</b><small>${D ? dimTxt(D) : '–'}${it.parts.length > 1 ? ' · ' + it.parts.length + ' ชิ้นส่วน' : ''}</small></div><span class="st ${it.tbc ? 'tbc' : 'ok'}">${esc(it.st || '—')}</span></div>`;
+    }
+    return (h || '<div class="sp-empty">ไม่พบรายการ</div>') + `<div class="sp-acts"><a class="btn" href="${ASSET_BASE}stakeholder_specs.csv" download="Stakeholder_Day_specs.csv">ดาวน์โหลดตาราง (Excel)</a><button class="btn" data-k="specprint">พิมพ์สเปกทั้งหมด</button></div>`;
+  }
+  function selectSpec(id, pi = 0, fly = true) {
+    const it = SPECUI.data && SPECUI.data.find(x => x.id === id);
+    if (!it) { loadSpecs().then(() => { if (SPECUI.data.find(x => x.id === id)) selectSpec(id, pi, fly); }).catch(() => {}); return; }
+    if (st.auto) setAuto(false);
+    clearSpec(); st.sel = null; SPECUI.cur = { it, pi };
+    const p = it.parts[pi] || it.parts[0], T = specT(p) || specT(it.parts[0]), D = dimOf(p, T), q = p.qty && +p.qty > 1 ? ' · จำนวน ' + p.qty : '';
+    const kv = (k, v) => v ? `<div class="sp-kv"><span>${k}</span><p>${esc(v)}</p></div>` : '';
+    det.innerHTML = `<div class="hd"><div class="sw" style="background:${swOf(it)}">${esc(shortId(it.id))}</div><div><h3>${esc(it.name)}</h3><div class="sub">${esc(it.cat)}</div></div><button class="x" data-k="desel" aria-label="ปิด">✕</button></div>
+      <div class="pill ${it.tbc ? 'tbc' : 'mwa'}"><i></i>${esc(p.st || it.st || 'สเปก')}${q}</div>
+      <div class="sp-part">${esc(p.part)}</div>
+      <div class="sp-dim"><div><span>กว้าง</span><b>${n0(D && D.w)}</b></div><div><span>ลึก</span><b>${n0(D && D.d)}</b></div><div><span>สูง</span><b>${n0(D && D.h)}</b></div><em>ซม.</em></div>
+      ${p.colors.length ? `<div class="sp-kv"><span>สี</span></div><div class="sp-cols">${p.colors.map(c => `<span>${c.hex ? `<i style="background:${c.hex}"></i>` : ''}${esc(c.name || c.hex)}${c.hex ? ` <code>${c.hex}</code>` : ''}</span>`).join('')}</div>` : ''}
+      ${kv('วัสดุ / งานพิมพ์', p.mat)}${kv('รายละเอียด', p.note)}${T ? '' : '<div class="sp-kv"><p style="color:#b26a00">ยังไม่ได้ระบุจุดในฉาก (คอลัมน์ "จุดในฉาก")</p></div>'}
+      ${it.parts.length > 1 ? `<div class="sp-parts"><span>ชิ้นส่วน (กดเพื่อดูขนาดในฉาก)</span>${it.parts.map((x, i) => { const d2 = dimOf(x, specT(x)); return `<button class="sp-pt${i === pi ? ' on' : ''}" data-spi="${i}"><b>${esc(x.part)}</b><small>${d2 ? dimTxt(d2) : ''}</small></button>`; }).join('')}</div>` : ''}
+      <div class="nav"><a class="btn" href="${ASSET_BASE}stakeholder_specs.csv" download="Stakeholder_Day_specs.csv" style="text-decoration:none">ตาราง (Excel)</a><button class="btn" data-k="specprint">พิมพ์สเปก</button></div>`;
+    det.classList.add('on', 'spec'); root.classList.add('specmode');
+    if (T) { showDims(T, D); setFocus(T.zone); if (fly) flySpec(T, D); }
+    renderList();
+  }
+  det.addEventListener('click', e => { const b = e.target.closest('[data-spi]'); if (b && SPECUI.cur) selectSpec(SPECUI.cur.it.id, +b.dataset.spi, true); });
+  function clearSpec() {
+    if (SPECUI.grp) { scene.remove(SPECUI.grp); SPECUI.grp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); SPECUI.grp = null; }
+    SPECUI.labels = []; dimRoot.innerHTML = ''; det.classList.remove('spec'); root.classList.remove('specmode'); SPECUI.cur = null;
+  }
+  const DIM_C = new THREE.Color('#ea580c'), dimLine = new THREE.MeshBasicMaterial({ color: DIM_C, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
+  const dimEdge = new THREE.LineBasicMaterial({ color: DIM_C, depthTest: false, transparent: true, opacity: 0.95, toneMapped: false });
+  const dimFill = new THREE.MeshBasicMaterial({ color: '#fb923c', transparent: true, opacity: 0.13, depthWrite: false, toneMapped: false });
+  function showDims(T, D) {
+    const w = D && D.w != null ? D.w / 100 : T.w, d = D && D.d != null ? D.d / 100 : T.d, h = D && D.h != null ? D.h / 100 : T.h;
+    const g = new THREE.Group(); g.position.set(T.x, T.y0 || 0, T.z); g.rotation.y = T.yaw; g.renderOrder = 50; scene.add(g); SPECUI.grp = g;
+    const bx = new THREE.BoxGeometry(Math.max(w, 0.01), Math.max(h, 0.01), Math.max(d, 0.01)).translate(0, Math.max(h, 0.01) / 2, 0);
+    const fill = new THREE.Mesh(bx, dimFill); fill.renderOrder = 49; g.add(fill);
+    const ed = new THREE.LineSegments(new THREE.EdgesGeometry(bx), dimEdge); ed.renderOrder = 51; g.add(ed);
+    const big = Math.max(w, d, h), o = clamp(big * 0.07, 0.12, 0.45), th = clamp(big * 0.006, 0.01, 0.045), tk = th * 6;
+    const bar = (a, b) => { const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), L = A.distanceTo(B); const m = new THREE.Mesh(new THREE.BoxGeometry(th, L, th), dimLine);
+      m.position.copy(A).add(B).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); m.renderOrder = 52; g.add(m); };
+    const lab = (txt, k, pos) => { const e = document.createElement('div'); e.className = 'dl'; e.innerHTML = `<small>${k}</small>${txt}`; dimRoot.appendChild(e); SPECUI.labels.push({ e, p: new THREE.Vector3(...pos) }); };
+    const fz = d / 2 + o, rx = w / 2 + o;
+    if (w > 0.03) { bar([-w / 2, 0.02, fz], [w / 2, 0.02, fz]); bar([-w / 2, 0.02, fz - tk / 2], [-w / 2, 0.02, fz + tk / 2]); bar([w / 2, 0.02, fz - tk / 2], [w / 2, 0.02, fz + tk / 2]); lab(n0(w * 100) + ' ซม.', 'กว้าง', [0, 0.02, fz]); }
+    if (d > 0.05) { bar([rx, 0.02, -d / 2], [rx, 0.02, d / 2]); bar([rx - tk / 2, 0.02, -d / 2], [rx + tk / 2, 0.02, -d / 2]); bar([rx - tk / 2, 0.02, d / 2], [rx + tk / 2, 0.02, d / 2]); lab(n0(d * 100) + ' ซม.', 'ลึก', [rx, 0.02, 0]); }
+    if (h > 0.03) { bar([rx, 0, fz], [rx, h, fz]); bar([rx - tk / 2, h, fz], [rx + tk / 2, h, fz]); lab(n0(h * 100) + ' ซม.', 'สูง', [rx, h / 2, fz]); }
+    g.updateMatrixWorld(true);
+  }
+  const dimV = new THREE.Vector3();
+  function placeDims() {
+    if (!SPECUI.grp) return; const w = st.rw, h = st.rh, M = SPECUI.grp.matrixWorld;
+    for (const L of SPECUI.labels) { dimV.copy(L.p).applyMatrix4(M).project(camera); const on = dimV.z < 1 && Math.abs(dimV.x) < 1.2 && Math.abs(dimV.y) < 1.2;
+      L.e.style.display = on ? '' : 'none'; if (on) L.e.style.transform = `translate(${Math.round((dimV.x + 1) / 2 * w)}px,${Math.round((1 - dimV.y) / 2 * h)}px) translate(-50%,-50%)`; }
+  }
+  const spRc = new THREE.Raycaster();
+  function flySpec(T, D) {
+    const w = D && D.w != null ? D.w / 100 : T.w, h = D && D.h != null ? D.h / 100 : T.h, y0 = T.y0 || 0;
+    const fx = Math.sin(T.yaw), fz = Math.cos(T.yaw), rx = Math.cos(T.yaw), rz = -Math.sin(T.yaw);
+    // ระยะที่เห็นทั้งชิ้น · ลองหลายมุมรอบด้านหน้า เลือกมุมที่ไม่ติดผนังและถอยได้ไกลพอ
+    const port = camera.aspect < 0.9, D0 = clamp(Math.max(w * (port ? 1.2 : 1), h * 1.5) * 1.3 + 1.3, 2.4, 18), o = new THREE.Vector3(T.x, y0 + clamp(h * 0.5, 0.6, 1.6), T.z);
+    let best = null;
+    for (const a of [0.32, -0.32, 0.65, -0.65, 0, 0.95, -0.95]) {
+      const dir = new THREE.Vector3(fx * Math.cos(a) + rx * Math.sin(a), 0, fz * Math.cos(a) + rz * Math.sin(a)).normalize();
+      spRc.set(o, dir); spRc.far = D0 + 0.5; const hit = spRc.intersectObjects(W.walls, false)[0], free = hit ? hit.distance - 0.45 : D0;
+      const score = Math.min(free, D0) - Math.abs(a) * 0.6; if (!best || score > best.score) best = { dir, free: Math.min(free, D0), score }; if (free >= D0) break; }
+    const dist = Math.max(1.6, best.free), lack = Math.max(0, D0 - dist), dir = best.dir;
+    const up = clamp(dist * 0.4 + lack * 0.55, 0.9, 9), tgt = [T.x, y0 + h * 0.42 + (port ? dist * 0.24 : 0), T.z];   // ถอยได้ไม่พอ → ยกกล้องสูงขึ้นแทน · จอแนวตั้ง: วัตถุอยู่ครึ่งล่าง (ครึ่งบนมีกล่องข้อมูล)
+    flyTo([T.x + dir.x * dist, y0 + h * 0.5 + up, T.z + dir.z * dist], tgt, 1.3);
+  }
+  function specPrint() {
+    loadSpecs().then(list => {
+      const sw = c => c.hex ? `<i style="background:${c.hex}"></i>` : '', d8 = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+      let cat = null, rows = '';
+      for (const it of list) { if (it.cat !== cat) { cat = it.cat; rows += `<tr class="c"><td colspan="8">${esc(cat)}</td></tr>`; }
+        it.parts.forEach((p, i) => { const D = dimOf(p, specT(p)); rows += `<tr${i ? '' : ' class="f"'}><td>${i ? '' : esc(it.id)}</td><td>${i ? '' : '<b>' + esc(it.name) + '</b>'}<div>${esc(p.part)}</div></td><td class="n">${esc(p.qty || '')}</td><td class="n">${D ? n0(D.w) : ''}</td><td class="n">${D ? n0(D.d) : ''}</td><td class="n">${D ? n0(D.h) : ''}</td><td>${p.colors.map(c => `<span>${sw(c)}${esc(c.name || '')} ${c.hex ? '<code>' + c.hex + '</code>' : ''}</span>`).join('')}</td><td>${esc(p.mat)}${p.note ? `<div class="m">${esc(p.note)}</div>` : ''}${p.st && /รอ/.test(p.st) ? '<div class="t">รอยืนยัน</div>' : ''}</td></tr>`; }); }
+      const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>สเปกจัดงาน Stakeholder Day</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600&family=Bai+Jamjuree:wght@600;700&display=swap" rel="stylesheet">
+<style>body{font:12px/1.45 'IBM Plex Sans Thai',sans-serif;color:#1f2d3d;margin:18px}h1{font:700 22px 'Bai Jamjuree',sans-serif;margin:0}p.s{margin:2px 0 14px;color:#6b7a8c}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e3e8ee;padding:5px 6px;vertical-align:top;text-align:left}th{font:600 11px 'Bai Jamjuree',sans-serif;color:#6b7a8c;background:#f6f8fa}td.n,th.n{text-align:right;white-space:nowrap}tr.c td{font:700 13px 'Bai Jamjuree',sans-serif;background:#eef4fb;color:#1d5fc0;padding-top:9px}tr.f td{border-top:1px solid #c9d3de}td span{display:inline-flex;align-items:center;gap:4px;margin:0 8px 2px 0}td i{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}code{font-size:10px;color:#7b8898}.m{color:#5b6b7c}.t{color:#b26a00;font-weight:600}@media print{body{margin:8mm}tr{break-inside:avoid}}</style></head>
+<body><h1>สเปกจัดงาน · Stakeholder Day</h1><p class="s">การประปานครหลวง · ชั้น 5 อาคารสำนักงานใหญ่ · ขนาดเป็นเซนติเมตร (กว้าง × ลึก × สูง) · พิมพ์เมื่อ ${d8}</p>
+<table><thead><tr><th>รหัส</th><th>รายการ / ชิ้นส่วน</th><th class="n">จำนวน</th><th class="n">กว้าง</th><th class="n">ลึก</th><th class="n">สูง</th><th>สี</th><th>วัสดุ / งานพิมพ์ · รายละเอียด</th></tr></thead><tbody>${rows}</tbody></table>
+<script>document.fonts && document.fonts.ready.then(()=>setTimeout(()=>print(),300));<\/script></body></html>`;
+      const wnd = window.open('', '_blank'); if (!wnd) { alert('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาตป๊อปอัปแล้วลองอีกครั้ง'); return; } wnd.document.write(html); wnd.document.close();
+    }).catch(e => alert('โหลดตารางสเปกไม่ได้: ' + e.message));
   }
 
   // ── จางโซน
@@ -2187,6 +2360,9 @@ function play(opt = {}) {
     else if (k === 'fs') { try { document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen(); } catch (e) {} }
     else if (k === 'back') stop();
     else if (k === 'desel') { selectBooth(null); }
+    else if (k === 'spec') { setAuto(false); const L = root.querySelector('.list'); L.classList.remove('min'); L.classList.add('show'); tab = 'spec'; root.querySelectorAll('.tabs [data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === 'spec')); renderList(); if (!SPECUI.cur) loadSpecs().then(() => { if (!SPECUI.cur && !st.sel) selectSpec(SPECUI.data[0].id); }).catch(() => {}); }
+    else if (k === 'bspec') { if (st.sel) { const code = st.sel.code; tab = 'spec'; root.querySelectorAll('.tabs [data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === 'spec')); selectSpec(code); } }
+    else if (k === 'specprint') specPrint();
     else if (k === 'list') { const L = root.querySelector('.list'); L.classList.remove('min'); L.classList.toggle('show'); if (L.classList.contains('show')) selectBooth(null); }
     else if (k === 'lmin') { root.querySelector('.list').classList.toggle('min'); }
     else if (k === 'bnext' || k === 'bprev') { const i = st.sel ? st.sel.order - 1 : -1, n = W.booths[(i + (k === 'bnext' ? 1 : -1) + W.booths.length) % W.booths.length]; selectBooth(n, true); }
@@ -2195,14 +2371,14 @@ function play(opt = {}) {
   const onKey = e => {
     if (e.target && e.target.tagName === 'INPUT') return;
     if (e.key === 'ArrowRight') act('next'); else if (e.key === 'ArrowLeft') act('prev'); else if (e.key === ' ') { e.preventDefault(); act('auto'); }
-    else if (e.key === 'Escape') { if (st.sel) selectBooth(null); else if (opt.onDone) stop(); } };
+    else if (e.key === 'Escape') { if (st.sel || SPECUI.cur) selectBooth(null); else if (opt.onDone) stop(); } };
   addEventListener('keydown', onKey); st.onKey = onKey;
   // เลือกบูธด้วยเมาส์
   const ray = new THREE.Raycaster(), mp = new THREE.Vector2(); let down = null;
   const hits = W.booths.map(b => b.hit);
   const pick = e => { const r = renderer.domElement.getBoundingClientRect(); mp.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mp, camera); const h = ray.intersectObjects(hits, false)[0]; return h ? h.object.userData.booth : null; };
   renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; setAuto(false); st.tween = null; if (st.spin) { st.spin = false; controls.autoRotate = false; } });
-  renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const b = pick(e); if (b) selectBooth(b, true); });
+  renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const b = pick(e); if (b) { if (tab === 'spec') selectSpec(b.code); else selectBooth(b, true); } });
   renderer.domElement.addEventListener('pointermove', e => { if (e.buttons) return; const b = pick(e); st.hover = b; renderer.domElement.style.cursor = b ? 'pointer' : ''; });
 
   // ── อินโทร: ตึกเต็ม → แยกชั้น → ชั้น 5
@@ -2726,7 +2902,7 @@ function play(opt = {}) {
     }
     viewShift(now);
     if (ctx.composer) ctx.composer.render(); else renderer.render(scene, camera);
-    placeLabels();
+    placeLabels(); placeDims();
     st.raf = requestAnimationFrame(frame);
   }
   if (opt.at != null) { st.intro = INTRO_END + 0.4; }
